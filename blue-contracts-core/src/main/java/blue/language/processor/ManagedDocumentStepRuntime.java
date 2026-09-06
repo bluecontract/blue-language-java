@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.processor.ManagedRootRouteClassifier.RootSurfaceView;
+
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.identity.BlueIds;
@@ -34,6 +36,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     private final ProcessorInvocationServices owner;
     private final ProcessingGasContext sharedGasContext;
     private final ManagedDocumentStepContinuation continuation;
+    private boolean proofOnly;
     private boolean closed;
 
     /**
@@ -59,6 +62,22 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         this.sharedGasContext = this.owner.newGasContext();
         this.continuation = Objects.requireNonNull(
                 continuation, "continuation");
+    }
+
+    /**
+     * Detached physical verification of an authenticated, already-executed source.
+     * This runtime cannot execute application handlers, and its memo is separate
+     * from the consumer's semantic ledger.
+     */
+    public static ManagedDocumentStepRuntime retainedSourceProof(DocumentProcessor owner) {
+        return new ManagedDocumentStepRuntime(owner, true);
+    }
+
+    private ManagedDocumentStepRuntime(DocumentProcessor owner, boolean proofOnly) {
+        this.owner = ProcessorInvocationServices.configured(Objects.requireNonNull(owner, "owner"));
+        this.sharedGasContext = new ProcessingGasContext(GasMeter.retainedSourceProof(this.owner.gasSchedule()));
+        this.continuation = rejectingContinuation();
+        this.proofOnly = proofOnly;
     }
 
     /**
@@ -119,6 +138,9 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     private ManagedDocumentStepOutcome execute(
             ManagedDocumentStepRequest request,
             ManagedDocumentStepRoute selectedRoute) {
+        if (proofOnly) {
+            throw new IllegalStateException("Source-proof runtime cannot execute application handlers");
+        }
         ManagedDocumentStepRequest admitted = Objects.requireNonNull(
                 request, "request");
         ensureOpen();
@@ -150,11 +172,14 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 new ArrayList<DocumentUpdateOccurrence>();
         List<Node> orderedEmittedEvents =
                 new ArrayList<Node>();
+        ManagedDocumentOverlaySnapshotManager overlaySnapshots = owner.snapshotManager() == null ? null
+                : new ManagedDocumentOverlaySnapshotManager(owner.snapshotManager(), admitted.resolutionOverlay());
         ManagedDocumentStepContinuation stepContinuation =
                 collectingContinuation(
                         orderedPatches,
                         orderedPatchUpdates,
-                        orderedEmittedEvents);
+                        orderedEmittedEvents,
+                        overlaySnapshots);
         long gasBefore = sharedGasContext.meter().totalGas();
         ProcessorInvocationState execution = new ProcessorInvocationState(
                 owner,
@@ -163,11 +188,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 FrozenNode::fromResolvedNode,
                 sharedGasContext,
                 stepContinuation,
-                owner.snapshotManager() != null
-                        ? new ManagedDocumentOverlaySnapshotManager(
-                                owner.snapshotManager(),
-                                admitted.resolutionOverlay())
-                        : null);
+                overlaySnapshots);
         try (GasMeter.AttributionScope ignored =
                      sharedGasContext.withAttribution(
                              admitted.attribution())) {
@@ -278,7 +299,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactEvent) {
         ensureOpen();
         Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
+        ContractBundle bundle = ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -313,7 +334,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactEvent) {
         ensureOpen();
         Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
+        ContractBundle bundle = ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -340,7 +361,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Map<String, String> expectedBlueIdsByPath) {
         ensureOpen();
         long gasBefore = sharedGasContext.meter().totalGas();
-        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        RootSurfaceView surface = ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactDocument);
         FrozenNode resolved = surface.resolvedRoot();
         ContractBundle bundle = surface.bundle();
         Map<String, String> expected = Objects.requireNonNull(
@@ -385,7 +406,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     projectManagedProcessEmbeddedSurface(Node exactDocument) {
         ensureOpen();
         long gasBefore = sharedGasContext.meter().totalGas();
-        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        RootSurfaceView surface = ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactDocument);
         ContractBundle bundle = surface.bundle();
         if (!bundle.hasProcessEmbedded()) {
             if (sharedGasContext.meter().totalGas() != gasBefore) {
@@ -409,7 +430,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 declaration.collectionPaths(),
                 owner.gasSchedule());
         EffectiveContractSnapshot embedded =
-                effectiveProcessEmbeddedSnapshot(bundle);
+                ManagedRootRouteClassifier.effectiveProcessEmbeddedSnapshot(bundle);
         FrozenNode explicitContribution = embedded.headerFields().get(
                 ProcessorContractConstants.KEY_PATHS);
         FrozenNode collectionContribution = embedded.headerFields().get(
@@ -539,8 +560,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 .properties(
                         ProcessorContractConstants.KEY_EVENT,
                         new Node().blueId(eventBlueId));
-        ContractBundle bundle = classifyRootSurface(
-                exactContainingDocument).bundle();
+        ContractBundle bundle = ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactContainingDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -582,7 +602,9 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 occurrence, "occurrence");
         ContractBundle bundle = update.frozenRootDispatchBundle() != null
                 ? update.frozenRootDispatchBundle()
-                : classifyRootSurface(exactDocument).bundle();
+                : update.exactRootDispatchContracts() == null
+                        ? ManagedRootRouteClassifier.classifyRootSurface(owner, sharedGasContext, exactDocument).bundle()
+                        : ManagedRootRouteClassifier.classifyRetainedDispatch(owner, update.exactRootDispatchContracts());
         DocumentUpdateData data = new DocumentUpdateData(
                 update.path(),
                 update.before(),
@@ -700,6 +722,16 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         }
     }
 
+    /** Read-only classification from authenticated complete Root headers, without reopening an application Root type. */
+    public ManagedExternalDeliveryClassification classifyExternalDelivery(
+            blue.language.processor.closure.RootChannelMetadata metadata, String rawChannelKey,
+            Node exactEvent, GasChargeContext attribution) {
+        ensureOpen();
+        try (GasMeter.AttributionScope ignored = sharedGasContext.withAttribution(Objects.requireNonNull(attribution))) {
+            return settlementService().classifyExternalDelivery(metadata, rawChannelKey, exactEvent, attribution);
+        }
+    }
+
     /**
      * Applies one post-quiescence Root-local checkpoint batch atomically on a
      * detached exact Root using this session's shared meter.
@@ -759,13 +791,41 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     }
 
     /**
+     * Settles one already-joined atomic group while retaining each target's
+     * original runtime, semantic memo, and charge owner. Selection is frozen
+     * before planning; all targets are planned and preflighted before the
+     * globally ordered writes and cleanups. This method never joins budgets.
+     * Batch gas totals cover the accepted group, not just this runtime's trace.
+     */
+    public ManagedCheckpointSettlementBatch settleCheckpointBatch(
+            List<ManagedCheckpointSettlementRequest> requests,
+            ManagedCheckpointBatchCleanupContextFactory cleanupContextFactory,
+            java.util.function.Function<ManagedCheckpointSettlementRequest,
+                    ManagedDocumentStepRuntime> runtimeSelector) {
+        ensureOpen();
+        Objects.requireNonNull(runtimeSelector, "runtimeSelector");
+        return settlementService().settleCheckpointBatch(
+                requests, cleanupContextFactory, request -> {
+                    ManagedDocumentStepRuntime selected = Objects.requireNonNull(
+                            runtimeSelector.apply(request), "selected runtime");
+                    selected.ensureOpen();
+                    if (!runtimeRegistryIdentity().equals(selected.runtimeRegistryIdentity())
+                            || !gasManifestIdentity().equals(selected.gasManifestIdentity())) {
+                        throw new IllegalArgumentException(
+                                "Checkpoint batch runtimes require the same exact registry and gas manifest");
+                    }
+                    return selected.settlementService();
+                });
+    }
+
+    /**
      * Returns the exact identity of the captured immutable runtime registry.
      *
      * @return captured runtime-registry identity
      */
     public String runtimeRegistryIdentity() {
         ensureOpen();
-        return owner.runtimeRegistryIdentity();
+        return ClosureRuntimeDescriptor.registryEvidenceIdentity(owner.runtimeRegistryIdentity());
     }
 
     /**
@@ -833,6 +893,49 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     }
 
     /**
+     * Installs one run-local journal before this original runtime charges any gas. Notifications
+     * carry the original runtime even after an accepted group join, and occur only on parent trace
+     * append, including completed/failed child settlement, never on reservations or discarded child
+     * work. The callback must only record evidence; failure aborts noncommitting. It is not a gas
+     * policy hook and neither runtime identity nor physical journal order is semantic evidence.
+     */
+    public void observeAdmittedGas(java.util.function.BiConsumer<ManagedDocumentStepRuntime, GasTraceEntry> observer) {
+        ensureOpen();
+        Objects.requireNonNull(observer, "observer");
+        sharedGasContext.meter().observeAdmittedGas((meter, entry) -> observer.accept(this, entry));
+    }
+
+    /** Joins live semantic budgets; the closure coordinator owns admission and rollback. */
+    public GasMeter.GroupJoinResult tryJoinGasGroup(ManagedDocumentStepRuntime other) {
+        ensureOpen();
+        Objects.requireNonNull(other, "other").ensureOpen();
+        return sharedGasContext.meter().tryJoinGroup(other.sharedGasContext.meter());
+    }
+
+    /** Preflights one complete proposed scope union; a rejected multi-party join changes none. */
+    public GasMeter.MultiGroupJoinResult tryJoinGasGroups(java.util.Collection<ManagedDocumentStepRuntime> others) {
+        ensureOpen(); Objects.requireNonNull(others, "others");
+        List<GasMeter> meters = new ArrayList<>();
+        for (ManagedDocumentStepRuntime other : others) {
+            Objects.requireNonNull(other, "other").ensureOpen();
+            meters.add(other.sharedGasContext.meter());
+        }
+        return sharedGasContext.meter().tryJoinGroups(meters);
+    }
+
+    /** Admitted gas across all members of this runtime's current atomic group. */
+    public long groupAdmittedGas() {
+        ensureOpen();
+        return sharedGasContext.meter().groupAdmittedGas();
+    }
+
+    /** In-flight runtime reservations across this runtime's current atomic group. */
+    public long groupReservedGas() {
+        ensureOpen();
+        return sharedGasContext.meter().groupReservedGas();
+    }
+
+    /**
      * Returns the remaining invocation-wide allowance.
      *
      * @return exact remaining shared allowance
@@ -882,107 +985,12 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         }
     }
 
-    private RootSurfaceView classifyRootSurface(Node exactDocument) {
-        Node document = Objects.requireNonNull(
-                exactDocument, "exactDocument").clone();
-        DocumentProcessingResult invalid =
-                ProcessingInputAdmission.validateDocument(document);
-        if (invalid != null) {
-            ProcessorDiagnostic diagnostic = invalid.diagnostic();
-            throw new ProcessorFailureException(
-                    diagnostic != null
-                            ? diagnostic.category()
-                            : ProcessorErrorCategory.InvalidProcessingDocument,
-                    diagnostic != null && diagnostic.message() != null
-                            ? diagnostic.message()
-                            : "Invalid managed route-classification document");
-        }
-        ProcessorMarkerStore.collapseInitializationDocuments(document);
-        long gasBefore = sharedGasContext.meter().totalGas();
-        DocumentProcessingRuntime view = new DocumentProcessingRuntime(
-                document,
-                owner.conformanceEngine(),
-                owner.conformancePlannerOverride(),
-                owner.snapshotManager(),
-                owner.observer(),
-                sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
-                owner.strictPlatformInvocation());
-        FrozenNode selected = view.selectedFrozenAt(JsonPointer.ROOT);
-        owner.contractLoader().preflightSelectedContractHeaders(selected);
-        FrozenNode resolved = view.resolvedFrozenAt(JsonPointer.ROOT);
-        FrozenNode recognition = view.contractRecognitionScope(
-                selected, resolved);
-        ContractBundle bundle = owner.contractLoader().load(
-                selected,
-                recognition,
-                JsonPointer.ROOT,
-                owner.observer(),
-                null,
-                null);
-        if (sharedGasContext.meter().totalGas() != gasBefore) {
-            throw new IllegalStateException(
-                    "Route classification must not charge shared gas");
-        }
-        return new RootSurfaceView(selected, resolved, bundle);
-    }
-
-    private EffectiveContractSnapshot effectiveProcessEmbeddedSnapshot(
-            ContractBundle bundle) {
-        EffectiveContractSnapshot found = null;
-        for (EffectiveContractSnapshot snapshot
-                : bundle.effectiveContractSnapshots()) {
-            if (!EffectiveContractSnapshotConstants.Role.PROCESS_EMBEDDED
-                    .equals(snapshot.role())) {
-                continue;
-            }
-            if (found != null) {
-                throw new IllegalStateException(
-                        "Effective Root contains multiple Process Embedded snapshots");
-            }
-            found = snapshot;
-        }
-        if (found == null) {
-            throw new IllegalStateException(
-                    "Effective Process Embedded declaration lacks its exact snapshot");
-        }
-        return found;
-    }
-
-    /** Immutable selected, resolved, and classified view of one exact Root. */
-    private static final class RootSurfaceView {
-        private final FrozenNode selectedRoot;
-        private final FrozenNode resolvedRoot;
-        private final ContractBundle bundle;
-
-        RootSurfaceView(
-                FrozenNode selectedRoot,
-                FrozenNode resolvedRoot,
-                ContractBundle bundle) {
-            this.selectedRoot = Objects.requireNonNull(
-                    selectedRoot, "selectedRoot");
-            this.resolvedRoot = Objects.requireNonNull(
-                    resolvedRoot, "resolvedRoot");
-            this.bundle = Objects.requireNonNull(bundle, "bundle");
-        }
-
-        FrozenNode selectedRoot() {
-            return selectedRoot;
-        }
-
-        FrozenNode resolvedRoot() {
-            return resolvedRoot;
-        }
-
-        ContractBundle bundle() {
-            return bundle;
-        }
-    }
 
     private ManagedDocumentStepContinuation collectingContinuation(
             final List<FrozenJsonPatch> orderedPatches,
             final List<DocumentUpdateOccurrence> orderedPatchUpdates,
-            final List<Node> orderedEmittedEvents) {
+            final List<Node> orderedEmittedEvents,
+            final ManagedDocumentOverlaySnapshotManager overlaySnapshots) {
         return new ManagedDocumentStepContinuation() {
             @Override
             public void afterPatch(
@@ -1002,6 +1010,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         currentDocument,
                         patch,
                         updates);
+                if (overlaySnapshots != null) overlaySnapshots.refresh(continuation.currentResolutionOverlay(scopePath));
             }
 
             @Override

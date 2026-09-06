@@ -919,7 +919,8 @@ final class TerminationConformanceTest {
                 context.throwFatal("ignored reentrant fatal request");
             }
             if ("/failing".equals(propertyKey)) {
-                throw new IllegalStateException("termination lifecycle handler failed");
+                throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
+                        "termination lifecycle handler failed");
             }
         }
     }

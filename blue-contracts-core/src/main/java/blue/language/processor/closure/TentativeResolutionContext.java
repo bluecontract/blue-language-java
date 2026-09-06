@@ -140,11 +140,11 @@ public final class TentativeResolutionContext {
         for (ManagedDocumentSnapshot document
                 : tentativeState.managedDocuments()) {
             current.put(document.documentId(), document.blueId());
-            documents.put(document.documentId(), document.document());
+            if (document.hasResidentBody()) documents.put(document.documentId(), document.document());
         }
         ArrayList<ManagedOccurrenceBinding> forwardBindings =
                 new ArrayList<ManagedOccurrenceBinding>();
-        Node targetBody = documents.get(targetDocumentId);
+        Node targetBody = target.document();
         for (ManagedOccurrenceBinding binding
                 : tentativeState.occurrences()) {
             if (binding.sourceDocumentId().equals(targetDocumentId)
@@ -177,6 +177,9 @@ public final class TentativeResolutionContext {
         }
         LinkedHashMap<String, Node> managedReadExactNodes =
                 new LinkedHashMap<String, Node>();
+        for (ManagedReadPin pin : tentativeState.readPins()) {
+            managedReadExactNodes.put(pin.blueId(), pin.document());
+        }
         if (invocation.cause() instanceof ManagedRevisionCause) {
             ManagedRevisionCause revision =
                     (ManagedRevisionCause) invocation.cause();
@@ -347,16 +350,14 @@ public final class TentativeResolutionContext {
             Map<DocumentId, String> identities) {
         LinkedHashMap<DocumentId, Node> copy =
                 new LinkedHashMap<DocumentId, Node>();
+        Objects.requireNonNull(values, "currentDocuments");
         for (DocumentId documentId : identities.keySet()) {
-            Node document = Objects.requireNonNull(
-                    Objects.requireNonNull(values, "currentDocuments")
-                            .get(documentId),
-                    "current document");
-            copy.put(documentId, document.clone());
+            Node document = values.get(documentId);
+            if (document != null) copy.put(documentId, document.clone());
         }
         if (copy.size() != values.size()) {
             throw new IllegalArgumentException(
-                    "Current documents must match current BlueIds");
+                    "Resident documents must belong to current BlueIds");
         }
         return Collections.unmodifiableMap(copy);
     }

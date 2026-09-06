@@ -31,6 +31,21 @@ public final class ClosureEvidenceFactory {
     private ClosureEvidenceFactory() {
     }
 
+    /** Binds an occurrence-specific consumer placement without changing the source event's provenance. */
+    public static ClosureInvocationInput withManagedReaction(ClosureInvocationInput input, ManagedReactionContext context) {
+        ClosureInvocationInput provisional = Objects.requireNonNull(input, "input")
+                .withManagedReaction(UNBOUND_IDENTITY, Objects.requireNonNull(context, "context"));
+        return provisional.withManagedReaction(IDENTITIES.invocationIdentity(provisional), context);
+    }
+
+    /** Binds last terminal semantic operations independently of state epochs and host fences. */
+    public static ClosureInvocationInput withSemanticPredecessors(
+            ClosureInvocationInput input, Map<DocumentId, String> predecessors) {
+        ClosureInvocationInput provisional = Objects.requireNonNull(input, "input")
+                .withSemanticPredecessors(UNBOUND_IDENTITY, predecessors);
+        return provisional.withSemanticPredecessors(IDENTITIES.invocationIdentity(provisional), predecessors);
+    }
+
     /**
      * Captures one exact production environment from a configured processor.
      *
@@ -431,6 +446,14 @@ public final class ClosureEvidenceFactory {
             List<ManagedOccurrenceBinding> occurrences,
             List<ComponentSnapshot> components,
             List<DocumentId> publicRootDocumentIds) {
+        return affectedClosure(graphGeneration, managedDocuments, occurrences, components,
+                publicRootDocumentIds, java.util.Collections.<ManagedReadPin>emptyList());
+    }
+
+    public static AffectedClosureSnapshot affectedClosure(long graphGeneration,
+            List<ManagedDocumentSnapshot> managedDocuments, List<ManagedOccurrenceBinding> occurrences,
+            List<ComponentSnapshot> components, List<DocumentId> publicRootDocumentIds,
+            List<ManagedReadPin> readPins) {
         List<ManagedDocumentSnapshot> documents = sortedDocuments(
                 managedDocuments);
         List<ManagedOccurrenceBinding> rows = sortedOccurrences(occurrences);
@@ -445,7 +468,7 @@ public final class ClosureEvidenceFactory {
                 rows,
                 bindingSetIdentity,
                 components,
-                publicRoots);
+                publicRoots, readPins);
         return new AffectedClosureSnapshot(
                 IDENTITIES.affectedClosureIdentity(provisional),
                 graphGeneration,
@@ -453,7 +476,7 @@ public final class ClosureEvidenceFactory {
                 rows,
                 bindingSetIdentity,
                 components,
-                publicRoots);
+                publicRoots, readPins);
     }
 
     /**

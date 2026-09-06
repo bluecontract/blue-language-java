@@ -677,7 +677,8 @@ public final class FrozenNode {
         return schema;
     }
 
-    boolean isListElementContext() {
+    /** Returns the retained list-child construction context, including ordinary elements. */
+    public boolean isListElementContext() {
         return previousAnchorContext;
     }
 

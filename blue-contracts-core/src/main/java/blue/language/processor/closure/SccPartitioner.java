@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 /** Deterministic SCC partitioner with canonical target-before-source output. */
@@ -59,46 +60,33 @@ public final class SccPartitioner {
             }
         }
 
-        Set<Integer> remaining = new HashSet<Integer>();
+        // Kahn ordering on the reversed condensation graph. Only newly ready
+        // sources enter the queue; there is no repeated scan of every remaining
+        // component. The comparator is exactly the former minimum-member law.
+        int[] remainingTargets = new int[discovered.size()];
+        ArrayList<List<Integer>> sourcesByTarget = new ArrayList<List<Integer>>();
         for (int index = 0; index < discovered.size(); index++) {
-            remaining.add(Integer.valueOf(index));
+            sourcesByTarget.add(new ArrayList<Integer>());
+            remainingTargets[index] = outgoing.get(index).size();
+        }
+        PriorityQueue<Integer> ready = new PriorityQueue<Integer>((left, right) ->
+                minimum(discovered, left).compareTo(minimum(discovered, right)));
+        for (int source = 0; source < discovered.size(); source++) {
+            if (remainingTargets[source] == 0) ready.add(Integer.valueOf(source));
+            for (Integer target : outgoing.get(source)) sourcesByTarget.get(target).add(Integer.valueOf(source));
         }
         ArrayList<List<DocumentId>> result =
                 new ArrayList<List<DocumentId>>();
-        while (!remaining.isEmpty()) {
-            Integer selected = null;
-            for (Integer candidate : remaining) {
-                if (hasRemainingTarget(
-                        outgoing.get(candidate.intValue()), remaining)) {
-                    continue;
-                }
-                if (selected == null
-                        || minimum(discovered, candidate).compareTo(
-                                minimum(discovered, selected)) < 0) {
-                    selected = candidate;
-                }
-            }
-            if (selected == null) {
-                throw new IllegalStateException(
-                        "SCC condensation graph contains a cycle");
-            }
+        while (!ready.isEmpty()) {
+            Integer selected = ready.remove();
             result.add(Collections.unmodifiableList(
                     new ArrayList<DocumentId>(
                             discovered.get(selected.intValue()))));
-            remaining.remove(selected);
+            for (Integer source : sourcesByTarget.get(selected))
+                if (--remainingTargets[source] == 0) ready.add(source);
         }
+        if (result.size() != discovered.size()) throw new IllegalStateException("SCC condensation graph contains a cycle");
         return Collections.unmodifiableList(result);
-    }
-
-    private static boolean hasRemainingTarget(
-            Set<Integer> targets,
-            Set<Integer> remaining) {
-        for (Integer target : targets) {
-            if (remaining.contains(target)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static DocumentId minimum(

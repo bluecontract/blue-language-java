@@ -9,11 +9,13 @@ import java.util.function.LongSupplier;
 final class ClosureExecutionRecorder {
 
     private final String invocationIdentity;
+    private SourceObservationRecorder sourceObservation;
     private final LongSupplier nanoTime;
     private final List<ClosureWorkOccurrence> work =
             new ArrayList<ClosureWorkOccurrence>();
     private final List<DocumentStepEvidence> steps =
             new ArrayList<DocumentStepEvidence>();
+    private final List<ClosureImplementationEvidence.SkippedWorkEvidence> skippedWork = new ArrayList<>();
     private final List<TentativeFinalization> finalizations =
             new ArrayList<TentativeFinalization>();
     private long managedDocumentStepInclusiveNanos;
@@ -24,6 +26,17 @@ final class ClosureExecutionRecorder {
 
     ClosureExecutionRecorder(String invocationIdentity) {
         this(invocationIdentity, System::nanoTime);
+    }
+
+    void captureSourceObservation() {
+        sourceObservation = new SourceObservationRecorder();
+    }
+
+    SourceObservationRecorder sourceObservation() { return sourceObservation; }
+
+    SourceObservationProgram sourceObservationProgram(
+            ClosureInvocationInput input, ClosureProcessResult result) {
+        return sourceObservation == null ? null : sourceObservation.finish(input, result);
     }
 
     ClosureExecutionRecorder(
@@ -51,6 +64,13 @@ final class ClosureExecutionRecorder {
                     "Document-step ordinal is not contiguous");
         }
         steps.add(evidence);
+    }
+
+    void skippedWork(ClosureWorkOccurrence occurrence, ClosureWorkOccurrence request) {
+        if (work.get(Math.toIntExact(occurrence.ordinal())) != occurrence
+                || work.get(Math.toIntExact(request.ordinal())) != request)
+            throw new IllegalArgumentException("Skipped work must name original accepted occurrences");
+        skippedWork.add(new ClosureImplementationEvidence.SkippedWorkEvidence(occurrence, request));
     }
 
     void finalization(TentativeFinalization finalization) {
@@ -132,7 +152,7 @@ final class ClosureExecutionRecorder {
                 managedDocumentStepNestedFinalizationProofNanos,
                 componentFinalizationProofNanos,
                 successfulResultAssemblyNanos,
-                nonConformanceCode);
+                nonConformanceCode, skippedWork);
     }
 
     private long elapsedSince(long started) {

@@ -2,8 +2,11 @@ package blue.language.processor.closure;
 
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.processor.ExecutionEvidenceUnavailableException;
 
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Optional;
 
 /** Exact immutable state of one independently managed document. */
 public final class ManagedDocumentSnapshot
@@ -17,6 +20,8 @@ public final class ManagedDocumentSnapshot
     private final boolean publicRoot;
     private final long epoch;
     private final long componentGeneration;
+    private final ReusableComponentAuthority reusableAuthority;
+    private final RootChannelMetadata rootMetadata;
 
     /**
      * Creates one exact managed-document state record.
@@ -39,16 +44,49 @@ public final class ManagedDocumentSnapshot
             boolean publicRoot,
             long epoch,
             long componentGeneration) {
+        this(documentId, blueId, Objects.requireNonNull(document, "document"), initialized,
+                terminated, publicRoot, epoch, componentGeneration, null, null);
+    }
+
+    private ManagedDocumentSnapshot(DocumentId documentId, String blueId, Node document,
+            boolean initialized, boolean terminated, boolean publicRoot, long epoch, long componentGeneration,
+            ReusableComponentAuthority reusableAuthority, RootChannelMetadata rootMetadata) {
         this.documentId = Objects.requireNonNull(documentId, "documentId");
         this.blueId = ClosureValueSupport.requireBlueId(
                 blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
-        this.document = Objects.requireNonNull(document, "document").clone();
+        this.document = document == null ? null : document.clone();
         this.initialized = initialized;
         this.terminated = terminated;
         this.publicRoot = publicRoot;
         this.epoch = ClosureValueSupport.requireSafeInteger(epoch, "epoch");
         this.componentGeneration = ClosureValueSupport.requireSafeInteger(
                 componentGeneration, "componentGeneration");
+        this.reusableAuthority = reusableAuthority;
+        this.rootMetadata = rootMetadata;
+        if (document == null && reusableAuthority == null)
+            throw new IllegalArgumentException("An absent body requires verified owning component authority");
+    }
+
+    static ManagedDocumentSnapshot fromVerifiedHeader(DocumentId documentId, String blueId, Node document,
+            boolean initialized, boolean terminated, boolean publicRoot, long epoch, long generation,
+            ReusableComponentAuthority authority, RootChannelMetadata metadata) {
+        return new ManagedDocumentSnapshot(documentId, blueId, document, initialized, terminated,
+                publicRoot, epoch, generation, Objects.requireNonNull(authority, "authority"), metadata);
+    }
+
+    /** Residency is physical acquisition state and never enters semantic identities. */
+    public boolean hasResidentBody() { return document != null; }
+    public Optional<Node> residentDocument() { return document == null ? Optional.<Node>empty() : Optional.of(document.clone()); }
+    public Optional<RootChannelMetadata> rootMetadata() { return Optional.ofNullable(rootMetadata); }
+    public Optional<ReusableComponentAuthority> reusableAuthority() { return Optional.ofNullable(reusableAuthority); }
+
+    /** Hydrates only this exact selected view; a provider's newer head is not interchangeable. */
+    public ManagedDocumentSnapshot withResidentBody(ManagedReadPin exact) {
+        Objects.requireNonNull(exact, "exact");
+        if (!documentId.equals(exact.documentId()) || !blueId.equals(exact.blueId()))
+            throw new IllegalArgumentException("Body evidence belongs to another selected member state");
+        return new ManagedDocumentSnapshot(documentId, blueId, exact.document(), initialized, terminated,
+                publicRoot, epoch, componentGeneration, reusableAuthority, rootMetadata);
     }
 
     /**
@@ -75,6 +113,8 @@ public final class ManagedDocumentSnapshot
      * @return copied document node
      */
     public Node document() {
+        if (document == null) throw new ExecutionEvidenceUnavailableException(
+                "Exact managed document body is not resident: " + documentId.value(), Collections.singleton(blueId));
         return document.clone();
     }
 

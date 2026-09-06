@@ -408,9 +408,9 @@ public class NodeWireFormTest {
                 NodeWireForm.get(invalidItemsAndProperties));
 
         // then
-        assertEquals(IllegalArgumentException.class,
+        assertEquals(InvalidNodeStructureException.class,
                 valueAndPropertiesFailure.getClass());
-        assertEquals(IllegalArgumentException.class,
+        assertEquals(InvalidNodeStructureException.class,
                 itemsAndPropertiesFailure.getClass());
     }
 

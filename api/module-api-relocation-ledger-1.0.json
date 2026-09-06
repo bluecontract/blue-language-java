@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 526,
-    "publicTypeIdentity": "sha256:9fbe2aac00dcc3cb11a41342ad053dabe62490a96901487bdc9bc9f9a6c7cc0e",
+    "publicProductionTypeCount": 589,
+    "publicTypeIdentity": "sha256:6c150591c69e438d5d84dd467356d86398dd6e822bff00d1f288d8a3c6927045",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 259,
-      "new-supported-api-spi": 67
+      "internal-type-removed-from-public-surface": 267,
+      "new-supported-api-spi": 122
     }
   },
   "allowedClassifications": [
@@ -1565,6 +1565,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.model.InvalidNodeStructureException",
+      "sourcePath": "blue-language-model/src/main/java/blue/language/model/InvalidNodeStructureException.java",
+      "currentArtifact": "blue.language:blue-language-model",
+      "targetModule": ":blue-language-model",
+      "targetType": "blue.language.model.InvalidNodeStructureException",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.model.Node",
       "sourcePath": "blue-language-model/src/main/java/blue/language/model/Node.java",
       "currentArtifact": "blue.language:blue-language-model",
@@ -2768,6 +2779,50 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.GasMeter$GroupContribution",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.GasMeter$GroupContribution",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.GasMeter$GroupJoinResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.GasMeter$GroupJoinResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.GasMeter$GroupJoinResult$Status",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.GasMeter$GroupJoinResult$Status",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.GasMeter$MultiGroupJoinResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.GasMeter$MultiGroupJoinResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.GasSchedule",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -3116,8 +3171,8 @@
       "targetType": "blue.language.processor.ManagedDocumentResolutionOverlay",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.ManagedDocumentStepContinuation",
@@ -3215,8 +3270,8 @@
       "targetType": "blue.language.processor.ManagedGeneralizationWrite",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.ManagedProcessEmbeddedPath",
@@ -3246,6 +3301,17 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.ManagedRootSubscriptionSurface",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedRootSurfaceCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSurfaceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedRootSurfaceCodec",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
@@ -3857,6 +3923,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.UnclassifiedProcessingException",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/UnclassifiedProcessingException.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.UnclassifiedProcessingException",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.VerifiedExecutionEvidence",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/VerifiedExecutionEvidence.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -3899,6 +3976,39 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.closure.AcceptedAttachmentView",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AcceptedAttachmentView.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AcceptedAttachmentView",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.AcceptedInitializationInstallation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AcceptedInitializationInstallation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AcceptedInitializationInstallation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.AcceptedInitializationInstallationCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AcceptedInitializationInstallationCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AcceptedInitializationInstallationCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.AdmissionCandidate",
@@ -4227,8 +4337,19 @@
       "targetType": "blue.language.processor.closure.ClosureImplementationEvidence",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureImplementationEvidence$SkippedWorkEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureImplementationEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureImplementationEvidence$SkippedWorkEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.ClosureInvocationInput",
@@ -4271,8 +4392,8 @@
       "targetType": "blue.language.processor.closure.ClosureProcessRetryInput",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ClosureProcessor",
@@ -4458,8 +4579,41 @@
       "targetType": "blue.language.processor.closure.DocumentTransitionEvidence",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$AuthoredContractPatch",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$AuthoredContractPatch",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$GeneratedGeneralizationWrite",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$GeneratedGeneralizationWrite",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$Operation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$Operation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ExactNodeDemand",
@@ -4515,6 +4669,83 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$CapacityExceeded",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$CapacityExceeded",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Decoder",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Decoder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Encoder",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Encoder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Limits",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Limits",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Reader",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Reader",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Writer",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenNodeEvidenceCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FrozenNodeEvidenceCodec$Writer",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.GasTraceEntry",
@@ -4614,8 +4845,8 @@
       "targetType": "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ManagedOccurrenceBinding",
@@ -4647,6 +4878,50 @@
       "targetType": "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
       "previousTypes": [],
       "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedReactionContext",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedReactionContext.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedReactionContext",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedReactionContext$DueOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedReactionContext.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedReactionContext$DueOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedReactionContextCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedReactionContextCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedReactionContextCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedReadPin",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedReadPin.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedReadPin",
+      "previousTypes": [],
+      "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
@@ -4669,8 +4944,8 @@
       "targetType": "blue.language.processor.closure.ManagedRootEventOccurrence",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ManagedScopeKey",
@@ -4838,6 +5113,215 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.closure.ReusableComponentAuthority",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ReusableComponentAuthority.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ReusableComponentAuthority",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ReusableComponentAuthorityCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ReusableComponentAuthorityCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ReusableComponentAuthorityCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.RootChannelMetadata",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootChannelMetadata.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RootChannelMetadata",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.RootChannelMetadataCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootChannelMetadataCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RootChannelMetadataCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginAttachmentPolicy",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginAttachmentPolicy.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginAttachmentPolicy",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginAttachmentPolicy$Mode",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginAttachmentPolicy.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginAttachmentPolicy$Mode",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginAttachmentPolicy$Selection",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginAttachmentPolicy.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginAttachmentPolicy$Selection",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginGroupEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginGroupEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginGroupEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginGroupEvidence$Admission",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginGroupEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginGroupEvidence$Admission",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$Admission",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$Admission",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$ChargeRejection",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$ChargeRejection",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$Contribution",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$Contribution",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$Event",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$Event",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$Failure",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$Failure",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$JoinRejection",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$JoinRejection",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginOperationResult$ObservedSource",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginOperationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginOperationResult$ObservedSource",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginProcessAttempt",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginProcessAttempt.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginProcessAttempt",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginRejectedChargeEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginRejectedChargeEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginRejectedChargeEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.closure.SccPartitioner",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -4858,6 +5342,204 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceFrontierView",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceFrontierView.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceFrontierView",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceFrontierViewCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceFrontierViewCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceFrontierViewCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceInitialization",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceInitialization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceInitialization",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceInitializationDemand",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceInitializationDemand.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceInitializationDemand",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationGap",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationGap.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationGap",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$Action",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$Action",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$Enqueue",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$Enqueue",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$Patch",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$Patch",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$ReferenceChange",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$ReferenceChange",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$ReferenceProjection",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$ReferenceProjection",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$SkippedWork",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$SkippedWork",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$SourceState",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$SourceState",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$Step",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$Step",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgram$TerminationRequest",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgram.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgram$TerminationRequest",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceObservationProgramCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceObservationProgramCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceObservationProgramCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceOperationFailure",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceOperationFailure.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceOperationFailure",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SourceOperationFailureCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceOperationFailureCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SourceOperationFailureCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.SubscriptionDelta",
@@ -6000,6 +6682,17 @@
           "commit": "1f799962ef715c9488ae5bde77338993a114022a"
         }
       ],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.snapshot.InvalidCanonicalPatchException",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/InvalidCanonicalPatchException.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.snapshot.InvalidCanonicalPatchException",
+      "previousTypes": [],
+      "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     }

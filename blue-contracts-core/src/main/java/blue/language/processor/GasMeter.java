@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
+import static blue.language.processor.GasBudgetGroup.localGas;
+
 /**
  * Shared live-bounded named gas ledger for one processing invocation.
  *
@@ -21,17 +23,18 @@ public final class GasMeter {
 
     private final GasSchedule schedule;
     private final long gasLimit;
+    private final boolean proofOnly;
     private final List<GasTraceEntry> trace = new ArrayList<>();
     private final SemanticGasMeter semantic;
     private final ProcessorGasCharges processorCharges;
     private Map<String, Long> localGasLimits = Collections.emptyMap();
-    private final Map<String, Long> admittedLocalGas =
-            new LinkedHashMap<>();
-    private final Map<String, Long> reservedLocalGas =
-            new LinkedHashMap<>();
+    private final GasBudgetGroup budgetGroup = new GasBudgetGroup();
     private boolean localGasLimitsConfigured;
     private long totalGas;
     private GasChargeContext defaultAttribution = GasChargeContext.empty();
+    private java.util.function.BiConsumer<GasMeter, GasTraceEntry> admittedObserver;
+    private boolean accountingStarted;
+    private static final ThreadLocal<Boolean> NOTIFYING_OBSERVER = new ThreadLocal<>();
     /*
      * Runtime work sessions stage their ordered child traces until the
      * processor decides whether the execution unit completed, failed
@@ -65,6 +68,15 @@ public final class GasMeter {
      * @throws IllegalArgumentException when the budget is outside schedule bounds
      */
     public GasMeter(GasSchedule schedule, long gasLimit) {
+        this(schedule, gasLimit, false);
+    }
+
+    /** Physical validation of already-metered source evidence owns no new ledger. */
+    static GasMeter retainedSourceProof(GasSchedule schedule) {
+        return new GasMeter(schedule, schedule.maxProcessGas(), true);
+    }
+
+    private GasMeter(GasSchedule schedule, long gasLimit, boolean proofOnly) {
         this.schedule = Objects.requireNonNull(schedule, "schedule");
         if (gasLimit < 0L || gasLimit > schedule.maxProcessGas()) {
             throw new IllegalArgumentException(
@@ -72,6 +84,7 @@ public final class GasMeter {
                             + schedule.maxProcessGas());
         }
         this.gasLimit = gasLimit;
+        this.proofOnly = proofOnly;
         this.semantic = new SemanticGasMeter(this);
         this.processorCharges = new ProcessorGasCharges(this);
     }
@@ -103,13 +116,143 @@ public final class GasMeter {
         return totalGas;
     }
 
+    /** Physical journal hook, installed once before any charge or live reservation. */
+    void observeAdmittedGas(java.util.function.BiConsumer<GasMeter, GasTraceEntry> observer) {
+        Objects.requireNonNull(observer, "observer");
+        if (proofOnly || admittedObserver != null || accountingStarted
+                || totalGas != 0L || reservedRuntimeGas != 0L || !trace.isEmpty())
+            throw new IllegalStateException("Admitted gas observer requires a fresh semantic meter");
+        admittedObserver = observer;
+    }
+
     /**
      * Returns the budget that remains available after charges and reservations.
      *
      * @return budget not yet charged or reserved by runtime sessions
      */
     public long remainingGas() {
-        return gasLimit - totalGas - reservedRuntimeGas;
+        GasBudgetGroup group = budgetGroup.root();
+        return gasLimit - group.admitted - group.reserved;
+    }
+
+    /** Admitted charges across the live atomic group; member traces remain separate. */
+    public long groupAdmittedGas() {
+        return budgetGroup.root().admitted;
+    }
+
+    /** In-flight runtime reservations across the live atomic group. */
+    public long groupReservedGas() {
+        return budgetGroup.root().reserved;
+    }
+
+    /** Run-local identity check; it neither joins budgets nor transfers memos. */
+    boolean sharesBudgetWith(GasMeter other) {
+        return other != null && budgetGroup.root() == other.budgetGroup.root();
+    }
+
+    /**
+     * Joins two live budgets without copying traces or reparenting runtime ledgers.
+     * The caller owns canonical admission order and charges any semantic join work
+     * before calling this method. A rejected join changes neither group. All member
+     * meters must use the same exact policy. This run-local API is single-threaded;
+     * it is not a coordination mechanism between host workers.
+     */
+    public GroupJoinResult tryJoinGroup(GasMeter other) {
+        Objects.requireNonNull(other, "other");
+        GroupContribution left = new GroupContribution(0, budgetGroup.root());
+        GroupContribution right = new GroupContribution(1, other.budgetGroup.root());
+        MultiGroupJoinResult joined = tryJoinGroups(Collections.singletonList(other));
+        String local = joined.localDocumentId();
+        return new GroupJoinResult(joined.status(), left, right, gasLimit, local, joined.localLimit(),
+                local == null ? 0L : left.localUsage(local), local == null ? 0L : right.localUsage(local));
+    }
+
+    /**
+     * Atomically preflights the complete proposed union, then joins all distinct
+     * groups or none. Input zero is this meter; additional inputs retain caller
+     * iteration order. Repeated meters/already joined roots are counted once.
+     */
+    public MultiGroupJoinResult tryJoinGroups(java.util.Collection<GasMeter> others) {
+        requireOutsideObserver();
+        return GasBudgetGroup.join(this, others);
+    }
+
+    GasBudgetGroup budgetGroup() { return budgetGroup; }
+    Map<String, Long> localGasLimits() { return localGasLimits; }
+    boolean proofOnlyBudget() { return proofOnly; }
+
+    /** One distinct pre-join group's immutable contribution; index names its first caller input. */
+    public static final class GroupContribution {
+        private final int firstInputIndex;
+        private final long admitted, reserved;
+        private final Map<String, Long> admittedLocal, reservedLocal;
+        GroupContribution(int firstInputIndex, GasBudgetGroup group) {
+            this.firstInputIndex = firstInputIndex; this.admitted = group.admitted; this.reserved = group.reserved;
+            this.admittedLocal = Collections.unmodifiableMap(new TreeMap<>(group.admittedLocal));
+            this.reservedLocal = Collections.unmodifiableMap(new TreeMap<>(group.reservedLocal));
+        }
+        public int firstInputIndex() { return firstInputIndex; }
+        public long admitted() { return admitted; }
+        public long reserved() { return reserved; }
+        public Map<String, Long> admittedLocal() { return admittedLocal; }
+        public Map<String, Long> reservedLocal() { return reservedLocal; }
+        public long localUsage(String documentId) { return localGas(admittedLocal, documentId) + localGas(reservedLocal, documentId); }
+    }
+
+    /** Exact multi-group admission evidence, not a fabricated next-charge failure. */
+    public static final class MultiGroupJoinResult {
+        private final GroupJoinResult.Status status;
+        private final List<GroupContribution> contributions;
+        private final long limit, localLimit;
+        private final String localDocumentId;
+        MultiGroupJoinResult(GroupJoinResult.Status status, List<GroupContribution> contributions,
+                                     long limit, String localDocumentId, long localLimit) {
+            this.status = status; this.contributions = Collections.unmodifiableList(new ArrayList<>(contributions));
+            this.limit = limit; this.localDocumentId = localDocumentId; this.localLimit = localLimit;
+        }
+        public GroupJoinResult.Status status() { return status; }
+        public boolean joined() { return status == GroupJoinResult.Status.JOINED || status == GroupJoinResult.Status.ALREADY_JOINED; }
+        public boolean alreadyJoined() { return status == GroupJoinResult.Status.ALREADY_JOINED; }
+        public List<GroupContribution> contributions() { return contributions; }
+        public long limit() { return limit; }
+        public String localDocumentId() { return localDocumentId; }
+        public long localLimit() { return localLimit; }
+    }
+
+    /** Exact pre-join evidence, including reservations; never a synthetic charge rejection. */
+    public static final class GroupJoinResult {
+        public enum Status { JOINED, ALREADY_JOINED, SHARED_LIMIT_EXCEEDED, LOCAL_LIMIT_EXCEEDED }
+        private final Status status;
+        private final long leftAdmitted, rightAdmitted, leftReserved, rightReserved, limit;
+        private final String localDocumentId;
+        private final long localLimit, leftLocal, rightLocal;
+
+        private GroupJoinResult(Status status, GroupContribution left, GroupContribution right,
+                                long limit, String localDocumentId, long localLimit,
+                                long leftLocal, long rightLocal) {
+            this.status = status;
+            this.leftAdmitted = left.admitted;
+            this.rightAdmitted = right.admitted;
+            this.leftReserved = left.reserved;
+            this.rightReserved = right.reserved;
+            this.limit = limit;
+            this.localDocumentId = localDocumentId;
+            this.localLimit = localLimit;
+            this.leftLocal = leftLocal;
+            this.rightLocal = rightLocal;
+        }
+        public Status status() { return status; }
+        public boolean joined() { return status == Status.JOINED || status == Status.ALREADY_JOINED; }
+        public boolean alreadyJoined() { return status == Status.ALREADY_JOINED; }
+        public long leftAdmitted() { return leftAdmitted; }
+        public long rightAdmitted() { return rightAdmitted; }
+        public long leftReserved() { return leftReserved; }
+        public long rightReserved() { return rightReserved; }
+        public long limit() { return limit; }
+        public String localDocumentId() { return localDocumentId; }
+        public long localLimit() { return localLimit; }
+        public long leftLocal() { return leftLocal; }
+        public long rightLocal() { return rightLocal; }
     }
 
     /**
@@ -137,7 +280,8 @@ public final class GasMeter {
             throw new IllegalStateException(
                     "Document-local gas limits were already configured");
         }
-        if (totalGas != 0L || reservedRuntimeGas != 0L || !trace.isEmpty()) {
+        if (totalGas != 0L || reservedRuntimeGas != 0L || !trace.isEmpty()
+                || budgetGroup.root().members != 1) {
             throw new IllegalStateException(
                     "Document-local gas limits must be configured before gas work");
         }
@@ -257,14 +401,30 @@ public final class GasMeter {
         List<ChildGasLedger.Entry> entries =
                 child.takeForMerge(
                         Objects.requireNonNull(ownerToken, "ownerToken"));
-        for (ChildGasLedger.Entry entry : entries) {
-            long subtotal = multiplyExact(entry.quantity, entry.weight);
-            releaseRuntimeReservation(subtotal, entry.context);
-            chargeWeighted(child.namespace(),
-                    entry.counter,
-                    entry.quantity,
-                    entry.weight,
-                    entry.context);
+        int index = 0;
+        try {
+            for (; index < entries.size(); index++) {
+                ChildGasLedger.Entry entry = entries.get(index);
+                long subtotal = multiplyExact(entry.quantity, entry.weight);
+                releaseRuntimeReservation(subtotal, entry.context);
+                chargeWeighted(child.namespace(),
+                        entry.counter,
+                        entry.quantity,
+                        entry.weight,
+                        entry.context);
+            }
+        } catch (NoncommittingExecutionException failure) {
+            // The child was consumed up front. Its current entry's reservation was released
+            // before the failed append/journal; discard only the still-unprocessed suffix.
+            for (int remaining = index + 1; remaining < entries.size(); remaining++) {
+                ChildGasLedger.Entry entry = entries.get(remaining);
+                try {
+                    releaseRuntimeReservation(multiplyExact(entry.quantity, entry.weight), entry.context);
+                } catch (RuntimeException cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
+            throw failure;
         }
     }
 
@@ -285,7 +445,9 @@ public final class GasMeter {
                                     long weight,
                                     long subtotal,
                                     GasChargeContext context) {
-        rejectIfCapExceeded(
+        requireOutsideObserver();
+        if (subtotal > 0L) accountingStarted = true;
+        budgetGroup.rejectIfCapExceeded(gasLimit, localGasLimits,
                 namespace,
                 counter,
                 quantity,
@@ -300,8 +462,10 @@ public final class GasMeter {
                            long weight,
                            long subtotal,
                            GasChargeContext context) {
+        requireOutsideObserver();
+        if (subtotal > 0L) accountingStarted = true;
         GasChargeContext exactContext = resolveAttribution(context);
-        rejectIfCapExceeded(
+        budgetGroup.rejectIfCapExceeded(gasLimit, localGasLimits,
                 namespace,
                 counter,
                 quantity,
@@ -309,7 +473,8 @@ public final class GasMeter {
                 subtotal,
                 exactContext);
         reservedRuntimeGas += subtotal;
-        addLocalGas(reservedLocalGas, exactContext, subtotal);
+        budgetGroup.root().reserved += subtotal;
+        GasBudgetGroup.addLocalGas(localGasLimits, budgetGroup.root().reservedLocal, exactContext, subtotal);
     }
 
     private void releaseRuntimeReservation(long subtotal,
@@ -319,7 +484,8 @@ public final class GasMeter {
                     "Runtime gas reservation accounting mismatch");
         }
         reservedRuntimeGas -= subtotal;
-        removeLocalGas(reservedLocalGas, context, subtotal);
+        budgetGroup.root().reserved -= subtotal;
+        GasBudgetGroup.removeLocalGas(localGasLimits, budgetGroup.root().reservedLocal, context, subtotal);
     }
 
     boolean matchesCurrentCapRejection(
@@ -327,7 +493,7 @@ public final class GasMeter {
         Objects.requireNonNull(rejection, "rejection");
         if (rejection.applicableCapKind()
                 == GasLimitExceededException.ApplicableCapKind.SHARED) {
-            long admitted = totalGas + reservedRuntimeGas;
+            long admitted = groupAdmittedGas() + groupReservedGas();
             return rejection.localDocumentId() == null
                     && rejection.effectiveBudget() == gasLimit
                     && rejection.admittedGas() == admitted
@@ -339,8 +505,8 @@ public final class GasMeter {
         if (limit == null) {
             return false;
         }
-        long admitted = localGas(admittedLocalGas, documentId)
-                + localGas(reservedLocalGas, documentId);
+        long admitted = localGas(budgetGroup.root().admittedLocal, documentId)
+                + localGas(budgetGroup.root().reservedLocal, documentId);
         return rejection.effectiveBudget() == limit.longValue()
                 && rejection.admittedGas() == admitted
                 && rejection.remainingBeforeCharge()
@@ -353,8 +519,8 @@ public final class GasMeter {
             Map<String, Long> remainingLocalLimits = new LinkedHashMap<>();
             for (Map.Entry<String, Long> entry : localGasLimits.entrySet()) {
                 String documentId = entry.getKey();
-                long admitted = localGas(admittedLocalGas, documentId)
-                        + localGas(reservedLocalGas, documentId);
+                long admitted = localGas(budgetGroup.root().admittedLocal, documentId)
+                        + localGas(budgetGroup.root().reservedLocal, documentId);
                 long remaining = entry.getValue().longValue() - admitted;
                 remainingLocalLimits.put(
                         documentId,
@@ -526,161 +692,48 @@ public final class GasMeter {
             throw new IllegalArgumentException(
                     "Gas weight must be positive");
         }
-        if (quantity == 0L) {
+        if (quantity == 0L || proofOnly) {
             return;
         }
+        requireOutsideObserver();
+        accountingStarted = true;
         long subtotal = multiplyExact(quantity, weight);
         GasChargeContext exactContext = resolveAttribution(context);
-        rejectIfCapExceeded(
+        budgetGroup.rejectIfCapExceeded(gasLimit, localGasLimits,
                 namespace,
                 counter,
                 quantity,
                 weight,
                 subtotal,
                 exactContext);
-        trace.add(new GasTraceEntry(trace.size(),
+        GasTraceEntry admitted = new GasTraceEntry(trace.size(),
                 namespace,
                 counter,
                 quantity,
                 weight,
                 subtotal,
-                exactContext));
+                exactContext);
+        trace.add(admitted);
         totalGas += subtotal;
-        addLocalGas(admittedLocalGas, exactContext, subtotal);
-    }
-
-    private void rejectIfCapExceeded(String namespace,
-                                     String counter,
-                                     long quantity,
-                                     long weight,
-                                     long subtotal,
-                                     GasChargeContext context) {
-        long sharedRemaining = remainingGas();
-        LocalAllowance local = localAllowance(context);
-        long localRemaining = local != null
-                ? local.remaining
-                : Long.MAX_VALUE;
-        if (subtotal <= sharedRemaining && subtotal <= localRemaining) {
-            return;
-        }
-        if (local != null && localRemaining < sharedRemaining) {
-            throw new GasLimitExceededException(
-                    namespace,
-                    counter,
-                    quantity,
-                    weight,
-                    local.admitted,
-                    local.limit,
-                    GasLimitExceededException.ApplicableCapKind.LOCAL,
-                    local.documentId,
-                    localRemaining,
-                    context);
-        }
-        long sharedAdmitted = totalGas + reservedRuntimeGas;
-        throw new GasLimitExceededException(
-                namespace,
-                counter,
-                quantity,
-                weight,
-                sharedAdmitted,
-                gasLimit,
-                GasLimitExceededException.ApplicableCapKind.SHARED,
-                null,
-                sharedRemaining,
-                context);
-    }
-
-    private LocalAllowance localAllowance(GasChargeContext context) {
-        String documentId = context != null ? context.documentId() : null;
-        if (documentId == null) {
-            return null;
-        }
-        Long limit = localGasLimits.get(documentId);
-        if (limit == null) {
-            return null;
-        }
-        long admitted = localGas(admittedLocalGas, documentId)
-                + localGas(reservedLocalGas, documentId);
-        return new LocalAllowance(
-                documentId,
-                limit.longValue(),
-                admitted,
-                limit.longValue() - admitted);
-    }
-
-    private void addLocalGas(Map<String, Long> gasByDocument,
-                             GasChargeContext context,
-                             long subtotal) {
-        LocalAllowance local = localAllowanceWithoutReservations(
-                context, gasByDocument);
-        if (local == null) {
-            return;
-        }
-        gasByDocument.put(
-                local.documentId,
-                Long.valueOf(local.admitted + subtotal));
-    }
-
-    private void removeLocalGas(Map<String, Long> gasByDocument,
-                                GasChargeContext context,
-                                long subtotal) {
-        String documentId = context != null ? context.documentId() : null;
-        if (documentId == null || !localGasLimits.containsKey(documentId)) {
-            return;
-        }
-        long current = localGas(gasByDocument, documentId);
-        if (subtotal < 0L || subtotal > current) {
-            throw new IllegalStateException(
-                    "Document-local runtime gas reservation mismatch");
-        }
-        long updated = current - subtotal;
-        if (updated == 0L) {
-            gasByDocument.remove(documentId);
-        } else {
-            gasByDocument.put(documentId, Long.valueOf(updated));
+        budgetGroup.root().admitted += subtotal;
+        GasBudgetGroup.addLocalGas(localGasLimits, budgetGroup.root().admittedLocal, exactContext, subtotal);
+        if (admittedObserver != null) {
+            NOTIFYING_OBSERVER.set(Boolean.TRUE);
+            try {
+                admittedObserver.accept(this, admitted);
+            } catch (RuntimeException journalFailure) {
+                // Journal failure cannot be an authored rejection or an incomplete trace exposed
+                // as a successful result. The whole tentative attempt exits noncommitting.
+                throw new UnclassifiedProcessingException(journalFailure);
+            } finally {
+                NOTIFYING_OBSERVER.remove();
+            }
         }
     }
 
-    private LocalAllowance localAllowanceWithoutReservations(
-            GasChargeContext context,
-            Map<String, Long> gasByDocument) {
-        String documentId = context != null ? context.documentId() : null;
-        if (documentId == null) {
-            return null;
-        }
-        Long limit = localGasLimits.get(documentId);
-        if (limit == null) {
-            return null;
-        }
-        long admitted = localGas(gasByDocument, documentId);
-        return new LocalAllowance(
-                documentId,
-                limit.longValue(),
-                admitted,
-                limit.longValue() - admitted);
-    }
-
-    private static long localGas(Map<String, Long> gasByDocument,
-                                 String documentId) {
-        Long value = gasByDocument.get(documentId);
-        return value != null ? value.longValue() : 0L;
-    }
-
-    private static final class LocalAllowance {
-        private final String documentId;
-        private final long limit;
-        private final long admitted;
-        private final long remaining;
-
-        private LocalAllowance(String documentId,
-                               long limit,
-                               long admitted,
-                               long remaining) {
-            this.documentId = documentId;
-            this.limit = limit;
-            this.admitted = admitted;
-            this.remaining = remaining;
-        }
+    private static void requireOutsideObserver() {
+        if (Boolean.TRUE.equals(NOTIFYING_OBSERVER.get()))
+            throw new UnclassifiedProcessingException(new IllegalStateException("Gas journal cannot execute or reserve processing work"));
     }
 
     /** Lexically scoped default attribution for one closure work frame. */

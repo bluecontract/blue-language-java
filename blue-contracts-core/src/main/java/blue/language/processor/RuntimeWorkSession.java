@@ -680,13 +680,30 @@ public final class RuntimeWorkSession {
         }
         List<LedgerState> ordered =
                 orderedLedgers();
-        for (LedgerState state : ordered) {
-            if (finalOutcome != Outcome.SUSPENDED
-                    && (retainUnsubmitted || state.submitted)) {
-                parent.mergeReserved(state.ledger, ownerToken);
-            } else {
-                parent.discardReserved(state.ledger, ownerToken);
+        int index = 0;
+        try {
+            for (; index < ordered.size(); index++) {
+                LedgerState state = ordered.get(index);
+                if (finalOutcome != Outcome.SUSPENDED
+                        && (retainUnsubmitted || state.submitted)) {
+                    parent.mergeReserved(state.ledger, ownerToken);
+                } else {
+                    parent.discardReserved(state.ledger, ownerToken);
+                }
             }
+        } catch (NoncommittingExecutionException failure) {
+            // mergeReserved already releases its consumed child's unappended suffix. Closing
+            // this session must not consume it again, emit later prefixes, or mask the original
+            // operational failure with an already-merged-ledger exception.
+            outcome = Outcome.SUSPENDED;
+            for (int remaining = index + 1; remaining < ordered.size(); remaining++) {
+                try {
+                    parent.discardReserved(ordered.get(remaining).ledger, ownerToken);
+                } catch (RuntimeException cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
+            throw failure;
         }
         outcome = finalOutcome;
     }

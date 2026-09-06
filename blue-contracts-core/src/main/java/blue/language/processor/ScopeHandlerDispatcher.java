@@ -304,7 +304,7 @@ final class ScopeHandlerDispatcher {
                     exception.errorCategory(),
                     execution.fatalReason(
                             exception, "Handler execution failed"));
-        } catch (RuntimeException exception) {
+        } catch (ProcessorFailureException exception) {
             execution.abortRuntimeFailure(
                     scopePath,
                     bundle,
@@ -313,6 +313,10 @@ final class ScopeHandlerDispatcher {
                             ProcessorErrorCategory.RuntimeExecutionFailure),
                     execution.fatalReason(
                             exception, "Handler execution failed"));
+        } catch (RuntimeException exception) {
+            // A handler is an extension boundary. An arbitrary Java failure is not authored
+            // semantic failure merely because it occurred during processing.
+            throw new UnclassifiedProcessingException(exception);
         } finally {
             ProcessingObservations.record(
                     metrics,

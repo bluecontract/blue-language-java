@@ -7,6 +7,15 @@ import java.util.Objects;
 /** One admitted charge in the complete affected-closure gas trace. */
 public final class GasTraceEntry {
 
+    /** Reconstructs the owning closed trace identity without executing or settling any gas. */
+    public static String identityOfTrace(java.util.List<GasTraceEntry> trace) {
+        Objects.requireNonNull(trace, "trace");
+        for (int index = 0; index < trace.size(); index++)
+            if (Objects.requireNonNull(trace.get(index), "entry").sequence() != index)
+                throw new IllegalArgumentException("Gas trace must be contiguous");
+        return ClosureResultAssemblySupport.sequenceIdentity(ClosureIdentityService.Constructor.GAS_TRACE, trace);
+    }
+
     /** Closed gas namespace. */
     public enum Namespace {
         /** Processor-orchestration gas. */

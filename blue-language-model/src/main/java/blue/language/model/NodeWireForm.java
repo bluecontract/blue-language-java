@@ -202,7 +202,7 @@ public final class NodeWireForm {
         if (node.getProperties() != null
                 && !node.getProperties().isEmpty()) payloadKinds++;
         if (payloadKinds > 1) {
-            throw new IllegalArgumentException(
+            throw new InvalidNodeStructureException(
                     "A Blue node may contain only one payload kind: value, items, or object fields.");
         }
         if (node.getPreviousBlueId() != null && (payloadKinds > 0

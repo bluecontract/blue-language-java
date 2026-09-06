@@ -89,6 +89,9 @@ public final class ComponentFinalizationKernel {
                         graph);
         List<List<DocumentId>> partition =
                 new SccPartitioner().partition(graph);
+        Map<DocumentId, List<ManagedOccurrenceBinding>> outgoing = new LinkedHashMap<>();
+        for (ManagedOccurrenceBinding binding : graph.bindings())
+            outgoing.computeIfAbsent(binding.sourceDocumentId(), ignored -> new ArrayList<>()).add(binding);
 
         LinkedHashMap<DocumentId, DocumentDraft> drafts =
                 new LinkedHashMap<DocumentId, DocumentDraft>();
@@ -100,8 +103,28 @@ public final class ComponentFinalizationKernel {
 
         for (List<DocumentId> members : partition) {
             ComponentKind kind = componentKind(graph, members);
+            ReusableComponentAuthority reusable = selected.reusableComponent(members.get(0));
+            if (canReuse(reusable, members, generations, outgoing, workingBodies, drafts, selected.pinnedOccurrences())) {
+                componentEvidence.add(FinalizedComponentEvidence.fromReusable(reusable));
+                for (DocumentId member : members) {
+                    ManagedDocumentSnapshot header = reusable.memberHeader(member);
+                    Node resident = workingBodies.get(member);
+                    drafts.put(member, new DocumentDraft(resident, header.blueId(),
+                            reusable.canonicalMemberIndexes().get(member), reusable.preliminaryBlueIds().get(member)));
+                    documentEvidence.put(member, FinalizedDocumentEvidence.fromReusable(reusable, member, resident));
+                }
+                continue;
+            }
+            List<String> missingBodies = new ArrayList<>();
+            for (DocumentId member : members) if (!workingBodies.containsKey(member)) {
+                ReusableComponentAuthority original = selected.reusableComponent(member);
+                if (original == null) throw new IllegalArgumentException("Unverified nonresident component member");
+                missingBodies.add(original.memberHeader(member).blueId());
+            }
+            if (!missingBodies.isEmpty()) throw new blue.language.processor.ExecutionEvidenceUnavailableException(
+                    "Changed or newly owned component requires its exact member bodies", missingBodies);
             rewriteComponentOccurrences(
-                    graph, members, kind, workingBodies, drafts);
+                    graph, members, kind, workingBodies, drafts, selected.pinnedOccurrences());
             CyclicSetFinalization cyclicFinalization = kind
                     == ComponentKind.CYCLIC
                     ? finalizeCyclicComponent(members, workingBodies, drafts)
@@ -128,17 +151,17 @@ public final class ComponentFinalizationKernel {
         }
 
         ManagedDocumentGraph finalizedGraph = rebindActiveRows(
-                graph, documentEvidence);
+                graph, documentEvidence, selected.pinnedOccurrences());
         if (!graph.adjacency().equals(finalizedGraph.adjacency())) {
             throw new IllegalStateException(
                     "Identity rebasing changed the active graph topology");
         }
-        validateFinalizedReferences(finalizedGraph, documentEvidence);
+        validateFinalizedReferences(finalizedGraph, documentEvidence, selected.pinnedOccurrences());
         return new ComponentFinalizationResult(
                 finalizedGraph,
                 generations,
                 componentEvidence,
-                documentEvidence);
+                documentEvidence, selected.pinnedOccurrences().values());
     }
 
     private Map<DocumentId, Node> workingBodies(
@@ -147,11 +170,34 @@ public final class ComponentFinalizationKernel {
         LinkedHashMap<DocumentId, Node> result =
                 new LinkedHashMap<DocumentId, Node>();
         for (DocumentId documentId : graph.documentIds()) {
+            if (!input.hasResidentBody(documentId)) continue;
             Node body = input.localBody(documentId);
             requireNoCyclicPlaceholder(body, documentId.value());
             result.put(documentId, body);
         }
         return result;
+    }
+
+    private static boolean canReuse(ReusableComponentAuthority authority, List<DocumentId> members,
+            Map<DocumentId, Long> generations, Map<DocumentId, List<ManagedOccurrenceBinding>> outgoing, Map<DocumentId, Node> resident,
+            Map<DocumentId, DocumentDraft> finalized, Map<String, ManagedReadPin> pins) {
+        if (authority == null || !authority.component().orderedMemberDocumentIds().equals(members)
+                || authority.component().componentGeneration() != generations.get(members.get(0))) return false;
+        List<ManagedOccurrenceBinding> componentBindings = new ArrayList<>();
+        for (DocumentId member : members) componentBindings.addAll(outgoing.getOrDefault(member, java.util.Collections.emptyList()));
+        if (!authority.matchesOutgoingBindings(componentBindings)) return false;
+        java.util.Set<DocumentId> owned = new java.util.HashSet<>(members);
+        for (DocumentId member : members) {
+            Node body = resident.get(member);
+            if (body != null && !authority.matchesBody(member, body)) return false;
+        }
+        for (ManagedOccurrenceBinding binding : authority.outgoingBindings()) {
+            if (!binding.active() || owned.contains(binding.targetDocumentId())) continue;
+            ManagedReadPin pin = pins.get(binding.occurrenceIdentity());
+            String target = pin == null ? finalized.get(binding.targetDocumentId()).blueId : pin.blueId();
+            if (!binding.expectedTargetBlueId().equals(target)) return false;
+        }
+        return true;
     }
 
     private void validateBindingClaims(
@@ -188,6 +234,7 @@ public final class ComponentFinalizationKernel {
                 new HashMap<DocumentId, List<ParsedJsonPointer>>();
         for (ManagedOccurrenceBinding binding : graph.activeBindings()) {
             Node body = bodies.get(binding.sourceDocumentId());
+            if (body == null) continue; // A closed unchanged-component authority is checked before reuse below.
             if (NodePathEditor.getOrNull(body, binding.sourcePath()) == null) {
                 throw new IllegalArgumentException(
                         "Active occurrence path is absent from its source body");
@@ -223,7 +270,8 @@ public final class ComponentFinalizationKernel {
             List<DocumentId> members,
             ComponentKind kind,
             Map<DocumentId, Node> bodies,
-            Map<DocumentId, DocumentDraft> finalized) {
+            Map<DocumentId, DocumentDraft> finalized,
+            Map<String, ManagedReadPin> pins) {
         Map<DocumentId, Integer> internalIndexes =
                 new HashMap<DocumentId, Integer>();
         for (int index = 0; index < members.size(); index++) {
@@ -237,6 +285,22 @@ public final class ComponentFinalizationKernel {
             }
             Integer targetIndex = internalIndexes.get(
                     binding.targetDocumentId());
+            if (pins.containsKey(binding.occurrenceIdentity())) {
+                if (targetIndex != null) throw new IllegalArgumentException("An atomic component cannot retain a divergent internal read pin");
+                ManagedReadPin selectedPin = pins.get(binding.occurrenceIdentity());
+                Node reference = NodePathEditor.getOrNull(bodies.get(binding.sourceDocumentId()), binding.sourcePath());
+                boolean exactReference = reference != null && reference.isReferenceOnly()
+                        && selectedPin.blueId().equals(reference.getBlueId());
+                boolean exactBody = reference != null && !reference.isReferenceOnly()
+                        && blue.language.model.NodeWireForm.get(reference, blue.language.model.NodeWireForm.Strategy.SIMPLE)
+                        .equals(blue.language.model.NodeWireForm.get(selectedPin.document(), blue.language.model.NodeWireForm.Strategy.SIMPLE));
+                if (!exactReference && !exactBody) {
+                    throw new IllegalArgumentException("Pinned occurrence body does not retain its exact dependency reference");
+                }
+                if (exactBody) NodePathEditor.put(bodies.get(binding.sourceDocumentId()), binding.sourcePath(),
+                        new Node().blueId(selectedPin.blueId()));
+                continue;
+            }
             String replacement;
             if (targetIndex != null) {
                 if (kind != ComponentKind.CYCLIC) {
@@ -394,11 +458,12 @@ public final class ComponentFinalizationKernel {
 
     private ManagedDocumentGraph rebindActiveRows(
             ManagedDocumentGraph graph,
-            Map<DocumentId, FinalizedDocumentEvidence> documents) {
+            Map<DocumentId, FinalizedDocumentEvidence> documents,
+            Map<String, ManagedReadPin> pins) {
         ArrayList<ManagedOccurrenceBinding> rebound =
                 new ArrayList<ManagedOccurrenceBinding>();
         for (ManagedOccurrenceBinding binding : graph.bindings()) {
-            if (!binding.active()) {
+            if (!binding.active() || pins.containsKey(binding.occurrenceIdentity())) {
                 rebound.add(binding);
                 continue;
             }
@@ -428,8 +493,14 @@ public final class ComponentFinalizationKernel {
 
     private static void validateFinalizedReferences(
             ManagedDocumentGraph graph,
-            Map<DocumentId, FinalizedDocumentEvidence> documents) {
+            Map<DocumentId, FinalizedDocumentEvidence> documents,
+            Map<String, ManagedReadPin> pins) {
         for (ManagedOccurrenceBinding binding : graph.activeBindings()) {
+            if (!documents.get(binding.sourceDocumentId()).hasResidentBody()) {
+                if (!documents.get(binding.sourceDocumentId()).reusableAuthority().isPresent())
+                    throw new IllegalStateException("Finalized body absence has no unchanged component authority");
+                continue;
+            }
             Node reference = NodePathEditor.getOrNull(
                     documents.get(binding.sourceDocumentId()).document(),
                     binding.sourcePath());
@@ -437,7 +508,7 @@ public final class ComponentFinalizationKernel {
                     || !reference.isReferenceOnly()
                     || !binding.expectedTargetBlueId().equals(
                             reference.getBlueId())
-                    || !documents.get(binding.targetDocumentId()).blueId()
+                    || !pins.containsKey(binding.occurrenceIdentity()) && !documents.get(binding.targetDocumentId()).blueId()
                             .equals(reference.getBlueId())) {
                 throw new IllegalStateException(
                         "Finalized active occurrence is not an exact target reference");
@@ -599,7 +670,7 @@ public final class ComponentFinalizationKernel {
                 String blueId,
                 Integer canonicalMemberIndex,
                 String preliminaryBlueId) {
-            this.document = document.clone();
+            this.document = document == null ? null : document.clone();
             this.blueId = blueId;
             this.canonicalMemberIndex = canonicalMemberIndex;
             this.preliminaryBlueId = preliminaryBlueId;

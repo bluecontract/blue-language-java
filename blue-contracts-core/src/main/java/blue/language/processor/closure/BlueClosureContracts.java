@@ -5,6 +5,10 @@ import blue.language.model.Node;
 import blue.language.processor.ManagedRootSubscriptionSurface;
 
 import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -95,6 +99,109 @@ public final class BlueClosureContracts
     }
 
     /**
+     * Executes one exact external origin with independent initial component budgets and live
+     * feedback admission. Returned operations are separate commits except where an operation
+     * explicitly owns several joined lineages. No host state is read or mutated by this call.
+     */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input) {
+        return processSameOrigin(input, SameOriginAttachmentPolicy.empty());
+    }
+
+    /** Executes with explicit occurrence attachment selections bound into each creating seed. */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy) {
+        ensureOpen();
+        return owner.withCapturedConfiguration(() -> processor.processSameOrigin(input, attachmentPolicy));
+    }
+
+    /** Reuses already committed source programs while producing only newly owned atomic operations. */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, Collections.emptyList());
+    }
+
+    /** Canonical initializers are immutable evidence; they are observed only at an actual creation site. */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final List<SourceInitialization> sourceInitializations) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations, Collections.emptyList());
+    }
+
+    /** Exact historical frontier views are offered without activating their prospective occurrences. */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final List<SourceInitialization> sourceInitializations, final List<SourceFrontierView> frontierViews) {
+        ensureOpen();
+        return owner.withCapturedConfiguration(() -> processor.processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations, frontierViews));
+    }
+
+    /**
+     * Interprets retained independent source actions through the ordinary
+     * continuation and FIFO, executing only newly participating consumers.
+     * The input must name the source's original external cause and exact
+     * source predecessor. This method does not publish or settle its source.
+     */
+    public synchronized ClosureAttemptResult processWithSourceObservation(
+            final ClosureInvocationInput input,
+            final SourceObservationProgram sourceProgram) {
+        ensureOpen();
+        Objects.requireNonNull(sourceProgram, "sourceProgram");
+        return owner.withCapturedConfiguration(new Supplier<ClosureAttemptResult>() {
+            @Override public ClosureAttemptResult get() {
+                return processor.processClosure(input, sourceProgram);
+            }
+        });
+    }
+
+    /**
+     * Executes one externally owned atomic scope. Dependencies retain their own
+     * completed source programs and cannot become newly metered source work.
+     */
+    public synchronized ClosureAttemptResult processExternalScope(
+            final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments,
+            final List<SourceObservationProgram> sourcePrograms) {
+        return processExternalScope(input, ownedDocuments, sourcePrograms,
+                Collections.<DocumentId, List<SourceObservationGap>>emptyMap());
+    }
+
+    /** Executes a scope with exact consumed-failure continuity for stale successful pins. */
+    public synchronized ClosureAttemptResult processExternalScope(
+            final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments,
+            final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps) {
+        return processExternalScope(input, ownedDocuments, sourcePrograms, gaps, Collections.<SourceOperationFailure>emptyList());
+    }
+
+    /** Imports terminal producer outcomes without executing or publishing their failed business prefix. */
+    public synchronized ClosureAttemptResult processExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
+            final List<SourceOperationFailure> sourceFailures) {
+        ensureOpen();
+        Objects.requireNonNull(ownedDocuments, "ownedDocuments");
+        Objects.requireNonNull(sourcePrograms, "sourcePrograms");
+        return owner.withCapturedConfiguration(new Supplier<ClosureAttemptResult>() {
+            @Override public ClosureAttemptResult get() {
+                return processor.processExternalScope(input, ownedDocuments, sourcePrograms, gaps, sourceFailures);
+            }
+        });
+    }
+
+    /** Executes one explicitly selected historical reaction without redelivering the consumer's external input. */
+    public synchronized ClosureAttemptResult processManagedReaction(final ClosureInvocationInput sourceCauseInput,
+            final java.util.Set<DocumentId> consumerOwned, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final ManagedReactionContext reaction) {
+        Objects.requireNonNull(reaction, "reaction");
+        return processExternalScope(sourceCauseInput.withManagedReaction(reaction), consumerOwned, sourcePrograms, gaps, sourceFailures);
+    }
+
+    /**
      * Reconstructs and retries one processing invocation with exact
      * demand-bound managed-occurrence resolutions.
      *
@@ -170,6 +277,39 @@ public final class BlueClosureContracts
                 });
     }
 
+    /** Canonical initialization owns only the selected atomic group; initialized dependencies remain read-only. */
+    public synchronized ClosureAttemptResult admitExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments) {
+        return admitExternalScope(input, ownedDocuments, Collections.<SourceInitialization>emptyList());
+    }
+
+    /** Installs authenticated canonical child initialization through the ordinary admission lane. */
+    public synchronized ClosureAttemptResult admitExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments, final List<SourceInitialization> sourceInitializations) {
+        ensureOpen();
+        Objects.requireNonNull(ownedDocuments, "ownedDocuments");
+        final List<SourceInitialization> initializations = Collections.unmodifiableList(
+                new java.util.ArrayList<SourceInitialization>(Objects.requireNonNull(sourceInitializations, "sourceInitializations")));
+        java.util.Set<DocumentId> initializedSources = new java.util.HashSet<DocumentId>();
+        for (SourceInitialization initialization : initializations) {
+            initialization.verifyInstallationBasis(input.snapshot(), ownedDocuments, input.environment(), input.executionPolicy());
+            for (DocumentId source : initialization.ownedDocumentIds()) {
+                if (!initializedSources.add(source)) throw new IllegalArgumentException("Two initialization programs own the same source");
+            }
+        }
+        for (ManagedDocumentSnapshot document : input.snapshot().managedDocuments()) {
+            if (!ownedDocuments.contains(document.documentId()) && !document.initialized()
+                    && !initializedSources.contains(document.documentId())) {
+                throw new IllegalArgumentException("An independent source must have its own canonical initialization first");
+            }
+        }
+        return owner.withCapturedConfiguration(new Supplier<ClosureAttemptResult>() {
+            @Override public ClosureAttemptResult get() {
+                return processor.admitExternalScope(input, ownedDocuments, initializations);
+            }
+        });
+    }
+
     /**
      * Projects the exact externally routable surface of one independently
      * managed Root without traversing a Process Embedded declaration.
@@ -196,6 +336,124 @@ public final class BlueClosureContracts
                         }
                     }
                 });
+    }
+
+    /** Captures complete routing metadata only after verifying the owning state and topology. */
+    public synchronized List<RootChannelMetadata> captureRootMetadata(final AffectedClosureSnapshot snapshot) {
+        return captureRootMetadata(snapshot, documentIds(snapshot));
+    }
+
+    /** Captures selected Root surfaces while retaining the complete verified topology read cut. */
+    public synchronized List<RootChannelMetadata> captureRootMetadata(final AffectedClosureSnapshot snapshot,
+            final Set<DocumentId> selectedRoots) {
+        ensureOpen();
+        ClosureEvidenceVerifier.verifySnapshot(Objects.requireNonNull(snapshot, "snapshot"));
+        final Set<DocumentId> selected = checkedDocumentIds(snapshot, selectedRoots);
+        return owner.withCapturedConfiguration(new Supplier<List<RootChannelMetadata>>() {
+            @Override public List<RootChannelMetadata> get() {
+                List<RootChannelMetadata> result = new ArrayList<RootChannelMetadata>();
+                for (ManagedDocumentSnapshot state : snapshot.managedDocuments()) {
+                    if (!selected.contains(state.documentId())) continue;
+                    RootChannelMetadata retained = state.rootMetadata().orElse(null);
+                    if (retained != null) {
+                        retained.verifyState(state); retained.verifyRegistry(owner.runtimeRegistryIdentity()); result.add(retained);
+                    } else result.add(RootChannelMetadata.fromVerifiedRoot(state, owner));
+                }
+                return Collections.unmodifiableList(result);
+            }
+        });
+    }
+
+    /** Derives the complete frozen direct-delivery set from exact Root headers. */
+    public synchronized List<DirectLogicalDelivery> selectDirectDeliveries(
+            final AffectedClosureSnapshot snapshot, final Node exactEvent) {
+        return selectDirectDeliveries(snapshot, exactEvent, Collections.<SourceObservationProgram>emptyList());
+    }
+
+    /** Source headers are read for canonical admission without aligning visible dependency pins. */
+    public synchronized List<DirectLogicalDelivery> selectDirectDeliveries(
+            final AffectedClosureSnapshot snapshot, final Node exactEvent,
+            final List<SourceObservationProgram> sourcePrograms) {
+        return selectDirectDeliveries(snapshot, exactEvent, sourcePrograms, Collections.<SourceOperationFailure>emptyList());
+    }
+
+    public synchronized List<DirectLogicalDelivery> selectDirectDeliveries(final AffectedClosureSnapshot snapshot,
+            final Node exactEvent, final List<SourceObservationProgram> sourcePrograms,
+            final List<SourceOperationFailure> sourceFailures) {
+        return selectDirectDeliveries(snapshot, exactEvent, sourcePrograms, sourceFailures, documentIds(snapshot));
+    }
+
+    /** Selects only live sources; inactive edges remain in the separately verified complete read cut. */
+    public synchronized List<DirectLogicalDelivery> selectDirectDeliveries(final AffectedClosureSnapshot snapshot,
+            final Node exactEvent, final List<SourceObservationProgram> sourcePrograms,
+            final List<SourceOperationFailure> sourceFailures, final Set<DocumentId> eligibleSources) {
+        ensureOpen();
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(exactEvent, "exactEvent");
+        final Set<DocumentId> eligible = checkedDocumentIds(snapshot, eligibleSources);
+        return owner.withCapturedConfiguration(new Supplier<List<DirectLogicalDelivery>>() {
+            @Override public List<DirectLogicalDelivery> get() {
+                java.util.Map<DocumentId, Node> sourceHeaders = new java.util.HashMap<DocumentId, Node>();
+                for (SourceObservationProgram program : sourcePrograms) {
+                    for (SourceObservationProgram.SourceState state : program.sourcePredecessors()) {
+                        if (eligible.contains(state.documentId()) && program.ownedDocumentIds().contains(state.documentId())
+                                && sourceHeaders.put(state.documentId(), state.document()) != null) {
+                            throw new IllegalArgumentException("Conflicting source header authority");
+                        }
+                    }
+                }
+                for (SourceOperationFailure failure : sourceFailures) {
+                    for (SourceObservationProgram.SourceState state : failure.sourcePredecessors()) {
+                        if (eligible.contains(state.documentId()) && failure.ownedDocumentIds().contains(state.documentId())
+                                && sourceHeaders.put(state.documentId(), state.document()) != null) {
+                            throw new IllegalArgumentException("Conflicting failed source header authority");
+                        }
+                    }
+                }
+                List<DirectLogicalDelivery> selected = new ArrayList<DirectLogicalDelivery>();
+                long ordinal = 0L;
+                try (ManagedDocumentStepProcessor steps = new ManagedDocumentStepProcessor(owner)) {
+                    for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
+                        if (!eligible.contains(document.documentId()) || !document.initialized() || document.terminated()) continue;
+                        Node header; RootChannelMetadata retainedMetadata = null;
+                        if (sourceHeaders.containsKey(document.documentId())) header = sourceHeaders.get(document.documentId());
+                        else if (document.rootMetadata().isPresent()) {
+                            RootChannelMetadata metadata = document.rootMetadata().get();
+                            metadata.verifyState(document); metadata.verifyRegistry(owner.runtimeRegistryIdentity());
+                            retainedMetadata = metadata; header = null;
+                        } else header = document.document();
+                        for (blue.language.processor.ManagedRootChannelOccurrence channel
+                                : retainedMetadata == null ? steps.projectRootChannelSurface(header) : retainedMetadata.surface().channelOccurrences()) {
+                            if (!channel.externalSource()) continue;
+                            blue.language.processor.ManagedExternalDeliveryClassification classification =
+                                    retainedMetadata == null ? steps.classifyExternalDelivery(header, channel.rawChannelKey(),
+                                            exactEvent, blue.language.processor.GasChargeContext.empty())
+                                            : steps.classifyExternalDelivery(retainedMetadata, channel.rawChannelKey(), exactEvent,
+                                                    blue.language.processor.GasChargeContext.empty());
+                            if (classification.state() == blue.language.processor.ManagedExternalDeliveryClassification.State.ACCEPTED_NEW) {
+                                selected.add(new DirectLogicalDelivery(ManagedScopeKey.root(document.documentId()),
+                                        channel.rawChannelKey(), classification.candidate().logicalDeliveryKey(), ordinal));
+                            }
+                            ordinal++;
+                        }
+                    }
+                }
+                return Collections.unmodifiableList(selected);
+            }
+        });
+    }
+
+    private static Set<DocumentId> documentIds(AffectedClosureSnapshot snapshot) {
+        Set<DocumentId> ids = new java.util.HashSet<DocumentId>();
+        for (ManagedDocumentSnapshot state : Objects.requireNonNull(snapshot, "snapshot").managedDocuments()) ids.add(state.documentId());
+        return ids;
+    }
+
+    private static Set<DocumentId> checkedDocumentIds(AffectedClosureSnapshot snapshot, Set<DocumentId> requested) {
+        Set<DocumentId> ids = new java.util.HashSet<DocumentId>(Objects.requireNonNull(requested, "selectedRoots"));
+        if (ids.contains(null) || !documentIds(snapshot).containsAll(ids))
+            throw new IllegalArgumentException("Selected Root is outside the complete verified read cut");
+        return Collections.unmodifiableSet(ids);
     }
 
     /**

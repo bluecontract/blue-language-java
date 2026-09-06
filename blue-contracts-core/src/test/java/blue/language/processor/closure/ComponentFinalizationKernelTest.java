@@ -27,6 +27,36 @@ final class ComponentFinalizationKernelTest {
             "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR";
 
     @Test
+    void shouldPreserveTheSameExactPinForInlineAndReferencePlacements() {
+        // given
+        DocumentId a = new DocumentId("pin-owner");
+        DocumentId b = new DocumentId("pin-source");
+        Node selected = new Node().name("selected source");
+        Node current = new Node().name("later source");
+        String selectedId = DirectBlueIdCalculator.calculateBlueId(selected);
+        ManagedReadPin pin = ManagedReadPin.fromExactEvidence(b, selectedId, selected, null);
+        ManagedOccurrenceBinding row = binding(a, "/b", b, selectedId, true, 1L);
+        List<ManagedOccurrenceBinding> rows = Collections.singletonList(row);
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(Arrays.asList(a, b), rows);
+        ComponentFinalizationKernel kernel = new ComponentFinalizationKernel();
+
+        // when
+        ComponentFinalizationResult inline = kernel.finalizeComponents(new ComponentFinalizationInput(graph,
+                generations(a, 1L, b, 1L), bodies(a, new Node().properties("b", selected), b, current), rows,
+                Collections.singletonMap(row.occurrenceIdentity(), pin)));
+        ComponentFinalizationResult reference = kernel.finalizeComponents(new ComponentFinalizationInput(graph,
+                generations(a, 1L, b, 1L), bodies(a, new Node().properties("b", new Node().blueId(selectedId)), b, current), rows,
+                Collections.singletonMap(row.occurrenceIdentity(), pin)));
+
+        // then
+        assertEquals(reference.document(a).blueId(), inline.document(a).blueId());
+        assertEquals(selectedId, inline.document(a).document().getNode("/b").getBlueId());
+        assertThrows(IllegalArgumentException.class, () -> kernel.finalizeComponents(new ComponentFinalizationInput(graph,
+                generations(a, 1L, b, 1L), bodies(a, new Node().properties("b", current), b, current), rows,
+                Collections.singletonMap(row.occurrenceIdentity(), pin))));
+    }
+
+    @Test
     void shouldMatchReleasedClo01CyclicIdentityAndProofOracle() {
         DocumentId a = new DocumentId("simple-a");
         DocumentId b = new DocumentId("simple-b");

@@ -641,6 +641,29 @@ final class ClosureFinalizationGasCharger {
                 Objects.requireNonNull(completion, "completion"));
     }
 
+    /** Original-seed identity memo selection; budget union must not merge these ledgers. */
+    interface IdentityLedgerSelector { IdentityLedger forDocument(DocumentId document); }
+
+    static final class IdentityLedger {
+        final Set<String> established;
+        final Set<String> existing;
+        IdentityLedger(Set<String> established, Set<String> existing) {
+            this.established = Objects.requireNonNull(established, "established");
+            this.existing = Objects.requireNonNull(existing, "existing");
+        }
+    }
+
+    /**
+     * Per-member Language work uses that member's original seed. Component-wide
+     * boundary, sort and master work use the first intrinsic component member,
+     * irrespective of the runtime which happened to initiate the accepted union.
+     */
+    void finishFinalization(FinalizationFrame frame, Map<DocumentId, Node> sourceBodies,
+            ComponentFinalizationResult result, IdentityLedgerSelector ledgers, ComponentCompletion completion) {
+        finishFinalization(frame, sourceBodies, result, Objects.requireNonNull(ledgers, "ledgers"),
+                true, true, Objects.requireNonNull(completion, "completion"));
+    }
+
     /**
      * Charges one exact changed acyclic document or containing spine.
      *
@@ -800,6 +823,14 @@ final class ClosureFinalizationGasCharger {
             Set<String> existingBlueIds,
             boolean requireSourceCoverage,
             ComponentCompletion completion) {
+        final IdentityLedger shared = new IdentityLedger(establishedBlueIds, existingBlueIds);
+        finishFinalization(frame, sourceBodies, result, document -> shared,
+                false, requireSourceCoverage, completion);
+    }
+
+    private void finishFinalization(FinalizationFrame frame, Map<DocumentId, Node> sourceBodies,
+            ComponentFinalizationResult result, IdentityLedgerSelector selector,
+            boolean seedOwned, boolean requireSourceCoverage, ComponentCompletion completion) {
         FinalizationFrame admitted = Objects.requireNonNull(frame, "frame");
         if (admitted.finished) {
             throw new IllegalStateException(
@@ -807,10 +838,12 @@ final class ClosureFinalizationGasCharger {
         }
         ComponentFinalizationResult finalized = Objects.requireNonNull(
                 result, "result");
-        Set<String> established = Objects.requireNonNull(
-                establishedBlueIds, "establishedBlueIds");
-        Set<String> existing = Objects.requireNonNull(
-                existingBlueIds, "existingBlueIds");
+        Map<DocumentId, IdentityLedger> ledgers = new HashMap<DocumentId, IdentityLedger>();
+        for (ComponentFrame component : admitted.components) {
+            for (DocumentId member : component.members)
+                ledgers.put(member, Objects.requireNonNull(selector.forDocument(member), "member identity ledger"));
+            component.gasOwner = seedOwned ? component.members.get(0) : null;
+        }
         Map<List<DocumentId>, FinalizedComponentEvidence> evidenceByMembers =
                 evidenceByMembers(finalized);
         if (requireSourceCoverage) {
@@ -840,8 +873,7 @@ final class ClosureFinalizationGasCharger {
                     admitted,
                     component,
                     evidence,
-                    established,
-                    existing);
+                    ledgers);
             completion.completed(evidence);
         }
         admitted.finished = true;
@@ -851,8 +883,7 @@ final class ClosureFinalizationGasCharger {
             FinalizationFrame frame,
             ComponentFrame component,
             FinalizedComponentEvidence evidence,
-            Set<String> established,
-            Set<String> existing) {
+            Map<DocumentId, IdentityLedger> ledgers) {
         CyclicSetFinalization finalization = evidence.cyclicFinalization();
         ArrayList<SortMember> preliminary = new ArrayList<SortMember>();
         for (CyclicMemberFinalization member
@@ -874,8 +905,8 @@ final class ClosureFinalizationGasCharger {
                     zeroed,
                     projected,
                     frame.meter,
-                    established,
-                    existing,
+                    ledgers.get(documentId).established,
+                    ledgers.get(documentId).existing,
                     finalizationContext(
                             documentId,
                             component,
@@ -917,8 +948,8 @@ final class ClosureFinalizationGasCharger {
                     canonicalBody,
                     projected,
                     frame.meter,
-                    established,
-                    existing,
+                    ledgers.get(documentId).established,
+                    ledgers.get(documentId).existing,
                     finalizationContext(
                             documentId,
                             component,
@@ -944,8 +975,8 @@ final class ClosureFinalizationGasCharger {
         String master = establishExactValue(
                 masterInput,
                 frame.meter,
-                established,
-                existing,
+                ledgers.get(component.members.get(0)).established,
+                ledgers.get(component.members.get(0)).existing,
                 finalizationContext(
                         null,
                         component,
@@ -1584,7 +1615,7 @@ final class ClosureFinalizationGasCharger {
             ClosureWorkOccurrence owner,
             String reason) {
         return context(
-                documentId,
+                documentId == null ? component.gasOwner : documentId,
                 component.generation,
                 owner,
                 reason).withFinalizationOwner(
@@ -1820,6 +1851,7 @@ final class ClosureFinalizationGasCharger {
     }
 
     private static final class ComponentFrame {
+        private DocumentId gasOwner;
 
         private final List<DocumentId> members;
         private final long generation;

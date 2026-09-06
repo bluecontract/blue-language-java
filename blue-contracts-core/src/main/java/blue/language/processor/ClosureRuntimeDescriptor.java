@@ -54,8 +54,28 @@ public final class ClosureRuntimeDescriptor {
                     "Custom gas schedules require an exact manifest identity binding");
         }
         return new ClosureRuntimeDescriptor(
-                selected.runtimeRegistryIdentity(),
+                registryEvidenceIdentity(selected.runtimeRegistryIdentity()),
                 "sha256:" + GasSchedule.CONTRACTS_1_0_RESOURCE_SHA256);
+    }
+
+    /** Canonical owning bridge from the generated registry's content BlueId. */
+    static String registryEvidenceIdentity(String identity) {
+        Objects.requireNonNull(identity, "runtimeRegistryIdentity");
+        if (identity.matches("sha256:[0-9a-f]{64}")) return identity;
+        blue.language.identity.BlueIds.requirePlainBlueId(identity, "runtimeRegistryIdentity");
+        // A validated Base58 value needs no JSON escaping. This fixed field
+        // order is the RFC 8785 representation of the closed constructor.
+        String canonical = "{\"domain\":\"blue-contracts-runtime-registry-blueid/1\",\"value\":{\"blueId\":\""
+                + identity + "\"}}";
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder("sha256:");
+            for (byte value : digest) hex.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+        }
     }
 
     /**

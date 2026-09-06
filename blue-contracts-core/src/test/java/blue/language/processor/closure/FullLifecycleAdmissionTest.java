@@ -22,6 +22,7 @@ import blue.language.processor.ManagedCheckpointCandidate;
 import blue.language.processor.ManagedCheckpointSettlementEntry;
 import blue.language.processor.ManagedDocumentStepRuntime;
 import blue.language.processor.ProcessorErrorCategory;
+import blue.language.processor.ProcessorFailureException;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.HandlerContract;
@@ -94,11 +95,11 @@ final class FullLifecycleAdmissionTest {
                     + "|sha256:7dde48d6e83e259960c1bd6edf6d1f6d54bd8798d91fd1d4c7a3cd9056eec9a8";
     private static final String GAS_FAILURE_ORACLE =
             "sha256:f866ec935ec5e02c380033741a667dcd182ca3835a7dc33a5ec2fda94d6ac7e7"
-                    + "|19987|2065"
-                    + "|sha256:5e29b1a069aca3391d6beceb3857f41a8fa095823ded3e29c9d647d4707dacb3"
+                    + "|19999|2171"
+                    + "|sha256:a7d9c367cc2dd84e2d8d4b1c67f44172246d6f36996d57e416a78ad094080121"
                     + "|GasLimitExceeded"
-                    + "|Gas limit exceeded before processor.handlerCall"
-                    + "|{namespace=processor, counter=handlerCall, quantity=1, weight=50, admittedGas=19987, gasLimit=20000, effectiveBudget=20000}"
+                    + "|Gas limit exceeded before processor.handlerCandidateTested"
+                    + "|{namespace=processor, counter=handlerCandidateTested, quantity=1, weight=5, admittedGas=19999, gasLimit=20000, effectiveBudget=20000}"
                     + "|g0:0:PROCESSOR:processInvocation:1:50:50:null:null:null:admission.process"
                     + "|g1:1:PROCESSOR:closureInvocation:1:100:100:null:null:null:admission.closure"
                     + "|g2:2:PROCESSOR:managedDocumentOpened:1:10:10:a:null:null:admission.document.a"
@@ -107,9 +108,9 @@ final class FullLifecycleAdmissionTest {
                     + "|g5:5:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:b:null:null:admission.edge.sha256:42c26caa522b69df9e1485ab05a3f7e0085b75e15d48c6a0d70d048ecd6e514a"
                     + "|g6:6:PROCESSOR:managedOccurrenceBindingVerified:1:5:5:a:null:null:admission.binding.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
                     + "|g7:7:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:a:null:null:admission.edge.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
-                    + "|rejected:[sha256:0b6692350dd4bd63777025596c7c17fcc5c5a61550e46c1bc28606ea6289fe25, PROCESSOR, handlerCall, 1, 50, 50, SHARED, null, 13, WORK, sha256:59cd643c6ece37761491232efb7aa772336e675d401239fd3ca65ba35ceafd0e, null, null, null]"
-                    + "|works:141:0|INITIALIZATION|a|sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c"
-                    + ":140|EMBEDDED_EVENT|a|sha256:59cd643c6ece37761491232efb7aa772336e675d401239fd3ca65ba35ceafd0e";
+                    + "|rejected:[sha256:6f7d3ae90d341b7d013cda765c74dbf2ec6e115a7590e8e5a5d3a401ba8ec583, PROCESSOR, handlerCandidateTested, 1, 5, 5, SHARED, null, 1, WORK, sha256:eb53b33bbd34ccfddd4c41f7ebffb7285ae8c8adbd334c808218041330b8ca23, null, null, null]"
+                    + "|works:139:0|INITIALIZATION|a|sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c"
+                    + ":138|EMBEDDED_EVENT|a|sha256:eb53b33bbd34ccfddd4c41f7ebffb7285ae8c8adbd334c808218041330b8ca23";
 
     @Test
     void requirement01RootInitializationPatchCommitsExactMarkerState() {
@@ -1482,7 +1483,7 @@ final class FullLifecycleAdmissionTest {
             assertFalse(retired.active());
             assertNull(retired.pendingHistoricalEpoch());
             assertEquals(2L, retired.activationGeneration());
-            assertEquals(snapshot.managedDocument(B).blueId(),
+            assertEquals(afterBlueId,
                     retired.expectedTargetBlueId());
             assertFalse(result.occurrenceBindings().stream()
                     .anyMatch(binding -> binding.active()
@@ -2432,10 +2433,12 @@ final class FullLifecycleAdmissionTest {
                 result = contracts.admitClosure(input).processResult();
             }
 
-            assertEquals(ProcessorStatus.RUNTIME_FATAL,
+            assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
                     result.status(), diagnostic(result));
-            assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+            assertEquals(ProcessorErrorCategory.UnsupportedRuntimeRole,
                     result.diagnostic().category());
+            assertEquals("INITIALIZATION_EVENT_QUEUE_REQUIRED",
+                    result.diagnostic().detail("closureCapability"));
             assertEquals(
                     "Initialization-caused application events require the full event queue lane",
                     result.diagnostic().message());
@@ -4192,7 +4195,7 @@ final class FullLifecycleAdmissionTest {
                 }
             } else if ("laterFail".equals(key)) {
                 if (initiated(context)) {
-                    throw new IllegalStateException(
+                    throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
                             "deterministic later-member failure");
                 }
             } else if ("installUnknown".equals(key)) {

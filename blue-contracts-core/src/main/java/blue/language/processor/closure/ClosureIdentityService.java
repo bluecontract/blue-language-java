@@ -156,6 +156,10 @@ final class ClosureIdentityService {
                 "exactNodeProviderDomainIdentity",
                 "externalOrderPolicyIdentity", "gasManifestIdentity",
                 "portableLimitPolicyIdentity"),
+        SEMANTIC_INVOCATION("blue-contracts-semantic-predecessor-invocation/1.0",
+                "invocation", "semanticPredecessors"),
+        MANAGED_REACTION_INVOCATION("blue-managed-reaction-invocation-poc/1",
+                "baseInvocationIdentity", "reactionContextIdentity"),
         TRANSITION_OCCURRENCE(
                 "blue-contracts-transition-occurrence/1.0",
                 "invocationIdentity", "transitionOrdinal", "targetDocumentId",
@@ -200,6 +204,37 @@ final class ClosureIdentityService {
                 "namespace", "counter", "quantity", "weight", "subtotal",
                 "applicableCap", "remainingBeforeCharge", "owner"),
         GAS_TRACE("blue-contracts-gas-trace/1.0"),
+        SOURCE_OBSERVATION_ENTRY("blue-source-observation-entry-poc/1", "workIdentity"),
+        SOURCE_OBSERVATION_PREDECESSOR("blue-source-observation-predecessor-poc/1", "executionSeedIdentity"),
+        SOURCE_OBSERVATION_PATCH("blue-source-observation-patch-poc/1", "entrySiteIdentity", "patchOrdinal"),
+        SOURCE_OBSERVATION_INITIALIZATION_COMPLETION("blue-source-observation-initialization-completion-poc/1", "sourceInitializationInvocationIdentity"),
+        SOURCE_OBSERVATION_TERMINATION_COMPLETION("blue-source-observation-termination-completion-poc/1", "requestWorkIdentity"),
+        SOURCE_OBSERVATION_INITIALIZATION_PLACEMENT("blue-source-observation-initialization-placement-poc/1",
+                "originalSourceSiteIdentity", "creatorSeedIdentity", "creatorPatchSite", "occurrenceIdentity"),
+        SOURCE_OBSERVATION_PLACEMENT("blue-source-observation-placement-poc/1", "originalSiteIdentity", "orderedOccurrenceIdentities"),
+        SAME_ORIGIN_ATTACHMENT_SELECTION("blue-same-origin-attachment-selection-poc/1", "mode", "creatorLineage",
+                "occurrenceIdentity", "targetLineage", "suppliedExactRefBlueId", "frontier"),
+        ACCEPTED_ATTACHMENT_VIEW("blue-accepted-attachment-view-poc/1", "selectionIdentity", "creatorSeedIdentity",
+                "creatorPatchSite", "sourceSeedIdentity", "sourceSiteIdentity", "selectedBlueId", "frontierViewIdentity"),
+        SELECTED_SOURCE_FRONTIER_VIEW("blue-selected-source-frontier-view-poc/1", "selection", "successfulOperation",
+                "terminalOperation", OBJECT_BLUE_ID, "epoch", "productionOrder", "environment", "policy"),
+        ACCEPTED_INITIALIZATION_INSTALLATION("blue-accepted-initialization-installation-poc/1", "selectionIdentity", "creatorSeedIdentity",
+                "creatorPatchSite", "sourceInitializationOperationIdentity", "sourceCompletionSiteIdentity", "selectedBlueId"),
+        SOURCE_INITIALIZATION_DEMAND("blue-source-initialization-demand-poc/1", "selectionIdentity", "creatorSeedIdentity",
+                "creatorPatchSite", "sourcePath"),
+        MANAGED_REACTION_ORIGIN("blue-managed-reaction-origin-poc/1", "creatingOperationIdentity", "creatorExecutionSeedIdentity",
+                "creationSiteIdentity", "activationCut", "sourceReactionPositionIdentity"),
+        MANAGED_REACTION_CONTEXT("blue-managed-reaction-context-poc/1", "reactionOriginIdentity", "dueOccurrences"),
+        SAME_ORIGIN_SEED("blue-same-origin-execution-seed-poc/1", "operation", "causeIdentity", "componentKind",
+                "ownedMembers", "ownedBindings", "exactPins", "ownedDirectDeliveries", "attachmentPolicies", "environment"),
+        SAME_ORIGIN_DIRECT_DELIVERY("blue-same-origin-direct-delivery-poc/1", "targetDocumentId", "scopePath",
+                "activationGeneration", "channelKey", "logicalDeliveryKey"),
+        SAME_ORIGIN_WORK("blue-same-origin-work-poc/1", "executionSeed", "ordinal", "workKind", "targetScope", "sourceOccurrence"),
+        SAME_ORIGIN_EVENT("blue-same-origin-event-poc/1", "executionSeed", "ordinal", "producingLineage", "causingWork", "eventBlueId"),
+        SAME_ORIGIN_TRANSITION("blue-same-origin-transition-poc/1", "executionSeed", "ordinal", "documentId", "beforeBlueId", "causingWork"),
+        SAME_ORIGIN_GROUP("blue-same-origin-settlement-group-poc/1", "originalSeeds", "acceptedAdmissions", "consumedSourceOperations"),
+        SAME_ORIGIN_REJECTED_CHARGE("blue-same-origin-rejected-charge-poc/1", "operationIdentity", "failureSite",
+                "namespace", "counter", "quantity", "weight", "admittedGas", "gasLimit", "remainingBeforeCharge", "cap", "localDocument", "context"),
         PLATFORM_COMMIT_COMPANION(
                 "blue-contracts-platform-commit-companion/1.0",
                 "invocationIdentity", "inputClosureIdentity",
@@ -273,6 +308,69 @@ final class ClosureIdentityService {
         envelope.put("domain", selected.domain);
         envelope.put(OBJECT_VALUE, admitted);
         return "sha256:" + hex(sha256(canonicalBytes(envelope)));
+    }
+
+    /** Identifies the original source work Entry independently of an importing consumer. */
+    String observationEntrySiteIdentity(String workIdentity) {
+        Map<String, Object> value = objectValue(); value.put("workIdentity", workIdentity);
+        return identity(Constructor.SOURCE_OBSERVATION_ENTRY, value);
+    }
+
+    /** Identifies the exact source predecessor before any work from its original seed has run. */
+    String observationSourcePredecessorSiteIdentity(String executionSeedIdentity) {
+        Map<String, Object> value = objectValue(); value.put("executionSeedIdentity", executionSeedIdentity);
+        return identity(Constructor.SOURCE_OBSERVATION_PREDECESSOR, value);
+    }
+
+    String observationPatchSiteIdentity(String entrySiteIdentity, long patchOrdinal) {
+        Map<String, Object> value = objectValue(); value.put("entrySiteIdentity", entrySiteIdentity);
+        value.put("patchOrdinal", Long.valueOf(patchOrdinal));
+        return identity(Constructor.SOURCE_OBSERVATION_PATCH, value);
+    }
+
+    /**
+     * Identifies the original source component's successful initialization-marker completion.
+     * This boundary does not itself imply an application patch, Document Update, or emitted event.
+     */
+    String observationInitializationCompletionSiteIdentity(String sourceInitializationInvocationId) {
+        Map<String, Object> value = objectValue();
+        value.put("sourceInitializationInvocationIdentity", sourceInitializationInvocationId);
+        return identity(Constructor.SOURCE_OBSERVATION_INITIALIZATION_COMPLETION, value);
+    }
+
+    /** Exact original request whose lifecycle/FIFO batch has reached marker installation. */
+    String observationTerminationCompletionSiteIdentity(String requestWorkIdentity) {
+        Map<String, Object> value = objectValue();
+        value.put("requestWorkIdentity", requestWorkIdentity);
+        return identity(Constructor.SOURCE_OBSERVATION_TERMINATION_COMPLETION, value);
+    }
+
+    /**
+     * Qualifies a consumer's observation of canonical initialization without changing the
+     * producer's original work, patch or completion identity. Replaying the same initializer
+     * at another actual creation site is another observation, not another source history.
+     */
+    String observationInitializationPlacementSiteIdentity(String originalSourceSiteIdentity,
+            String creatorSeedIdentity, String creatorPatchSite, String occurrenceIdentity) {
+        Map<String, Object> value = objectValue();
+        value.put("originalSourceSiteIdentity", originalSourceSiteIdentity);
+        value.put("creatorSeedIdentity", creatorSeedIdentity);
+        value.put("creatorPatchSite", creatorPatchSite);
+        value.put("occurrenceIdentity", occurrenceIdentity);
+        return identity(Constructor.SOURCE_OBSERVATION_INITIALIZATION_PLACEMENT, value);
+    }
+
+    /**
+     * Identifies one sequential placement/route-prefix observation at an original source site.
+     * Occurrence identities bind authored paths and activations. Their order is semantic and is
+     * never sorted or replaced with a worker/page sequence. The caller supplies a valid authored
+     * vertex-simple route; hashes alone cannot establish its vertices or adjacency.
+     */
+    String observationPlacementSiteIdentity(String originalEntryOrPatchSite, List<String> orderedOccurrenceIdentities) {
+        Map<String, Object> value = objectValue();
+        value.put("originalSiteIdentity", originalEntryOrPatchSite);
+        value.put("orderedOccurrenceIdentities", orderedOccurrenceIdentities);
+        return identity(Constructor.SOURCE_OBSERVATION_PLACEMENT, value);
     }
 
     /** Constructs a one-label policy or environment-domain identity. */
@@ -390,6 +488,9 @@ final class ClosureIdentityService {
         if (selected.kind() != ComponentKind.CYCLIC) {
             throw new IllegalArgumentException(
                     "Cyclic proof identity requires a cyclic component");
+        }
+        if (!selected.hasResidentCyclicProof() && selected.hasVerifiedProofHeader()) {
+            return selected.cyclicProofIdentity();
         }
         LinkedHashMap<String, Object> value = objectValue();
         value.put("componentIdentity", selected.componentIdentity());
@@ -601,6 +702,28 @@ final class ClosureIdentityService {
 
     /** Constructs the complete Contracts 1.0 invocation identity. */
     String invocationIdentity(ClosureInvocationInput input) {
+        String base = baseInvocationIdentity(input);
+        if (!input.managedReaction().isPresent()) return base;
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("baseInvocationIdentity", base);
+        value.put("reactionContextIdentity", input.managedReaction().get().identity());
+        return identity(Constructor.MANAGED_REACTION_INVOCATION, value);
+    }
+
+    private String baseInvocationIdentity(ClosureInvocationInput input) {
+        if (!input.semanticPredecessors().isEmpty()) {
+            LinkedHashMap<String, Object> value = objectValue();
+            value.put("invocation", invocationIdentityConstructorValue(input));
+            ArrayList<Object> predecessors = new ArrayList<Object>();
+            for (Map.Entry<DocumentId, String> entry : input.semanticPredecessors().entrySet()) {
+                LinkedHashMap<String, Object> predecessor = objectValue();
+                predecessor.put("documentId", entry.getKey().value());
+                predecessor.put("precedingOperation", entry.getValue());
+                predecessors.add(predecessor);
+            }
+            value.put("semanticPredecessors", predecessors);
+            return identity(Constructor.SEMANTIC_INVOCATION, value);
+        }
         return identity(Constructor.INVOCATION,
                 invocationIdentityConstructorValue(input));
     }
@@ -993,6 +1116,103 @@ final class ClosureIdentityService {
                     constructor + " value must be an array");
         }
         switch (constructor) {
+            case SAME_ORIGIN_REJECTED_CHARGE:
+                validateSameOriginRejectedCharge(requireObject(value, OBJECT_VALUE));
+                return;
+            case SAME_ORIGIN_GROUP:
+                SameOriginGroupIdentity.validateConstructor(requireObject(value, OBJECT_VALUE));
+                return;
+            case SAME_ORIGIN_SEED:
+            case SAME_ORIGIN_DIRECT_DELIVERY:
+            case SAME_ORIGIN_WORK:
+            case SAME_ORIGIN_EVENT:
+            case SAME_ORIGIN_TRANSITION:
+                SameOriginSeedIdentity.validateConstructor(constructor, requireObject(value, OBJECT_VALUE));
+                return;
+            case SOURCE_OBSERVATION_ENTRY:
+                requireSha256(requireObject(value, OBJECT_VALUE), "workIdentity", false);
+                return;
+            case SOURCE_OBSERVATION_PREDECESSOR:
+                requireSha256(requireObject(value, OBJECT_VALUE), "executionSeedIdentity", false);
+                return;
+            case SAME_ORIGIN_ATTACHMENT_SELECTION:
+                Map<String, Object> selection = requireObject(value, OBJECT_VALUE);
+                SameOriginAttachmentPolicy.Mode mode = SameOriginAttachmentPolicy.Mode.valueOf(requireNonEmptyText(selection, "mode"));
+                Object frontier = selection.get("frontier");
+                if ((mode == SameOriginAttachmentPolicy.Mode.FROM_FRONTIER) != (frontier != null))
+                    throw new IllegalArgumentException("Only FROM_FRONTIER requires an exact frontier");
+                if (frontier != null) {
+                    if (!(frontier instanceof List)) throw new IllegalArgumentException("Expected exact frontier tuple");
+                    SameOriginAttachmentPolicy.requireFrontier(blue.language.processor.ExternalOrderKey.of((List<?>) frontier));
+                }
+                requireNonEmptyText(selection, "creatorLineage");
+                requireSha256(selection, "occurrenceIdentity", false);
+                requireNonEmptyText(selection, "targetLineage");
+                requireNonEmptyText(selection, "suppliedExactRefBlueId");
+                return;
+            case ACCEPTED_ATTACHMENT_VIEW:
+                Map<String, Object> attachment = requireObject(value, OBJECT_VALUE);
+                requireSha256(attachment, "selectionIdentity", false);
+                requireSha256(attachment, "creatorSeedIdentity", false);
+                requireSha256(attachment, "creatorPatchSite", false);
+                boolean selectedFrontier = attachment.get("frontierViewIdentity") != null;
+                requireSha256(attachment, "frontierViewIdentity", !selectedFrontier);
+                requireSha256(attachment, "sourceSeedIdentity", selectedFrontier);
+                requireSha256(attachment, "sourceSiteIdentity", selectedFrontier);
+                if (selectedFrontier && (attachment.get("sourceSeedIdentity") != null || attachment.get("sourceSiteIdentity") != null))
+                    throw new IllegalArgumentException("A frontier must not fabricate a live source seed or site");
+                requireNonEmptyText(attachment, "selectedBlueId");
+                return;
+            case SELECTED_SOURCE_FRONTIER_VIEW:
+                SourceFrontierView.validateConstructor(requireObject(value, OBJECT_VALUE));
+                return;
+            case MANAGED_REACTION_ORIGIN:
+            case MANAGED_REACTION_CONTEXT:
+                ManagedReactionContext.validateConstructor(constructor, requireObject(value, OBJECT_VALUE));
+                return;
+            case ACCEPTED_INITIALIZATION_INSTALLATION:
+                Map<String, Object> installation = requireObject(value, OBJECT_VALUE);
+                requireSha256(installation, "selectionIdentity", false);
+                requireSha256(installation, "creatorSeedIdentity", false);
+                requireSha256(installation, "creatorPatchSite", false);
+                requireSha256(installation, "sourceInitializationOperationIdentity", false);
+                requireSha256(installation, "sourceCompletionSiteIdentity", false);
+                requireNonEmptyText(installation, "selectedBlueId");
+                return;
+            case SOURCE_INITIALIZATION_DEMAND:
+                Map<String, Object> initializationDemand = requireObject(value, OBJECT_VALUE);
+                requireSha256(initializationDemand, "selectionIdentity", false);
+                requireSha256(initializationDemand, "creatorSeedIdentity", false);
+                requireSha256(initializationDemand, "creatorPatchSite", false);
+                ClosureValueSupport.requireAbsolutePointer(requireNonEmptyText(initializationDemand, "sourcePath"), "sourcePath");
+                return;
+            case SOURCE_OBSERVATION_INITIALIZATION_COMPLETION:
+                requireSha256(requireObject(value, OBJECT_VALUE), "sourceInitializationInvocationIdentity", false);
+                return;
+            case SOURCE_OBSERVATION_TERMINATION_COMPLETION:
+                requireSha256(requireObject(value, OBJECT_VALUE), "requestWorkIdentity", false);
+                return;
+            case SOURCE_OBSERVATION_INITIALIZATION_PLACEMENT:
+                Map<String, Object> initializationPlacement = requireObject(value, OBJECT_VALUE);
+                requireSha256(initializationPlacement, "originalSourceSiteIdentity", false);
+                requireSha256(initializationPlacement, "creatorSeedIdentity", false);
+                requireSha256(initializationPlacement, "creatorPatchSite", false);
+                requireSha256(initializationPlacement, "occurrenceIdentity", false);
+                return;
+            case SOURCE_OBSERVATION_PATCH:
+                Map<String, Object> site = requireObject(value, OBJECT_VALUE);
+                requireSha256(site, "entrySiteIdentity", false);
+                if (requireSafeInteger(site, "patchOrdinal") == 0L) throw new IllegalArgumentException("Patch ordinal starts at one");
+                return;
+            case SOURCE_OBSERVATION_PLACEMENT:
+                Map<String, Object> placement = requireObject(value, OBJECT_VALUE);
+                requireSha256(placement, "originalSiteIdentity", false);
+                Set<String> occurrences = new HashSet<String>();
+                for (Object item : requireTextArray(placement.get("orderedOccurrenceIdentities"), "orderedOccurrenceIdentities", true)) {
+                    String occurrence = ClosureValueSupport.requireSha256Identity((String) item, "orderedOccurrenceIdentity");
+                    if (!occurrences.add(occurrence)) throw new IllegalArgumentException("An observation route cannot repeat an occurrence");
+                }
+                return;
             case MANAGED_DOCUMENT_IDENTITY_POLICY:
             case MANAGED_BINDING_POLICY:
             case ADMISSION_POLICY:
@@ -1074,6 +1294,27 @@ final class ClosureIdentityService {
                 return;
             case INVOCATION:
                 validateInvocation(requireObject(value, OBJECT_VALUE));
+                return;
+            case MANAGED_REACTION_INVOCATION:
+                Map<String, Object> reactionInvocation = requireObject(value, OBJECT_VALUE);
+                requireSha256(reactionInvocation, "baseInvocationIdentity", false);
+                requireSha256(reactionInvocation, "reactionContextIdentity", false);
+                return;
+            case SEMANTIC_INVOCATION:
+                Map<String, Object> semantic = requireObject(value, OBJECT_VALUE);
+                validateConstructor(Constructor.INVOCATION, semantic.get("invocation"));
+                String previousDocument = null;
+                for (Object item : requireArray(semantic.get("semanticPredecessors"), "semanticPredecessors")) {
+                    Map<String, Object> predecessor = requireObject(item, "semantic predecessor");
+                    requireExactFields(predecessor, Arrays.asList("documentId", "precedingOperation"));
+                    String document = requireNonEmptyText(predecessor, "documentId");
+                    ClosureValueSupport.requireSha256Identity(
+                            requireNonEmptyText(predecessor, "precedingOperation"), "precedingOperation");
+                    if (previousDocument != null && ClosureValueSupport.comparePortableText(previousDocument, document) >= 0) {
+                        throw new IllegalArgumentException("Semantic predecessors must have unique canonical lineage order");
+                    }
+                    previousDocument = document;
+                }
                 return;
             case TRANSITION_OCCURRENCE:
                 validateTransition(requireObject(value, OBJECT_VALUE));
@@ -1638,6 +1879,28 @@ final class ClosureIdentityService {
         requireObject(value.get("owner"), "owner");
     }
 
+    private static void validateSameOriginRejectedCharge(Map<String, Object> value) {
+        requireSha256(value, "operationIdentity", false); requireSha256(value, "failureSite", false);
+        String namespace = requireNonEmptyText(value, "namespace");
+        if (!Arrays.asList("processor", "semantic", "runtime").contains(namespace)) throw new IllegalArgumentException("Unknown gas namespace");
+        requireNonEmptyText(value, "counter");
+        long quantity = requireSafeInteger(value, "quantity"), weight = requireSafeInteger(value, "weight");
+        long admitted = requireSafeInteger(value, "admittedGas"), limit = requireSafeInteger(value, "gasLimit");
+        long remaining = requireSafeInteger(value, "remainingBeforeCharge");
+        if (quantity == 0 || admitted > limit || remaining != limit - admitted
+                || BigInteger.valueOf(quantity).multiply(BigInteger.valueOf(weight)).compareTo(BigInteger.valueOf(remaining)) <= 0)
+            throw new IllegalArgumentException("Invalid actual rejected charge arithmetic");
+        String cap = requireNonEmptyText(value, "cap");
+        if ("LOCAL".equals(cap)) requireNonEmptyText(value, "localDocument");
+        else if (!"SHARED".equals(cap) || value.get("localDocument") != null) throw new IllegalArgumentException("Invalid rejected charge cap");
+        Map<String, Object> context = requireObject(value.get("context"), "context");
+        requireExactFields(context, Arrays.asList("documentId", "scopePath", "activationGeneration", "contractKey", "logicalPath", "workOccurrenceId", "reason"));
+        for (String field : Arrays.asList("documentId", "contractKey", "logicalPath", "reason")) requireNullableText(context, field);
+        requireSha256(context, "workOccurrenceId", true);
+        if ((context.get("scopePath") == null) != (context.get("activationGeneration") == null)) throw new IllegalArgumentException("Scope and activation must be paired");
+        if (context.get("scopePath") != null) { requireAbsolutePointer(context, "scopePath"); requireSafeInteger(context, "activationGeneration"); }
+    }
+
     private static void validateDocuments(Object value) {
         List<Object> documents = requireArray(value, "documents");
         String previous = null;
@@ -1786,7 +2049,7 @@ final class ClosureIdentityService {
         if (constructor == Constructor.MANAGED_OCCURRENCE_RESOLUTION) {
             return field.endsWith(".pendingHistoricalEpoch");
         }
-        return constructor == Constructor.OCCURRENCE_BINDING_SET
+        return (constructor == Constructor.OCCURRENCE_BINDING_SET || constructor == Constructor.SAME_ORIGIN_SEED)
                 && field.endsWith(".pendingHistoricalEpoch");
     }
 

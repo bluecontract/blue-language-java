@@ -1,0 +1,35 @@
+{
+  "kind": "approved-local-poc-fixture-deltas",
+  "packageRoot": "/Users/kamil/Documents/Projects/Blue/worktrees/coordination-external-state/blue-language-java/blue-conformance/src/main/resources/blue-contracts-closure-1.0",
+  "review": "Second, separate review after the 36-case refresh. Independent auditor verified unchanged work/document-step/finalization traces, states/epochs/events and counter deltas. Supervisor completed exact receipt-attribution and placement review: all receipts equal owning trace gas; only admittedGas and its receipt hash change. Preserve actual selected retirement refs, not ambient final source heads. C23-00 adds the real containing reference write; C28 spine adds two. No runtime changes or old reports replayed.",
+  "reports": [
+    {
+      "id": "c-clo-10-split-to-singletons",
+      "sha256": "8e767c9741394d716bcec016ac32d80ccc89572ae8270730886f093ddf277163"
+    },
+    {
+      "id": "c-clo-11-split-into-two-cycles",
+      "sha256": "c7b0a4071854eaa8d7694070c35920a8727431b7936fea21d553754bbbc2e465"
+    },
+    {
+      "id": "c-clo-12-frozen-edge-removal",
+      "sha256": "7e8628281b1d1f08db62e8668a6d7429e3edfcbe8135dc529d9cce2e542cc057"
+    },
+    {
+      "id": "c-clo-23-00-attach-a5-retry",
+      "sha256": "5af46e1b330f748e74212982bba367d0b747d7bd72b1c51b5523bc164f973075"
+    },
+    {
+      "id": "c-clo-28-containing-spine-identity-gas",
+      "sha256": "6cdcb486617cb1c8ec33622cf7c3052174f1ef7bc51eacd0cc6c6eeeff947adf"
+    },
+    {
+      "id": "c-clo-28-mixed-result-shape",
+      "sha256": "3fca6c979b5412335edf29a680852cb016e24c56a429358af3dcb40289cb2a64"
+    },
+    {
+      "id": "c-clo-35-00-remove-and-create-successor",
+      "sha256": "391ba1a7b8c4463d55a4d504d344cb755e10b24f0fdf1d7dd54276c12540ffa0"
+    }
+  ]
+}

@@ -24,6 +24,8 @@ public final class ComponentFinalizationInput {
     private final Map<DocumentId, Long> inputComponentGenerations;
     private final ManagedDocumentGraph resultingGraph;
     private final Map<DocumentId, Node> latestLocalBodies;
+    private final Map<String, ManagedReadPin> pinnedOccurrences;
+    private final Map<DocumentId, ReusableComponentAuthority> reusableComponents;
 
     /**
      * Creates a complete finalization input and derives its resulting graph.
@@ -38,15 +40,59 @@ public final class ComponentFinalizationInput {
             Map<DocumentId, Long> inputComponentGenerations,
             Map<DocumentId, Node> latestLocalBodies,
             Collection<ManagedOccurrenceBinding> resultingBindings) {
+        this(inputGraph, inputComponentGenerations, latestLocalBodies, resultingBindings,
+                Collections.<String, ManagedReadPin>emptyMap());
+    }
+
+    /** Keeps only explicitly authenticated observer pins independent of the current source cell. */
+    public ComponentFinalizationInput(ManagedDocumentGraph inputGraph,
+            Map<DocumentId, Long> inputComponentGenerations, Map<DocumentId, Node> latestLocalBodies,
+            Collection<ManagedOccurrenceBinding> resultingBindings,
+            Map<String, ManagedReadPin> pinnedOccurrences) {
+        this(inputGraph, inputComponentGenerations, latestLocalBodies, resultingBindings, pinnedOccurrences,
+                Collections.<ReusableComponentAuthority>emptyList());
+    }
+
+    /** Full directed metadata with a sparse body inventory and closed unchanged-component authority. */
+    public ComponentFinalizationInput(ManagedDocumentGraph inputGraph,
+            Map<DocumentId, Long> inputComponentGenerations, Map<DocumentId, Node> residentLocalBodies,
+            Collection<ManagedOccurrenceBinding> resultingBindings, Map<String, ManagedReadPin> pinnedOccurrences,
+            Collection<ReusableComponentAuthority> reusableComponents) {
         this.inputGraph = Objects.requireNonNull(inputGraph, "inputGraph");
         this.inputComponentGenerations = copyGenerations(
                 this.inputGraph, inputComponentGenerations);
-        this.latestLocalBodies = copyBodies(latestLocalBodies);
+        this.latestLocalBodies = copyBodies(residentLocalBodies);
+        Map<DocumentId, ReusableComponentAuthority> reusable = new LinkedHashMap<>();
+        for (ReusableComponentAuthority authority : Objects.requireNonNull(reusableComponents, "reusableComponents")) {
+            for (DocumentId member : authority.component().orderedMemberDocumentIds()) {
+                if (reusable.put(member, authority) != null) throw new IllegalArgumentException("Repeated reusable component member");
+            }
+        }
+        this.reusableComponents = Collections.unmodifiableMap(reusable);
+        java.util.Set<DocumentId> vertices = new java.util.TreeSet<>(this.latestLocalBodies.keySet());
+        vertices.addAll(reusable.keySet());
         this.resultingGraph = ManagedDocumentGraph.fromBindings(
-                this.latestLocalBodies.keySet(),
+                vertices,
                 new ArrayList<ManagedOccurrenceBinding>(Objects.requireNonNull(
                         resultingBindings, "resultingBindings")));
+        Map<String, ManagedReadPin> pins = new LinkedHashMap<String, ManagedReadPin>(
+                Objects.requireNonNull(pinnedOccurrences, "pinnedOccurrences"));
+        for (Map.Entry<String, ManagedReadPin> pin : pins.entrySet()) {
+            ManagedOccurrenceBinding found = null;
+            for (ManagedOccurrenceBinding binding : this.resultingGraph.activeBindings()) {
+                if (binding.occurrenceIdentity().equals(pin.getKey())) { found = binding; break; }
+            }
+            if (found == null || !found.targetDocumentId().equals(pin.getValue().documentId())
+                    || !found.expectedTargetBlueId().equals(pin.getValue().blueId())) {
+                throw new IllegalArgumentException("Pinned occurrence does not match exact active binding evidence");
+            }
+        }
+        this.pinnedOccurrences = Collections.unmodifiableMap(pins);
     }
+
+    public Map<String, ManagedReadPin> pinnedOccurrences() { return pinnedOccurrences; }
+    ReusableComponentAuthority reusableComponent(DocumentId member) { return reusableComponents.get(member); }
+    boolean hasResidentBody(DocumentId member) { return latestLocalBodies.containsKey(member); }
 
     /**
      * Returns the authoritative predecessor graph.

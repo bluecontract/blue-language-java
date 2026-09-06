@@ -312,6 +312,15 @@ final class ManagedRootSettlementServiceTest {
 
     @Test
     void globallyOrdersReverseDocumentWritesThenLexicalCleanup() {
+        verifyGlobalCheckpointOrder(false);
+    }
+
+    @Test
+    void joinedGroupPreservesGlobalOrderAndOriginalRuntimeOwnership() {
+        verifyGlobalCheckpointOrder(true);
+    }
+
+    private void verifyGlobalCheckpointOrder(boolean separateOwners) {
         ExactDomainSnapshotManager domainStore =
                 new ExactDomainSnapshotManager();
         ContractProcessorRegistry registry =
@@ -326,7 +335,10 @@ final class ManagedRootSettlementServiceTest {
                 .snapshotStore(domainStore)
                 .build();
         try (ManagedDocumentStepRuntime runtime =
+                     new ManagedDocumentStepRuntime(processor);
+             ManagedDocumentStepRuntime secondRuntime =
                      new ManagedDocumentStepRuntime(processor)) {
+            ManagedDocumentStepRuntime bRuntime = separateOwners ? secondRuntime : runtime;
             Node a = sourceAndRetiredDocument("Batch Root A");
             Node b = sourceAndRetiredDocument("Batch Root B");
             ManagedExternalDeliveryClassification retiredA =
@@ -340,7 +352,7 @@ final class ManagedRootSettlementServiceTest {
                                     "retired-a",
                                     "setup.compare.a"));
             ManagedExternalDeliveryClassification retiredB =
-                    runtime.classifyExternalDelivery(
+                    bRuntime.classifyExternalDelivery(
                             b,
                             "retired",
                             event("retired-b"),
@@ -362,7 +374,7 @@ final class ManagedRootSettlementServiceTest {
                                             "setup.write.a"))),
                     cleanupContexts(),
                     context("a", null, null, "setup.revalidate.a"));
-            ManagedCheckpointSettlement seededB = runtime.settleCheckpoints(
+            ManagedCheckpointSettlement seededB = bRuntime.settleCheckpoints(
                     b,
                     Collections.singletonList(
                             new ManagedCheckpointSettlementEntry(
@@ -394,7 +406,7 @@ final class ManagedRootSettlementServiceTest {
                                     "batch.compare.a"))
                             .candidate();
             ManagedCheckpointCandidate sourceB =
-                    runtime.classifyExternalDelivery(
+                    bRuntime.classifyExternalDelivery(
                             finalB,
                             "source",
                             event("source-b"),
@@ -405,6 +417,11 @@ final class ManagedRootSettlementServiceTest {
                                     "batch.compare.b"))
                             .candidate();
             int traceBefore = runtime.gasTrace().size();
+            int bTraceBefore = bRuntime.gasTrace().size();
+            if (separateOwners) runtime.tryJoinGasGroup(bRuntime);
+            long groupGasBefore = runtime.totalGas()
+                    + (separateOwners ? bRuntime.totalGas() : 0L);
+            List<String> selections = new ArrayList<>();
 
             ManagedCheckpointSettlementBatch batch =
                     runtime.settleCheckpointBatch(
@@ -447,7 +464,17 @@ final class ManagedRootSettlementServiceTest {
                                     "scope-a".equals(target) ? "b" : "a",
                                     rawKey,
                                     null,
-                                    "batch.cleanup." + ordinal));
+                                    "batch.cleanup." + ordinal),
+                            request -> {
+                                selections.add(request.targetManagedScopeIdentity());
+                                return "scope-a".equals(request.targetManagedScopeIdentity())
+                                        ? bRuntime : runtime;
+                            });
+
+            assertEquals(Arrays.asList("scope-z", "scope-a"), selections);
+            assertEquals(groupGasBefore, batch.gasBefore());
+            assertEquals(runtime.totalGas()
+                    + (separateOwners ? bRuntime.totalGas() : 0L), batch.gasAfter());
 
             assertEquals(2, batch.targets().size());
             assertEquals("scope-z",
@@ -474,17 +501,24 @@ final class ManagedRootSettlementServiceTest {
                             traceBefore, runtime.gasTrace().size()),
                     GasScheduleConstants.ProcessorCounter
                             .CHECKPOINT_WRITTEN);
-            assertEquals(4, batchWrites.size());
-            assertEquals(
-                    Arrays.asList(
-                            "batch.write.b",
-                            "batch.write.a",
-                            "batch.cleanup.2",
-                            "batch.cleanup.3"),
-                    reasons(batchWrites));
-            assertEquals(
-                    Arrays.asList("b", "a", "b", "a"),
-                    documentIds(batchWrites));
+            if (separateOwners) {
+                List<GasTraceEntry> bWrites = traces(
+                        bRuntime.gasTrace().subList(bTraceBefore, bRuntime.gasTrace().size()),
+                        GasScheduleConstants.ProcessorCounter.CHECKPOINT_WRITTEN);
+                assertEquals(Arrays.asList("batch.write.a", "batch.cleanup.3"), reasons(batchWrites));
+                assertEquals(Arrays.asList("batch.write.b", "batch.cleanup.2"), reasons(bWrites));
+                assertEquals(Arrays.asList("a", "a"), documentIds(batchWrites));
+                assertEquals(Arrays.asList("b", "b"), documentIds(bWrites));
+                for (GasTraceEntry entry : runtime.gasTrace().subList(traceBefore, runtime.gasTrace().size()))
+                    assertEquals("a", entry.documentId(), "Original A owner must also cover semantic identity rebuilds");
+                for (GasTraceEntry entry : bRuntime.gasTrace().subList(bTraceBefore, bRuntime.gasTrace().size()))
+                    assertEquals("b", entry.documentId(), "Original B owner must also cover semantic identity rebuilds");
+            } else {
+                assertEquals(4, batchWrites.size());
+                assertEquals(Arrays.asList("batch.write.b", "batch.write.a",
+                        "batch.cleanup.2", "batch.cleanup.3"), reasons(batchWrites));
+                assertEquals(Arrays.asList("b", "a", "b", "a"), documentIds(batchWrites));
+            }
 
             for (ManagedCheckpointSettlementBatch.TargetResult target
                     : batch.targets()) {
@@ -495,6 +529,31 @@ final class ManagedRootSettlementServiceTest {
                 assertTrue(entries.getProperties() == null
                         || !entries.getProperties().containsKey("retired"));
             }
+        } finally {
+            processor.close();
+        }
+    }
+
+    @Test
+    void rejectsUnjoinedRuntimeSelectionBeforeAnyChargedPlanning() {
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(SOURCE_BLUE_ID, SOURCE_TYPE, new SourceProcessor()).build();
+        DocumentProcessor processor = DocumentProcessor.builder().runtimeRegistry(registry).build();
+        try (ManagedDocumentStepRuntime a = new ManagedDocumentStepRuntime(processor);
+             ManagedDocumentStepRuntime b = new ManagedDocumentStepRuntime(processor)) {
+            List<ManagedCheckpointSettlementRequest> requests = Arrays.asList(
+                    new ManagedCheckpointSettlementRequest("a", document(), Collections.emptyList(),
+                            context("a", null, null, "revalidate.a")),
+                    new ManagedCheckpointSettlementRequest("b", document(), Collections.emptyList(),
+                            context("b", null, null, "revalidate.b")));
+            long aBefore = a.totalGas(), bBefore = b.totalGas();
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> a.settleCheckpointBatch(requests,
+                            (target, key, ordinal) -> context(target, key, null, "cleanup"),
+                            request -> "a".equals(request.targetManagedScopeIdentity()) ? a : b));
+            assertTrue(failure.getMessage().contains("already share"));
+            assertEquals(aBefore, a.totalGas());
+            assertEquals(bBefore, b.totalGas());
         } finally {
             processor.close();
         }

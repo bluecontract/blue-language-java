@@ -23,20 +23,30 @@ public final class ComponentFinalizationResult {
     private final Map<DocumentId, Long> componentGenerations;
     private final List<FinalizedComponentEvidence> components;
     private final Map<DocumentId, FinalizedDocumentEvidence> documents;
+    private final List<ManagedReadPin> readPins;
 
     ComponentFinalizationResult(
             ManagedDocumentGraph finalizedGraph,
             Map<DocumentId, Long> componentGenerations,
             List<FinalizedComponentEvidence> components,
             Map<DocumentId, FinalizedDocumentEvidence> documents) {
+        this(finalizedGraph, componentGenerations, components, documents, Collections.<ManagedReadPin>emptyList());
+    }
+
+    ComponentFinalizationResult(ManagedDocumentGraph finalizedGraph, Map<DocumentId, Long> componentGenerations,
+            List<FinalizedComponentEvidence> components, Map<DocumentId, FinalizedDocumentEvidence> documents,
+            java.util.Collection<ManagedReadPin> readPins) {
         this.finalizedGraph = Objects.requireNonNull(
                 finalizedGraph, "finalizedGraph");
         this.componentGenerations = immutableGenerations(
                 finalizedGraph, componentGenerations);
         this.components = immutableComponents(components);
         this.documents = immutableDocuments(documents);
+        this.readPins = Collections.unmodifiableList(new ArrayList<ManagedReadPin>(new java.util.TreeSet<ManagedReadPin>(readPins)));
         validateCoverageAndOrder();
     }
+
+    public List<ManagedReadPin> readPins() { return readPins; }
 
     /**
      * Returns the complete active/inactive binding graph after exact rebasing.

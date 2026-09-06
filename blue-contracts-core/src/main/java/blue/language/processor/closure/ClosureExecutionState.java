@@ -28,6 +28,7 @@ final class ClosureExecutionState {
             checkpointMutations;
     private final Set<DocumentId> epochAdvanceDocuments;
     private final List<DocumentTransitionEvidence> transitionEvidence;
+    private final Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements;
 
     ClosureExecutionState(
             AffectedClosureSnapshot tentativeSnapshot,
@@ -94,6 +95,17 @@ final class ClosureExecutionState {
             Set<DocumentId> epochAdvanceDocuments,
             List<DocumentTransitionEvidence> transitionEvidence,
             List<ManagedRootEventOccurrence> managedRootEvents) {
+        this(tentativeSnapshot, finalization, publicEvents, gasTrace, inputChannelSurfaces, resultingChannelSurfaces,
+                checkpointMutations, epochAdvanceDocuments, transitionEvidence, managedRootEvents, Collections.emptyMap());
+    }
+
+    ClosureExecutionState(AffectedClosureSnapshot tentativeSnapshot, ComponentFinalizationResult finalization,
+            List<PublicEventOccurrence> publicEvents, List<blue.language.processor.GasTraceEntry> gasTrace,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>> inputChannelSurfaces,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>> resultingChannelSurfaces,
+            List<ManagedCheckpointSettlementBatch.Mutation> checkpointMutations, Set<DocumentId> epochAdvanceDocuments,
+            List<DocumentTransitionEvidence> transitionEvidence, List<ManagedRootEventOccurrence> managedRootEvents,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
         this.tentativeSnapshot = Objects.requireNonNull(
                 tentativeSnapshot, "tentativeSnapshot");
         this.finalization = finalization;
@@ -125,8 +137,11 @@ final class ClosureExecutionState {
                 new ArrayList<DocumentTransitionEvidence>(
                         Objects.requireNonNull(
                                 transitionEvidence,
-                                "transitionEvidence")));
+                        "transitionEvidence")));
+        this.retirements = Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(retirements, "retirements")));
     }
+
+    Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements() { return retirements; }
 
     AffectedClosureSnapshot tentativeSnapshot() {
         return tentativeSnapshot;

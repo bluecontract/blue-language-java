@@ -18,6 +18,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.*;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.InvalidNodeStructureException;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SchemaVerifierTest {
 
@@ -58,6 +61,37 @@ public class SchemaVerifierTest {
                 )
         );
         merger = new Merger(mergingProcessor, e -> null);
+    }
+
+    @Test
+    public void shouldClassifyOnlyLocallyValidatedSchemaFailuresAsStructural() {
+        // given
+        Node missing = new Node().schema(new Schema().required(true));
+        SchemaVerifier verifier = new SchemaVerifier();
+
+        // when
+        Throwable failure = captureFailure(() -> verifier.validateCompleted(missing, false, "/required"));
+
+        // then
+        assertInstanceOf(InvalidNodeStructureException.class, failure);
+        assertTrue(failure.getMessage().contains("/required"));
+        assertInstanceOf(InvalidNodeStructureException.class, failure.getCause());
+    }
+
+    @Test
+    public void shouldPreserveUnknownValidationHookFailuresWithoutSemanticReclassification() {
+        // given
+        IllegalArgumentException unknown = new IllegalArgumentException("extension implementation defect");
+        SchemaVerifier verifier = new SchemaVerifier() {
+            @Override protected void onCompletedValidation(Node value, String path) { throw unknown; }
+        };
+        Node value = new Node().value("present").schema(new Schema().required(true));
+
+        // when
+        Throwable failure = captureFailure(() -> verifier.validateCompleted(value, true, "/valid"));
+
+        // then
+        assertSame(unknown, failure);
     }
 
     @Test

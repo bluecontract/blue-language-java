@@ -361,7 +361,7 @@ public final class NodeToBlueIdInput {
         if (node.getItems() != null) payloadKinds++;
         if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
         if (payloadKinds > 1) {
-            throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
+            throw new blue.language.model.InvalidNodeStructureException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
         }
         if (node.getBlueId() != null && !node.isReferenceOnly()) {
             throw new IllegalArgumentException("\"blueId\" nodes must be reference-only and cannot contain sibling fields. Path: " + path);

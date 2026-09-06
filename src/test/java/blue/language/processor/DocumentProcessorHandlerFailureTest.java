@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class DocumentProcessorHandlerFailureTest {
 
@@ -34,7 +36,7 @@ class DocumentProcessorHandlerFailureTest {
                     new Node().value("existing"));
 
     @Test
-    void shouldVerifyHandlerRuntimeExceptionRollsBackWithoutTerminationMarker() {
+    void shouldVerifyTypedHandlerFailureRollsBackWithoutTerminationMarker() {
         // given
         Blue blue = blueWithThrowingProcessor();
         Node document = blue.yamlToNode("name: Handler Failure\n" +
@@ -384,6 +386,44 @@ class DocumentProcessorHandlerFailureTest {
         return blue;
     }
 
+    @Test
+    void shouldPreserveUnclassifiedHandlerFailuresWithoutSemanticResults() {
+        // given
+        List<RuntimeException> failures = java.util.Arrays.asList(
+                new IllegalStateException("extension defect"),
+                new IllegalArgumentException("unexpected extension input"),
+                new java.io.UncheckedIOException(new java.io.IOException("storage offline")),
+                new java.util.concurrent.CancellationException("host cancellation"));
+        // when
+        for (RuntimeException failure : failures) {
+            for (boolean bufferPatch : new boolean[] {false, true}) {
+                Blue blue = blueWithThrowingProcessor();
+                blue.registerContractProcessor(new HandlerProcessor<SetProperty>() {
+                    public Class<SetProperty> contractType() { return SetProperty.class; }
+                    public void execute(SetProperty contract, ProcessorExecutionContext context) {
+                        if (bufferPatch) {
+                            context.applyPatch(JsonPatch.add(context.resolvePointer("/x"), new Node().value(9)));
+                        }
+                        throw failure;
+                    }
+                });
+                Node document = blue.yamlToNode("name: Operational Failure\ncontracts:\n"
+                        + "  initialized:\n    type:\n      blueId: " + RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER + "\n"
+                        + "    document:\n      blueId: " + EXISTING_DOCUMENT_BLUE_ID + "\n"
+                        + "  events:\n    type:\n      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n"
+                        + "  fail:\n    channel: events\n    type:\n      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n"
+                        + "    propertyKey: /x\n    propertyValue: 1\n");
+                String before = document.toString();
+                Throwable observed = FailureCapture.captureFailure(
+                        () -> blue.getDocumentProcessor().processDocumentWithTrace(document, event("fault")));
+                // then
+                org.junit.jupiter.api.Assertions.assertInstanceOf(UnclassifiedProcessingException.class, observed);
+                assertSame(failure, observed.getCause());
+                assertEquals(before, document.toString(), "an unclassified failure cannot publish buffered effects");
+            }
+        }
+    }
+
     private Node event(String id) {
         return new TestEvent().eventId(id).toNode();
     }
@@ -461,7 +501,8 @@ class DocumentProcessorHandlerFailureTest {
             context.submitRuntimeGasLedger(ledger);
             String propertyKey = contract.getPropertyKey() != null ? contract.getPropertyKey() : "/x";
             if ("/throwWithoutPatch".equals(propertyKey)) {
-                throw new IllegalArgumentException("handler failed before buffering effects");
+                throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
+                        "handler failed before buffering effects");
             }
             String patchPath =
                     contract.getPropertyValue() == -999
@@ -474,7 +515,8 @@ class DocumentProcessorHandlerFailureTest {
                             contract.getPropertyValue()));
             context.applyPatch(patch);
             if ("/shouldNotApply".equals(propertyKey)) {
-                throw new IllegalArgumentException("handler failed after buffering effects");
+                throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
+                        "handler failed after buffering effects");
             }
         }
     }

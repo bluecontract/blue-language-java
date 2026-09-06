@@ -83,13 +83,13 @@ public final class CheckpointWrite {
     }
 
     /**
-     * Returns the verified target key for package-level evidence
+     * Returns the verified target key for sparse owned-effect evidence
      * reconciliation. The normative result wire shape exposes its identity,
      * not this redundant constructor witness.
      *
      * @return exact target Root key
      */
-    ManagedScopeKey targetManagedScopeKey() {
+    public ManagedScopeKey targetManagedScopeKey() {
         return targetManagedScopeKey;
     }
 

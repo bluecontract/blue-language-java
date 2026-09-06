@@ -311,33 +311,33 @@ expected:
     kind: EXTERNAL_DELIVERY
     targetDocumentId: a-source
     channelKey: sourceChannel
-    workIdentity: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     eventBlueId: FRggoYz3PYxjiXoogS4pxYNBS9dkYPmtgZvKd4JdvvaK
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:723f34ea72de7ebcba4bd11ac0267005733a3b8533c40cf059bd2a11706a828d
     sourceOccurrenceIdentity: sha256:07b4c3e89bdc114b61cdc94bc2a9766fedae7b598d7ba9fa5b32e57e5b458acc
+    workIdentity: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
   - ordinal: 1
     kind: EXTERNAL_DELIVERY
     targetDocumentId: z-owner
     channelKey: sourceChannel
-    workIdentity: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     eventBlueId: FRggoYz3PYxjiXoogS4pxYNBS9dkYPmtgZvKd4JdvvaK
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:24d01497d1a6115ce3232a3e745e505ae833ce97ab0e622784d292ec7f6c686a
     sourceOccurrenceIdentity: sha256:33b1305bdad5a485f76abff81cb76e3b9d8e113c8d3a6d1953e2d09de3c9ea74
+    workIdentity: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
   documentStepTrace:
   - stepOrdinal: 0
     workOrdinal: 0
     targetDocumentId: a-source
     executionRootDocumentId: a-source
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   - stepOrdinal: 1
     workOrdinal: 1
     targetDocumentId: z-owner
     executionRootDocumentId: z-owner
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   tentativeFinalizations: []
@@ -347,16 +347,12 @@ expected:
     beforeBlueId: 7noupvbV5GXLTyYoAEW2Z9MhFfKtH56HBs6UMwQZ9Xtr
     afterBlueId: 8NpvtytEtPLemmdPoAHPZ573Khx1RYmNNLMwf1coDeai
     document:
-      documentId: a-source
-      memberIdentity: a-source
-      shared:
-        blueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
       contracts:
         embedded:
           type:
             blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
           paths:
-          - /shared
+          - "/shared"
         sourceChannel:
           type:
             blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
@@ -384,6 +380,10 @@ expected:
                 blueId: 4h8W6YUo5LFiNhLtFuepdJRdtX2FrMg9H7DtTsJLA7in
               subject:
                 blueId: FRggoYz3PYxjiXoogS4pxYNBS9dkYPmtgZvKd4JdvvaK
+      documentId: a-source
+      memberIdentity: a-source
+      shared:
+        blueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
     initialized: true
     terminated: false
     publicRoot: false
@@ -396,14 +396,14 @@ expected:
     beforeBlueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
     afterBlueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
     document:
-      documentId: shared-target
-      memberIdentity: shared-target
       contracts:
         initialized:
           type:
             blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
           document:
             blueId: 54gdoP1LwkCjZW6yef2KFwSrMxrJz8RyGd4pmrJm5jkh
+      documentId: shared-target
+      memberIdentity: shared-target
     initialized: true
     terminated: false
     publicRoot: false
@@ -416,18 +416,13 @@ expected:
     beforeBlueId: 5ea7kHYS3R3jYMgZpKRjESFNuv2SXiyJmef6dKVRzpxc
     afterBlueId: 13BnZ7jbXhoHBFKMPNHbUWiXcsDjiLYufJbY852h7dK3
     document:
-      documentId: z-owner
-      memberIdentity: z-owner
-      shared:
-        blueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
-      receivedOldX: false
       contracts:
         embedded:
           type:
             blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
           paths:
-          - /shared
-          - /source
+          - "/shared"
+          - "/source"
         sourceChannel:
           type:
             blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
@@ -439,20 +434,20 @@ expected:
         attach:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: sourceChannel
           order: 0
+          channel: sourceChannel
         fromSource:
           type:
             blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
-          sourcePath: /source
+          order: 0
+          sourcePath: "/source"
           event:
             blueId: 312wzgo4djUyGQBf6howypp151RLeZS6o28dSqN3tyrQ
-          order: 0
         onOldX:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: fromSource
           order: 0
+          channel: fromSource
         initialized:
           type:
             blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
@@ -467,6 +462,11 @@ expected:
                 blueId: 7KzRdKLZoyF75umYCECgnb7VKDFLeVmW7my2pWsALEAK
               subject:
                 blueId: FRggoYz3PYxjiXoogS4pxYNBS9dkYPmtgZvKd4JdvvaK
+      documentId: z-owner
+      memberIdentity: z-owner
+      shared:
+        blueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
+      receivedOldX: false
       source:
         blueId: 8NpvtytEtPLemmdPoAHPZ573Khx1RYmNNLMwf1coDeai
     initialized: true
@@ -479,57 +479,57 @@ expected:
     memberIndex: null
   resultingComponents:
   - componentIdentity: sha256:784d77b6a60536cb7773c0a5c91925285a43eeb74e9d57935296d88742e8f9a3
+    componentStateIdentity: sha256:af68ca106eaeaf6eadfbef4438f6793f2b11337a2af88a715d9acc8d74f4fdb7
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - shared-target
     orderedMemberBlueIds:
     - 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
-    componentStateIdentity: sha256:af68ca106eaeaf6eadfbef4438f6793f2b11337a2af88a715d9acc8d74f4fdb7
   - componentIdentity: sha256:20478cca7e478d7d424ab3215f94de9343a67cddeb2511238be739e443245ea5
+    componentStateIdentity: sha256:7b9ca57f344a2f0d9c5bca194926a09caa42362cbb5e66f8087e822186950f2e
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - a-source
     orderedMemberBlueIds:
     - 8NpvtytEtPLemmdPoAHPZ573Khx1RYmNNLMwf1coDeai
-    componentStateIdentity: sha256:7b9ca57f344a2f0d9c5bca194926a09caa42362cbb5e66f8087e822186950f2e
   - componentIdentity: sha256:a445500139588ceea2f9f07748f9b3f70efd00203a0f80bcc8edccc38d24a015
+    componentStateIdentity: sha256:948e40ea89b27dda30f33076b2d88acc5d784f680956db906d9da35a6ebf3272
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - z-owner
     orderedMemberBlueIds:
     - 13BnZ7jbXhoHBFKMPNHbUWiXcsDjiLYufJbY852h7dK3
-    componentStateIdentity: sha256:948e40ea89b27dda30f33076b2d88acc5d784f680956db906d9da35a6ebf3272
   occurrenceBindings:
   - occurrenceIdentity: sha256:238bad7e0deaa65698650840f3d9c8735fce95ce97cb494a705a54209a7e38f7
     bindingIdentity: sha256:1dd3f1630d3d17cf4980e12ba9e86417dcbd6c481bee901187e52e2b04237561
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     sourceDocumentId: z-owner
-    sourcePath: /source
+    sourcePath: "/source"
     activationGeneration: 1
     targetDocumentId: a-source
-    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     expectedTargetBlueId: 8NpvtytEtPLemmdPoAHPZ573Khx1RYmNNLMwf1coDeai
     active: true
     pendingHistoricalEpoch: null
   - occurrenceIdentity: sha256:62fad28fc1cb1b2ad56b572bdb8b2f51ead8bdfc971b8fd09a5e3617a911e5ac
     bindingIdentity: sha256:b24b76e4e05529e45de7c7d6cf08a745e9547e7ce80edf536e1b31d92003d925
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     sourceDocumentId: a-source
-    sourcePath: /shared
+    sourcePath: "/shared"
     activationGeneration: 1
     targetDocumentId: shared-target
-    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     expectedTargetBlueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
     active: true
     pendingHistoricalEpoch: null
   - occurrenceIdentity: sha256:804e30cb93969f9a2ae255e8a78bb7e28421d0e6b5b86eb08bd39d6084bd1fe3
     bindingIdentity: sha256:5d9a4242ed3b756dfe157698b3cb82b409789df821c1cec9dc86b331a897f160
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     sourceDocumentId: z-owner
-    sourcePath: /shared
+    sourcePath: "/shared"
     activationGeneration: 1
     targetDocumentId: shared-target
-    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     expectedTargetBlueId: 6LkA2vimY2z1unPzPwLaaqb5rZkuuTqAcDJMY5F9hQ2t
     active: true
     pendingHistoricalEpoch: null
@@ -538,7 +538,7 @@ expected:
   - graphChangeOrdinal: 0
     changeKind: ADD
     sourceDocumentId: z-owner
-    sourcePath: /source
+    sourcePath: "/source"
     beforeActivationGeneration: null
     beforeOccurrenceIdentity: null
     beforeBindingIdentity: null
@@ -568,7 +568,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:053c8bbedf21fdc91022a79717263d8680d3027d8d2a3df6ebff0c75f42583b3
         managedDocumentId: a-source
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: sourceChannel
         effectiveRuntimeContributionBlueId: DDXMHwoniCX5muJiapsR6iJ4rQWVVG9uucCiCGTmNEj3
@@ -581,7 +581,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:053c8bbedf21fdc91022a79717263d8680d3027d8d2a3df6ebff0c75f42583b3
         managedDocumentId: a-source
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: sourceChannel
         effectiveRuntimeContributionBlueId: DDXMHwoniCX5muJiapsR6iJ4rQWVVG9uucCiCGTmNEj3
@@ -606,7 +606,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:d2cadd4ca6209434c7b1f1fcdf6bc5d3042b954c37d550aa678595b5646fc01a
         managedDocumentId: z-owner
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromSource
         effectiveRuntimeContributionBlueId: Gtni9GakcmA8KtLNsYY2RJTF9SCqebKQx3YWaperoMn1
@@ -619,7 +619,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:d2cadd4ca6209434c7b1f1fcdf6bc5d3042b954c37d550aa678595b5646fc01a
         managedDocumentId: z-owner
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromSource
         effectiveRuntimeContributionBlueId: Gtni9GakcmA8KtLNsYY2RJTF9SCqebKQx3YWaperoMn1
@@ -644,7 +644,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:8ceabd0d4732e5ab9b5c527d627954cb4af8a5116163b12d5d7ab86c6765dfb5
         managedDocumentId: z-owner
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: sourceChannel
         effectiveRuntimeContributionBlueId: 32tGeJBdiuXVvrvoBCLdSqRYGsJAyZ2u1VP9L6fDrYGo
@@ -657,7 +657,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:8ceabd0d4732e5ab9b5c527d627954cb4af8a5116163b12d5d7ab86c6765dfb5
         managedDocumentId: z-owner
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: sourceChannel
         effectiveRuntimeContributionBlueId: 32tGeJBdiuXVvrvoBCLdSqRYGsJAyZ2u1VP9L6fDrYGo
@@ -703,7 +703,7 @@ expected:
   publicEvents: []
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:6aca52bef38ec18b1ea5c9f18fd3a4b0976aee2ad492b317832f01e64384b8ec
+  - transitionReceiptIdentity: sha256:2843a11db13042fddc5285f7e947e3a1f6af301a18be2049e444f0719378db7d
     sourceInvocationIdentity: sha256:d3b37ad3db73a08302bd80999c3577dc56f49148030eaaf797ab6449f1b252b6
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:43738e029e546ae5abe2dce31db715c657d2b7a5ba1958dee5e08331d6673459
@@ -724,8 +724,8 @@ expected:
         id: X-BEFORE-ADD
       publicAtSource: false
     emittedRootEventsIdentity: sha256:c334c7813c045cd0d0887766224ce77af82584af4b3719aafeda0d54881166cb
-    admittedGas: 528
-  - transitionReceiptIdentity: sha256:480c8eb94c83a85be262264f09a596ba082af1ea9224cc799f0bfe51f026b177
+    admittedGas: 445
+  - transitionReceiptIdentity: sha256:ecbdb94525b5e5f1f15846d89bbd1f489a2ee4260552cd2af91dc2f8cb830b21
     sourceInvocationIdentity: sha256:d3b37ad3db73a08302bd80999c3577dc56f49148030eaaf797ab6449f1b252b6
     transitionOrdinal: 1
     transitionOccurrenceIdentity: sha256:b26c9f74775c9337416f5d28efa84a170559be8cbb16f9a7b7a818e53ec88b96
@@ -735,11 +735,11 @@ expected:
     afterBlueId: 13BnZ7jbXhoHBFKMPNHbUWiXcsDjiLYufJbY852h7dK3
     emittedRootEvents: []
     emittedRootEventsIdentity: sha256:55dcb59a5fedea089fc3a0deff7cc48a50404e52cf4c4579c5ff30a32af496eb
-    admittedGas: 261
-  managedTransitionReceiptsIdentity: sha256:36fc7bb263c543b1f19f18c1b0cd5d0b77f6781b6d9f57564477ce08876d1165
+    admittedGas: 344
+  managedTransitionReceiptsIdentity: sha256:0878346f0c6e7acaf4072766835e0f9e08118201bbf524fc9be72c6f68fc71a5
   rollbackToInput: false
   totalGas: 789
-  gasTraceIdentity: sha256:9b65b21e30f6f8ec44dd49db97113f2632350e175ecd7f35ce28d46cc150670f
+  gasTraceIdentity: sha256:3838bb63847d329ccce0950c52975e1459920611636e0af779274952ff87f8db
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -857,12 +857,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: acceptance
   - sequence: 15
     namespace: processor
@@ -871,12 +871,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: acceptance
   - sequence: 16
     namespace: processor
@@ -885,12 +885,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: direct-admission.0.classification
   - sequence: 17
     namespace: processor
@@ -899,12 +899,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: acceptance
   - sequence: 18
     namespace: processor
@@ -913,12 +913,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: acceptance
   - sequence: 19
     namespace: processor
@@ -927,12 +927,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: direct-admission.1.classification
   - sequence: 20
     namespace: processor
@@ -941,12 +941,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: work.0.seed-enqueue
   - sequence: 21
     namespace: processor
@@ -955,12 +955,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.seed-enqueue
   - sequence: 22
     namespace: processor
@@ -969,12 +969,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: work.0.dequeue
   - sequence: 23
     namespace: processor
@@ -983,7 +983,7 @@ expected:
     weight: 10
     subtotal: 10
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -996,7 +996,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
@@ -1009,7 +1009,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1022,7 +1022,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emit
@@ -1035,12 +1035,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/shared"
     workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
-    logicalPath: /shared
     reason: route
   - sequence: 28
     namespace: processor
@@ -1049,12 +1049,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/shared"
     workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
-    logicalPath: /shared
     reason: route
   - sequence: 29
     namespace: processor
@@ -1063,7 +1063,7 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emit
@@ -1076,7 +1076,7 @@ expected:
     weight: 50
     subtotal: 50
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emit
@@ -1089,7 +1089,7 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1102,12 +1102,12 @@ expected:
     weight: 20
     subtotal: 20
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     logicalPath: work/0
+    workOccurrenceId: sha256:59a252855b30d59a961d01a30154438705c95dd9af59c3a4ecdf86c425899b77
     reason: event.0.enqueue
   - sequence: 33
     namespace: processor
@@ -1123,12 +1123,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.dequeue
   - sequence: 35
     namespace: processor
@@ -1137,7 +1137,7 @@ expected:
     weight: 10
     subtotal: 10
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1150,7 +1150,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
@@ -1163,7 +1163,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1176,7 +1176,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: attach
@@ -1189,7 +1189,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromSource
@@ -1202,7 +1202,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: onOldX
@@ -1215,12 +1215,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/shared"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /shared
     reason: route
   - sequence: 42
     namespace: processor
@@ -1229,12 +1229,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/shared"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /shared
     reason: route
   - sequence: 43
     namespace: processor
@@ -1243,12 +1243,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/source"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /source
     reason: route
   - sequence: 44
     namespace: processor
@@ -1257,12 +1257,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/source"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /source
     reason: route
   - sequence: 45
     namespace: processor
@@ -1271,7 +1271,7 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: attach
@@ -1284,7 +1284,7 @@ expected:
     weight: 50
     subtotal: 50
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: attach
@@ -1297,7 +1297,7 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1310,7 +1310,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1323,7 +1323,7 @@ expected:
     weight: 20
     subtotal: 20
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1336,12 +1336,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/source"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /source
     reason: identity-rebuild
   - sequence: 51
     namespace: semantic
@@ -1350,12 +1350,12 @@ expected:
     weight: 1
     subtotal: 6
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/source"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /source
     reason: identity-rebuild
   - sequence: 52
     namespace: semantic
@@ -1364,12 +1364,12 @@ expected:
     weight: 1
     subtotal: 7
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
+    logicalPath: "/source"
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
-    logicalPath: /source
     reason: identity-rebuild
   - sequence: 53
     namespace: processor
@@ -1378,12 +1378,12 @@ expected:
     weight: 2
     subtotal: 2
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.topology-change
   - sequence: 54
     namespace: processor
@@ -1392,12 +1392,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.topology-change
   - sequence: 55
     namespace: processor
@@ -1406,12 +1406,12 @@ expected:
     weight: 2
     subtotal: 6
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.topology-change
   - sequence: 56
     namespace: processor
@@ -1420,12 +1420,12 @@ expected:
     weight: 1
     subtotal: 3
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     logicalPath: work/1
+    workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.topology-change
   - sequence: 57
     namespace: semantic
@@ -1434,9 +1434,9 @@ expected:
     weight: 1
     subtotal: 1
     documentId: z-owner
-    componentGeneration: 1
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
+    componentGeneration: 1
     contractKey: sourceChannel
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.acyclic-finalization.node-established
@@ -1447,9 +1447,9 @@ expected:
     weight: 1
     subtotal: 6
     documentId: z-owner
-    componentGeneration: 1
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
+    componentGeneration: 1
     contractKey: sourceChannel
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.acyclic-finalization.object-members
@@ -1460,9 +1460,9 @@ expected:
     weight: 1
     subtotal: 7
     documentId: z-owner
-    componentGeneration: 1
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
+    componentGeneration: 1
     contractKey: sourceChannel
     workOccurrenceId: sha256:2ec00cb2e62d54f9b8fadad200289ca04441a3ca7a06590f4690fc432d1edc6d
     reason: work.1.acyclic-finalization.direct-hash
@@ -1473,7 +1473,7 @@ expected:
     weight: 20
     subtotal: 20
     documentId: z-owner
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
@@ -1484,7 +1484,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 62
     namespace: semantic
@@ -1492,7 +1497,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 63
     namespace: semantic
@@ -1500,7 +1510,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 64
     namespace: semantic
@@ -1508,7 +1523,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 65
     namespace: semantic
@@ -1516,7 +1536,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 66
     namespace: semantic
@@ -1524,7 +1549,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 67
     namespace: semantic
@@ -1532,7 +1562,12 @@ expected:
     quantity: 7
     weight: 1
     subtotal: 7
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 68
     namespace: semantic
@@ -1540,7 +1575,12 @@ expected:
     quantity: 8
     weight: 1
     subtotal: 8
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 69
     namespace: semantic
@@ -1548,7 +1588,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 70
     namespace: semantic
@@ -1556,7 +1601,12 @@ expected:
     quantity: 6
     weight: 1
     subtotal: 6
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 71
     namespace: semantic
@@ -1564,7 +1614,12 @@ expected:
     quantity: 7
     weight: 1
     subtotal: 7
-    logicalPath: /contracts/checkpoint
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 72
     namespace: semantic
@@ -1572,7 +1627,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 73
     namespace: semantic
@@ -1580,7 +1640,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 74
     namespace: semantic
@@ -1588,7 +1653,12 @@ expected:
     quantity: 3
     weight: 1
     subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 75
     namespace: semantic
@@ -1596,7 +1666,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 76
     namespace: semantic
@@ -1604,7 +1679,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 77
     namespace: semantic
@@ -1612,7 +1692,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 78
     namespace: semantic
@@ -1620,7 +1705,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 79
     namespace: semantic
@@ -1628,7 +1718,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 80
     namespace: semantic
@@ -1636,7 +1731,12 @@ expected:
     quantity: 3
     weight: 1
     subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 81
     namespace: semantic
@@ -1644,7 +1744,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 82
     namespace: semantic
@@ -1652,7 +1757,12 @@ expected:
     quantity: 7
     weight: 1
     subtotal: 7
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 83
     namespace: semantic
@@ -1660,7 +1770,12 @@ expected:
     quantity: 8
     weight: 1
     subtotal: 8
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 84
     namespace: semantic
@@ -1668,7 +1783,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 85
     namespace: semantic
@@ -1676,7 +1796,12 @@ expected:
     quantity: 6
     weight: 1
     subtotal: 6
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 86
     namespace: semantic
@@ -1684,7 +1809,12 @@ expected:
     quantity: 7
     weight: 1
     subtotal: 7
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: z-owner
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 87
     namespace: processor
@@ -1693,18 +1823,23 @@ expected:
     weight: 20
     subtotal: 20
     documentId: a-source
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: sourceChannel
-    reason: checkpoint-settlement.1.write.1
+    reason: checkpoint-settlement.0.write.1
   - sequence: 88
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 89
     namespace: semantic
@@ -1712,7 +1847,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 90
     namespace: semantic
@@ -1720,7 +1860,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 91
     namespace: semantic
@@ -1728,7 +1873,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 92
     namespace: semantic
@@ -1736,7 +1886,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 93
     namespace: semantic
@@ -1744,7 +1899,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 94
     namespace: semantic
@@ -1752,7 +1912,12 @@ expected:
     quantity: 5
     weight: 1
     subtotal: 5
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 95
     namespace: semantic
@@ -1760,7 +1925,12 @@ expected:
     quantity: 6
     weight: 1
     subtotal: 6
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 96
     namespace: semantic
@@ -1768,7 +1938,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 97
     namespace: semantic
@@ -1776,7 +1951,12 @@ expected:
     quantity: 4
     weight: 1
     subtotal: 4
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 98
     namespace: semantic
@@ -1784,7 +1964,12 @@ expected:
     quantity: 5
     weight: 1
     subtotal: 5
-    logicalPath: /contracts/checkpoint
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint"
     reason: identity-rebuild
   - sequence: 99
     namespace: semantic
@@ -1792,7 +1977,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 100
     namespace: semantic
@@ -1800,7 +1990,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 101
     namespace: semantic
@@ -1808,7 +2003,12 @@ expected:
     quantity: 3
     weight: 1
     subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 102
     namespace: semantic
@@ -1816,7 +2016,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 103
     namespace: semantic
@@ -1824,7 +2029,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 104
     namespace: semantic
@@ -1832,7 +2042,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 105
     namespace: semantic
@@ -1840,7 +2055,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 106
     namespace: semantic
@@ -1848,7 +2068,12 @@ expected:
     quantity: 2
     weight: 1
     subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 107
     namespace: semantic
@@ -1856,7 +2081,12 @@ expected:
     quantity: 3
     weight: 1
     subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 108
     namespace: semantic
@@ -1864,7 +2094,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 109
     namespace: semantic
@@ -1872,7 +2107,12 @@ expected:
     quantity: 5
     weight: 1
     subtotal: 5
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 110
     namespace: semantic
@@ -1880,7 +2120,12 @@ expected:
     quantity: 6
     weight: 1
     subtotal: 6
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 111
     namespace: semantic
@@ -1888,7 +2133,12 @@ expected:
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 112
     namespace: semantic
@@ -1896,7 +2146,12 @@ expected:
     quantity: 4
     weight: 1
     subtotal: 4
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 113
     namespace: semantic
@@ -1904,7 +2159,12 @@ expected:
     quantity: 5
     weight: 1
     subtotal: 5
-    logicalPath: /contracts/checkpoint/entries/sourceChannel
+    documentId: a-source
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: sourceChannel
+    logicalPath: "/contracts/checkpoint/entries/sourceChannel"
     reason: identity-rebuild
   - sequence: 114
     namespace: semantic
@@ -2179,10 +2439,10 @@ expected:
   observations:
   - workOrdinal: 0
     targetDocumentId: z-owner
-    pointer: /receivedOldX
+    pointer: "/receivedOldX"
     observedValue: false
   platformCommitCompanion:
-    companionIdentity: sha256:5b205da55d7e5ef9830e76cd7563e7a2fbdb1c48f5835cbe6298ac9602407792
+    companionIdentity: sha256:cd1ebfc17fb38451abf9a9ff714caca629d5316afd12dbd0083d1cb199c60330
     invocationIdentity: sha256:d3b37ad3db73a08302bd80999c3577dc56f49148030eaaf797ab6449f1b252b6
     inputClosureIdentity: sha256:05ecf3710a5d9a96153d8d1543e78786145b58f70a8d35da056efeade0286350
     outputClosureIdentity: sha256:cab5841aed634a29335cff1b51ab08f31174797996fad38845e3e74f60de5f95
@@ -2234,8 +2494,8 @@ expected:
     checkpointWritesIdentity: sha256:500c7e3d5397cc0c57abbe9aac9365e7e280f3dd4c2c830db3bd8c4aa86e84ca
     subscriptionDeltasIdentity: sha256:96aa978da235998ad71fb329155ce52beacbe323a727c2ae6393a0562903eae3
     publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
-    gasTraceIdentity: sha256:9b65b21e30f6f8ec44dd49db97113f2632350e175ecd7f35ce28d46cc150670f
-    managedTransitionReceiptsIdentity: sha256:36fc7bb263c543b1f19f18c1b0cd5d0b77f6781b6d9f57564477ce08876d1165
+    gasTraceIdentity: sha256:3838bb63847d329ccce0950c52975e1459920611636e0af779274952ff87f8db
+    managedTransitionReceiptsIdentity: sha256:0878346f0c6e7acaf4072766835e0f9e08118201bbf524fc9be72c6f68fc71a5
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac

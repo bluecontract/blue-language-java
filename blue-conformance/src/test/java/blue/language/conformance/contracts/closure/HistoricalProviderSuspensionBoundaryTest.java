@@ -77,7 +77,9 @@ final class HistoricalProviderSuspensionBoundaryTest {
             attempt = contracts.processClosure(fixture.input);
         }
 
-        assertTrue(attempt.isComplete());
+        assertTrue(attempt.isComplete(), () -> "Historical successor attempt=" + attempt.kind()
+                + ", requiredExactBlueIds=" + attempt.requiredExactBlueIds()
+                + ", resourceDemands=" + attempt.resourceDemands());
         assertEquals(ProcessorStatus.SUCCESS,
                 attempt.processResult().status());
     }

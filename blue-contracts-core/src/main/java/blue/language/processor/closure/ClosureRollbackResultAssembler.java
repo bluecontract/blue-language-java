@@ -193,6 +193,10 @@ final class ClosureRollbackResultAssembler {
         for (ManagedDocumentSnapshot document
                 : snapshot.managedDocuments()) {
             ComponentSnapshot component = owners.get(document.documentId());
+            if (!document.hasResidentBody()) {
+                result.add(ResultingDocument.unchangedVerified(document, component));
+                continue;
+            }
             result.add(new ResultingDocument(
                     document.documentId(),
                     document.blueId(),

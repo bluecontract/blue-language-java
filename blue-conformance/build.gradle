@@ -57,3 +57,24 @@ tasks.register('exportManagedTransitionReceiptFixtures', JavaExec) {
         args = requiredProperties.collect { project.property(it).toString() }
     }
 }
+
+// Review diagnostics only: this does not run in, or update, the acceptance suite.
+tasks.register('collectReviewedClosureFixtureCandidates', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'blue.language.conformance.contracts.ReviewedClosureFixtureCandidates'
+    outputs.upToDateWhen { false }
+    doFirst {
+        def requiredProperties = [
+                'reviewFixturePackageRoot',
+                'reviewFixtureOutputRoot',
+                'reviewFixtureIds'
+        ]
+        def missing = requiredProperties.findAll { !project.hasProperty(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                    "Missing required fixture review properties: ${missing.join(', ')}")
+        }
+        args = requiredProperties.collect { project.property(it).toString() }
+    }
+}

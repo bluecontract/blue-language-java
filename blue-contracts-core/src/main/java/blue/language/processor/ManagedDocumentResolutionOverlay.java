@@ -28,6 +28,7 @@ public final class ManagedDocumentResolutionOverlay {
 
     private final Map<String, Node> exactNodesByBlueId;
     private final Map<String, String> expectedManagedBlueIdsByPath;
+    private final java.util.Set<String> admittedManagedBlueIds;
 
     /**
      * Creates an immutable invocation-local overlay.
@@ -41,6 +42,16 @@ public final class ManagedDocumentResolutionOverlay {
     public ManagedDocumentResolutionOverlay(
             Map<String, Node> exactNodesByBlueId,
             Map<String, String> expectedManagedBlueIdsByPath) {
+        this(exactNodesByBlueId, expectedManagedBlueIdsByPath, exactNodesByBlueId.keySet());
+    }
+
+    /** Complete managed identity inventory, with only resident bodies supplied above. */
+    public ManagedDocumentResolutionOverlay(
+            Map<String, Node> exactNodesByBlueId,
+            Map<String, String> expectedManagedBlueIdsByPath,
+            java.util.Collection<String> admittedManagedBlueIds) {
+        this.admittedManagedBlueIds = Collections.unmodifiableSet(new java.util.LinkedHashSet<String>(
+                Objects.requireNonNull(admittedManagedBlueIds, "admittedManagedBlueIds")));
         LinkedHashMap<String, Node> nodes =
                 new LinkedHashMap<String, Node>();
         for (Map.Entry<String, Node> entry
@@ -111,6 +122,8 @@ public final class ManagedDocumentResolutionOverlay {
         }
         return Collections.unmodifiableMap(result);
     }
+
+    java.util.Set<String> admittedManagedBlueIds() { return admittedManagedBlueIds; }
 
     /**
      * Returns the selected Root's declaration-covered managed paths.

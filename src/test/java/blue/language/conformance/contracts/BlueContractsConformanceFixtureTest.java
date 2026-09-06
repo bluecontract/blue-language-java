@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -50,7 +51,11 @@ class BlueContractsConformanceFixtureTest {
         assertEquals(276, fixtureCount);
         assertEquals(report.getFixtureIds(),
                 report.getPassedFixtureIds(),
-                report.getFailures()::toString);
+                () -> report.getFailures().stream()
+                        .map(failure -> failure.getFixtureId() + ": "
+                                + failure.getExceptionClass() + ": "
+                                + failure.getMessage())
+                        .collect(Collectors.joining("\n")));
         assertTrue(report.getFailedFixtureIds().isEmpty());
         assertEquals(0, report.getSkippedFixtureCount());
         assertTrue(report.isConformant());

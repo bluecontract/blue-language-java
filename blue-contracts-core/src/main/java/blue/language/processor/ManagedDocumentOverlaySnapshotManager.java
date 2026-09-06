@@ -22,6 +22,7 @@ final class ManagedDocumentOverlaySnapshotManager
     private final ProcessingSnapshotManager delegate;
     private final Map<String, FrozenNode> exactNodesByBlueId;
     private final Map<String, String> expectedManagedBlueIdsByPath;
+    private final Set<String> admittedManagedBlueIds;
 
     ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
@@ -35,19 +36,36 @@ final class ManagedDocumentOverlaySnapshotManager
                 : admitted.exactNodesByBlueId().entrySet()) {
             nodes.put(entry.getKey(), FrozenNode.fromNode(entry.getValue()));
         }
-        this.exactNodesByBlueId = Collections.unmodifiableMap(nodes);
+        this.exactNodesByBlueId = nodes;
+        this.admittedManagedBlueIds = new LinkedHashSet<String>(admitted.admittedManagedBlueIds());
         this.expectedManagedBlueIdsByPath =
-                Collections.unmodifiableMap(new LinkedHashMap<String, String>(
-                        admitted.expectedManagedBlueIdsByPath()));
+                new LinkedHashMap<String, String>(admitted.expectedManagedBlueIdsByPath());
+    }
+
+    /**
+     * All transient views of this isolated step share these invocation-private maps. Update
+     * them only after its synchronous continuation returns, before another handler can read.
+     * A missing body stays a named evidence need; refresh never consults ambient storage.
+     */
+    void refresh(ManagedDocumentResolutionOverlay overlay) {
+        if (overlay == null) return;
+        Map<String, FrozenNode> nodes = new LinkedHashMap<String, FrozenNode>();
+        for (Map.Entry<String, Node> entry : overlay.exactNodesByBlueId().entrySet())
+            nodes.put(entry.getKey(), FrozenNode.fromNode(entry.getValue()));
+        exactNodesByBlueId.clear(); exactNodesByBlueId.putAll(nodes);
+        expectedManagedBlueIdsByPath.clear(); expectedManagedBlueIdsByPath.putAll(overlay.expectedManagedBlueIdsByPath());
+        admittedManagedBlueIds.clear(); admittedManagedBlueIds.addAll(overlay.admittedManagedBlueIds());
     }
 
     private ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
             Map<String, FrozenNode> exactNodesByBlueId,
-            Map<String, String> expectedManagedBlueIdsByPath) {
+            Map<String, String> expectedManagedBlueIdsByPath,
+            Set<String> admittedManagedBlueIds) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.exactNodesByBlueId = exactNodesByBlueId;
         this.expectedManagedBlueIdsByPath = expectedManagedBlueIdsByPath;
+        this.admittedManagedBlueIds = admittedManagedBlueIds;
     }
 
     @Override
@@ -91,6 +109,10 @@ final class ManagedDocumentOverlaySnapshotManager
         }
         FrozenNode current = exactNodesByBlueId.get(
                 checked.getReferenceBlueId());
+        if (current == null && admittedManagedBlueIds.contains(checked.getReferenceBlueId())) {
+            throw new ExecutionEvidenceUnavailableException("Managed reference requires exact admitted content",
+                    Collections.singletonList(checked.getReferenceBlueId()));
+        }
         return current != null
                 ? current
                 : delegate.materializeVerifiedExactReference(checked);
@@ -161,7 +183,7 @@ final class ManagedDocumentOverlaySnapshotManager
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.transientSequence(),
                 exactNodesByBlueId,
-                expectedManagedBlueIdsByPath);
+                expectedManagedBlueIdsByPath, admittedManagedBlueIds);
     }
 
     @Override
@@ -169,7 +191,7 @@ final class ManagedDocumentOverlaySnapshotManager
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.forkTransientSequence(),
                 exactNodesByBlueId,
-                expectedManagedBlueIdsByPath);
+                expectedManagedBlueIdsByPath, admittedManagedBlueIds);
     }
 
     @Override

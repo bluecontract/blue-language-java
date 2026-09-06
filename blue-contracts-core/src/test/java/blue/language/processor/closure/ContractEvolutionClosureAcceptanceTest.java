@@ -21,6 +21,7 @@ import blue.language.processor.HandlerProcessor;
 import blue.language.processor.HandlerRegistrationContext;
 import blue.language.processor.ManagedProcessEmbeddedPath;
 import blue.language.processor.ProcessorErrorCategory;
+import blue.language.processor.ProcessorFailureException;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorStatus;
@@ -1589,7 +1590,7 @@ final class ContractEvolutionClosureAcceptanceTest {
                                 "/state", new Node().value("tentative")),
                         JsonPatch.remove("/peer")));
                 context.emitEvent(EVENT_TENTATIVE.clone());
-                throw new IllegalStateException(
+                throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
                         "deterministic aggregate rollback failure");
             } else if ("matrixMutation".equals(key)) {
                 mutateRegisteredRuntime(context);

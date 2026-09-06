@@ -44,6 +44,7 @@ public final class ClosureProcessResult {
             managedTransitionReceipts;
     private final String managedTransitionReceiptsIdentity;
     private final boolean managedTransitionReceiptSurfacePresent;
+    private final List<ManagedReadPin> readPins;
 
     /**
      * Creates and semantically cross-validates one complete result.
@@ -192,7 +193,7 @@ public final class ClosureProcessResult {
                 false,
                 Collections.<DocumentId>emptySet(),
                 Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
+                        emptyList(), Collections.<DocumentId>emptySet(), Collections.emptyMap());
     }
 
     /**
@@ -257,7 +258,7 @@ public final class ClosureProcessResult {
                 false,
                 Collections.<DocumentId>emptySet(),
                 Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
+                        emptyList(), Collections.<DocumentId>emptySet(), Collections.emptyMap());
     }
 
     /**
@@ -324,10 +325,10 @@ public final class ClosureProcessResult {
                 true,
                 Collections.<DocumentId>emptySet(),
                 Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
+                        emptyList(), Collections.<DocumentId>emptySet(), Collections.emptyMap());
     }
 
-    /** Processor hook for one verified resolution-bound retry result. */
+    /** Processor hook for a verified result and actual owned semantic step/epoch authority. */
     ClosureProcessResult(
             AffectedClosureSnapshot inputSnapshot,
             ProcessorStatus status,
@@ -357,7 +358,9 @@ public final class ClosureProcessResult {
             List<DocumentTransitionEvidence> documentTransitionEvidence,
             List<ManagedDocumentTransitionReceipt>
                     managedTransitionReceipts,
-            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+            List<ManagedOccurrenceEvidenceResolution> resolutions,
+            Set<DocumentId> processedEpochDocuments,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
         this(
                 inputSnapshot,
                 status,
@@ -388,7 +391,7 @@ public final class ClosureProcessResult {
                 managedTransitionReceipts,
                 true,
                 Collections.<DocumentId>emptySet(),
-                resolutions);
+                resolutions, processedEpochDocuments, retirements);
     }
 
     /**
@@ -453,7 +456,7 @@ public final class ClosureProcessResult {
                 false,
                 candidateGasDocumentIds(rejectedAdmissionCandidate),
                 Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
+                        emptyList(), Collections.<DocumentId>emptySet(), Collections.emptyMap());
     }
 
     private ClosureProcessResult(
@@ -487,7 +490,9 @@ public final class ClosureProcessResult {
             boolean managedTransitionReceiptSurfacePresent,
             Set<DocumentId> supplementalGasDocumentIds,
             List<ManagedOccurrenceEvidenceResolution>
-                    managedOccurrenceResolutions) {
+                    managedOccurrenceResolutions,
+            Set<DocumentId> processedEpochDocumentIds,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
         this.status = Objects.requireNonNull(status, "status");
@@ -554,6 +559,11 @@ public final class ClosureProcessResult {
         }
         Set<DocumentId> supplementalGasDocuments =
                 immutableDocumentIds(supplementalGasDocumentIds);
+        Set<DocumentId> processedEpochDocuments = immutableDocumentIds(processedEpochDocumentIds);
+        if (!processedEpochDocuments.isEmpty() && status != ProcessorStatus.SUCCESS)
+            throw new IllegalArgumentException("Only successful owned processing can authorize a same-head epoch advance");
+        if (!Objects.requireNonNull(retirements, "retirements").isEmpty() && status != ProcessorStatus.SUCCESS)
+            throw new IllegalArgumentException("Only successful processing can expose exact retirement authority");
         if (!supplementalGasDocuments.isEmpty()
                 && status != ProcessorStatus.INVALID_PROCESSING_DOCUMENT) {
             throw new IllegalArgumentException(
@@ -562,7 +572,10 @@ public final class ClosureProcessResult {
         validateInputIdentity(input);
         ClosureEvidenceVerifier.verifySnapshot(input);
         validateCanonicalEvidence();
-        AffectedClosureSnapshot output = validateResultSnapshot();
+        java.util.TreeSet<ManagedReadPin> readPins = new java.util.TreeSet<ManagedReadPin>(input.readPins());
+        if (reusableFinalization != null) readPins.addAll(reusableFinalization.readPins());
+        this.readPins = Collections.unmodifiableList(new ArrayList<ManagedReadPin>(readPins));
+        AffectedClosureSnapshot output = validateResultSnapshot(this.readPins);
         validateManagedTransitionReceipts();
         validateStatusAndRollback(input);
         validateRejectedCharge();
@@ -577,11 +590,14 @@ public final class ClosureProcessResult {
                 this.gasTrace,
                 reusableFinalization,
                 supplementalGasDocuments,
-                managedOccurrenceResolutions);
+                managedOccurrenceResolutions, processedEpochDocuments, retirements);
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }
     }
+
+    /** Exact dependency bodies retained by observers; never additional mutable lineage states. */
+    public List<ManagedReadPin> readPins() { return readPins; }
 
     private static Set<DocumentId> candidateGasDocumentIds(
             AdmissionCandidate candidate) {
@@ -1150,7 +1166,7 @@ public final class ClosureProcessResult {
         return result;
     }
 
-    private AffectedClosureSnapshot validateResultSnapshot() {
+    private AffectedClosureSnapshot validateResultSnapshot(List<ManagedReadPin> readPins) {
         Map<String, ComponentSnapshot> components =
                 new HashMap<String, ComponentSnapshot>();
         Set<DocumentId> covered = new HashSet<DocumentId>();
@@ -1212,7 +1228,7 @@ public final class ClosureProcessResult {
                 occurrenceBindings,
                 occurrenceBindingSetIdentity,
                 resultingComponents,
-                publicRoots);
+                publicRoots, readPins);
         String computedOutput = ClosureIdentityService.INSTANCE
                 .affectedClosureIdentity(output);
         if (!outputClosureIdentity.equals(computedOutput)) {

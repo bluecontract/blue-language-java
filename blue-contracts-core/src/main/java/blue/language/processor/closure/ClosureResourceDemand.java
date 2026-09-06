@@ -7,8 +7,8 @@ import java.util.Objects;
  * noncommitting closure attempt.
  *
  * <p>Construction is package-controlled. The only supported concrete forms
- * are {@link ExactNodeDemand} and
- * {@link ManagedOccurrenceEvidenceDemand}; both are final.</p>
+ * are {@link ExactNodeDemand}, {@link ManagedOccurrenceEvidenceDemand}, and
+ * {@link SourceInitializationDemand}; all are final.</p>
  */
 public abstract class ClosureResourceDemand
         implements Comparable<ClosureResourceDemand> {
@@ -18,7 +18,9 @@ public abstract class ClosureResourceDemand
         /** An exact Blue node must first become available. */
         EXACT_NODE,
         /** Exact managed-occurrence lineage evidence must be supplied. */
-        MANAGED_OCCURRENCE_EVIDENCE
+        MANAGED_OCCURRENCE_EVIDENCE,
+        /** A canonical source initialization must be prepared or retrieved, not executed by the consumer. */
+        CANONICAL_INITIALIZATION
     }
 
     private final Kind kind;

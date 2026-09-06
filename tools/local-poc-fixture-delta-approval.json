@@ -1,0 +1,151 @@
+{
+  "kind": "approved-local-poc-fixture-deltas",
+  "packageRoot": "/Users/kamil/Documents/Projects/Blue/worktrees/coordination-external-state/blue-language-java/blue-conformance/src/main/resources/blue-contracts-closure-1.0",
+  "review": "Reviewed against kernel22, actual inverse-hash routing and historical callback controls; independent audit agrees. Preserve custom observations, unchanged inputs, status, state, epochs, events and checkpoints. See local-poc-fixture-deltas.md.",
+  "reports": [
+    {
+      "id": "c-clo-02-acyclic-materialized-parity",
+      "sha256": "dc5f229359f359156de3ee78a2c4fae735e0494721ea038c565467276fddcede"
+    },
+    {
+      "id": "c-clo-02-acyclic-pure-reference-parity",
+      "sha256": "b85b929be0a69c7e60b96535cefd8e7eff5cfb84f863be87713405540f39e97d"
+    },
+    {
+      "id": "c-clo-02-dynamic-finite-cycle",
+      "sha256": "b337b9d3d1b2904a290a7222665ff1bc7f62205b1a06d1b7ec3052ef615787c3"
+    },
+    {
+      "id": "c-clo-03-exact-tentative-identity-visibility",
+      "sha256": "2509e14a20ac994a5ac7011d376c28df633ad15ff1952912bc1d329869d40b6d"
+    },
+    {
+      "id": "c-clo-04-default-policy-loop",
+      "sha256": "5279dae70e7c1ed3cf0f40af49822d6f121d6d822a45dc76dce93874a6040560"
+    },
+    {
+      "id": "c-clo-04-same-event-gas-loop",
+      "sha256": "96f56f4293c43dd894022b2179399d1e3a4e1116d29c008a2bb7a7602fa3d6ae"
+    },
+    {
+      "id": "c-clo-05-direct-both-members",
+      "sha256": "0fe2d5ce13cf4a68ba09d5e1288ff8119d3d0dd7e70e7a27a8d4dcf181267418"
+    },
+    {
+      "id": "c-clo-06-duplicate-event-occurrences",
+      "sha256": "e3d21ba3b6d22d4db4b03f3d180e9702a8212566734cf7889c91bd6a19df60c6"
+    },
+    {
+      "id": "c-clo-08-cycle-during-initialization",
+      "sha256": "a1c0b20269359d37264cd31df33b25c311178bc05ab9a9662ad14690ed187a48"
+    },
+    {
+      "id": "c-clo-09-merge-two-cycles",
+      "sha256": "d4a6d877e76e687bcab69974e6a9ef16e47a27a659116762a91c4dfd6ec6e016"
+    },
+    {
+      "id": "c-clo-13-frozen-edge-addition",
+      "sha256": "96310ef34fdc29ab36ac906d487e0ba1775d458913f87b636ffcaae360623181"
+    },
+    {
+      "id": "c-clo-19-multiple-public-roots-canonical",
+      "sha256": "eedbfef86c4dc168f2b0ce234816432356c3edd15455142722b53b7f07ee6a2a"
+    },
+    {
+      "id": "c-clo-19-public-event-boundary",
+      "sha256": "703accfc4256ffce2972074d4ac7a04622326fe3daad69459a466d9796f332b6"
+    },
+    {
+      "id": "c-clo-19-single-public-root",
+      "sha256": "c49c4df3f6667e3b2ceebf194665069f32803b1505e276fd7fc9ae2bcb9bd91d"
+    },
+    {
+      "id": "c-clo-20-late-outer-failure",
+      "sha256": "4b846cc44b248209ec630130ac0c05f5157dcb38aa7635a70d2e8810763298b5"
+    },
+    {
+      "id": "c-clo-23-01-a5-to-a6",
+      "sha256": "586e64ed3e3790e9bfdc8077a17dd21492fd0ce4d9ee842c095e24cacc52b13f"
+    },
+    {
+      "id": "c-clo-23-02-a6-to-a7",
+      "sha256": "bda689660967e4766cb7d6df056395203f2c162a659eac898e7f6a4cbda048a6"
+    },
+    {
+      "id": "c-clo-23-03-a7-to-a8",
+      "sha256": "ba270236ad9e1289023cd607412b932e92e63a03592f5eb1f7e8e91d144c6085"
+    },
+    {
+      "id": "c-clo-23-04-a8-to-a9",
+      "sha256": "b8739149e5a0ed29d269eb38177926d9062be0afbde11c30fdee0a618ad993d1"
+    },
+    {
+      "id": "c-clo-23-05-a9-to-a10",
+      "sha256": "ec39786339eddae3c3b4a8c78392200153b7ef5acd00e35d34935fd8bdf0fd2a"
+    },
+    {
+      "id": "c-clo-24-occurrence-continuity",
+      "sha256": "9622175d3e9a1028637f9f1b2c37f53d1aca2596fce487c7f2f83145f3e61a2e"
+    },
+    {
+      "id": "c-clo-25-policy-identity-binding",
+      "sha256": "7d6822a68b883c65235f2f2962523ca8bc4a350b2917d8dfe75971a90c389d69"
+    },
+    {
+      "id": "c-clo-26-embedded-local-cap",
+      "sha256": "86364d2bf51faaebf1c86e2d3250b0577770278bc2cf8b1b6738b6771bcb06c7"
+    },
+    {
+      "id": "c-clo-27-multiple-scc-one-closure",
+      "sha256": "eea6487cc680e5004c6729f22f60954bb22c8372444b1e5eced48debd0392668"
+    },
+    {
+      "id": "c-clo-30-language-cyclic-oracles",
+      "sha256": "83ee6783dceb554579715c6973b164c0f7b315cbd29da9673e5e80284204c9cd"
+    },
+    {
+      "id": "c-clo-33-checkpoint-domain-retirement",
+      "sha256": "12f638009d267e60f0897a77b921df9ae7ca02f29a1a78ba30914516f85d709c"
+    },
+    {
+      "id": "c-clo-34-separate-document-steps",
+      "sha256": "9ab5b3bf2cc6cd328ca09ee4965fb3f57bd8dc802fa8e8ebfa231d1c4f897cbc"
+    },
+    {
+      "id": "c-clo-35-01-readd-committed-successor",
+      "sha256": "606c9a9548ce5c80d975d1039b503b1549b2d0832333548fc962bc79e55841fb"
+    },
+    {
+      "id": "fl-adm-03-non-public-containing-route",
+      "sha256": "b2a293df5bdfbeabfffd44979f958cefcb964bcb9350789b76cd42966f414fe7"
+    },
+    {
+      "id": "fl-adm-06-order-representation-inline",
+      "sha256": "e242d7951cf392851d1babe5bb9cc8ed326e0e47a42cf504f7971d3d6e8dda38"
+    },
+    {
+      "id": "fl-adm-06-order-representation-reference",
+      "sha256": "3bda90aed58ef1d49e546a91fd2652747738dd975558f48717017f93ef33bfbc"
+    },
+    {
+      "id": "fl-adm-06-order-representation-reversed",
+      "sha256": "29eb7dd281cb392437d5e8502656651e265c2adc705b7cf39def2d7aaa96e382"
+    },
+    {
+      "id": "fl-adm-07-finite-cyclic-route",
+      "sha256": "b70146febee83bc5cd3650423ffb33fa45b68e60734751edca50b5205958e50b"
+    },
+    {
+      "id": "fl-adm-08-infinite-cycle-gas-retry-first",
+      "sha256": "5109db62a1ae5f26d0467eac714243613fecc4db53200a0fc2c0fd32bc00f371"
+    },
+    {
+      "id": "fl-adm-08-infinite-cycle-gas-retry-retry",
+      "sha256": "da398d92a0fef81d416a6dbfbc5bdba323819765a6b3facb64389b79d0f69c6b"
+    },
+    {
+      "id": "fl-adm-09-late-member-rollback",
+      "sha256": "2f2bddfe816b97546a16f8d549ba09f17bcd1041a1a169ed97be68db9ab781b1"
+    }
+  ]
+}

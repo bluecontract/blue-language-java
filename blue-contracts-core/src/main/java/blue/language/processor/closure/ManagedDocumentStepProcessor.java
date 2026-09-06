@@ -44,6 +44,49 @@ final class ManagedDocumentStepProcessor
 
     private final ManagedDocumentStepRuntime runtime;
     private final DocumentProcessor owner;
+    private ManagedDocumentStepRuntime sourceProofRuntime;
+    private SameOriginAttemptCoordinator sameOrigin;
+    private java.util.function.Consumer<DocumentId> originalAdmission = ignored -> { };
+    private java.util.function.UnaryOperator<GasChargeContext> semanticAttribution = java.util.function.UnaryOperator.identity();
+    private java.util.Set<String> retainedSourceDocuments = java.util.Collections.emptySet();
+    private final java.util.Set<String> retainedSourceWork = new java.util.HashSet<>();
+
+    void retainSourceWork(String workIdentity) {
+        retainedSourceWork.add(workIdentity);
+        if (sourceProofRuntime == null) sourceProofRuntime = ManagedDocumentStepRuntime.retainedSourceProof(owner);
+    }
+
+    void retainSourceDocuments(java.util.Set<DocumentId> documents) {
+        java.util.Set<String> ids = new java.util.HashSet<String>();
+        for (DocumentId document : documents) ids.add(document.value());
+        retainedSourceDocuments = java.util.Collections.unmodifiableSet(ids);
+        if (sourceProofRuntime == null) {
+            sourceProofRuntime = ManagedDocumentStepRuntime.retainedSourceProof(owner);
+        }
+    }
+
+    private ManagedDocumentStepRuntime runtimeFor(GasChargeContext context) {
+        if (retainedSourceDocuments.contains(context.documentId()) || retainedSourceWork.contains(context.workOccurrenceId())) return sourceProofRuntime;
+        if (sameOrigin != null) {
+            if (context.documentId() == null) throw new IllegalArgumentException("Same-origin semantic work requires an exact seed owner");
+            DocumentId document = new DocumentId(context.documentId());
+            originalAdmission.accept(document);
+            return sameOrigin.runtime(document);
+        }
+        return runtime;
+    }
+
+    void useSameOriginGroups(SameOriginAttemptCoordinator groups, java.util.function.UnaryOperator<GasChargeContext> attribution) {
+        useSameOriginGroups(groups, attribution, ignored -> { });
+    }
+
+    void useSameOriginGroups(SameOriginAttemptCoordinator groups, java.util.function.UnaryOperator<GasChargeContext> attribution,
+            java.util.function.Consumer<DocumentId> admission) {
+        if (sameOrigin != null || sourceProofRuntime != null) throw new IllegalStateException("Runtime ownership was already selected");
+        sameOrigin = Objects.requireNonNull(groups, "groups");
+        semanticAttribution = Objects.requireNonNull(attribution, "attribution");
+        originalAdmission = Objects.requireNonNull(admission, "admission");
+    }
 
     ManagedDocumentStepProcessor(DocumentProcessor owner) {
         DocumentProcessor checked = Objects.requireNonNull(owner, "owner");
@@ -105,7 +148,7 @@ final class ManagedDocumentStepProcessor
         for (Map.Entry<DocumentId, String> entry
                 : context.currentBlueIds().entrySet()) {
             Node exact = currentDocuments.get(entry.getKey());
-            putExactNode(exactNodes, entry.getValue(), exact);
+            if (exact != null) putExactNode(exactNodes, entry.getValue(), exact);
         }
         for (Map.Entry<String, Node> entry
                 : context.managedReadExactNodesByBlueId().entrySet()) {
@@ -125,7 +168,7 @@ final class ManagedDocumentStepProcessor
                                 target.documentId().value(),
                                 "/",
                                 Long.valueOf(0L),
-                                Long.valueOf(target.componentGeneration()),
+                                Long.valueOf(sameOrigin == null ? target.componentGeneration() : 0L),
                                 admitted.work().channelKey().isEmpty()
                                         ? null
                                         : admitted.work().channelKey(),
@@ -134,10 +177,12 @@ final class ManagedDocumentStepProcessor
                                 "managed-document-step"),
                         new ManagedDocumentResolutionOverlay(
                                 exactNodes,
-                                context.targetManagedBlueIdsByPath()));
+                                context.targetManagedBlueIdsByPath(),
+                                context.currentBlueIds().values()));
+        ManagedDocumentStepRuntime targetRuntime = sameOrigin == null ? runtime : sameOrigin.runtime(target.documentId());
         ManagedDocumentStepOutcome outcome = selectedRoute == null
-                ? runtime.execute(request)
-                : runtime.executeSelectedRoute(
+                ? targetRuntime.execute(request)
+                : targetRuntime.executeSelectedRoute(
                         request, selectedRoute);
         return new LocalDocumentStepResult(
                 target.documentId(),
@@ -277,12 +322,18 @@ final class ManagedDocumentStepProcessor
         return runtime.projectRootSubscriptionSurface(exactDocument);
     }
 
+    ManagedExternalDeliveryClassification classifyExternalDelivery(RootChannelMetadata metadata, String channel,
+            Node event, GasChargeContext context) {
+        return runtimeFor(context).classifyExternalDelivery(metadata, channel, event, context);
+    }
+
     ManagedExternalDeliveryClassification classifyExternalDelivery(
             Node exactDocument,
             String rawChannelKey,
             Node exactEvent,
             GasChargeContext context) {
-        return runtime.classifyExternalDelivery(
+        context = semanticAttribution.apply(context);
+        return runtimeFor(context).classifyExternalDelivery(
                 exactDocument,
                 rawChannelKey,
                 exactEvent,
@@ -294,7 +345,7 @@ final class ManagedDocumentStepProcessor
             List<ManagedCheckpointSettlementEntry> completedEntries,
             ManagedCheckpointCleanupContextFactory cleanupContextFactory,
             GasChargeContext batchContext) {
-        return runtime.settleCheckpoints(
+        return runtimeFor(batchContext).settleCheckpoints(
                 exactDocument,
                 completedEntries,
                 cleanupContextFactory,
@@ -305,7 +356,13 @@ final class ManagedDocumentStepProcessor
             List<ManagedCheckpointSettlementRequest> requests,
             ManagedCheckpointBatchCleanupContextFactory
                     cleanupContextFactory) {
-        return runtime.settleCheckpointBatch(
+        ManagedDocumentStepRuntime selectedRuntime = runtime;
+        if (sameOrigin != null && !requests.isEmpty()) {
+            selectedRuntime = runtimeFor(requests.get(0).revalidationAttribution());
+            return selectedRuntime.settleCheckpointBatch(requests, cleanupContextFactory,
+                    request -> runtimeFor(request.revalidationAttribution()));
+        }
+        return selectedRuntime.settleCheckpointBatch(
                 requests, cleanupContextFactory);
     }
 
@@ -322,11 +379,13 @@ final class ManagedDocumentStepProcessor
             String counter,
             long quantity,
             GasChargeContext context) {
-        runtime.charge(namespace, counter, quantity, context);
+        context = semanticAttribution.apply(context);
+        runtimeFor(context).charge(namespace, counter, quantity, context);
     }
 
     ManagedSemanticGasBridge semanticGas(GasChargeContext attribution) {
-        return runtime.semanticGas(attribution);
+        attribution = semanticAttribution.apply(attribution);
+        return runtimeFor(attribution).semanticGas(attribution);
     }
 
     Node writeDetachedProcessorState(
@@ -334,16 +393,22 @@ final class ManagedDocumentStepProcessor
             String path,
             Node exactValue,
             GasChargeContext attribution) {
-        return runtime.writeDetachedProcessorState(
+        attribution = semanticAttribution.apply(attribution);
+        return runtimeFor(attribution).writeDetachedProcessorState(
                 exactRoot, path, exactValue, attribution);
     }
 
     long totalGas() {
+        if (sameOrigin != null) {
+            long total = 0;
+            for (GasTraceEntry charge : sameOrigin.admittedTraceByStableOwner()) total = Math.addExact(total, charge.subtotal());
+            return total;
+        }
         return runtime.totalGas();
     }
 
     List<GasTraceEntry> processorGasTrace() {
-        return runtime.gasTrace();
+        return sameOrigin == null ? runtime.gasTrace() : sameOrigin.admittedTraceByStableOwner();
     }
 
     private static Map<String, Long> localLimits(
@@ -359,6 +424,10 @@ final class ManagedDocumentStepProcessor
 
     @Override
     public void close() {
-        runtime.close();
+        try {
+            runtime.close();
+        } finally {
+            if (sourceProofRuntime != null) sourceProofRuntime.close();
+        }
     }
 }

@@ -95,6 +95,8 @@ public enum ProcessorErrorCategory {
     SubscriptionSurfaceInvalid,
     /** A registered runtime implementation failed deterministically. */
     RuntimeExecutionFailure,
+    /** A proposed atomic feedback scope cannot admit its complete participant budgets. */
+    AtomicScopeGasAdmissionFailure,
     /** The admitted gas budget was exhausted. */
     GasLimitExceeded,
     /** The portable managed-document count for one closure was exceeded. */

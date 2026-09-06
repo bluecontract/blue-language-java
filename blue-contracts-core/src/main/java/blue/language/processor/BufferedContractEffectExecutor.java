@@ -169,6 +169,7 @@ final class BufferedContractEffectExecutor {
                     : CheckpointIdentityCalculator.identity(
                             event, execution.blue());
         } catch (RuntimeException exception) {
+            ProcessingFailureBoundary.requireSemantic(exception);
             execution.abortRuntimeFailure(scopePath,
                     bundle,
                     ProcessorErrorCategory.InvalidPatch,

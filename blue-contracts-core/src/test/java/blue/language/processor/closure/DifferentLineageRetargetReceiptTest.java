@@ -75,6 +75,19 @@ final class DifferentLineageRetargetReceiptTest {
     }
 
     @Test
+    void rejectsSyntheticUnchangedUninitializedEpochAdvance() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = scenario(environment.managedBindingPolicyIdentity());
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> ClosureSuccessResultAssembler.assemble(
+                            invocation(scenario.input.snapshot, environment),
+                            executionState(scenario.input)));
+            assertEquals("Processed epoch authority requires an initialized input lineage", failure.getMessage());
+        }
+    }
+
+    @Test
     void rejectsMixedRetargetShapesAtTheReceiptBoundary() {
         Node oldTarget = new Node().name("Old target");
         Node newTarget = new Node().name("New target");

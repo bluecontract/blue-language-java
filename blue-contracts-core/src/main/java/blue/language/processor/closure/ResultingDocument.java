@@ -7,7 +7,9 @@ import java.util.Objects;
 /**
  * Complete exact resulting state of one independently managed document.
  *
- * <p>The document body is always copied on ingress and egress.  Component
+ * <p>A resident document body is copied on ingress and egress. An untouched
+ * nonresident dependency may retain its closed owning component authority instead;
+ * asking for its body then produces an exact, noncommitting resource need. Component
  * membership is repeated deliberately so a result can be validated without
  * consulting hidden processor state.</p>
  */
@@ -18,6 +20,7 @@ public final class ResultingDocument
     private final String beforeBlueId;
     private final String afterBlueId;
     private final Node document;
+    private final ManagedDocumentSnapshot unchangedVerifiedHeader;
     private final boolean initialized;
     private final boolean terminated;
     private final boolean publicRoot;
@@ -62,6 +65,7 @@ public final class ResultingDocument
         this.afterBlueId = ClosureValueSupport.requireBlueId(
                 afterBlueId, "afterBlueId");
         this.document = Objects.requireNonNull(document, "document").clone();
+        this.unchangedVerifiedHeader = null;
         this.initialized = initialized;
         this.terminated = terminated;
         this.publicRoot = publicRoot;
@@ -77,6 +81,28 @@ public final class ResultingDocument
                 ? null
                 : Long.valueOf(ClosureValueSupport.requireSafeInteger(
                         memberIndex.longValue(), "memberIndex"));
+        validateMemberIndex();
+    }
+
+    /** Only an unchanged, already owning-verified component may leave its body nonresident. */
+    static ResultingDocument unchangedVerified(ManagedDocumentSnapshot exact, ComponentSnapshot component) {
+        return new ResultingDocument(exact, component);
+    }
+
+    private ResultingDocument(ManagedDocumentSnapshot exact, ComponentSnapshot component) {
+        Objects.requireNonNull(exact, "exact"); Objects.requireNonNull(component, "component");
+        ReusableComponentAuthority authority = exact.reusableAuthority().orElseThrow(
+                () -> new IllegalArgumentException("Nonresident result requires unchanged component authority"));
+        if (exact.hasResidentBody() || !authority.matchesHeader(exact)
+                || !authority.component().componentIdentity().equals(component.componentIdentity())
+                || !authority.component().componentStateIdentity().equals(component.componentStateIdentity()))
+            throw new IllegalArgumentException("Nonresident result differs from its verified unchanged component");
+        this.documentId = exact.documentId(); this.beforeBlueId = exact.blueId(); this.afterBlueId = exact.blueId();
+        this.document = null; this.unchangedVerifiedHeader = exact;
+        this.initialized = exact.initialized(); this.terminated = exact.terminated(); this.publicRoot = exact.publicRoot();
+        this.epoch = exact.epoch(); this.componentGeneration = exact.componentGeneration();
+        this.componentIdentity = component.componentIdentity(); this.componentStateIdentity = component.componentStateIdentity();
+        this.memberIndex = ClosureResultAssemblySupport.memberIndex(exact.blueId());
         validateMemberIndex();
     }
 
@@ -113,8 +139,11 @@ public final class ResultingDocument
      * @return a deep defensive copy of the resulting document
      */
     public Node document() {
-        return document.clone();
+        return document == null ? unchangedVerifiedHeader.document() : document.clone();
     }
+
+    /** False only for an unchanged component passed through its closed owning authority. */
+    public boolean hasResidentBody() { return document != null; }
 
     /**
      * Returns exact initialization-state assertion.
@@ -195,6 +224,7 @@ public final class ResultingDocument
     }
 
     ManagedDocumentSnapshot asSnapshot() {
+        if (unchangedVerifiedHeader != null) return unchangedVerifiedHeader;
         return new ManagedDocumentSnapshot(
                 documentId,
                 afterBlueId,

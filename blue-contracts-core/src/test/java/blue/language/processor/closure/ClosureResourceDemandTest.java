@@ -372,7 +372,7 @@ final class ClosureResourceDemandTest {
     }
 
     @Test
-    void closesConstructionToTheTwoFinalSupportedDemandForms()
+    void closesConstructionToTheThreeFinalSupportedDemandForms()
             throws IOException {
         assertTrue(Modifier.isAbstract(
                 ClosureResourceDemand.class.getModifiers()));
@@ -385,9 +385,12 @@ final class ClosureResourceDemandTest {
                 ExactNodeDemand.class.getSuperclass());
         assertEquals(ClosureResourceDemand.class,
                 ManagedOccurrenceEvidenceDemand.class.getSuperclass());
+        assertEquals(ClosureResourceDemand.class,
+                SourceInitializationDemand.class.getSuperclass());
         assertTrue(Modifier.isFinal(ExactNodeDemand.class.getModifiers()));
         assertTrue(Modifier.isFinal(
                 ManagedOccurrenceEvidenceDemand.class.getModifiers()));
+        assertTrue(Modifier.isFinal(SourceInitializationDemand.class.getModifiers()));
 
         Path workingDirectory = Paths.get("").toAbsolutePath();
         Path production = Files.isDirectory(
@@ -418,9 +421,10 @@ final class ClosureResourceDemandTest {
         Collections.sort(directSubclasses);
         assertEquals(Arrays.asList(
                         "ExactNodeDemand.java",
-                        "ManagedOccurrenceEvidenceDemand.java"),
+                        "ManagedOccurrenceEvidenceDemand.java",
+                        "SourceInitializationDemand.java"),
                 directSubclasses,
-                "no third demand subtype may enter the closed hierarchy");
+                "Only the three reviewed demand forms may enter the closed hierarchy");
     }
 
     private static void assertIdentityChanges(

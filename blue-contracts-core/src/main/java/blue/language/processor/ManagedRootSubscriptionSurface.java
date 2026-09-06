@@ -18,17 +18,25 @@ public final class ManagedRootSubscriptionSurface {
     private final List<ManagedRootChannelOccurrence> channelOccurrences;
     private final List<SubscriptionDelta.Entry> externalSubscriptions;
     private final List<EffectiveContractSnapshot> effectiveRootContracts;
+    private final java.util.Map<String, blue.language.snapshot.FrozenNode> channelNodes;
 
     ManagedRootSubscriptionSurface(
             List<ManagedRootChannelOccurrence> channelOccurrences,
             List<SubscriptionDelta.Entry> externalSubscriptions,
             List<EffectiveContractSnapshot> effectiveRootContracts) {
+        this(channelOccurrences, externalSubscriptions, effectiveRootContracts, java.util.Collections.<String, blue.language.snapshot.FrozenNode>emptyMap());
+    }
+
+    ManagedRootSubscriptionSurface(List<ManagedRootChannelOccurrence> channelOccurrences,
+            List<SubscriptionDelta.Entry> externalSubscriptions, List<EffectiveContractSnapshot> effectiveRootContracts,
+            java.util.Map<String, blue.language.snapshot.FrozenNode> channelNodes) {
         this.channelOccurrences = immutable(
                 channelOccurrences, "channelOccurrence");
         this.externalSubscriptions = immutable(
                 externalSubscriptions, "externalSubscription");
         this.effectiveRootContracts = immutable(
                 effectiveRootContracts, "effectiveRootContract");
+        this.channelNodes = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(channelNodes));
     }
 
     /**
@@ -62,6 +70,9 @@ public final class ManagedRootSubscriptionSurface {
     public List<EffectiveContractSnapshot> effectiveRootContracts() {
         return effectiveRootContracts;
     }
+
+    /** Exact normalized Channel contributions only; never executable Handler bodies. */
+    public java.util.Map<String, blue.language.snapshot.FrozenNode> channelNodes() { return channelNodes; }
 
     private static <T> List<T> immutable(
             List<T> values,

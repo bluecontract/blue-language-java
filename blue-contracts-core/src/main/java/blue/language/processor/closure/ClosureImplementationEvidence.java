@@ -22,6 +22,7 @@ public final class ClosureImplementationEvidence {
     private final String invocationIdentity;
     private final List<ClosureWorkOccurrence> workTrace;
     private final List<DocumentStepEvidence> documentStepTrace;
+    private final List<SkippedWorkEvidence> skippedWorkTrace;
     private final List<TentativeFinalization> tentativeFinalizations;
     private final long managedDocumentStepInclusiveNanos;
     private final long managedDocumentStepNestedFinalizationProofNanos;
@@ -39,11 +40,23 @@ public final class ClosureImplementationEvidence {
             long componentFinalizationProofNanos,
             long successfulResultAssemblyNanos,
             String nonConformanceCode) {
+        this(invocationIdentity, workTrace, documentStepTrace, tentativeFinalizations,
+                managedDocumentStepInclusiveNanos, managedDocumentStepNestedFinalizationProofNanos,
+                componentFinalizationProofNanos, successfulResultAssemblyNanos, nonConformanceCode,
+                Collections.emptyList());
+    }
+
+    ClosureImplementationEvidence(String invocationIdentity, List<ClosureWorkOccurrence> workTrace,
+            List<DocumentStepEvidence> documentStepTrace, List<TentativeFinalization> tentativeFinalizations,
+            long managedDocumentStepInclusiveNanos, long managedDocumentStepNestedFinalizationProofNanos,
+            long componentFinalizationProofNanos, long successfulResultAssemblyNanos, String nonConformanceCode,
+            List<SkippedWorkEvidence> skippedWorkTrace) {
         this.invocationIdentity = ClosureValueSupport.requireSha256Identity(
                 invocationIdentity, "invocationIdentity");
         this.workTrace = immutable(workTrace, "workTrace");
         this.documentStepTrace = immutable(
                 documentStepTrace, "documentStepTrace");
+        this.skippedWorkTrace = immutable(skippedWorkTrace, "skippedWorkTrace");
         this.tentativeFinalizations = immutable(
                 tentativeFinalizations, "tentativeFinalizations");
         this.managedDocumentStepInclusiveNanos = requireNonNegativeNanos(
@@ -166,18 +179,33 @@ public final class ClosureImplementationEvidence {
     }
 
     /**
-     * Reports whether every accepted work occurrence has one completed
-     * isolated step and no capability gap remains.
+     * Reports whether every accepted work occurrence has one isolated step or
+     * an exact recorded termination cutoff, and no capability gap remains.
      *
      * @return whether the implementation evidence is complete
      */
     public boolean complete() {
         return nonConformanceCode == null
-                && workTrace.size() == documentStepTrace.size();
+                && workTrace.size() == documentStepTrace.size() + skippedWorkTrace.size();
+    }
+
+    /** Invocation-local diagnostic cutoff evidence; never source replay or publication authority. */
+    public List<SkippedWorkEvidence> skippedWorkTrace() { return skippedWorkTrace; }
+
+    public static final class SkippedWorkEvidence {
+        private final long workOrdinal, requestWorkOrdinal;
+        private final String requestWorkIdentity;
+        SkippedWorkEvidence(ClosureWorkOccurrence work, ClosureWorkOccurrence request) {
+            workOrdinal = work.ordinal(); requestWorkOrdinal = request.ordinal();
+            requestWorkIdentity = request.workIdentity();
+        }
+        public long workOrdinal() { return workOrdinal; }
+        public long requestWorkOrdinal() { return requestWorkOrdinal; }
+        public String requestWorkIdentity() { return requestWorkIdentity; }
     }
 
     private void validateOneStepPerWork() {
-        if (documentStepTrace.size() > workTrace.size()) {
+        if (documentStepTrace.size() + skippedWorkTrace.size() > workTrace.size()) {
             throw new IllegalArgumentException(
                     "Document-step trace cannot exceed accepted work");
         }
@@ -188,8 +216,10 @@ public final class ClosureImplementationEvidence {
                         "Accepted work ordinals must be contiguous");
             }
         }
+        java.util.Set<Long> covered = new java.util.HashSet<>();
         for (int index = 0; index < documentStepTrace.size(); index++) {
             DocumentStepEvidence step = documentStepTrace.get(index);
+            if (!covered.add(step.workOrdinal())) throw new IllegalArgumentException("Accepted work has duplicate execution evidence");
             if (step.stepOrdinal() != index) {
                 throw new IllegalArgumentException(
                         "Document-step ordinals must be contiguous");
@@ -206,6 +236,16 @@ public final class ClosureImplementationEvidence {
                 throw new IllegalArgumentException(
                         "Document-step evidence disagrees with accepted work");
             }
+        }
+        java.util.Set<Long> executed = new java.util.HashSet<>(covered);
+        for (SkippedWorkEvidence skipped : skippedWorkTrace) {
+            ClosureWorkOccurrence work = workTrace.get(Math.toIntExact(skipped.workOrdinal()));
+            ClosureWorkOccurrence request = workTrace.get(Math.toIntExact(skipped.requestWorkOrdinal()));
+            if (!covered.add(skipped.workOrdinal()) || !executed.contains(skipped.requestWorkOrdinal())
+                    || !request.targetDocumentId().equals(work.targetDocumentId())
+                    || !request.workIdentity().equals(skipped.requestWorkIdentity())
+                    || work.kind() == WorkKind.LIFECYCLE || work.kind() == WorkKind.INITIALIZATION)
+                throw new IllegalArgumentException("Skipped work disagrees with its accepted request and disjoint execution evidence");
         }
     }
 

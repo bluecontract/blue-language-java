@@ -26,6 +26,7 @@ public final class DocumentUpdateOccurrence {
     private final String originScope;
     private final List<String> recipientChain;
     private final ContractBundle frozenRootDispatchBundle;
+    private final FrozenNode retainedRootDispatchContracts;
 
     DocumentUpdateOccurrence(
             String path,
@@ -69,6 +70,12 @@ public final class DocumentUpdateOccurrence {
             String originScope,
             List<String> recipientChain,
             ContractBundle frozenRootDispatchBundle) {
+        this(path, beforeFrozen, afterFrozen, operation, originScope, recipientChain, frozenRootDispatchBundle, null);
+    }
+
+    private DocumentUpdateOccurrence(String path, FrozenNode beforeFrozen, FrozenNode afterFrozen,
+            JsonPatch.Op operation, String originScope, List<String> recipientChain,
+            ContractBundle frozenRootDispatchBundle, FrozenNode retainedRootDispatchContracts) {
         this.path = Objects.requireNonNull(path, "path");
         this.beforeFrozen = beforeFrozen;
         this.operation = Objects.requireNonNull(operation, "operation");
@@ -79,6 +86,7 @@ public final class DocumentUpdateOccurrence {
                 originScope, "originScope");
         this.recipientChain = immutableRecipientChain(recipientChain);
         this.frozenRootDispatchBundle = frozenRootDispatchBundle;
+        this.retainedRootDispatchContracts = retainedRootDispatchContracts;
     }
 
     /**
@@ -174,6 +182,35 @@ public final class DocumentUpdateOccurrence {
     ContractBundle frozenRootDispatchBundle() {
         return frozenRootDispatchBundle;
     }
+
+    /** Exact dispatch contracts retained for persistence; never serializes Java handler objects. */
+    public Node exactRootDispatchContracts() {
+        FrozenNode contracts = frozenRootDispatchContracts();
+        return contracts == null ? null : contracts.toNode();
+    }
+
+    public FrozenNode frozenRootDispatchContracts() {
+        if (retainedRootDispatchContracts != null) return retainedRootDispatchContracts;
+        if (frozenRootDispatchBundle == null) return null;
+        return blue.language.snapshot.FrozenNodeBuilder.fromResolvedParts(FrozenNode.fromResolvedNode(new Node()),
+                java.util.Collections.<String, FrozenNode>emptyMap(), null, frozenRootDispatchBundle.contractNodes());
+    }
+
+    /** Restores a structurally verified retained occurrence; its enclosing source receipt is authoritative. */
+    public static DocumentUpdateOccurrence fromRetainedEvidence(String path, Node before, Node after,
+            JsonPatch.Op operation, String originScope, List<String> recipients, Node dispatchContracts) {
+        return new DocumentUpdateOccurrence(path, freeze(before), freeze(after), operation, originScope, recipients,
+                null, freeze(dispatchContracts));
+    }
+
+    /** Retains shared frozen evidence without materializing and re-freezing complete views. */
+    public static DocumentUpdateOccurrence fromRetainedFrozenEvidence(String path, FrozenNode before, FrozenNode after,
+            JsonPatch.Op operation, String originScope, List<String> recipientChain, FrozenNode dispatchContracts) {
+        return new DocumentUpdateOccurrence(path, before, after, operation, originScope, recipientChain, null, dispatchContracts);
+    }
+
+    public FrozenNode frozenBefore() { return beforeFrozen; }
+    public FrozenNode frozenAfter() { return afterFrozen; }
 
     private static FrozenNode freeze(Node value) {
         return value == null

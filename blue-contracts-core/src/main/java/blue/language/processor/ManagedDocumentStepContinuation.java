@@ -15,6 +15,13 @@ import java.util.List;
 public interface ManagedDocumentStepContinuation {
 
     /**
+     * The exact forward read view after a synchronous continuation has completed. Returning
+     * {@code null} preserves the initial overlay for compatibility continuations. This is
+     * owning interpreter evidence, never a request to look up a host's current physical head.
+     */
+    default ManagedDocumentResolutionOverlay currentResolutionOverlay(String scopePath) { return null; }
+
+    /**
      * Continues immediately after one exact authored patch was applied.
      *
      * @param scopePath normalized local scope, always Root in closure mode

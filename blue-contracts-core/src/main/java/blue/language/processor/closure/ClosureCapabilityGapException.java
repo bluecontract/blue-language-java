@@ -1,7 +1,15 @@
 package blue.language.processor.closure;
 
-/** Deterministic fail-closed exit for a not-yet-authoritative runtime seam. */
-final class ClosureCapabilityGapException extends RuntimeException {
+import blue.language.processor.NoncommittingExecutionException;
+
+/**
+ * Owning capability control for a not-yet-authoritative runtime seam.
+ * Handler dispatch must preserve this signal without classifying it as an
+ * application failure; only the closure attempt boundary assigns its explicit
+ * capability-failure disposition and rolls back all tentative effects.
+ */
+final class ClosureCapabilityGapException
+        extends NoncommittingExecutionException {
 
     private static final long serialVersionUID = 1L;
 

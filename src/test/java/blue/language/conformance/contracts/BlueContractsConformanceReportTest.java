@@ -131,7 +131,7 @@ class BlueContractsConformanceReportTest {
         String expectedContractsGas =
                 "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
         String expectedContractsFixtures =
-                "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c";
+                "sha256:8ab8ffc4e2db1ca2ac27a91f5bc51cdbc93c1f923d0e4a04afefa6f75bf9f296";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -144,7 +144,7 @@ class BlueContractsConformanceReportTest {
                         .RELEASE_PACKAGE_IDENTITY,
                 nested(encoded, "release", "packageIdentity"));
         assertEquals(
-                "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3",
+                "sha256:842c4714529f048c3a4bdfc0e4e74a09d80941be01e524d95f547d6401013bdd",
                 nested(encoded, "release", "contractsReleaseIdentity"));
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -165,7 +165,7 @@ class BlueContractsConformanceReportTest {
                 expectedContractsFixtures,
                 nested(encoded, "packages", "contractsFixtures"));
         assertEquals(
-                "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3",
+                "sha256:842c4714529f048c3a4bdfc0e4e74a09d80941be01e524d95f547d6401013bdd",
                 nested(encoded, "packages", "contractsRelease"));
         assertEquals(
                 BlueContractsConformanceReport
@@ -253,7 +253,7 @@ class BlueContractsConformanceReportTest {
                 "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
+                "sha256:8ab8ffc4e2db1ca2ac27a91f5bc51cdbc93c1f923d0e4a04afefa6f75bf9f296",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,

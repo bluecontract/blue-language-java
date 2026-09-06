@@ -10,15 +10,15 @@
   },
   "release" : {
     "packageIdentity" : "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
-    "contractsReleaseIdentity" : "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3"
+    "contractsReleaseIdentity" : "sha256:842c4714529f048c3a4bdfc0e4e74a09d80941be01e524d95f547d6401013bdd"
   },
   "packages" : {
     "languageRegistry" : "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
     "languageFixtures" : "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
     "contractsRegistry" : "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
     "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
-    "contractsFixtures" : "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
-    "contractsRelease" : "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3"
+    "contractsFixtures" : "sha256:8ab8ffc4e2db1ca2ac27a91f5bc51cdbc93c1f923d0e4a04afefa6f75bf9f296",
+    "contractsRelease" : "sha256:842c4714529f048c3a4bdfc0e4e74a09d80941be01e524d95f547d6401013bdd"
   },
   "tests" : {
     "all" : {
@@ -31,7 +31,7 @@
   },
   "gas" : {
     "fixtureCount" : 71,
-    "oraclePackageIdentity" : "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
+    "oraclePackageIdentity" : "sha256:8ab8ffc4e2db1ca2ac27a91f5bc51cdbc93c1f923d0e4a04afefa6f75bf9f296",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",

@@ -14,6 +14,24 @@ final class ClosureValueSupport {
     private ClosureValueSupport() {
     }
 
+    /** Closed prefixes of semantic gas attribution tokens, never JSON pointers. */
+    enum GasAttributionPrefix {
+        DIRECT_ADMISSION("direct-admission."),
+        CHECKPOINT_SETTLEMENT_WRITE("checkpoint-settlement.0.write."),
+        WORK("work/");
+
+        private final String value;
+
+        GasAttributionPrefix(String value) {
+            this.value = value;
+        }
+    }
+
+    /** Matches only the closed attribution vocabulary; pointer ancestry uses PointerUtils. */
+    static boolean matchesGasAttributionPrefix(String attribution, GasAttributionPrefix prefix) {
+        return attribution.startsWith(prefix.value);
+    }
+
     static long requireSafeInteger(long value, String field) {
         if (value < 0L || value > MAX_SAFE_INTEGER) {
             throw new IllegalArgumentException(

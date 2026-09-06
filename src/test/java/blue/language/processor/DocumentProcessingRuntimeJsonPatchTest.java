@@ -115,7 +115,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 () -> runtime.applyPatch("/", JsonPatch.remove("/missing")));
 
         // then
-        assertEquals(IllegalStateException.class, ex.getClass());
+        assertEquals(blue.language.snapshot.InvalidCanonicalPatchException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("missing"));
         assertNull(document.getProperties());
     }
@@ -226,7 +226,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 () -> runtime.applyPatch("/", JsonPatch.remove("/letters/5")));
 
         // then
-        assertEquals(IllegalStateException.class, ex.getClass());
+        assertEquals(blue.language.snapshot.InvalidCanonicalPatchException.class, ex.getClass());
         assertTrue(ex.getMessage().contains(
                 "Array index out of bounds for remove"));
         assertEquals(1, array(document, "letters").size());
@@ -264,7 +264,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 () -> runtime.applyPatch("/", JsonPatch.add("/foo/-", new Node().value("nope"))));
 
         // then
-        assertEquals(IllegalStateException.class, ex.getClass());
+        assertEquals(blue.language.snapshot.InvalidCanonicalPatchException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("Append token"));
         assertNotNull(document.getProperties());
         assertNull(document.getProperties().get("foo").getProperties());

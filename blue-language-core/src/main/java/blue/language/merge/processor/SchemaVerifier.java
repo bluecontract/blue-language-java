@@ -1,5 +1,6 @@
 package blue.language.merge.processor;
 
+import blue.language.model.InvalidNodeStructureException;
 import blue.language.model.wire.SchemaPropertyConstants;
 
 import blue.language.model.wire.BlueLanguageConstants;
@@ -79,8 +80,8 @@ public class SchemaVerifier implements MergingProcessor {
             verifyWellFormed(schema);
             onCompletedValidation(node, path);
             verifyValue(schema, node, semanticallyPresent);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Schema validation failed at path " + path + ": "
+        } catch (InvalidNodeStructureException ex) {
+            throw new InvalidNodeStructureException("Schema validation failed at path " + path + ": "
                     + ex.getMessage(), ex);
         }
     }
@@ -164,37 +165,37 @@ public class SchemaVerifier implements MergingProcessor {
 
     private void verifyNonNegative(String keyword, BigInteger value) {
         if (value != null && value.signum() < 0) {
-            throw new IllegalArgumentException("Schema keyword \"" + keyword + "\" must be non-negative.");
+            throw new InvalidNodeStructureException("Schema keyword \"" + keyword + "\" must be non-negative.");
         }
     }
 
     private void verifyMinLessThanOrEqualMax(String minKeyword, BigInteger minValue, String maxKeyword, BigInteger maxValue) {
         if (minValue != null && maxValue != null && minValue.compareTo(maxValue) > 0) {
-            throw new IllegalArgumentException("Schema keyword \"" + minKeyword + "\" must be less than or equal to \"" + maxKeyword + "\".");
+            throw new InvalidNodeStructureException("Schema keyword \"" + minKeyword + "\" must be less than or equal to \"" + maxKeyword + "\".");
         }
     }
 
     private void verifyMinimumLessThanOrEqualMaximum(BigDecimal minimum, BigDecimal maximum) {
         if (minimum != null && maximum != null && minimum.compareTo(maximum) > 0) {
-            throw new IllegalArgumentException("Schema keyword \"minimum\" must be less than or equal to \"maximum\".");
+            throw new InvalidNodeStructureException("Schema keyword \"minimum\" must be less than or equal to \"maximum\".");
         }
     }
 
     private void verifyExclusiveMinimumLessThanExclusiveMaximum(BigDecimal exclusiveMinimum, BigDecimal exclusiveMaximum) {
         if (exclusiveMinimum != null && exclusiveMaximum != null && exclusiveMinimum.compareTo(exclusiveMaximum) >= 0) {
-            throw new IllegalArgumentException("Schema keyword \"exclusiveMinimum\" must be less than \"exclusiveMaximum\".");
+            throw new InvalidNodeStructureException("Schema keyword \"exclusiveMinimum\" must be less than \"exclusiveMaximum\".");
         }
     }
 
     private void verifyMultipleOfKeyword(BigDecimal multipleOf) {
         if (multipleOf != null && multipleOf.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Schema keyword \"multipleOf\" must be greater than zero.");
+            throw new InvalidNodeStructureException("Schema keyword \"multipleOf\" must be greater than zero.");
         }
     }
 
     private void verifyRequired(Boolean required, boolean semanticallyPresent) {
         if (TRUE.equals(required) && !semanticallyPresent)
-            throw new IllegalArgumentException("Required node has no value, items, or object fields.");
+            throw new InvalidNodeStructureException("Required node has no value, items, or object fields.");
     }
 
     private void verifyMinLength(BigInteger minLength, Node node) {
@@ -206,7 +207,7 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         if (BigInteger.valueOf(codePointLength((String) value)).compareTo(minLength) < 0) {
-            throw new IllegalArgumentException("Value \"" + value + "\" is shorter than the minimum length of " + minLength + ".");
+            throw new InvalidNodeStructureException("Value \"" + value + "\" is shorter than the minimum length of " + minLength + ".");
         }
     }
 
@@ -219,7 +220,7 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         if (BigInteger.valueOf(codePointLength((String) value)).compareTo(maxLength) > 0) {
-            throw new IllegalArgumentException("Value \"" + value + "\" is longer than the maximum length of " + maxLength + ".");
+            throw new InvalidNodeStructureException("Value \"" + value + "\" is longer than the maximum length of " + maxLength + ".");
         }
     }
 
@@ -237,7 +238,7 @@ public class SchemaVerifier implements MergingProcessor {
         }
         BigDecimal valueDecimal = new BigDecimal(value.toString());
         if (valueDecimal.compareTo(minimum) < 0) {
-            throw new IllegalArgumentException("Value " + value + " is less than the minimum value of " + minimum + ".");
+            throw new InvalidNodeStructureException("Value " + value + " is less than the minimum value of " + minimum + ".");
         }
     }
 
@@ -251,7 +252,7 @@ public class SchemaVerifier implements MergingProcessor {
         }
         BigDecimal valueDecimal = new BigDecimal(value.toString());
         if (valueDecimal.compareTo(maximum) > 0) {
-            throw new IllegalArgumentException("Value " + value + " is greater than the maximum value of " + maximum + ".");
+            throw new InvalidNodeStructureException("Value " + value + " is greater than the maximum value of " + maximum + ".");
         }
     }
 
@@ -266,7 +267,7 @@ public class SchemaVerifier implements MergingProcessor {
         }
         BigDecimal valueDecimal = new BigDecimal(value.toString());
         if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
-            throw new IllegalArgumentException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
+            throw new InvalidNodeStructureException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
         }
     }
 
@@ -281,7 +282,7 @@ public class SchemaVerifier implements MergingProcessor {
         }
         BigDecimal valueDecimal = new BigDecimal(value.toString());
         if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
-            throw new IllegalArgumentException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
+            throw new InvalidNodeStructureException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
         }
     }
 
@@ -294,7 +295,7 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         if (!BlueNumbers.isExactBinary64Multiple(value, multipleOf)) {
-            throw new IllegalArgumentException("Value " + value + " is not a multiple of " + multipleOf + ".");
+            throw new InvalidNodeStructureException("Value " + value + " is not a multiple of " + multipleOf + ".");
         }
     }
 
@@ -306,7 +307,7 @@ public class SchemaVerifier implements MergingProcessor {
         List<Node> items = node.getItems();
         int size = items != null ? items.size() : 0;
         if (BigInteger.valueOf(size).compareTo(minItems) < 0) {
-            throw new IllegalArgumentException("Number of items " + (items != null ? items.size() : 0) + " is less than the minimum required items of " + minItems + ".");
+            throw new InvalidNodeStructureException("Number of items " + (items != null ? items.size() : 0) + " is less than the minimum required items of " + minItems + ".");
         }
     }
 
@@ -317,7 +318,7 @@ public class SchemaVerifier implements MergingProcessor {
         requireListPayload(KEY_MAX_ITEMS, node);
         List<Node> items = node.getItems();
         if (items != null && BigInteger.valueOf(items.size()).compareTo(maxItems) > 0) {
-            throw new IllegalArgumentException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
+            throw new InvalidNodeStructureException("Number of items " + items.size() + " is greater than the maximum allowed items of " + maxItems + ".");
         }
     }
 
@@ -335,7 +336,7 @@ public class SchemaVerifier implements MergingProcessor {
                     .collect(Collectors.toSet())
                     .size();
             if (items.size() != uniqueItemsCount)
-                throw new IllegalArgumentException("Unique items are required, but some items are identical. Found items: " + items);
+                throw new InvalidNodeStructureException("Unique items are required, but some items are identical. Found items: " + items);
         }
     }
 
@@ -347,7 +348,7 @@ public class SchemaVerifier implements MergingProcessor {
         Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
         if (BigInteger.valueOf(fieldCount).compareTo(minFields) < 0) {
-            throw new IllegalArgumentException("Number of fields " + fieldCount + " is less than the minimum required fields of " + minFields + ".");
+            throw new InvalidNodeStructureException("Number of fields " + fieldCount + " is less than the minimum required fields of " + minFields + ".");
         }
     }
 
@@ -359,7 +360,7 @@ public class SchemaVerifier implements MergingProcessor {
         Map<String, Node> properties = node.getProperties();
         int fieldCount = properties == null ? 0 : properties.size();
         if (BigInteger.valueOf(fieldCount).compareTo(maxFields) > 0) {
-            throw new IllegalArgumentException("Number of fields " + fieldCount + " is greater than the maximum allowed fields of " + maxFields + ".");
+            throw new InvalidNodeStructureException("Number of fields " + fieldCount + " is greater than the maximum allowed fields of " + maxFields + ".");
         }
     }
 
@@ -376,7 +377,7 @@ public class SchemaVerifier implements MergingProcessor {
                 .map(ScalarNodeIdentity::blueId)
                 .anyMatch(nodeBlueId::equals);
         if (!matched) {
-            throw new IllegalArgumentException("Node value is not one of the allowed enum values.");
+            throw new InvalidNodeStructureException("Node value is not one of the allowed enum values.");
         }
     }
 
@@ -438,6 +439,6 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private IllegalArgumentException wrongKind(String keyword, String expected, Node node) {
-        return new IllegalArgumentException("Schema keyword \"" + keyword + "\" applies to wrong kind; expected " + expected + ".");
+        return new InvalidNodeStructureException("Schema keyword \"" + keyword + "\" applies to wrong kind; expected " + expected + ".");
     }
 }

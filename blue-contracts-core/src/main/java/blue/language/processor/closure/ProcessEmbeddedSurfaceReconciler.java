@@ -180,7 +180,7 @@ final class ProcessEmbeddedSurfaceReconciler {
         Map<String, ManagedOccurrenceBinding> sourceBindings =
                 bindingsByPath(source, currentBindings);
         preflightDeclared(
-                source, document, declared, sourceBindings, documents);
+                source, document, declared, sourceBindings, documents, priorFinalizedReferenceAvailability);
 
         Set<OccurrencePath> fences = Objects.requireNonNull(
                 invocationRetirementFences,
@@ -222,7 +222,7 @@ final class ProcessEmbeddedSurfaceReconciler {
             Node document,
             Map<String, ManagedProcessEmbeddedPath> declared,
             Map<String, ManagedOccurrenceBinding> bindings,
-            Map<DocumentId, ManagedDocumentSnapshot> documents) {
+            Map<DocumentId, ManagedDocumentSnapshot> documents, PriorFinalizedReferenceAvailability prior) {
         for (String path : declared.keySet()) {
             ManagedOccurrenceBinding binding = bindings.get(path);
             if (binding == null) {
@@ -241,11 +241,13 @@ final class ProcessEmbeddedSurfaceReconciler {
                     && binding.pendingHistoricalEpoch() == null) {
                 ManagedDocumentSnapshot exact = documents.get(
                         binding.targetDocumentId());
+                boolean selected = exact != null && value.isReferenceOnly()
+                        && prior.acceptsProspectiveView(binding, value.getBlueId(), exact.blueId());
                 if (exact == null
-                        || !binding.expectedTargetBlueId().equals(
+                        || !selected && (!binding.expectedTargetBlueId().equals(
                                 exact.blueId())
                         || !ManagedOccurrenceTargetVerifier
-                                .establishesExactTarget(value, exact)) {
+                                .establishesExactTarget(value, exact))) {
                     throw invalidProspectiveOccurrence(path);
                 }
             }
@@ -276,7 +278,7 @@ final class ProcessEmbeddedSurfaceReconciler {
             ManagedOccurrenceBinding successor = retirementSuccessor(
                     binding, documents.get(binding.targetDocumentId()));
             reconciled.add(successor);
-            transitions.add(OccurrenceTransition.remove(binding));
+            if (binding.active()) transitions.add(OccurrenceTransition.remove(binding));
             retired.add(occurrencePath);
             return;
         }
@@ -296,16 +298,16 @@ final class ProcessEmbeddedSurfaceReconciler {
                             + "through its exact managed-revision lane");
         }
 
-        ManagedDocumentSnapshot exact = binding.active()
-                ? exactTarget(value, binding, documents)
-                : documents.get(binding.targetDocumentId());
-        if (exact == null
-                && binding.active()
+        // An authenticated prior view belongs to the existing lineage even if another
+        // member currently has identical content. Check that authority before searching
+        // other heads; their presence cannot turn a state advance into a retarget.
+        boolean keepsPriorTarget = binding.active()
                 && value.isReferenceOnly()
                 && priorFinalizedReferenceAvailability.isAvailable(
-                        binding.targetDocumentId(), value.getBlueId())) {
-            exact = documents.get(binding.targetDocumentId());
-        }
+                        binding.targetDocumentId(), value.getBlueId());
+        ManagedDocumentSnapshot exact = !binding.active() || keepsPriorTarget
+                ? documents.get(binding.targetDocumentId())
+                : exactTarget(value, binding, documents);
         if (exact == null) {
             throw new ClosureCapabilityGapException(
                     "NEW_OCCURRENCE_ADMISSION_REQUIRED",
@@ -315,7 +317,8 @@ final class ProcessEmbeddedSurfaceReconciler {
         }
         if (!binding.active()
                 && !ManagedOccurrenceTargetVerifier.establishesExactTarget(
-                        value, exact)) {
+                        value, exact)
+                && !(value.isReferenceOnly() && priorFinalizedReferenceAvailability.acceptsProspectiveView(binding, value.getBlueId(), exact.blueId()))) {
             throw invalidProspectiveOccurrence(path);
         }
         if (!binding.active() && fences.contains(occurrencePath)) {
@@ -336,7 +339,8 @@ final class ProcessEmbeddedSurfaceReconciler {
                         source,
                         ScopeAddress.embedded(path, generation),
                         exact.documentId(),
-                        exact.blueId(),
+                        value.isReferenceOnly() && priorFinalizedReferenceAvailability.retainsExactBinding(binding, value.getBlueId())
+                                ? value.getBlueId() : exact.blueId(),
                         true,
                         null);
         reconciled.add(replacement);
@@ -460,7 +464,7 @@ final class ProcessEmbeddedSurfaceReconciler {
                         successorGeneration(
                                 removed.activationGeneration())),
                 removed.targetDocumentId(),
-                target.blueId(),
+                removed.expectedTargetBlueId(),
                 false,
                 null);
     }
@@ -523,6 +527,10 @@ final class ProcessEmbeddedSurfaceReconciler {
                 };
 
         boolean isAvailable(DocumentId documentId, String blueId);
+
+        default boolean retainsExactBinding(ManagedOccurrenceBinding binding, String blueId) { return false; }
+        /** An exact mode/site-selected attachment view, not a generic known lineage alias. */
+        default boolean acceptsProspectiveView(ManagedOccurrenceBinding binding, String suppliedBlueId, String selectedBlueId) { return false; }
     }
 
     /** Frozen identity and lookup context for one demand-discovery boundary. */

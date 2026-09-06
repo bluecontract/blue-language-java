@@ -36,7 +36,9 @@ final class ManagedRevisionCyclicClosureFixtureTest {
 
     // Frozen after the focused fixture is executed once against the release
     // gas schedule; it is intentionally not derived from the implementation.
-    private static final long EXPECTED_TOTAL_GAS = 477L;
+    // Sequential containing routes add 4; direct joint activation avoids the
+    // discarded acyclic ancestor identity/reference work (42).
+    private static final long EXPECTED_TOTAL_GAS = 439L;
     private static final long EXPECTED_PROOF_ADMISSION_GAS = 53L;
     private static final int EXPECTED_PROOF_ADMISSION_ENTRIES = 17;
 

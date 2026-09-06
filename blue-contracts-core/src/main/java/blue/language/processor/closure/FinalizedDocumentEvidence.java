@@ -24,6 +24,7 @@ public final class FinalizedDocumentEvidence
     private final String componentStateIdentity;
     private final Integer cyclicMemberIndex;
     private final String preliminaryBlueId;
+    private final ReusableComponentAuthority reusableAuthority;
 
     FinalizedDocumentEvidence(
             DocumentId documentId,
@@ -44,7 +45,24 @@ public final class FinalizedDocumentEvidence
         this.componentStateIdentity = selected.componentStateIdentity();
         this.cyclicMemberIndex = cyclicMemberIndex;
         this.preliminaryBlueId = preliminaryBlueId;
+        this.reusableAuthority = null;
         validateCyclicEvidence();
+    }
+
+    private FinalizedDocumentEvidence(ManagedDocumentSnapshot header, ReusableComponentAuthority authority, Node residentBody) {
+        this.documentId = header.documentId(); this.blueId = header.blueId();
+        this.document = residentBody == null ? null : residentBody.clone();
+        ComponentSnapshot component = authority.component();
+        this.componentKind = component.kind(); this.componentGeneration = component.componentGeneration();
+        this.componentIdentity = component.componentIdentity(); this.componentStateIdentity = component.componentStateIdentity();
+        this.cyclicMemberIndex = authority.canonicalMemberIndexes().get(documentId);
+        this.preliminaryBlueId = authority.preliminaryBlueIds().get(documentId);
+        this.reusableAuthority = authority;
+        validateCyclicEvidence();
+    }
+
+    static FinalizedDocumentEvidence fromReusable(ReusableComponentAuthority authority, DocumentId member, Node residentBody) {
+        return new FinalizedDocumentEvidence(authority.memberHeader(member), authority, residentBody);
     }
 
     /**
@@ -71,8 +89,13 @@ public final class FinalizedDocumentEvidence
      * @return independent document body
      */
     public Node document() {
+        if (document == null) throw new blue.language.processor.ExecutionEvidenceUnavailableException(
+                "Exact finalized component body is not resident", java.util.Collections.singletonList(blueId));
         return document.clone();
     }
+
+    public boolean hasResidentBody() { return document != null; }
+    public java.util.Optional<ReusableComponentAuthority> reusableAuthority() { return java.util.Optional.ofNullable(reusableAuthority); }
 
     /**
      * Returns the resulting component shape.

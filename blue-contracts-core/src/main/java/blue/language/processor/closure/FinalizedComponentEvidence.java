@@ -24,11 +24,13 @@ public final class FinalizedComponentEvidence {
     private final CyclicSetFinalization cyclicFinalization;
     private final Map<DocumentId, Integer> canonicalMemberIndexes;
     private final Map<DocumentId, String> preliminaryBlueIds;
+    private final ReusableComponentAuthority reusableAuthority;
 
     FinalizedComponentEvidence(
             ComponentSnapshot component,
             CyclicSetFinalization cyclicFinalization) {
         this.component = Objects.requireNonNull(component, "component");
+        this.reusableAuthority = null;
         this.cyclicFinalization = cyclicFinalization;
         this.canonicalMemberIndexes = canonicalIndexes(
                 this.component, cyclicFinalization);
@@ -36,6 +38,19 @@ public final class FinalizedComponentEvidence {
                 this.component, cyclicFinalization);
         validateProofBodies();
     }
+
+    private FinalizedComponentEvidence(ReusableComponentAuthority authority) {
+        this.reusableAuthority = Objects.requireNonNull(authority, "authority");
+        this.component = authority.component(); this.cyclicFinalization = null;
+        this.canonicalMemberIndexes = authority.canonicalMemberIndexes();
+        this.preliminaryBlueIds = authority.preliminaryBlueIds();
+    }
+
+    static FinalizedComponentEvidence fromReusable(ReusableComponentAuthority authority) {
+        return new FinalizedComponentEvidence(authority);
+    }
+
+    public java.util.Optional<ReusableComponentAuthority> reusableAuthority() { return java.util.Optional.ofNullable(reusableAuthority); }
 
     /**
      * Returns the exact Contracts component-state evidence.

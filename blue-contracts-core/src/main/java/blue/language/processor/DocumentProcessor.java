@@ -397,7 +397,8 @@ public class DocumentProcessor implements AutoCloseable {
 
     GasMeter newGasMeter() { return new GasMeter(gasSchedule, gasLimit); }
 
-    String runtimeRegistryIdentity() { return runtimeRegistryIdentity; }
+    /** Exact immutable runtime registry generation used by retained header evidence. */
+    public String runtimeRegistryIdentity() { return runtimeRegistryIdentity; }
 
     SubscriptionSurfaceValidator subscriptionSurfaceValidator() { return subscriptionSurfaceValidator; }
 

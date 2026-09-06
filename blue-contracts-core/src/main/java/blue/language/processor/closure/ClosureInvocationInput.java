@@ -48,6 +48,8 @@ public final class ClosureInvocationInput {
     private final String directDeliverySnapshotIdentity;
     private final ExecutionPolicy executionPolicy;
     private final ClosureEnvironment environment;
+    private final Map<DocumentId, String> semanticPredecessors;
+    private final ManagedReactionContext managedReaction;
 
     private ClosureInvocationInput(
             Operation operation,
@@ -84,8 +86,65 @@ public final class ClosureInvocationInput {
         this.executionPolicy = Objects.requireNonNull(
                 executionPolicy, "executionPolicy");
         this.environment = Objects.requireNonNull(environment, "environment");
+        this.semanticPredecessors = Collections.emptyMap();
+        this.managedReaction = null;
         validateOperationShape();
         validateSnapshotReferences();
+    }
+
+    private ClosureInvocationInput(ClosureInvocationInput input, String identity,
+                                   Map<DocumentId, String> predecessors) {
+        this(input, identity, predecessors, input.managedReaction);
+    }
+
+    private ClosureInvocationInput(ClosureInvocationInput input, String identity,
+                                   Map<DocumentId, String> predecessors, ManagedReactionContext managedReaction) {
+        this.operation = input.operation;
+        this.invocationIdentity = ClosureValueSupport.requireSha256Identity(identity, "invocationIdentity");
+        this.snapshot = input.snapshot;
+        this.cause = input.cause;
+        this.admissionCandidate = input.admissionCandidate;
+        this.admissionCandidateIdentity = input.admissionCandidateIdentity;
+        this.directDeliveries = input.directDeliveries;
+        this.directDeliverySnapshotIdentity = input.directDeliverySnapshotIdentity;
+        this.executionPolicy = input.executionPolicy;
+        this.environment = input.environment;
+        java.util.TreeMap<DocumentId, String> ordered = new java.util.TreeMap<DocumentId, String>();
+        for (Map.Entry<DocumentId, String> entry : Objects.requireNonNull(predecessors, "predecessors").entrySet()) {
+            if (snapshot.managedDocument(Objects.requireNonNull(entry.getKey(), "lineage")) == null) {
+                throw new IllegalArgumentException("Semantic predecessor names a lineage outside the selected input");
+            }
+            ordered.put(entry.getKey(), ClosureValueSupport.requireSha256Identity(entry.getValue(), "semantic predecessor"));
+        }
+        this.semanticPredecessors = Collections.unmodifiableMap(ordered);
+        this.managedReaction = managedReaction;
+        if (managedReaction != null) {
+            if (operation != Operation.PROCESS_CLOSURE || cause.kind() != ProcessingCause.Kind.EXTERNAL)
+                throw new IllegalArgumentException("Managed reaction placement retains an external source cause");
+            for (ManagedReactionContext.DueOccurrence due : managedReaction.dueOccurrences()) {
+                if (!snapshot.contains(due.consumerLineage()) || !snapshot.contains(due.sourceLineage()))
+                    throw new IllegalArgumentException("Managed reaction endpoint is outside the exact input");
+            }
+        }
+    }
+
+    /** Exact last terminal operations, including failures that left state and epoch unchanged. */
+    public Map<DocumentId, String> semanticPredecessors() { return semanticPredecessors; }
+
+    /** Consumer reaction placement is separate from the retained source's original cause. */
+    public java.util.Optional<ManagedReactionContext> managedReaction() { return java.util.Optional.ofNullable(managedReaction); }
+
+    /** Binds the typed placement and recomputes the complete immutable invocation identity. */
+    public ClosureInvocationInput withManagedReaction(ManagedReactionContext context) {
+        return ClosureEvidenceFactory.withManagedReaction(this, context);
+    }
+
+    ClosureInvocationInput withManagedReaction(String identity, ManagedReactionContext context) {
+        return new ClosureInvocationInput(this, identity, semanticPredecessors, Objects.requireNonNull(context, "context"));
+    }
+
+    ClosureInvocationInput withSemanticPredecessors(String identity, Map<DocumentId, String> predecessors) {
+        return new ClosureInvocationInput(this, identity, predecessors);
     }
 
     /**
@@ -253,17 +312,7 @@ public final class ClosureInvocationInput {
 
     /** Internal execution view owned by a verified resolution-bound retry. */
     ClosureInvocationInput withInvocationIdentity(String selectedIdentity) {
-        return new ClosureInvocationInput(
-                operation,
-                selectedIdentity,
-                snapshot,
-                cause,
-                admissionCandidate,
-                admissionCandidateIdentity,
-                directDeliveries,
-                directDeliverySnapshotIdentity,
-                executionPolicy,
-                environment);
+        return new ClosureInvocationInput(this, selectedIdentity, semanticPredecessors);
     }
 
     private void validateOperationShape() {

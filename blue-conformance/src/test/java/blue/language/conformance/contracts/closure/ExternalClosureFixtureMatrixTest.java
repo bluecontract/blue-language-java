@@ -2,10 +2,16 @@ package blue.language.conformance.contracts.closure;
 
 import blue.language.conformance.contracts.ClosureFixtureRuntime;
 import blue.language.processor.ProcessorStatus;
+import blue.language.processor.closure.BlueClosureContracts;
+import blue.language.processor.closure.ClosureAttemptResult;
+import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessResult;
+import blue.language.processor.closure.ClosureWorkOccurrence;
 import blue.language.processor.closure.ComponentKind;
 import blue.language.processor.closure.ComponentSnapshot;
+import blue.language.processor.closure.DocumentId;
+import blue.language.processor.closure.ManagedOccurrenceBinding;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -18,6 +24,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -45,6 +52,47 @@ final class ExternalClosureFixtureMatrixTest {
                     "c-clo-33-checkpoint-domain-retirement",
                     "c-clo-35-00-remove-and-create-successor",
                     "c-clo-35-01-readd-committed-successor");
+
+    @Test
+    void shouldOrderEqualDepthContainingDeliveriesByCoordinatesRatherThanOccurrenceHashes() {
+        for (String id : Arrays.asList("c-clo-19-public-event-boundary", "c-clo-20-late-outer-failure")) {
+            // given
+            ClosureFixtureInventory.Entry entry = currentExternalEntry(id);
+            ClosureInvocationInput input = new ClosureFixtureParser().parse(entry).admit();
+            ManagedOccurrenceBinding b = input.snapshot().occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(new DocumentId("b")))
+                    .findFirst().orElseThrow(() -> new AssertionError("Missing B/a placement"));
+            ManagedOccurrenceBinding outer = input.snapshot().occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(new DocumentId("outer")))
+                    .findFirst().orElseThrow(() -> new AssertionError("Missing Outer/inner placement"));
+            ObjectNode runtimeEnvelope = JsonNodeFactory.instance.objectNode();
+            runtimeEnvelope.set("runtime", requiredObject(ClosureFixtureInventory.readFixture(entry), "runtime").deepCopy());
+            AtomicReference<ClosureImplementationEvidence> evidence = new AtomicReference<ClosureImplementationEvidence>();
+
+            // when
+            ClosureAttemptResult actual;
+            try (ClosureFixtureRuntime runtime = ClosureFixtureRuntime.fromFixture(runtimeEnvelope);
+                 BlueClosureContracts contracts = new BlueClosureContracts(runtime.processor(), evidence::set)) {
+                actual = contracts.processClosure(input);
+            }
+
+            // then
+            assertEquals(b.targetDocumentId(), outer.targetDocumentId(), "Both are depth-one receivers of A");
+            assertTrue(b.sourceDocumentId().compareTo(outer.sourceDocumentId()) < 0, "Containing coordinate order is B, Outer");
+            assertTrue(outer.occurrenceIdentity().compareTo(b.occurrenceIdentity()) < 0,
+                    "The fixture deliberately has the opposite hash order; natural row sorting is not a valid oracle");
+            assertTrue(actual.isComplete(), id);
+            assertEquals(id.equals("c-clo-20-late-outer-failure") ? ProcessorStatus.RUNTIME_FATAL : ProcessorStatus.SUCCESS,
+                    actual.processResult().status(), id);
+            assertNotNull(evidence.get(), id);
+            List<ClosureWorkOccurrence> work = evidence.get().workTrace();
+            assertTrue(work.size() >= 4, id);
+            assertEquals(new DocumentId("a"), work.get(0).targetDocumentId(), "Original external input");
+            assertEquals(new DocumentId("a"), work.get(1).targetDocumentId(), "Emitter's own triggered scope");
+            assertEquals(new DocumentId("b"), work.get(2).targetDocumentId(), "First depth-one containing scope");
+            assertEquals(new DocumentId("outer"), work.get(3).targetDocumentId(), "Second depth-one containing scope");
+        }
+    }
 
     @Test
     void shouldAdmitPriorityExternalFixtureShapesWithoutExpectedProjection() {

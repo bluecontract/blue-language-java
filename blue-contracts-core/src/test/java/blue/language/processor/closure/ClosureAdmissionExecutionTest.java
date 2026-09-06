@@ -187,7 +187,7 @@ final class ClosureAdmissionExecutionTest {
     }
 
     @Test
-    void rebindsInactiveProspectiveRowsToThePostAdmissionTargetHeadOnly() {
+    void preservesDormantSelectionsWhileAdvancingActiveAdmissionReferences() {
         try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
             ClosureInvocationInput input = admission(
                     owner, 100000L, 128L, null, true);
@@ -219,10 +219,12 @@ final class ClosureAdmissionExecutionTest {
 
             assertFalse(prospective.active());
             assertNull(prospective.pendingHistoricalEpoch());
-            assertEquals(resultingB, prospective.expectedTargetBlueId());
+            assertNotEquals(resultingB, prospective.expectedTargetBlueId());
+            assertEquals(inputProspective.expectedTargetBlueId(),
+                    prospective.expectedTargetBlueId());
             assertEquals(inputProspective.occurrenceIdentity(),
                     prospective.occurrenceIdentity());
-            assertNotEquals(inputProspective.bindingIdentity(),
+            assertEquals(inputProspective.bindingIdentity(),
                     prospective.bindingIdentity());
 
             assertFalse(historical.active());

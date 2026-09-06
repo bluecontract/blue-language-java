@@ -33,6 +33,44 @@ final class ClosureFinalizationGasChargerTest {
     private static final DocumentId D = new DocumentId("simple-d");
 
     @Test
+    void cyclicMemberIdentityLedgersStaySeedLocalAndComponentWorkHasStableOwner() {
+        Map<DocumentId, Node> bodies = bodies();
+        List<ManagedOccurrenceBinding> bindings = bindings();
+        ComponentFinalizationResult result = new ComponentFinalizationKernel().finalizeComponents(
+                new ComponentFinalizationInput(ManagedDocumentGraph.fromBindings(bodies.keySet(), bindings),
+                        generations(), bodies, bindings));
+        ClosureFinalizationGasCharger charger = new ClosureFinalizationGasCharger();
+        Set<String> warmA = new LinkedHashSet<>();
+        List<String> previousB = null;
+        for (int run = 0; run < 2; run++) {
+            Set<String> establishedA = new LinkedHashSet<>(warmA), establishedB = new LinkedHashSet<>();
+            try (DocumentProcessor owner = DocumentProcessor.builder().build();
+                 ManagedDocumentStepProcessor meter = new ManagedDocumentStepProcessor(owner)) {
+                ClosureFinalizationGasCharger.FinalizationFrame frame = charger.beginFinalization(
+                        meter, result.finalizedGraph(), result.componentGenerations(), work());
+                charger.finishFinalization(frame, bodies, result, document ->
+                        new ClosureFinalizationGasCharger.IdentityLedger(document.equals(A) ? establishedA : establishedB,
+                                Collections.emptySet()), evidence -> { });
+                List<String> bTrace = new java.util.ArrayList<>();
+                for (GasTraceEntry entry : meter.processorGasTrace()) {
+                    assertTrue(entry.documentId() != null, "No component charge uses the incidental initiating runtime");
+                    if (entry.reason().contains(".master") || entry.reason().contains(".preliminary-sort")
+                            || entry.counter().equals("tentativeComponentFinalization"))
+                        assertEquals(A.value(), entry.documentId());
+                    if (B.value().equals(entry.documentId()))
+                        bTrace.add(entry.namespace() + ":" + entry.counter() + ":" + entry.quantity() + ":" + entry.reason());
+                }
+                assertTrue(!bTrace.isEmpty());
+                if (previousB != null) assertEquals(previousB, bTrace, "A's prior openings cannot discount B's identity work");
+                previousB = bTrace;
+                assertTrue(establishedA.contains(MASTER));
+                assertTrue(!establishedB.contains(MASTER), "Master fold belongs to stable first member only");
+                warmA.addAll(establishedA);
+            }
+        }
+    }
+
+    @Test
     void chargesResolvedBodyAndHistoricalCyclicProofWithoutFakeComponent() {
         ClosureFinalizationGasCharger charger =
                 new ClosureFinalizationGasCharger();

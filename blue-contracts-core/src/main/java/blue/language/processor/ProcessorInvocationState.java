@@ -752,6 +752,7 @@ final class ProcessorInvocationState {
     }
 
     String fatalReason(Throwable throwable, String defaultReason) {
+        ProcessingFailureBoundary.requireSemantic(throwable);
         String message = throwable != null ? throwable.getMessage() : null;
         return message != null ? message : defaultReason;
     }

@@ -453,9 +453,15 @@ final class ProcessorInvocationOrchestrator {
     private static void rethrowIdentityBoundaryFailure(
             RuntimeException exception) {
         if (exception instanceof ExecutionEvidenceUnavailableException
+                || exception instanceof NoncommittingExecutionException
                 || ScopeIdentityErrorMapper
                 .isProviderIdentityFailure(exception)) {
             throw exception;
+        }
+        if (!(exception instanceof ProcessorFailureException)
+                && !(exception instanceof ProcessorFatalException)
+                && !(exception instanceof ProcessorEngine.BoundaryViolationException)) {
+            throw new UnclassifiedProcessingException(exception);
         }
     }
 

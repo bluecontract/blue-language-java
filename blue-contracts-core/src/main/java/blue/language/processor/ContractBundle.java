@@ -317,6 +317,17 @@ public final class ContractBundle {
                 runtimeCheckpointDeclared);
     }
 
+    /** Nonexecuting routing view: exact captured source/header identities replace the flat recognition scaffolding. */
+    ContractBundle withRetainedRootMetadata(ManagedRootSubscriptionSurface surface) {
+        if (!channels.keySet().equals(surface.channelNodes().keySet()))
+            throw new InvalidExecutionEvidenceException("Retained Root Channel inventory differs from routing headers");
+        Map<String, FrozenNode> exactNodes = new LinkedHashMap<>(contractNodes);
+        exactNodes.putAll(surface.channelNodes());
+        return new ContractBundle(new LinkedHashMap<>(channels), new LinkedHashMap<>(surface.channelNodes()),
+                new LinkedHashMap<>(handlersByChannel), new LinkedHashMap<>(markers), exactNodes,
+                new ArrayList<>(surface.effectiveRootContracts()), embeddedScopeDeclaration, embeddedScopePlan, checkpointDeclared);
+    }
+
     /** Returns an invocation-local copy carrying the frozen entry plan. */
     ContractBundle withEmbeddedScopePlan(EmbeddedScopePlan plan) {
         Map<String, List<HandlerBinding>> handlersCopy =

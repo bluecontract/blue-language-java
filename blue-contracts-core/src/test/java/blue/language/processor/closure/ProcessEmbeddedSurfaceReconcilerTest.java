@@ -305,6 +305,64 @@ final class ProcessEmbeddedSurfaceReconcilerTest {
     }
 
     @Test
+    void shouldNotRetargetAnAuthenticatedPriorViewToAnEqualContentLineage() {
+        assertPriorViewKeepsItsLineage(false);
+    }
+
+    @Test
+    void shouldKeepTheExactPinnedViewWhenAnotherLineageHasTheSameCurrentContent() {
+        assertPriorViewKeepsItsLineage(true);
+    }
+
+    private void assertPriorViewKeepsItsLineage(boolean retainSelectedView) {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot oldTarget = document(B, "shared-content");
+        ManagedDocumentSnapshot advancedTarget = document(B, "advanced-content");
+        ManagedDocumentSnapshot otherLineage = document(C, "shared-content");
+        ManagedOccurrenceBinding before = binding(A, "/peer", 3L, oldTarget, true);
+        Node resultingSource = source.document().properties(
+                "peer", new Node().blueId(oldTarget.blueId()));
+        ProcessEmbeddedSurfaceReconciler.PriorFinalizedReferenceAvailability authority =
+                new ProcessEmbeddedSurfaceReconciler.PriorFinalizedReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(DocumentId documentId, String blueId) {
+                        return B.equals(documentId) && oldTarget.blueId().equals(blueId);
+                    }
+
+                    @Override
+                    public boolean retainsExactBinding(ManagedOccurrenceBinding binding, String blueId) {
+                        return retainSelectedView && before.equals(binding)
+                                && oldTarget.blueId().equals(blueId);
+                    }
+                };
+        // Membership order must never turn a retained B view into a subscription to C.
+        for (List<ManagedDocumentSnapshot> documents : Arrays.asList(
+                Arrays.asList(source, advancedTarget, otherLineage),
+                Arrays.asList(otherLineage, advancedTarget, source))) {
+            ProcessEmbeddedSurfaceReconciler.Reconciliation result =
+                    reconciler.reconcileProjectedAfterDemandAggregation(
+                            A, resultingSource, Collections.singletonList(path("/peer")),
+                            Collections.singletonList(before), documents, noFences(), authority);
+            ManagedOccurrenceBinding after = only(result.bindings(), A, "/peer");
+            assertEquals(B, after.targetDocumentId());
+            assertEquals(before.occurrenceIdentity(), after.occurrenceIdentity());
+            assertEquals(3L, after.activationGeneration());
+            assertEquals(retainSelectedView ? oldTarget.blueId() : advancedTarget.blueId(),
+                    after.expectedTargetBlueId());
+            assertTrue(result.activatedOccurrenceIdentities().isEmpty());
+            assertTrue(result.retiredOccurrencePaths().isEmpty());
+        }
+        // Without authority for B's historical value, the exact C target is a real retarget.
+        ProcessEmbeddedSurfaceReconciler.Reconciliation unpinned =
+                reconciler.reconcileProjectedAfterDemandAggregation(
+                        A, resultingSource, Collections.singletonList(path("/peer")),
+                        Collections.singletonList(before), Arrays.asList(source, advancedTarget, otherLineage),
+                        noFences(), ProcessEmbeddedSurfaceReconciler.PriorFinalizedReferenceAvailability.NONE);
+        assertEquals(C, only(unpinned.bindings(), A, "/peer").targetDocumentId());
+        assertEquals(4L, only(unpinned.bindings(), A, "/peer").activationGeneration());
+    }
+
+    @Test
     void shouldDissolveSplitAndFormCyclesFromReconciledBindings() {
         // given
         ManagedDocumentSnapshot a = document(A, "doc-a");

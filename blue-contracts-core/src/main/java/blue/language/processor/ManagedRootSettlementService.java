@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 /** Processor-internal implementation of managed Root read/settlement seams. */
 final class ManagedRootSettlementService {
@@ -79,10 +81,13 @@ final class ManagedRootSettlementService {
                     null,
                     null));
         }
+        Map<String, FrozenNode> channelNodes = new LinkedHashMap<String, FrozenNode>();
+        for (ManagedRootChannelOccurrence occurrence : occurrences)
+            channelNodes.put(occurrence.rawChannelKey(), view.bundle.contractNode(occurrence.rawChannelKey()));
         return new ManagedRootSubscriptionSurface(
                 occurrences,
                 subscriptions,
-                view.bundle.effectiveContractSnapshots());
+                view.bundle.effectiveContractSnapshots(), channelNodes);
     }
 
     ManagedExternalDeliveryClassification classifyExternalDelivery(
@@ -90,7 +95,20 @@ final class ManagedRootSettlementService {
             String rawChannelKey,
             Node exactEvent,
             GasChargeContext comparisonContext) {
-        RootView view = openRoot(exactRoot);
+        return classifyExternalDelivery(openRoot(exactRoot), rawChannelKey, exactEvent, comparisonContext);
+    }
+
+    ManagedExternalDeliveryClassification classifyExternalDelivery(
+            blue.language.processor.closure.RootChannelMetadata metadata, String rawChannelKey,
+            Node exactEvent, GasChargeContext comparisonContext) {
+        RootView flat = openRoot(metadata.routingDocument());
+        RootView retained = new RootView(flat.document, flat.runtime,
+                flat.bundle.withRetainedRootMetadata(metadata.surface()));
+        return classifyExternalDelivery(retained, rawChannelKey, exactEvent, comparisonContext);
+    }
+
+    private ManagedExternalDeliveryClassification classifyExternalDelivery(RootView view,
+            String rawChannelKey, Node exactEvent, GasChargeContext comparisonContext) {
         requireActiveRoot(view.document);
         String channelKey = requireText(rawChannelKey, "rawChannelKey");
         Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
@@ -262,9 +280,32 @@ final class ManagedRootSettlementService {
             List<ManagedCheckpointSettlementRequest> requests,
             ManagedCheckpointBatchCleanupContextFactory
                     cleanupContextFactory) {
-        long gasBefore = sharedGasContext.meter().totalGas();
+        return settleCheckpointBatch(requests, cleanupContextFactory,
+                request -> this, sharedGasContext.meter()::totalGas);
+    }
+
+    ManagedCheckpointSettlementBatch settleCheckpointBatch(
+            List<ManagedCheckpointSettlementRequest> requests,
+            ManagedCheckpointBatchCleanupContextFactory cleanupContextFactory,
+            Function<ManagedCheckpointSettlementRequest,
+                    ManagedRootSettlementService> serviceSelector) {
+        return settleCheckpointBatch(requests, cleanupContextFactory,
+                serviceSelector, sharedGasContext.meter()::groupAdmittedGas);
+    }
+
+    private ManagedCheckpointSettlementBatch settleCheckpointBatch(
+            List<ManagedCheckpointSettlementRequest> requests,
+            ManagedCheckpointBatchCleanupContextFactory cleanupContextFactory,
+            Function<ManagedCheckpointSettlementRequest,
+                    ManagedRootSettlementService> serviceSelector,
+            LongSupplier admittedGas) {
+        Objects.requireNonNull(cleanupContextFactory, "cleanupContextFactory");
+        Objects.requireNonNull(serviceSelector, "serviceSelector");
         List<RootPlan> plans = new ArrayList<RootPlan>();
         Set<String> targetIdentities = new LinkedHashSet<String>();
+        Map<ManagedCheckpointSettlementRequest, ManagedRootSettlementService>
+                selected = new LinkedHashMap<>();
+        // Freeze and validate every original owner before any charged planning.
         for (ManagedCheckpointSettlementRequest request
                 : Objects.requireNonNull(requests, "requests")) {
             ManagedCheckpointSettlementRequest target =
@@ -276,10 +317,24 @@ final class ManagedRootSettlementService {
                                 + target.targetManagedScopeIdentity(),
                         ProcessorErrorCategory.CheckpointPolicyError);
             }
+            ManagedRootSettlementService service = Objects.requireNonNull(
+                    serviceSelector.apply(target), "selected service");
+            if (!sharedGasContext.meter().sharesBudgetWith(
+                    service.sharedGasContext.meter())) {
+                throw new IllegalArgumentException(
+                        "Checkpoint batch targets must already share one accepted gas group");
+            }
+            selected.put(target, service);
+        }
+        long gasBefore = admittedGas.getAsLong();
+        for (Map.Entry<ManagedCheckpointSettlementRequest,
+                ManagedRootSettlementService> selectedTarget : selected.entrySet()) {
+            ManagedCheckpointSettlementRequest target = selectedTarget.getKey();
+            ManagedRootSettlementService service = selectedTarget.getValue();
             try (GasMeter.AttributionScope ignored =
-                         sharedGasContext.withAttribution(
+                         service.sharedGasContext.withAttribution(
                                  target.revalidationAttribution())) {
-                plans.add(planRoot(
+                plans.add(service.planRoot(
                         target.targetManagedScopeIdentity(),
                         target.exactRoot(),
                         target.completedEntries()));
@@ -289,7 +344,7 @@ final class ManagedRootSettlementService {
                 plans,
                 Objects.requireNonNull(
                         cleanupContextFactory, "cleanupContextFactory"),
-                gasBefore);
+                gasBefore, admittedGas);
     }
 
     private RootPlan planRoot(
@@ -408,12 +463,22 @@ final class ManagedRootSettlementService {
             List<RootPlan> plans,
             ManagedCheckpointBatchCleanupContextFactory cleanupContextFactory,
             long gasBefore) {
+        return applyBatch(plans, cleanupContextFactory, gasBefore,
+                sharedGasContext.meter()::totalGas);
+    }
+
+    private ManagedCheckpointSettlementBatch applyBatch(
+            List<RootPlan> plans,
+            ManagedCheckpointBatchCleanupContextFactory cleanupContextFactory,
+            long gasBefore,
+            LongSupplier admittedGas) {
         List<BatchMutation> ordered = orderedMutations(
                 plans, cleanupContextFactory);
         preflight(ordered);
         for (BatchMutation item : ordered) {
             RootPlan plan = item.plan;
             PlannedMutation mutation = item.mutation;
+            try (GasMeter.AttributionScope ignored = plan.attribute(mutation.writeContext)) {
             ProcessingCheckpointTransaction transaction = plan.transaction();
             if (mutation.candidate != null) {
                 CheckpointManager.CheckpointRecord record = transaction.find(
@@ -435,8 +500,9 @@ final class ManagedRootSettlementService {
                         mutation.before.domainBlueId(),
                         mutation.writeContext);
             }
+            }
         }
-        long gasAfter = sharedGasContext.meter().totalGas();
+        long gasAfter = admittedGas.getAsLong();
         List<ManagedCheckpointSettlementBatch.TargetResult> targets =
                 new ArrayList<ManagedCheckpointSettlementBatch.TargetResult>();
         for (RootPlan plan : plans) {
@@ -595,65 +661,13 @@ final class ManagedRootSettlementService {
         String domainBlueId = CheckpointDomainIdentity.exact(domainNode);
         ManagedCheckpointDomain domain = knownDomains.get(domainBlueId);
         if (domain == null) {
-            Node exactDomain = materializeExactDomain(domainNode);
-            domain = parsedDomain(exactDomain, domainBlueId);
+            domain = ManagedCheckpointDomainEvidence.restore(
+                    domainNode, domainBlueId, owner.snapshotManager());
             knownDomains.put(domainBlueId, domain);
         }
         String subjectBlueId = CheckpointIdentityCalculator.identity(
                 subjectNode, owner.languageRuntimeAccess());
         return new ManagedCheckpointState(domain, subjectBlueId);
-    }
-
-    private Node materializeExactDomain(Node domainNode) {
-        if (!domainNode.isReferenceOnly()) {
-            return domainNode.clone();
-        }
-        ProcessingSnapshotManager manager = owner.snapshotManager();
-        if (manager == null) {
-            throw new ExecutionEvidenceUnavailableException(
-                    "Complete checkpoint-domain value is unavailable for "
-                            + domainNode.getBlueId(),
-                    Collections.singleton(domainNode.getBlueId()));
-        }
-        FrozenNode materialized = manager.materializeVerifiedExactReference(
-                FrozenNode.fromNode(domainNode));
-        if (materialized == null || materialized.isReferenceOnly()) {
-            throw new ExecutionEvidenceUnavailableException(
-                    "Complete checkpoint-domain value is unavailable for "
-                            + domainNode.getBlueId(),
-                    Collections.singleton(domainNode.getBlueId()));
-        }
-        return materialized.toNode();
-    }
-
-    private ManagedCheckpointDomain parsedDomain(
-            Node exactDomain,
-            String assertedBlueId) {
-        String type = textProperty(
-                exactDomain,
-                ProcessorIdentityConstants.Field.EFFECTIVE_TYPE_BLUE_ID,
-                true);
-        List<String> sources = textListProperty(
-                exactDomain,
-                ProcessorIdentityConstants.Field
-                        .SOURCE_CONTRIBUTION_NODE_BLUE_IDS,
-                true);
-        List<String> dependencies = textListProperty(
-                exactDomain,
-                ProcessorIdentityConstants.Field
-                        .DETERMINISTIC_DEPENDENCY_NODE_BLUE_IDS,
-                false);
-        String discriminator = textProperty(
-                exactDomain,
-                ProcessorIdentityConstants.Field.RUNTIME_DISCRIMINATOR,
-                false);
-        return new ManagedCheckpointDomain(
-                type,
-                sources,
-                dependencies,
-                discriminator,
-                exactDomain,
-                assertedBlueId);
     }
 
     private ManagedCheckpointDomain domain(
@@ -942,51 +956,6 @@ final class ManagedRootSettlementService {
         }
     }
 
-    private static String textProperty(
-            Node node,
-            String key,
-            boolean required) {
-        Node value = node != null && node.getProperties() != null
-                ? node.getProperties().get(key) : null;
-        Object raw = value != null ? value.getValue() : null;
-        if (raw instanceof String && !((String) raw).isEmpty()) {
-            return (String) raw;
-        }
-        if (!required && value == null) {
-            return null;
-        }
-        throw new InvalidExecutionEvidenceException(
-                "Checkpoint-domain field is invalid: " + key,
-                ProcessorErrorCategory.CheckpointPolicyError);
-    }
-
-    private static List<String> textListProperty(
-            Node node,
-            String key,
-            boolean required) {
-        Node value = node != null && node.getProperties() != null
-                ? node.getProperties().get(key) : null;
-        if (value == null && !required) {
-            return Collections.emptyList();
-        }
-        if (value == null || value.getItems() == null) {
-            throw new InvalidExecutionEvidenceException(
-                    "Checkpoint-domain list field is invalid: " + key,
-                    ProcessorErrorCategory.CheckpointPolicyError);
-        }
-        List<String> result = new ArrayList<String>();
-        for (Node item : value.getItems()) {
-            Object raw = item != null ? item.getValue() : null;
-            if (!(raw instanceof String) || ((String) raw).isEmpty()) {
-                throw new InvalidExecutionEvidenceException(
-                        "Checkpoint-domain list item is invalid: " + key,
-                        ProcessorErrorCategory.CheckpointPolicyError);
-            }
-            result.add((String) raw);
-        }
-        return result;
-    }
-
     private static boolean sameRuntimeTrace(
             List<GasTraceEntry> left,
             List<GasTraceEntry> right) {
@@ -1196,6 +1165,10 @@ final class ManagedRootSettlementService {
                         owner.observer());
             }
             return transaction;
+        }
+
+        private GasMeter.AttributionScope attribute(GasChargeContext context) {
+            return sharedGasContext.withAttribution(context);
         }
     }
 

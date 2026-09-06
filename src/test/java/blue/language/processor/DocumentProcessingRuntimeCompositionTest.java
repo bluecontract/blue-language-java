@@ -68,7 +68,7 @@ final class DocumentProcessingRuntimeCompositionTest {
                                 JsonPatch.remove("/missing"))));
 
         // then
-        assertEquals(IllegalStateException.class, failure.getClass());
+        assertEquals(blue.language.snapshot.InvalidCanonicalPatchException.class, failure.getClass());
         assertEquals("ready", document.getAsText("/status"));
         assertNull(document.getProperties().get("missing"));
     }

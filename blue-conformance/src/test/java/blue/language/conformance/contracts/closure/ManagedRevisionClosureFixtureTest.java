@@ -51,7 +51,9 @@ final class ManagedRevisionClosureFixtureTest {
                 attempt = contracts.processClosure(invocation);
             }
 
-            assertTrue(attempt.isComplete(), entry.id());
+            assertTrue(attempt.isComplete(), () -> entry.id() + " attempt=" + attempt.kind()
+                    + ", requiredExactBlueIds=" + attempt.requiredExactBlueIds()
+                    + ", resourceDemands=" + attempt.resourceDemands());
             ClosureProcessResult actual = attempt.processResult();
             assertEquals(
                     ProcessorStatus.SUCCESS,
@@ -97,7 +99,7 @@ final class ManagedRevisionClosureFixtureTest {
                     actual.gasTrace());
             assertEquals(
                     entry.id().equals("c-clo-23-05-a9-to-a10")
-                            ? 473L : 342L,
+                            ? 435L : 346L,
                     actual.totalGas(),
                     entry.id() + " gas " + traceSummary(actual));
         }
@@ -155,25 +157,32 @@ final class ManagedRevisionClosureFixtureTest {
                 trace,
                 "tentativeComponentFinalization",
                 "managed-revision.acyclic-finalization");
-        assertEquals(2, acyclic.size(), fixtureId);
-        int ancestorIdentity = indexOf(
-                trace,
-                "nodeIdentityEstablished",
-                "work.0.acyclic-finalization.node-established");
-        int ancestorReference = indexWithReasonPrefix(
-                trace,
-                "containingReferenceUpdated",
-                "managed-revision.ancestor-reference.");
+        boolean catchesUp = cause.toEpoch() == authoritativeChildEpoch;
+        assertEquals(catchesUp ? 1 : 2, acyclic.size(), fixtureId);
         assertStrictlyIncreasing(
                 fixtureId,
                 scope,
                 patch,
                 receiptReference,
                 receiptBinding,
-                acyclic.get(0).intValue(),
-                acyclic.get(1).intValue(),
-                ancestorIdentity,
-                ancestorReference);
+                acyclic.get(0).intValue());
+        int ancestorReference;
+        if (catchesUp) {
+            // The source stays pinned until the immediately following joint activation.
+            // There is no callback boundary or discarded acyclic source identity here.
+            assertEquals(-1, indexOfOptional(trace, "nodeIdentityEstablished",
+                    "work.0.acyclic-finalization.node-established"), fixtureId);
+            assertTrue(trace.stream().noneMatch(entry -> entry.reason() != null
+                    && entry.reason().startsWith("managed-revision.ancestor-reference.")), fixtureId);
+            ancestorReference = acyclic.get(0).intValue();
+        } else {
+            int ancestorIdentity = indexOf(trace, "nodeIdentityEstablished",
+                    "work.0.acyclic-finalization.node-established");
+            ancestorReference = indexWithReasonPrefix(trace, "containingReferenceUpdated",
+                    "managed-revision.ancestor-reference.");
+            assertStrictlyIncreasing(fixtureId, acyclic.get(0).intValue(), acyclic.get(1).intValue(),
+                    ancestorIdentity, ancestorReference);
+        }
 
         int duplicateSourceIdentity = 0;
         for (int index = receiptBinding + 1;
@@ -189,7 +198,6 @@ final class ManagedRevisionClosureFixtureTest {
         assertEquals(0, duplicateSourceIdentity,
                 fixtureId + " duplicate source finalization identity");
 
-        boolean catchesUp = cause.toEpoch() == authoritativeChildEpoch;
         if (!catchesUp) {
             assertEquals(-1, indexOfOptional(
                     trace,

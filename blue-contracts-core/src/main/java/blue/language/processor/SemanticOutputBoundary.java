@@ -125,6 +125,7 @@ public final class SemanticOutputBoundary {
             } catch (ExecutionEvidenceUnavailableException ex) {
                 throw ex;
             } catch (RuntimeException invalid) {
+                ProcessingFailureBoundary.requireSemantic(invalid);
                 throw new ProcessorFailureException(
                         ProcessorErrorCategory.InvalidProcessingDocument,
                         "Hosted runtime output is not valid exact Blue content",
@@ -136,6 +137,9 @@ public final class SemanticOutputBoundary {
             admittedByCanonicalStructure.put(
                     suppliedStructuralKey, admitted);
             return admitted;
+        } catch (blue.language.model.InvalidNodeStructureException malformed) {
+            throw new ProcessorFailureException(ProcessorErrorCategory.InvalidProcessingDocument,
+                    "Hosted runtime output is not valid exact Blue content", malformed);
         } catch (GasLimitExceededException exhaustion) {
             workSession.recordSemanticRejectedCharge(
                     exhaustion);

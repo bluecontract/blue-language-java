@@ -61,7 +61,9 @@ final class CheckpointIdentityCalculator {
                     ProcessingMetricId.CHECKPOINT_DIRECT_BLUE_ID_NANOS,
                     System.nanoTime() - directStart);
             return identity;
-        } catch (RuntimeException directFailure) {
+        } catch (blue.language.model.InvalidNodeStructureException malformed) {
+            throw malformed;
+        } catch (IllegalArgumentException directFailure) {
             ProcessingObservations.record(observer,
                     ProcessingMetricId.CHECKPOINT_DIRECT_BLUE_ID_NANOS,
                     System.nanoTime() - directStart);
@@ -79,6 +81,16 @@ final class CheckpointIdentityCalculator {
                         System.nanoTime() - contentStart);
                 return identity;
             } catch (RuntimeException semanticFailure) {
+                // The fallback is a representation rule, never an escape from a failed provider.
+                if (semanticFailure instanceof blue.language.model.InvalidNodeStructureException
+                        || semanticFailure instanceof NoncommittingExecutionException
+                        || semanticFailure instanceof ExecutionEvidenceUnavailableException
+                        || ScopeIdentityErrorMapper.isProviderIdentityFailure(semanticFailure)) {
+                    throw semanticFailure;
+                }
+                if (!(semanticFailure instanceof IllegalArgumentException)) {
+                    throw new UnclassifiedProcessingException(semanticFailure);
+                }
                 ProcessingObservations.record(observer,
                         ProcessingMetricId.CHECKPOINT_CONTENT_BLUE_ID_NANOS,
                         System.nanoTime() - contentStart);

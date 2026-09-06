@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 final class ProcessorStaticSafetyTest {
 
@@ -74,13 +75,40 @@ final class ProcessorStaticSafetyTest {
                 continue;
             }
             String source = read(file);
-            if (source.contains(".startsWith(")) {
+            if (containsRawPointerComparison(relative, source)) {
                 offenders.add(file + ": raw startsWith pointer comparison");
             }
         }
 
         // then
         assertTrue(offenders.isEmpty(), () -> String.join("\n", offenders));
+    }
+
+    @Test
+    void shouldPermitOnlyTheClosedGasAttributionPrefixComparison() {
+        // given
+        String allowed = "return attribution.startsWith(prefix.value);";
+        String arbitrary = "return pointer.startsWith(parent);";
+        String owner = "closure/ClosureValueSupport.java";
+
+        // when
+        boolean closedAttribution = containsRawPointerComparison(owner, allowed);
+        boolean additionalPointer = containsRawPointerComparison(owner, allowed + arbitrary);
+        boolean differentOwner = containsRawPointerComparison("closure/ClosureExecutionSession.java", allowed);
+
+        // then
+        assertFalse(closedAttribution);
+        assertTrue(additionalPointer);
+        assertTrue(differentOwner);
+    }
+
+    private static boolean containsRawPointerComparison(String relative, String source) {
+        // This single implementation accepts only a closed enum of non-pointer gas tokens.
+        // Other comparisons in the same file still require PointerUtils.
+        if (relative.equals("closure/ClosureValueSupport.java")) {
+            source = source.replace("return attribution.startsWith(prefix.value);", "");
+        }
+        return source.contains(".startsWith(");
     }
 
     @Test

@@ -170,7 +170,7 @@ public final class CanonicalOverlayPatchEngine {
             int index = parseArrayIndex(segment, path);
             FrozenNode child = node.item(index);
             if (child == null) {
-                throw new IllegalStateException("Array index out of bounds: " + path);
+                throw new InvalidCanonicalPatchException("Array index out of bounds: " + path);
             }
             FrozenNode nextChild = write(child, tail, value, path, mode);
             List<FrozenNode> nextItems = new ArrayList<>(node.getItems());
@@ -179,13 +179,13 @@ public final class CanonicalOverlayPatchEngine {
         }
 
         if (node.getValue() != null) {
-            throw new IllegalStateException("Cannot traverse into scalar at path: " + path);
+            throw new InvalidCanonicalPatchException("Cannot traverse into scalar at path: " + path);
         }
 
         FrozenNode child = node.property(segment);
         if (child == null) {
             if (JsonPointer.isArrayIndexSegment(segment)) {
-                throw new IllegalStateException(
+                throw new InvalidCanonicalPatchException(
                         "Expected array element to exist at path: " + path);
             }
             child = emptyNodeForRootMode();
@@ -213,7 +213,7 @@ public final class CanonicalOverlayPatchEngine {
             List<FrozenNode> nextItems = new ArrayList<>(node.getItems());
             if (ARRAY_APPEND_TOKEN.equals(leaf)) {
                 if (mode == WriteMode.REMOVE || mode == WriteMode.REPLACE) {
-                    throw new IllegalStateException("Only add supports append token '-' at path: " + path);
+                    throw new InvalidCanonicalPatchException("Only add supports append token '-' at path: " + path);
                 }
                 nextItems.add(value);
                 return node.withItemsForPatch(nextItems);
@@ -223,19 +223,19 @@ public final class CanonicalOverlayPatchEngine {
             switch (mode) {
                 case ADD:
                     if (index < 0 || index > nextItems.size()) {
-                        throw new IllegalStateException("Array index out of bounds for add: " + path);
+                        throw new InvalidCanonicalPatchException("Array index out of bounds for add: " + path);
                     }
                     nextItems.add(index, value);
                     return node.withItemsForPatch(nextItems);
                 case REPLACE:
                     if (index < 0 || index >= nextItems.size()) {
-                        throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                        throw new InvalidCanonicalPatchException("Array index out of bounds for replace: " + path);
                     }
                     nextItems.set(index, value);
                     return node.withItemsForPatch(nextItems);
                 case REMOVE:
                     if (index < 0 || index >= nextItems.size()) {
-                        throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                        throw new InvalidCanonicalPatchException("Array index out of bounds for remove: " + path);
                     }
                     nextItems.remove(index);
                     return node.withItemsForPatch(nextItems);
@@ -245,11 +245,11 @@ public final class CanonicalOverlayPatchEngine {
         }
 
         if (node.getValue() != null) {
-            throw new IllegalStateException("Cannot traverse into scalar at path: " + path);
+            throw new InvalidCanonicalPatchException("Cannot traverse into scalar at path: " + path);
         }
 
         if (ARRAY_APPEND_TOKEN.equals(leaf)) {
-            throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
+            throw new InvalidCanonicalPatchException("Append token '-' requires array parent at path: " + path);
         }
 
         return writePropertyLeaf(
@@ -264,7 +264,7 @@ public final class CanonicalOverlayPatchEngine {
             WriteMode mode) {
         FrozenNode existing = node.property(leaf);
         if (mode == WriteMode.REMOVE && existing == null) {
-            throw new IllegalStateException("Path does not exist for remove: " + path);
+            throw new InvalidCanonicalPatchException("Path does not exist for remove: " + path);
         }
         FrozenNode nextValue = mode == WriteMode.REPLACE ? mergeObjectReplacement(existing, value) : value;
         return node.withPropertyForPatch(leaf, mode == WriteMode.REMOVE ? null : nextValue);
@@ -357,7 +357,7 @@ public final class CanonicalOverlayPatchEngine {
                 || value.hasItems()
                 || value.hasProperties()
                 || value.getContracts() != null) {
-            throw new IllegalStateException(
+            throw new InvalidCanonicalPatchException(
                     "Node intrinsic 'value' requires a scalar patch value at path: "
                             + path);
         }
@@ -372,11 +372,11 @@ public final class CanonicalOverlayPatchEngine {
         try {
             int value = Integer.parseInt(segment);
             if (value < 0) {
-                throw new IllegalStateException("Negative array index in path: " + path);
+                throw new InvalidCanonicalPatchException("Negative array index in path: " + path);
             }
             return value;
         } catch (NumberFormatException ex) {
-            throw new IllegalStateException("Expected numeric array index in path: " + path);
+            throw new InvalidCanonicalPatchException("Expected numeric array index in path: " + path);
         }
     }
 

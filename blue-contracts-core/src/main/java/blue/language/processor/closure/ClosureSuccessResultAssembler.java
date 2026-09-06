@@ -57,6 +57,16 @@ final class ClosureSuccessResultAssembler {
                 execution.epochAdvanceDocuments());
         List<ResultingDocument> documents = resultingDocuments(
                 invocation.snapshot(), output);
+        Set<DocumentId> unchangedProcessedEpochDocuments = new HashSet<DocumentId>();
+        for (DocumentId id : execution.epochAdvanceDocuments()) {
+            ManagedDocumentSnapshot before = invocation.snapshot().managedDocument(id);
+            ManagedDocumentSnapshot after = output.managedDocument(id);
+            // Changed heads already follow ordinary finalization continuity. Only a
+            // successful unchanged head needs the additional processed-epoch authority.
+            if (before != null && after != null && before.blueId().equals(after.blueId())) {
+                unchangedProcessedEpochDocuments.add(id);
+            }
+        }
         List<GraphChange> graphChanges = graphChanges(
                 invocation.snapshot(), output);
         List<SubscriptionDelta> subscriptionDeltas = subscriptionDeltas(
@@ -135,7 +145,7 @@ final class ClosureSuccessResultAssembler {
                 execution.finalization(),
                 execution.transitionEvidence(),
                 managedTransitionReceipts,
-                Objects.requireNonNull(resolutions, "resolutions"));
+                Objects.requireNonNull(resolutions, "resolutions"), unchangedProcessedEpochDocuments, execution.retirements());
     }
 
     private static AffectedClosureSnapshot committedSnapshot(
@@ -149,14 +159,19 @@ final class ClosureSuccessResultAssembler {
             ManagedDocumentSnapshot before = input.managedDocument(
                     exact.documentId());
             long epoch = before.epoch();
-            if (!before.blueId().equals(exact.blueId())
-                    && epochAdvanceDocuments.contains(
+            if (epochAdvanceDocuments.contains(
                             exact.documentId())) {
                 if (epoch == ClosureValueSupport.MAX_SAFE_INTEGER) {
                     throw new IllegalArgumentException(
                             "Managed document epoch exceeds the safe-integer range");
                 }
                 epoch++;
+            }
+            if (!exact.hasResidentBody()) {
+                if (epoch != exact.epoch() || !before.blueId().equals(exact.blueId()))
+                    throw new IllegalStateException("A changed or processed result requires its exact body");
+                documents.add(exact);
+                continue;
             }
             documents.add(new ManagedDocumentSnapshot(
                     exact.documentId(),
@@ -175,7 +190,7 @@ final class ClosureSuccessResultAssembler {
                 tentative.occurrences(),
                 tentative.occurrenceBindingSetIdentity(),
                 tentative.components(),
-                tentative.publicRootDocumentIds());
+                tentative.publicRootDocumentIds(), tentative.readPins());
         return new AffectedClosureSnapshot(
                 IDENTITIES.affectedClosureIdentity(provisional),
                 provisional.graphGeneration(),
@@ -183,7 +198,7 @@ final class ClosureSuccessResultAssembler {
                 provisional.occurrences(),
                 provisional.occurrenceBindingSetIdentity(),
                 provisional.components(),
-                provisional.publicRootDocumentIds());
+                provisional.publicRootDocumentIds(), provisional.readPins());
     }
 
     private static List<ResultingDocument> resultingDocuments(
@@ -198,6 +213,12 @@ final class ClosureSuccessResultAssembler {
             ManagedDocumentSnapshot before = input.managedDocument(
                     after.documentId());
             ComponentSnapshot component = owners.get(after.documentId());
+            if (!after.hasResidentBody()) {
+                if (!before.blueId().equals(after.blueId()) || before.epoch() != after.epoch())
+                    throw new IllegalStateException("A nonresident result must preserve its exact predecessor");
+                result.add(ResultingDocument.unchangedVerified(after, component));
+                continue;
+            }
             result.add(new ResultingDocument(
                     after.documentId(),
                     before.blueId(),
@@ -216,7 +237,7 @@ final class ClosureSuccessResultAssembler {
         return Collections.unmodifiableList(result);
     }
 
-    private static List<GraphChange> graphChanges(
+    static List<GraphChange> graphChanges(
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot output) {
         Map<String, ManagedOccurrenceBinding> before = byOccurrence(
@@ -300,7 +321,7 @@ final class ClosureSuccessResultAssembler {
         }
     }
 
-    private static List<SubscriptionDelta> subscriptionDeltas(
+    static List<SubscriptionDelta> subscriptionDeltas(
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot output,
             Map<DocumentId, List<ManagedRootChannelOccurrence>> before,
@@ -375,7 +396,7 @@ final class ClosureSuccessResultAssembler {
         return Collections.unmodifiableList(result);
     }
 
-    private static List<CheckpointWrite> checkpointWrites(
+    static List<CheckpointWrite> checkpointWrites(
             AffectedClosureSnapshot snapshot,
             List<ManagedCheckpointSettlementBatch.Mutation> values) {
         ArrayList<CheckpointWrite> result =

@@ -1,6 +1,7 @@
 package blue.language.processor.closure;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -8,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.LinkedHashSet;
 
 /**
  * Complete immutable authoritative state for one connected affected closure.
@@ -23,6 +26,9 @@ public final class AffectedClosureSnapshot {
     private final List<ComponentSnapshot> components;
     private final List<DocumentId> publicRootDocumentIds;
     private final Map<DocumentId, ManagedDocumentSnapshot> documentsById;
+    private final List<ManagedReadPin> readPins;
+    private final Map<DocumentId, ComponentSnapshot> componentsByMember;
+    private final Map<DocumentId, List<ManagedOccurrenceBinding>> outgoingByMember;
 
     /**
      * Creates one closed authoritative affected-closure state.
@@ -43,6 +49,16 @@ public final class AffectedClosureSnapshot {
             String occurrenceBindingSetIdentity,
             List<ComponentSnapshot> components,
             List<DocumentId> publicRootDocumentIds) {
+        this(closureIdentity, graphGeneration, managedDocuments, occurrences,
+                occurrenceBindingSetIdentity, components, publicRootDocumentIds,
+                Collections.<ManagedReadPin>emptyList());
+    }
+
+    /** Adds verified historical dependency bodies without adding mutable lineage cells. */
+    public AffectedClosureSnapshot(String closureIdentity, long graphGeneration,
+            List<ManagedDocumentSnapshot> managedDocuments, List<ManagedOccurrenceBinding> occurrences,
+            String occurrenceBindingSetIdentity, List<ComponentSnapshot> components,
+            List<DocumentId> publicRootDocumentIds, List<ManagedReadPin> readPins) {
         this.closureIdentity = ClosureValueSupport.requireSha256Identity(
                 closureIdentity, "closureIdentity");
         this.graphGeneration = ClosureValueSupport.requireSafeInteger(
@@ -57,10 +73,130 @@ public final class AffectedClosureSnapshot {
         this.components = immutableComponents(components);
         this.publicRootDocumentIds = immutableCanonicalDocumentIds(
                 publicRootDocumentIds, "publicRootDocumentIds");
+        ArrayList<ManagedReadPin> pins = new ArrayList<ManagedReadPin>(Objects.requireNonNull(readPins, "readPins"));
+        Collections.sort(pins);
+        for (int index = 0; index < pins.size(); index++) {
+            ManagedReadPin pin = Objects.requireNonNull(pins.get(index), "readPin");
+            if (!documentsById.containsKey(pin.documentId())
+                    || index > 0 && pins.get(index - 1).compareTo(pin) == 0) {
+                throw new IllegalArgumentException("Read pins must uniquely name a member's exact dependency state");
+            }
+        }
+        this.readPins = Collections.unmodifiableList(pins);
         validateOccurrenceEndpoints();
         validateComponentPartition();
         validatePublicRoots();
+        Map<DocumentId, ComponentSnapshot> componentIndex = new LinkedHashMap<DocumentId, ComponentSnapshot>();
+        for (ComponentSnapshot component : this.components)
+            for (DocumentId member : component.orderedMemberDocumentIds()) componentIndex.put(member, component);
+        this.componentsByMember = Collections.unmodifiableMap(componentIndex);
+        Map<DocumentId, List<ManagedOccurrenceBinding>> outgoing = new LinkedHashMap<DocumentId, List<ManagedOccurrenceBinding>>();
+        for (DocumentId member : documentsById.keySet()) outgoing.put(member, new ArrayList<ManagedOccurrenceBinding>());
+        for (ManagedOccurrenceBinding row : this.occurrences) outgoing.get(row.sourceDocumentId()).add(row);
+        Map<DocumentId, List<ManagedOccurrenceBinding>> stable = new LinkedHashMap<DocumentId, List<ManagedOccurrenceBinding>>();
+        for (Map.Entry<DocumentId, List<ManagedOccurrenceBinding>> entry : outgoing.entrySet())
+            stable.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+        this.outgoingByMember = Collections.unmodifiableMap(stable);
     }
+
+    public ComponentSnapshot component(DocumentId member) { return componentsByMember.get(member); }
+    public List<ManagedOccurrenceBinding> occurrencesFrom(DocumentId member) {
+        List<ManagedOccurrenceBinding> found = outgoingByMember.get(member);
+        return found == null ? Collections.<ManagedOccurrenceBinding>emptyList() : found;
+    }
+
+    /** Exact reusable authority is physical evidence, not another semantic identity field. */
+    public List<ReusableComponentAuthority> reusableComponents() {
+        Set<ReusableComponentAuthority> result = new LinkedHashSet<ReusableComponentAuthority>();
+        for (ManagedDocumentSnapshot document : managedDocuments)
+            if (document.reusableAuthority().isPresent()) result.add(document.reusableAuthority().get());
+        return Collections.unmodifiableList(new ArrayList<ReusableComponentAuthority>(result));
+    }
+
+    public AffectedClosureSnapshot retainResidentBodies(Set<DocumentId> resident) {
+        return retainResidentBodies(resident, Collections.<RootChannelMetadata>emptyList());
+    }
+
+    /**
+     * Verifies this exact owning state before discarding body and cyclic-proof
+     * payloads. The resulting immutable authority has no hidden body cache.
+     * Metadata was captured by the owning configured channel projector.
+     */
+    public AffectedClosureSnapshot retainResidentBodies(Set<DocumentId> resident,
+            Collection<RootChannelMetadata> metadata) {
+        Objects.requireNonNull(resident, "resident");
+        if (!documentsById.keySet().containsAll(resident))
+            throw new IllegalArgumentException("Resident body selection contains a foreign lineage");
+        Map<DocumentId, RootChannelMetadata> roots = new TreeMap<DocumentId, RootChannelMetadata>();
+        for (RootChannelMetadata value : Objects.requireNonNull(metadata, "metadata")) {
+            value.verifyState(Objects.requireNonNull(managedDocument(value.documentId()), "metadata member"));
+            if (roots.put(value.documentId(), value) != null) throw new IllegalArgumentException("Duplicate root metadata");
+        }
+        ComponentFinalizationResult verified = ClosureEvidenceVerifier.verifyAndFinalizeSnapshot(this);
+        Map<DocumentId, ReusableComponentAuthority> authorities = new LinkedHashMap<DocumentId, ReusableComponentAuthority>();
+        List<ComponentSnapshot> headers = new ArrayList<ComponentSnapshot>();
+        for (FinalizedComponentEvidence exact : verified.components()) {
+            DocumentId first = exact.component().orderedMemberDocumentIds().get(0);
+            ReusableComponentAuthority authority = managedDocument(first).reusableAuthority().orElse(null);
+            if (authority != null) {
+                authority.verifyUnchanged(this);
+                authority = authority.withMetadata(roots);
+            } else {
+                authority = ReusableComponentAuthority.captureVerified(this, exact, roots);
+            }
+            headers.add(authority.component());
+            for (DocumentId member : authority.component().orderedMemberDocumentIds()) authorities.put(member, authority);
+        }
+        List<ManagedDocumentSnapshot> documents = new ArrayList<ManagedDocumentSnapshot>();
+        for (ManagedDocumentSnapshot original : managedDocuments)
+            documents.add(authorities.get(original.documentId()).retainingBody(original, resident.contains(original.documentId())));
+        return ClosureEvidenceFactory.affectedClosure(graphGeneration, documents, occurrences, headers, publicRootDocumentIds, readPins);
+    }
+
+    /** Additive exact evidence does not change any semantic snapshot or invocation identity. */
+    public AffectedClosureSnapshot withResidentBody(ManagedReadPin exact) {
+        ManagedDocumentSnapshot old = Objects.requireNonNull(managedDocument(exact.documentId()), "body member");
+        ManagedDocumentSnapshot hydrated = old.withResidentBody(exact);
+        List<ManagedDocumentSnapshot> documents = new ArrayList<ManagedDocumentSnapshot>(managedDocuments);
+        documents.set(documents.indexOf(old), hydrated);
+        return ClosureEvidenceFactory.affectedClosure(graphGeneration, documents, occurrences, components, publicRootDocumentIds, readPins);
+    }
+
+    /**
+     * Applies the established host-generation/public-root normalization while
+     * preserving residency. Cyclic normalized proof identity was computed at
+     * verified capture, never guessed from another proof digest.
+     */
+    public AffectedClosureSnapshot canonicalSemanticView() {
+        List<ManagedDocumentSnapshot> documents = new ArrayList<ManagedDocumentSnapshot>();
+        List<ComponentSnapshot> normalized = new ArrayList<ComponentSnapshot>();
+        for (ComponentSnapshot component : components) {
+            ReusableComponentAuthority authority = managedDocument(component.orderedMemberDocumentIds().get(0))
+                    .reusableAuthority().orElse(null);
+            if (authority != null) {
+                authority.verifyUnchanged(this);
+                ReusableComponentAuthority canonical = authority.canonicalSemanticAuthority();
+                normalized.add(canonical.component());
+                for (DocumentId member : component.orderedMemberDocumentIds()) {
+                    ManagedDocumentSnapshot previous = managedDocument(member);
+                    documents.add(canonical.retainingCanonicalBody(previous));
+                }
+            } else {
+                for (DocumentId member : component.orderedMemberDocumentIds()) {
+                    ManagedDocumentSnapshot previous = managedDocument(member);
+                    documents.add(new ManagedDocumentSnapshot(member, previous.blueId(), previous.document(), previous.initialized(),
+                            previous.terminated(), true, previous.epoch(), 0L));
+                }
+                if (component.kind() == ComponentKind.ACYCLIC)
+                    normalized.add(ClosureEvidenceFactory.acyclicComponent(documents.get(documents.size() - 1)));
+                else normalized.add(ClosureEvidenceFactory.cyclicComponent(0L, component.orderedMemberDocumentIds(),
+                        component.orderedMemberBlueIds(), component.masterBlueId(), component.completeCyclicProof()));
+            }
+        }
+        List<DocumentId> publicRoots = new ArrayList<DocumentId>(documentsById.keySet());
+        return ClosureEvidenceFactory.affectedClosure(0L, documents, occurrences, normalized, publicRoots, readPins);
+    }
+
 
     /**
      * Returns the documented value.
@@ -106,6 +242,26 @@ public final class AffectedClosureSnapshot {
      */
     public List<ManagedOccurrenceBinding> occurrences() {
         return occurrences;
+    }
+
+    public List<ManagedReadPin> readPins() { return readPins; }
+
+    public ManagedReadPin readPin(DocumentId documentId, String blueId) {
+        for (ManagedReadPin pin : readPins) {
+            if (pin.documentId().equals(documentId) && pin.blueId().equals(blueId)) return pin;
+        }
+        return null;
+    }
+
+    Map<String, ManagedReadPin> pinnedOccurrences() {
+        Map<String, ManagedReadPin> result = new LinkedHashMap<String, ManagedReadPin>();
+        for (ManagedOccurrenceBinding binding : occurrences) {
+            if (binding.active() && !managedDocument(binding.targetDocumentId()).blueId().equals(binding.expectedTargetBlueId())) {
+                result.put(binding.occurrenceIdentity(), Objects.requireNonNull(
+                        readPin(binding.targetDocumentId(), binding.expectedTargetBlueId()), "exact read pin"));
+            }
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     /**
@@ -158,7 +314,8 @@ public final class AffectedClosureSnapshot {
             }
             if (occurrence.active()
                     && !target.blueId().equals(
-                            occurrence.expectedTargetBlueId())) {
+                            occurrence.expectedTargetBlueId())
+                    && readPin(occurrence.targetDocumentId(), occurrence.expectedTargetBlueId()) == null) {
                 throw new IllegalArgumentException(
                         "Active occurrence target BlueId disagrees with current state");
             }

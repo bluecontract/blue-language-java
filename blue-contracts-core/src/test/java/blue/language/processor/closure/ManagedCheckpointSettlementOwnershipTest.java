@@ -20,6 +20,8 @@ import blue.language.processor.ManagedCheckpointCandidate;
 import blue.language.processor.ManagedCheckpointSettlementEntry;
 import blue.language.processor.ManagedDocumentStepRuntime;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.ProcessorErrorCategory;
+import blue.language.processor.ProcessorFailureException;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
@@ -401,7 +403,8 @@ final class ManagedCheckpointSettlementOwnershipTest {
                 context.applyPatch(JsonPatch.remove("/contracts/oldOther"));
                 context.applyPatch(JsonPatch.remove("/contracts/other"));
                 if ("fail".equals(key)) {
-                    throw new IllegalStateException("checkpoint ownership fixture failure");
+                    throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
+                            "checkpoint ownership fixture failure");
                 }
             } else if ("catalogChange".equals(key)) {
                 context.applyPatch(JsonPatch.add("/contracts/never", handler("ownerChannel")));

@@ -22,8 +22,14 @@ final class PatchBoundaryValidator {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = PointerUtils.assertValidRuntimePointer(
-                patch.authoredPath());
+        final String targetPath;
+        try {
+            targetPath = PointerUtils.assertValidRuntimePointer(patch.authoredPath());
+        } catch (IllegalArgumentException invalidAuthoredPointer) {
+            // Pure pointer syntax validation has no provider/extension callbacks.
+            throw new ProcessorFailureException(ProcessorErrorCategory.InvalidPatch,
+                    invalidAuthoredPointer.getMessage(), invalidAuthoredPointer);
+        }
 
         if (JsonPointer.ROOT.equals(targetPath)) {
             throw new ProcessorEngine.BoundaryViolationException(

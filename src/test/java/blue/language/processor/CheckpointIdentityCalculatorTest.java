@@ -17,6 +17,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class CheckpointIdentityCalculatorTest {
 
     @Test
+    void shouldRejectSourceIdentityFaultWithoutFallingBackToAnotherIdentity() {
+        // given
+        Node source = new Node().blue(new Node().properties("imports", new Node())).value("payload");
+        // when
+        for (RuntimeException fault : new RuntimeException[] {
+                new IllegalStateException("identity backend defect"),
+                new java.io.UncheckedIOException(new java.io.IOException("storage offline")),
+                new java.util.concurrent.CancellationException("cancelled")}) {
+            blue.language.runtime.LanguageRuntimeAccess runtime =
+                    (blue.language.runtime.LanguageRuntimeAccess) java.lang.reflect.Proxy.newProxyInstance(
+                            getClass().getClassLoader(), new Class<?>[] {blue.language.runtime.LanguageRuntimeAccess.class},
+                            (proxy, method, arguments) -> { throw fault; });
+            Throwable observed = FailureCapture.captureFailure(() -> CheckpointIdentityCalculator.identity(source, runtime));
+            // then
+            org.junit.jupiter.api.Assertions.assertInstanceOf(UnclassifiedProcessingException.class, observed);
+            org.junit.jupiter.api.Assertions.assertSame(fault, observed.getCause());
+        }
+    }
+
+    @Test
     void shouldVerifyCheckpointUsesNodeBlueIdForBlueIdInputEvent() {
         // given
         Node event = new Node().properties("kind", new Node().value("direct"));

@@ -699,6 +699,7 @@ final class ScopeExecutor {
                     exception)) {
                 throw exception;
             }
+            ProcessingFailureBoundary.requireSemantic(exception);
             throw new InvalidExecutionEvidenceException(
                     "Participating scope preflight failed at "
                             + normalizedScope + ": "

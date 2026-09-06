@@ -39,10 +39,19 @@ final class ClosureEvidenceVerifier {
      * purported authoritative snapshot.
      */
     static void verifySnapshot(AffectedClosureSnapshot snapshot) {
+        verifyAndFinalizeSnapshot(snapshot);
+    }
+
+    /** Captures reusable authority only from the exact state checked by this verifier. */
+    static ComponentFinalizationResult verifyAndFinalizeSnapshot(AffectedClosureSnapshot snapshot) {
         AffectedClosureSnapshot selected = Objects.requireNonNull(
                 snapshot, "snapshot");
-        verifyFinalizedState(selected, selected, null);
+        for (ReusableComponentAuthority authority : selected.reusableComponents()) authority.verifyUnchanged(selected);
+        if (!selected.closureIdentity().equals(IDENTITIES.affectedClosureIdentity(selected)))
+            throw new IllegalArgumentException("Verified state authority requires its exact owning snapshot identity");
+        ComponentFinalizationResult result = verifyFinalizedState(selected, selected, null);
         verifyMarkers(selected);
+        return result;
     }
 
     /** Reconciles every result receipt with its exact input and output state. */
@@ -114,10 +123,33 @@ final class ClosureEvidenceVerifier {
             ComponentFinalizationResult reusableFinalization,
             Set<DocumentId> supplementalGasDocumentIds,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
-        requireDocumentContinuity(input, output, resultingDocuments);
+        verifyTransition(input, output, resultingDocuments, graphChanges, subscriptionDeltas, checkpointWrites,
+                publicEvents, gasTrace, reusableFinalization, supplementalGasDocumentIds, resolutions, Collections.emptySet());
+    }
+
+    /** Only the successful interpreter assembler supplies actual owned processing authority. */
+    static void verifyTransition(AffectedClosureSnapshot input, AffectedClosureSnapshot output,
+            List<ResultingDocument> resultingDocuments, List<GraphChange> graphChanges,
+            List<SubscriptionDelta> subscriptionDeltas, List<CheckpointWrite> checkpointWrites,
+            List<PublicEventOccurrence> publicEvents, List<GasTraceEntry> gasTrace,
+            ComponentFinalizationResult reusableFinalization, Set<DocumentId> supplementalGasDocumentIds,
+            List<ManagedOccurrenceEvidenceResolution> resolutions, Set<DocumentId> processedEpochDocuments) {
+        verifyTransition(input, output, resultingDocuments, graphChanges, subscriptionDeltas, checkpointWrites,
+                publicEvents, gasTrace, reusableFinalization, supplementalGasDocumentIds, resolutions,
+                processedEpochDocuments, Collections.emptyMap());
+    }
+
+    static void verifyTransition(AffectedClosureSnapshot input, AffectedClosureSnapshot output,
+            List<ResultingDocument> resultingDocuments, List<GraphChange> graphChanges,
+            List<SubscriptionDelta> subscriptionDeltas, List<CheckpointWrite> checkpointWrites,
+            List<PublicEventOccurrence> publicEvents, List<GasTraceEntry> gasTrace,
+            ComponentFinalizationResult reusableFinalization, Set<DocumentId> supplementalGasDocumentIds,
+            List<ManagedOccurrenceEvidenceResolution> resolutions, Set<DocumentId> processedEpochDocuments,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
+        requireDocumentContinuity(input, output, resultingDocuments, processedEpochDocuments);
         verifyFinalizedState(input, output, reusableFinalization);
         verifyMarkers(output);
-        verifyGraphChanges(input, output, graphChanges, resolutions);
+        verifyGraphChanges(input, output, graphChanges, resolutions, retirements);
         verifyGraphGeneration(input, output);
         verifyPublicEventOrder(publicEvents);
         verifyGasDocumentContexts(
@@ -126,7 +158,7 @@ final class ClosureEvidenceVerifier {
         verifySubscriptionDeltas(input, output, subscriptionDeltas);
     }
 
-    private static void verifyFinalizedState(
+    private static ComponentFinalizationResult verifyFinalizedState(
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot asserted,
             ComponentFinalizationResult reusableFinalization) {
@@ -138,7 +170,7 @@ final class ClosureEvidenceVerifier {
                             inputGraph,
                             componentGenerations(input),
                             documentBodies(asserted),
-                            asserted.occurrences()));
+                            asserted.occurrences(), asserted.pinnedOccurrences(), asserted.reusableComponents()));
         } else {
             ManagedDocumentGraph assertedGraph = graph(asserted);
             Map<DocumentId, Long> expectedGenerations =
@@ -159,6 +191,7 @@ final class ClosureEvidenceVerifier {
                 calculated.finalizedGraph().bindings());
         requireComponents(asserted.components(), calculated.components());
         requireDocuments(asserted.managedDocuments(), calculated);
+        return calculated;
     }
 
     private static ManagedDocumentGraph graph(
@@ -187,7 +220,7 @@ final class ClosureEvidenceVerifier {
         LinkedHashMap<DocumentId, Node> result =
                 new LinkedHashMap<DocumentId, Node>();
         for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
-            result.put(document.documentId(), document.document());
+            if (document.hasResidentBody()) result.put(document.documentId(), document.document());
         }
         return result;
     }
@@ -198,6 +231,7 @@ final class ClosureEvidenceVerifier {
         VerifyingNodeProvider verifier = new VerifyingNodeProvider(evidence);
         for (FinalizedDocumentEvidence document
                 : finalized.documents().values()) {
+            if (document.reusableAuthority().isPresent()) continue;
             verifier.fetchByBlueId(document.blueId());
         }
     }
@@ -206,9 +240,23 @@ final class ClosureEvidenceVerifier {
             AffectedClosureSnapshot snapshot) {
         Map<DocumentId, ManagedDocumentSnapshot> documents = documentsById(
                 snapshot.managedDocuments());
+        Map<DocumentId, Node> resident = new HashMap<DocumentId, Node>();
+        Set<DocumentId> verifiedUnchanged = new HashSet<DocumentId>();
+        Set<ReusableComponentAuthority> checkedAuthorities = new HashSet<ReusableComponentAuthority>();
+        for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
+            ReusableComponentAuthority authority = document.reusableAuthority().orElse(null);
+            Node body = document.hasResidentBody() ? document.document() : null;
+            if (authority != null && authority.matchesHeader(document)
+                    && (body == null || authority.matchesBody(document.documentId(), body))) {
+                if (checkedAuthorities.add(authority)) authority.verifyUnchanged(snapshot);
+                verifiedUnchanged.add(document.documentId());
+            } else if (body != null) resident.put(document.documentId(), body);
+            else document.document(); // Unavailable is an exact noncommitting demand, never valid raw metadata.
+        }
         for (ManagedOccurrenceBinding occurrence : snapshot.occurrences()) {
+            if (verifiedUnchanged.contains(occurrence.sourceDocumentId())) continue;
             Node value = NodePathEditor.getOrNull(
-                    documents.get(occurrence.sourceDocumentId()).document(),
+                    resident.get(occurrence.sourceDocumentId()),
                     occurrence.sourcePath());
             if (value == null) {
                 if (occurrence.active()) {
@@ -346,8 +394,12 @@ final class ClosureEvidenceVerifier {
                         right.cyclicProofIdentity())) {
             return false;
         }
-        if (left.completeCyclicProof() == null) {
-            return right.completeCyclicProof() == null;
+        if (left.kind() == ComponentKind.ACYCLIC) return true;
+        if (!left.hasResidentCyclicProof() || !right.hasResidentCyclicProof()) {
+            if (!left.hasResidentCyclicProof() && !left.hasVerifiedProofHeader()
+                    || !right.hasResidentCyclicProof() && !right.hasVerifiedProofHeader()) return false;
+            return left.cyclicProofIdentity().equals(IDENTITIES.cyclicProofIdentity(left))
+                    && right.cyclicProofIdentity().equals(IDENTITIES.cyclicProofIdentity(right));
         }
         List<Node> leftProof = left.completeCyclicProof()
                 .declaredPlaceholderSet();
@@ -367,6 +419,9 @@ final class ClosureEvidenceVerifier {
 
     private static void verifyMarkers(AffectedClosureSnapshot snapshot) {
         for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
+            ReusableComponentAuthority authority = document.reusableAuthority().orElse(null);
+            if (authority != null && authority.matchesHeader(document)
+                    && (!document.hasResidentBody() || authority.matchesBody(document.documentId(), document.document()))) continue;
             verifyMarkers(document.document(), document.initialized(),
                     document.terminated());
         }
@@ -442,9 +497,14 @@ final class ClosureEvidenceVerifier {
     private static void requireDocumentContinuity(
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot output,
-            List<ResultingDocument> resultingDocuments) {
+            List<ResultingDocument> resultingDocuments, Set<DocumentId> processedEpochDocuments) {
         Map<DocumentId, ManagedDocumentSnapshot> before =
                 documentsById(input.managedDocuments());
+        for (DocumentId processed : processedEpochDocuments) {
+            ManagedDocumentSnapshot document = before.get(processed);
+            if (document == null || !document.initialized())
+                throw new IllegalArgumentException("Processed epoch authority requires an initialized input lineage");
+        }
         if (!before.keySet().equals(
                 documentsById(output.managedDocuments()).keySet())
                 || before.size() != resultingDocuments.size()) {
@@ -472,10 +532,12 @@ final class ClosureEvidenceVerifier {
                         "Managed document epoch must be preserved or advance once");
             }
             if (inputDocument.blueId().equals(outputDocument.blueId())
-                    && afterEpoch != beforeEpoch) {
+                    && afterEpoch != beforeEpoch && !processedEpochDocuments.contains(result.documentId())) {
                 throw new IllegalArgumentException(
                         "An unchanged managed head cannot advance its epoch");
             }
+            if (processedEpochDocuments.contains(result.documentId()) && afterEpoch - beforeEpoch != 1L)
+                throw new IllegalArgumentException("Successful owned processing must advance exactly one epoch");
         }
     }
 
@@ -502,7 +564,8 @@ final class ClosureEvidenceVerifier {
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot output,
             List<GraphChange> changes,
-            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+            List<ManagedOccurrenceEvidenceResolution> resolutions,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
         Map<String, ManagedOccurrenceBinding> beforeRows =
                 occurrencesById(input.occurrences());
         Map<String, ManagedOccurrenceBinding> afterRows =
@@ -539,7 +602,7 @@ final class ClosureEvidenceVerifier {
                             "Graph REMOVE before side is not authoritative");
                 }
                 requireRetirementSuccessor(
-                        lineage, input, output, resolutions);
+                        retirementSelection(lineage, retirements), input, output, resolutions);
                 active.remove(selected.occurrenceIdentity());
             } else {
                 verifyRebind(change, beforeRows, afterRows, active);
@@ -557,6 +620,18 @@ final class ClosureEvidenceVerifier {
                         "Graph changes do not produce the resulting bindings");
             }
         }
+    }
+
+    private static ManagedOccurrenceBinding retirementSelection(ManagedOccurrenceBinding original,
+            Map<String, ProcessEmbeddedSurfaceReconciler.OccurrenceTransition> retirements) {
+        ProcessEmbeddedSurfaceReconciler.OccurrenceTransition actual = retirements.get(original.occurrenceIdentity());
+        if (actual == null) return original;
+        if (actual.kind() != ProcessEmbeddedSurfaceReconciler.OccurrenceTransition.Kind.REMOVE
+                || actual.before() == null || !sameLineage(original, actual.before()))
+            throw new IllegalArgumentException("Retirement authority belongs to another occurrence lineage");
+        // The net graph still removes its input side. Only the owning reconciler's
+        // actual pre-removal row may establish a later selected view at that site.
+        return actual.before();
     }
 
     private static void verifyRebind(
@@ -646,13 +721,10 @@ final class ClosureEvidenceVerifier {
             throw new IllegalArgumentException(
                     "Graph REMOVE lacks its exact inactive retirement successor");
         }
-        ManagedDocumentSnapshot target = output.managedDocument(
-                successor.targetDocumentId());
-        if (target == null
-                || !target.blueId().equals(
-                        successor.expectedTargetBlueId())) {
+        if (!removed.expectedTargetBlueId().equals(
+                successor.expectedTargetBlueId())) {
             throw new IllegalArgumentException(
-                    "Retirement successor does not bind the current target state");
+                    "Retirement successor does not preserve the removed occurrence's exact selection");
         }
     }
 
@@ -918,12 +990,12 @@ final class ClosureEvidenceVerifier {
         private EvidenceNodeProvider(ComponentFinalizationResult finalized) {
             for (FinalizedDocumentEvidence document
                     : finalized.documents().values()) {
-                documents.put(document.blueId(), document.document());
+                if (document.hasResidentBody()) documents.put(document.blueId(), document.document());
             }
             for (FinalizedComponentEvidence evidence
                     : finalized.components()) {
                 ComponentSnapshot component = evidence.component();
-                if (component.kind() != ComponentKind.CYCLIC) {
+                if (component.kind() != ComponentKind.CYCLIC || !component.hasResidentCyclicProof()) {
                     continue;
                 }
                 CyclicSetProof proof = component.completeCyclicProof();

@@ -2,6 +2,7 @@ package blue.language.processor.closure;
 
 import blue.language.identity.BlueIds;
 import blue.language.provider.CyclicSetProof;
+import blue.language.processor.ExecutionEvidenceUnavailableException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,6 +23,7 @@ public final class ComponentSnapshot {
     private final String masterBlueId;
     private final CyclicSetProof completeCyclicProof;
     private final String cyclicProofIdentity;
+    private final boolean verifiedProofHeader;
 
     /**
      * Creates one exact component-state record.
@@ -53,6 +55,7 @@ public final class ComponentSnapshot {
         this.componentGeneration = ClosureValueSupport.requireSafeInteger(
                 componentGeneration, "componentGeneration");
         this.kind = Objects.requireNonNull(kind, "kind");
+        this.verifiedProofHeader = false;
         this.orderedMemberDocumentIds = immutableCanonicalDocumentIds(
                 orderedMemberDocumentIds);
         this.orderedMemberBlueIds = immutableUniqueBlueIds(
@@ -96,6 +99,53 @@ public final class ComponentSnapshot {
             this.completeCyclicProof = null;
         }
     }
+
+    private ComponentSnapshot(ComponentSnapshot verified) {
+        this.componentIdentity = verified.componentIdentity;
+        this.componentStateIdentity = verified.componentStateIdentity;
+        this.componentGeneration = verified.componentGeneration;
+        this.kind = verified.kind;
+        this.orderedMemberDocumentIds = verified.orderedMemberDocumentIds;
+        this.orderedMemberBlueIds = verified.orderedMemberBlueIds;
+        this.masterBlueId = verified.masterBlueId;
+        this.cyclicProofIdentity = verified.cyclicProofIdentity;
+        this.completeCyclicProof = null;
+        this.verifiedProofHeader = true;
+    }
+
+    /** Internal cold restore after the enclosing authority digest has been authenticated. */
+    static ComponentSnapshot restoreAuthenticatedHeader(String identity, String stateIdentity, long generation,
+            ComponentKind kind, List<DocumentId> members, List<String> blueIds, String master, String proofIdentity) {
+        return new ComponentSnapshot(identity, stateIdentity, generation, kind, members, blueIds, master, proofIdentity);
+    }
+
+    private ComponentSnapshot(String identity, String stateIdentity, long generation, ComponentKind kind,
+            List<DocumentId> members, List<String> blueIds, String master, String proofIdentity) {
+        this.componentIdentity = ClosureValueSupport.requireSha256Identity(identity, "componentIdentity");
+        this.componentStateIdentity = ClosureValueSupport.requireSha256Identity(stateIdentity, "componentStateIdentity");
+        this.componentGeneration = ClosureValueSupport.requireSafeInteger(generation, "componentGeneration");
+        this.kind = Objects.requireNonNull(kind, "kind");
+        this.orderedMemberDocumentIds = immutableCanonicalDocumentIds(members);
+        this.orderedMemberBlueIds = immutableUniqueBlueIds(blueIds);
+        if (this.orderedMemberDocumentIds.size() != this.orderedMemberBlueIds.size()
+                || kind == ComponentKind.ACYCLIC && this.orderedMemberDocumentIds.size() != 1)
+            throw new IllegalArgumentException("Authenticated component header has inconsistent membership");
+        this.masterBlueId = master == null ? null : ClosureValueSupport.requireBlueId(master, "masterBlueId");
+        this.cyclicProofIdentity = proofIdentity == null ? null : ClosureValueSupport.requireSha256Identity(proofIdentity, "cyclicProofIdentity");
+        if (kind == ComponentKind.CYCLIC ? master == null || proofIdentity == null : master != null || proofIdentity != null)
+            throw new IllegalArgumentException("Authenticated component header has inconsistent cyclic evidence");
+        this.completeCyclicProof = null;
+        this.verifiedProofHeader = true;
+        if (kind == ComponentKind.CYCLIC) requireCyclicSuffixMapping();
+        if (!componentIdentity.equals(ClosureIdentityService.INSTANCE.componentIdentity(this))
+                || !componentStateIdentity.equals(ClosureIdentityService.INSTANCE.componentStateIdentity(this)))
+            throw new IllegalArgumentException("Authenticated component header identities disagree with its fields");
+    }
+
+    /** Only the owning verified-component capture may discard the proof payload. */
+    static ComponentSnapshot verifiedHeader(ComponentSnapshot verified) { return new ComponentSnapshot(verified); }
+    public boolean hasResidentCyclicProof() { return completeCyclicProof != null; }
+    boolean hasVerifiedProofHeader() { return verifiedProofHeader; }
 
     /**
      * Returns the documented value.
@@ -166,6 +216,8 @@ public final class ComponentSnapshot {
      * @return proof copy, or {@code null} for acyclic state
      */
     public CyclicSetProof completeCyclicProof() {
+        if (kind == ComponentKind.CYCLIC && completeCyclicProof == null)
+            throw new ExecutionEvidenceUnavailableException("Exact cyclic component proof is not resident", orderedMemberBlueIds);
         return completeCyclicProof == null ? null : copyProof(completeCyclicProof);
     }
 

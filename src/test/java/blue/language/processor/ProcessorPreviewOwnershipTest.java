@@ -286,7 +286,8 @@ class ProcessorPreviewOwnershipTest {
                 preview = working.previewAndApplyPatches(patches);
             }
             context.applyPreviewedPatches(patches, preview);
-            throw new IllegalStateException("handler failed after buffering preview");
+            throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
+                    "handler failed after buffering preview");
         }
     }
 

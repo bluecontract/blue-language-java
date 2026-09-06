@@ -48,6 +48,37 @@ public final class FrozenNodeBuilder {
         return new FrozenNodeBuilder();
     }
 
+    /**
+     * Reconstructs resolved content from a shallow metadata node and already frozen children.
+     * Child instances remain structurally shared; no expanded mutable tree is created.
+     * The metadata must contain no child attributes, item list or object properties.
+     */
+    public static FrozenNode fromResolvedParts(FrozenNode metadata,
+            Map<String, FrozenNode> attributes, List<FrozenNode> items, Map<String, FrozenNode> properties) {
+        return fromRetainedParts(metadata, attributes, items, properties, false, false, metadata.isListElementContext());
+    }
+
+    /** Restores a retained canonical or resolved node while preserving its validated construction mode. */
+    public static FrozenNode fromRetainedParts(FrozenNode metadata, Map<String, FrozenNode> attributes,
+            List<FrozenNode> items, Map<String, FrozenNode> properties, boolean canonical, boolean validateBlueIds,
+            boolean listElementContext) {
+        Objects.requireNonNull(metadata, "metadata"); Objects.requireNonNull(attributes, "attributes");
+        if (metadata.type != null || metadata.itemType != null || metadata.keyType != null
+                || metadata.valueType != null || metadata.contracts != null || metadata.blue != null
+                || metadata.items != null || metadata.properties != null) {
+            throw new IllegalArgumentException("Fragment metadata must be shallow");
+        }
+        for (String key : attributes.keySet()) {
+            if (!java.util.Arrays.asList(BlueLanguageConstants.OBJECT_TYPE, BlueLanguageConstants.OBJECT_ITEM_TYPE, BlueLanguageConstants.OBJECT_KEY_TYPE, BlueLanguageConstants.OBJECT_VALUE_TYPE, OBJECT_CONTRACTS, BlueLanguageConstants.OBJECT_BLUE).contains(key))
+                throw new IllegalArgumentException("Unknown frozen attribute: " + key);
+        }
+        return from(metadata).type(attributes.get(BlueLanguageConstants.OBJECT_TYPE)).itemType(attributes.get(BlueLanguageConstants.OBJECT_ITEM_TYPE))
+                .keyType(attributes.get(BlueLanguageConstants.OBJECT_KEY_TYPE)).valueType(attributes.get(BlueLanguageConstants.OBJECT_VALUE_TYPE))
+                .contracts(attributes.get(OBJECT_CONTRACTS)).blue(attributes.get(BlueLanguageConstants.OBJECT_BLUE))
+                .items(items).properties(properties).strictCanonical(canonical).strictBlueIdValidation(validateBlueIds)
+                .previousAnchorContext(listElementContext).build();
+    }
+
     static FrozenNodeBuilder from(FrozenNode node) {
         return builder()
                 .name(node.name)
@@ -228,7 +259,7 @@ public final class FrozenNodeBuilder {
             payloadKinds++;
         }
         if (payloadKinds > 1) {
-            throw new IllegalArgumentException(
+            throw new blue.language.model.InvalidNodeStructureException(
                     "A Blue node may contain only one payload kind: value, items, or object fields.");
         }
         if (node.strictCanonical

@@ -531,7 +531,7 @@ class DocumentProcessorResolvedSnapshotParityTest {
                     };
                 case RUNTIME:
                     return context -> {
-                        throw new IllegalStateException(
+                        throw new ProcessorFailureException(ProcessorErrorCategory.RuntimeExecutionFailure,
                                 "test runtime failure");
                     };
                 default:

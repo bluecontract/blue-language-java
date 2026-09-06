@@ -347,65 +347,65 @@ expected:
     kind: EXTERNAL_DELIVERY
     targetDocumentId: a
     channelKey: source
-    workIdentity: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     eventBlueId: 4za3n8bAtn5YGRqAEeW6iRswtRnLgGkyZg9EN64gwLy2
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:1daa50609cd58f0d3ffb483be2ed6b3cf340e3d1f3de96d5101778a58fa4aa9e
     sourceOccurrenceIdentity: sha256:8fc445f892c5c6962bcf955f1cd6f33104dbaa7492d2a6e2bdc61d062c0194ff
+    workIdentity: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
   - ordinal: 1
     kind: TRIGGERED_EVENT
     targetDocumentId: a
     channelKey: localX
-    workIdentity: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     eventBlueId: EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:1daa50609cd58f0d3ffb483be2ed6b3cf340e3d1f3de96d5101778a58fa4aa9e
     sourceOccurrenceIdentity: sha256:ce00e7765216bf615639f273e870e95ecabe5244c77eeb6d351b570da93930a4
+    workIdentity: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
   - ordinal: 2
     kind: EMBEDDED_EVENT
     targetDocumentId: b
     channelKey: fromA
-    workIdentity: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     eventBlueId: EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:fe96b6d44657f6a8058faed715f798819f073b5d04900e2bdfb70645f41fe947
     sourceOccurrenceIdentity: sha256:ce00e7765216bf615639f273e870e95ecabe5244c77eeb6d351b570da93930a4
+    workIdentity: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
   - ordinal: 3
     kind: EMBEDDED_EVENT
     targetDocumentId: a
     channelKey: fromB
-    workIdentity: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     eventBlueId: 9uncWU9V9UadZA5zV3We6KBkM1azpwz8RLnMb7bVWTzv
     occurrenceOrdinal: 1
     targetManagedScopeIdentity: sha256:1daa50609cd58f0d3ffb483be2ed6b3cf340e3d1f3de96d5101778a58fa4aa9e
     sourceOccurrenceIdentity: sha256:1527570b25ceb3fc5790532648a485901eb2e0b98735361757c42bd452fb9908
+    workIdentity: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
   documentStepTrace:
   - stepOrdinal: 0
     workOrdinal: 0
     targetDocumentId: a
     executionRootDocumentId: a
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   - stepOrdinal: 1
     workOrdinal: 1
     targetDocumentId: a
     executionRootDocumentId: a
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   - stepOrdinal: 2
     workOrdinal: 2
     targetDocumentId: b
     executionRootDocumentId: b
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   - stepOrdinal: 3
     workOrdinal: 3
     targetDocumentId: a
     executionRootDocumentId: a
-    scopePath: /
+    scopePath: "/"
     executionMode: ISOLATED_DOCUMENT
     ambientContainingDocumentIds: []
   tentativeFinalizations:
@@ -459,16 +459,12 @@ expected:
     beforeBlueId: 8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8
     afterBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#0
     document:
-      documentId: a
-      memberIdentity: a
-      localXSeen: 1
-      result: done
       contracts:
         embedded:
           type:
             blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
           paths:
-          - /b
+          - "/b"
         source:
           type:
             blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
@@ -480,31 +476,31 @@ expected:
         start:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: source
           order: 0
+          channel: source
         localX:
           type:
             blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+          order: 0
           event:
             blueId: EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR
-          order: 0
         onLocalX:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: localX
           order: 0
+          channel: localX
         fromB:
           type:
             blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
-          sourcePath: /b
+          order: 0
+          sourcePath: "/b"
           event:
             blueId: 9uncWU9V9UadZA5zV3We6KBkM1azpwz8RLnMb7bVWTzv
-          order: 0
         onY:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: fromB
           order: 0
+          channel: fromB
         initialized:
           type:
             blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
@@ -519,6 +515,10 @@ expected:
                 blueId: ZuBZcL91HsnHvftRjirviKdby2RHiDMsW52SGkt2VWo
               subject:
                 blueId: 4za3n8bAtn5YGRqAEeW6iRswtRnLgGkyZg9EN64gwLy2
+      documentId: a
+      memberIdentity: a
+      localXSeen: 1
+      result: done
       b:
         blueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#1
     initialized: true
@@ -533,34 +533,34 @@ expected:
     beforeBlueId: 6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ
     afterBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#1
     document:
-      documentId: b
-      memberIdentity: b
-      xHandled: 1
-      a:
-        blueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#0
       contracts:
         embedded:
           type:
             blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
           paths:
-          - /a
+          - "/a"
         fromA:
           type:
             blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
-          sourcePath: /a
+          order: 0
+          sourcePath: "/a"
           event:
             blueId: EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR
-          order: 0
         onX:
           type:
             blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-          channel: fromA
           order: 0
+          channel: fromA
         initialized:
           type:
             blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
           document:
             blueId: 6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm
+      documentId: b
+      memberIdentity: b
+      xHandled: 1
+      a:
+        blueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#0
     initialized: true
     terminated: false
     publicRoot: false
@@ -571,15 +571,16 @@ expected:
     memberIndex: 1
   resultingComponents:
   - componentIdentity: sha256:ba4f220206c23bc3d08f45489b937d77be1c058003aa6249e52ab6d5063509c1
+    componentStateIdentity: sha256:bbb0ed7b9b43f00e8d67e5e64d5a025815193a486f967adfed9fe6b73cf37881
     componentGeneration: 2
     kind: CYCLIC
     orderedMemberDocumentIds:
     - a
     - b
-    masterBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq
     orderedMemberBlueIds:
     - HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#0
     - HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#1
+    masterBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq
     completeCyclicProof:
       componentIdentity: sha256:ba4f220206c23bc3d08f45489b937d77be1c058003aa6249e52ab6d5063509c1
       masterBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq
@@ -589,7 +590,9 @@ expected:
       - documentId: b
         blueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#1
       declaredPlaceholderSet:
-      - documentId:
+      - contracts:
+          blueId: 378tKzCPMUqP9PeK2paZ8NpcvLQG1WmUpHeHKv6AsFDk
+        documentId:
           blueId: FiKgkRN87Z82tAbT1q511m1kmQ9o3p5F8Y3GkKb7Q7pA
         memberIdentity:
           blueId: FiKgkRN87Z82tAbT1q511m1kmQ9o3p5F8Y3GkKb7Q7pA
@@ -597,11 +600,11 @@ expected:
           blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
         result:
           blueId: odfSAAcrNtFUFpd1BN5Yor3bsFhgY2iGAnr87Ls4axt
-        contracts:
-          blueId: 378tKzCPMUqP9PeK2paZ8NpcvLQG1WmUpHeHKv6AsFDk
         b:
           blueId: this#1
-      - documentId:
+      - contracts:
+          blueId: 4kRpqeqzVnSWAMtCqdngH5mAiy4sBz1qTpHPHBcBzCyc
+        documentId:
           blueId: 79z1gTcVYpZdpxJK9SE89iFMSidLdhQrrYcC88asfwXV
         memberIdentity:
           blueId: 79z1gTcVYpZdpxJK9SE89iFMSidLdhQrrYcC88asfwXV
@@ -609,28 +612,25 @@ expected:
           blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
         a:
           blueId: this#0
-        contracts:
-          blueId: 4kRpqeqzVnSWAMtCqdngH5mAiy4sBz1qTpHPHBcBzCyc
     cyclicProofIdentity: sha256:59c19ecce5913f6394aebb3bfce41a9b7f3cfee2e780415d3d7c797d74d1334e
-    componentStateIdentity: sha256:bbb0ed7b9b43f00e8d67e5e64d5a025815193a486f967adfed9fe6b73cf37881
   occurrenceBindings:
   - occurrenceIdentity: sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232
     bindingIdentity: sha256:c9d693e903dfcbf3835c163a963c2a7611cbc7ca25a6909b54b1e4f982fcdeed
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     sourceDocumentId: b
-    sourcePath: /a
+    sourcePath: "/a"
     activationGeneration: 1
     targetDocumentId: a
-    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     expectedTargetBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#0
     active: true
     pendingHistoricalEpoch: null
   - occurrenceIdentity: sha256:f5d1cd1ca17ac4fa6547d53f85dadb18f4b37e1bca42588f5cb4fb9090023eca
     bindingIdentity: sha256:107790b4a995064703177722d565a5e2596c3ead07837d0c99a4642b7d7abc1a
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     sourceDocumentId: a
-    sourcePath: /b
+    sourcePath: "/b"
     activationGeneration: 1
     targetDocumentId: b
-    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     expectedTargetBlueId: HGfTzveWupSCRQ27s6kkEXe98pjg1u42yJ7GvcdnZTzq#1
     active: true
     pendingHistoricalEpoch: null
@@ -639,7 +639,7 @@ expected:
   - graphChangeOrdinal: 0
     changeKind: ADD
     sourceDocumentId: a
-    sourcePath: /b
+    sourcePath: "/b"
     beforeActivationGeneration: null
     beforeOccurrenceIdentity: null
     beforeBindingIdentity: null
@@ -653,7 +653,7 @@ expected:
   - graphChangeOrdinal: 1
     changeKind: REBIND
     sourceDocumentId: b
-    sourcePath: /a
+    sourcePath: "/a"
     beforeActivationGeneration: 1
     beforeOccurrenceIdentity: sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232
     beforeBindingIdentity: sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7
@@ -683,7 +683,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:8d3ef1a760a4410e02c6444c5c023f8e16f24ab0daa4910b1272377531a5b390
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromB
         effectiveRuntimeContributionBlueId: 4Cr7R8Tn4Nrkk5xwG8cdS8rj2Eqcy25un7nFnHmjjpnt
@@ -696,7 +696,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:8d3ef1a760a4410e02c6444c5c023f8e16f24ab0daa4910b1272377531a5b390
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromB
         effectiveRuntimeContributionBlueId: 4Cr7R8Tn4Nrkk5xwG8cdS8rj2Eqcy25un7nFnHmjjpnt
@@ -721,7 +721,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:5e88d0868dee75483ea9e03c1d330bac3a850c71e67d1d673ee5964ba2897223
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: localX
         effectiveRuntimeContributionBlueId: Arfupv7HBSgG9BVjn4NrVv1DSpfJq6JufLdJ9uLoRAgU
@@ -734,7 +734,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:5e88d0868dee75483ea9e03c1d330bac3a850c71e67d1d673ee5964ba2897223
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: localX
         effectiveRuntimeContributionBlueId: Arfupv7HBSgG9BVjn4NrVv1DSpfJq6JufLdJ9uLoRAgU
@@ -759,7 +759,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:9209e9b0095b7259e96f934154c30588bfd9147daf2dcf58f38e664d41894646
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: source
         effectiveRuntimeContributionBlueId: Csa9euy5vbxsffMqM2Nm4fFeTaVo48ouSdEJ1X74MJ9o
@@ -772,7 +772,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:9209e9b0095b7259e96f934154c30588bfd9147daf2dcf58f38e664d41894646
         managedDocumentId: a
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: source
         effectiveRuntimeContributionBlueId: Csa9euy5vbxsffMqM2Nm4fFeTaVo48ouSdEJ1X74MJ9o
@@ -797,7 +797,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:f051e8cf1fc09d741848359c671344c4f1271796618114bcaddbfff54a6bf289
         managedDocumentId: b
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromA
         effectiveRuntimeContributionBlueId: J7hboNKxCqP8au4qSTktJmKBGFJFZng54z1ufQ9VBgxg
@@ -810,7 +810,7 @@ expected:
       channelOccurrence:
         channelOccurrenceIdentity: sha256:f051e8cf1fc09d741848359c671344c4f1271796618114bcaddbfff54a6bf289
         managedDocumentId: b
-        scopePath: /
+        scopePath: "/"
         scopeActivationGeneration: 0
         rawChannelKey: fromA
         effectiveRuntimeContributionBlueId: J7hboNKxCqP8au4qSTktJmKBGFJFZng54z1ufQ9VBgxg
@@ -850,7 +850,7 @@ expected:
       id: X
   publicEventsIdentity: sha256:1d2c533e2bb8d7d3731fcd31e67d82b5ff2201946f7baab9d7bb3c0629ef2983
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:634162d9cbd186a5f948787393578e59c0efd0ab8a6840d6b2f66e0283792934
+  - transitionReceiptIdentity: sha256:2448b1b3eacd9b769e82a833c22a602939842d6dfbad738183835af5e36e5071
     sourceInvocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:3125315a2470dfe2b304794ccd2a3ed5bd5aa29373b3ed1ac26ab6c157bbfb25
@@ -871,8 +871,8 @@ expected:
         id: X
       publicAtSource: true
     emittedRootEventsIdentity: sha256:d09d6301440e3a9a5f9cd1f63589e2fd8bf1bda87dc11d75661726ffea96fc8f
-    admittedGas: 1106
-  - transitionReceiptIdentity: sha256:53d0c727e1f4b9e50390e5bb077b5385f89cf1f685cec15f6ef79ffc28c320ec
+    admittedGas: 1112
+  - transitionReceiptIdentity: sha256:c088faa8d26faae9ff70a685dacacab379780120fd12ff4bd6600c84cc64cabe
     sourceInvocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     transitionOrdinal: 1
     transitionOccurrenceIdentity: sha256:235ba729ca2bfc80aca9be0e03500b278791445274dd7b920069ae85156bd532
@@ -893,11 +893,11 @@ expected:
         id: Y
       publicAtSource: false
     emittedRootEventsIdentity: sha256:4d8a1bc162b47f42038d840beaa6b80777d934540c4940ffd7d5102ff429deec
-    admittedGas: 306
-  managedTransitionReceiptsIdentity: sha256:325573b055fde7cefe6c116fa2eb3374a635b8fd5207f417c4f15e941930f002
+    admittedGas: 320
+  managedTransitionReceiptsIdentity: sha256:16391a4a76270de99d1cacea726f0fad4760dec7aadc49874fb7097d7443767f
   rollbackToInput: false
-  totalGas: 1412
-  gasTraceIdentity: sha256:be30e1525e651368b07035b59b7bebc49666c9bc6e768066d58abedcddb2f3db
+  totalGas: 1432
+  gasTraceIdentity: sha256:6f2c4cdf54a14267f79247999baa5e6c17a05cad55a7160aea57d4d703190f14
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -983,12 +983,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: acceptance
   - sequence: 11
     namespace: processor
@@ -997,12 +997,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: acceptance
   - sequence: 12
     namespace: processor
@@ -1011,12 +1011,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: direct-admission.0.classification
   - sequence: 13
     namespace: processor
@@ -1025,12 +1025,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.seed-enqueue
   - sequence: 14
     namespace: processor
@@ -1039,12 +1039,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.dequeue
   - sequence: 15
     namespace: processor
@@ -1053,7 +1053,7 @@ expected:
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
@@ -1066,7 +1066,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
@@ -1079,7 +1079,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
@@ -1092,7 +1092,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: start
@@ -1105,7 +1105,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: localX
@@ -1118,7 +1118,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: onLocalX
@@ -1131,7 +1131,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
@@ -1144,7 +1144,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: onY
@@ -1157,12 +1157,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
+    logicalPath: "/b"
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    logicalPath: /b
     reason: route
   - sequence: 24
     namespace: processor
@@ -1171,12 +1171,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
+    logicalPath: "/b"
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    logicalPath: /b
     reason: route
   - sequence: 25
     namespace: processor
@@ -1185,7 +1185,7 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: start
@@ -1198,7 +1198,7 @@ expected:
     weight: 50
     subtotal: 50
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: start
@@ -1211,7 +1211,7 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
@@ -1224,7 +1224,7 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
@@ -1237,7 +1237,7 @@ expected:
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
@@ -1250,12 +1250,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
+    logicalPath: "/b"
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    logicalPath: /b
     reason: identity-rebuild
   - sequence: 31
     namespace: semantic
@@ -1264,12 +1264,12 @@ expected:
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
+    logicalPath: "/b"
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    logicalPath: /b
     reason: identity-rebuild
   - sequence: 32
     namespace: semantic
@@ -1278,12 +1278,12 @@ expected:
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
+    logicalPath: "/b"
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    logicalPath: /b
     reason: identity-rebuild
   - sequence: 33
     namespace: processor
@@ -1292,12 +1292,12 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.topology-change
   - sequence: 34
     namespace: processor
@@ -1306,12 +1306,12 @@ expected:
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.topology-change
   - sequence: 35
     namespace: processor
@@ -1320,12 +1320,12 @@ expected:
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.topology-change
   - sequence: 36
     namespace: processor
@@ -1334,12 +1334,12 @@ expected:
     weight: 2
     subtotal: 4
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.topology-change
   - sequence: 37
     namespace: processor
@@ -1348,12 +1348,12 @@ expected:
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: work.0.topology-change
   - sequence: 38
     namespace: processor
@@ -1362,12 +1362,12 @@ expected:
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.finalization-boundary
+    reason: work.0.finalization.finalization-boundary
   - sequence: 39
     namespace: semantic
     counter: nodeIdentityEstablished
@@ -1375,12 +1375,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.0.node-established
+    reason: work.0.finalization.preliminary.0.node-established
   - sequence: 40
     namespace: semantic
     counter: objectMemberRebuilt
@@ -1388,12 +1388,12 @@ expected:
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.0.object-members
+    reason: work.0.finalization.preliminary.0.object-members
   - sequence: 41
     namespace: semantic
     counter: directIdentityHashBlock
@@ -1401,12 +1401,12 @@ expected:
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.0.direct-hash
+    reason: work.0.finalization.preliminary.0.direct-hash
   - sequence: 42
     namespace: semantic
     counter: nodeIdentityEstablished
@@ -1414,12 +1414,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.1.node-established
+    reason: work.0.finalization.preliminary.1.node-established
   - sequence: 43
     namespace: semantic
     counter: objectMemberRebuilt
@@ -1427,12 +1427,12 @@ expected:
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.1.object-members
+    reason: work.0.finalization.preliminary.1.object-members
   - sequence: 44
     namespace: semantic
     counter: directIdentityHashBlock
@@ -1440,12 +1440,12 @@ expected:
     weight: 1
     subtotal: 6
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary.1.direct-hash
+    reason: work.0.finalization.preliminary.1.direct-hash
   - sequence: 45
     namespace: semantic
     counter: sortComparison
@@ -1453,12 +1453,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary-sort.0
+    reason: work.0.finalization.preliminary-sort.0
   - sequence: 46
     namespace: semantic
     counter: scalarComparison
@@ -1466,12 +1466,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary-compare.0
+    reason: work.0.finalization.preliminary-compare.0
   - sequence: 47
     namespace: semantic
     counter: textBlockExamined
@@ -1479,12 +1479,12 @@ expected:
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.preliminary-text.0
+    reason: work.0.finalization.preliminary-text.0
   - sequence: 48
     namespace: semantic
     counter: nodeIdentityEstablished
@@ -1492,12 +1492,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.0.node-established
+    reason: work.0.finalization.canonical-member.0.node-established
   - sequence: 49
     namespace: semantic
     counter: objectMemberRebuilt
@@ -1505,12 +1505,12 @@ expected:
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.0.object-members
+    reason: work.0.finalization.canonical-member.0.object-members
   - sequence: 50
     namespace: semantic
     counter: directIdentityHashBlock
@@ -1518,12 +1518,12 @@ expected:
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.0.direct-hash
+    reason: work.0.finalization.canonical-member.0.direct-hash
   - sequence: 51
     namespace: semantic
     counter: nodeIdentityEstablished
@@ -1531,12 +1531,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.1.node-established
+    reason: work.0.finalization.canonical-member.1.node-established
   - sequence: 52
     namespace: semantic
     counter: objectMemberRebuilt
@@ -1544,12 +1544,12 @@ expected:
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.1.object-members
+    reason: work.0.finalization.canonical-member.1.object-members
   - sequence: 53
     namespace: semantic
     counter: directIdentityHashBlock
@@ -1557,12 +1557,12 @@ expected:
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.canonical-member.1.direct-hash
+    reason: work.0.finalization.canonical-member.1.direct-hash
   - sequence: 54
     namespace: semantic
     counter: nodeIdentityEstablished
@@ -1570,12 +1570,12 @@ expected:
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.master.node-established
+    reason: work.0.finalization.master.node-established
   - sequence: 55
     namespace: semantic
     counter: listFoldStepRecomputed
@@ -1583,12 +1583,12 @@ expected:
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.master.list-fold
+    reason: work.0.finalization.master.list-fold
   - sequence: 56
     namespace: processor
     counter: cyclicMemberFinalized
@@ -1596,12 +1596,12 @@ expected:
     weight: 10
     subtotal: 10
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.member-finalized.0
+    reason: work.0.finalization.member-finalized.0
   - sequence: 57
     namespace: processor
     counter: cyclicMemberFinalized
@@ -1609,115 +1609,114 @@ expected:
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: source
     componentGeneration: 2
+    contractKey: source
     workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
-    reason: work.0.transition-0-cycle-formed.member-finalized.1
+    reason: work.0.finalization.member-finalized.1
   - sequence: 58
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: source
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
+    reason: observation-route.sha256:ba98b64c347b831176a8bc9d8dff558c50b7399172046ab3bec44c8bd7d4ea3a.sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232
+  - sequence: 59
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: source
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
+    reason: observation-placement.sha256:120a1b4541878225ff314de407412a0cb8398e780bcf1236481375736f09d719
+  - sequence: 60
     namespace: processor
     counter: rootEventRecorded
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: event.0.public-record
-  - sequence: 59
+  - sequence: 61
     namespace: processor
     counter: internalEventEnqueued
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 1
     contractKey: source
-    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     logicalPath: work/0
+    workOccurrenceId: sha256:42b065902c605b24adecfb86655699747fc12c39408020ed03ca344c19ee983a
     reason: event.0.enqueue
-  - sequence: 60
+  - sequence: 62
     namespace: processor
     counter: internalEventDequeued
     quantity: 1
     weight: 10
     subtotal: 10
     reason: event.0.dequeue
-  - sequence: 61
+  - sequence: 63
     namespace: processor
     counter: closureWorkOccurrenceEnqueued
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
-    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     logicalPath: work/1
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: event.0.delivery.0.enqueue
-  - sequence: 62
-    namespace: processor
-    counter: closureWorkOccurrenceEnqueued
-    quantity: 1
-    weight: 5
-    subtotal: 5
-    documentId: b
-    scopePath: /
-    activationGeneration: 0
-    componentGeneration: 2
-    contractKey: fromA
-    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: work/2
-    reason: event.0.delivery.1.enqueue
-  - sequence: 63
+  - sequence: 64
     namespace: processor
     counter: closureWorkOccurrenceDequeued
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
-    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     logicalPath: work/1
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: work.1.dequeue
-  - sequence: 64
+  - sequence: 65
     namespace: processor
     counter: scopeOpened
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-scope
-  - sequence: 65
-    namespace: processor
-    counter: contractHeaderRecognized
-    quantity: 1
-    weight: 2
-    subtotal: 2
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    componentGeneration: 2
-    contractKey: embedded
-    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: participating-contract-header
   - sequence: 66
     namespace: processor
     counter: contractHeaderRecognized
@@ -1725,10 +1724,10 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
-    contractKey: source
+    contractKey: embedded
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
   - sequence: 67
@@ -1738,10 +1737,10 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
-    contractKey: start
+    contractKey: source
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
   - sequence: 68
@@ -1751,10 +1750,10 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
-    contractKey: localX
+    contractKey: start
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
   - sequence: 69
@@ -1764,10 +1763,10 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
-    contractKey: onLocalX
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
   - sequence: 70
@@ -1777,10 +1776,10 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
-    contractKey: fromB
+    contractKey: onLocalX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
   - sequence: 71
@@ -1790,1914 +1789,2165 @@ expected:
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
+    reason: participating-contract-header
+  - sequence: 72
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onY
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: participating-contract-header
-  - sequence: 72
+  - sequence: 73
     namespace: processor
     counter: embeddedPathEntryRead
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/b"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /b
     reason: route
-  - sequence: 73
+  - sequence: 74
     namespace: processor
     counter: embeddedPathSegmentValidated
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/b"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /b
     reason: route
-  - sequence: 74
+  - sequence: 75
     namespace: processor
     counter: triggeredEventDelivered
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: triggered-event
-  - sequence: 75
+  - sequence: 76
     namespace: processor
     counter: handlerCandidateTested
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onLocalX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: matching
-  - sequence: 76
+  - sequence: 77
     namespace: processor
     counter: handlerCall
     quantity: 1
     weight: 50
     subtotal: 50
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onLocalX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: handler-call
-  - sequence: 77
+  - sequence: 78
     namespace: runtime
     counter: scriptedResultApplied
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: unspecified
-  - sequence: 78
+  - sequence: 79
     namespace: processor
     counter: patchBoundaryChecked
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: patch-boundary
-  - sequence: 79
+  - sequence: 80
     namespace: processor
     counter: patchAddOrReplace
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
     reason: application-patch
-  - sequence: 80
+  - sequence: 81
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 81
+  - sequence: 82
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 82
+  - sequence: 83
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 83
+  - sequence: 84
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 84
+  - sequence: 85
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 85
+  - sequence: 86
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
+    logicalPath: "/localXSeen"
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    logicalPath: /localXSeen
     reason: identity-rebuild
-  - sequence: 86
+  - sequence: 87
     namespace: processor
     counter: tentativeComponentFinalization
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.finalization-boundary
-  - sequence: 87
+    reason: work.1.finalization.finalization-boundary
+  - sequence: 88
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.child.3.node-established
-  - sequence: 88
+    reason: work.1.finalization.preliminary.0.child.3.node-established
+  - sequence: 89
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.child.3.object-members
-  - sequence: 89
+    reason: work.1.finalization.preliminary.0.child.3.object-members
+  - sequence: 90
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.child.3.direct-hash
-  - sequence: 90
+    reason: work.1.finalization.preliminary.0.child.3.direct-hash
+  - sequence: 91
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.node-established
-  - sequence: 91
+    reason: work.1.finalization.preliminary.0.node-established
+  - sequence: 92
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.object-members
-  - sequence: 92
+    reason: work.1.finalization.preliminary.0.object-members
+  - sequence: 93
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary.0.direct-hash
-  - sequence: 93
+    reason: work.1.finalization.preliminary.0.direct-hash
+  - sequence: 94
     namespace: semantic
     counter: sortComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary-sort.0
-  - sequence: 94
+    reason: work.1.finalization.preliminary-sort.0
+  - sequence: 95
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary-compare.0
-  - sequence: 95
+    reason: work.1.finalization.preliminary-compare.0
+  - sequence: 96
     namespace: semantic
     counter: textBlockExamined
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.preliminary-text.0
-  - sequence: 96
+    reason: work.1.finalization.preliminary-text.0
+  - sequence: 97
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.0.node-established
-  - sequence: 97
+    reason: work.1.finalization.canonical-member.0.node-established
+  - sequence: 98
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.0.object-members
-  - sequence: 98
+    reason: work.1.finalization.canonical-member.0.object-members
+  - sequence: 99
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.0.direct-hash
-  - sequence: 99
+    reason: work.1.finalization.canonical-member.0.direct-hash
+  - sequence: 100
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.1.node-established
-  - sequence: 100
+    reason: work.1.finalization.canonical-member.1.node-established
+  - sequence: 101
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.1.object-members
-  - sequence: 101
+    reason: work.1.finalization.canonical-member.1.object-members
+  - sequence: 102
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.canonical-member.1.direct-hash
-  - sequence: 102
+    reason: work.1.finalization.canonical-member.1.direct-hash
+  - sequence: 103
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.master.node-established
-  - sequence: 103
+    reason: work.1.finalization.master.node-established
+  - sequence: 104
     namespace: semantic
     counter: listFoldStepRecomputed
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
-    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.master.list-fold
-  - sequence: 104
-    namespace: processor
-    counter: cyclicMemberFinalized
-    quantity: 1
-    weight: 10
-    subtotal: 10
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
     contractKey: localX
-    componentGeneration: 2
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.member-finalized.0
+    reason: work.1.finalization.master.list-fold
   - sequence: 105
     namespace: processor
     counter: cyclicMemberFinalized
     quantity: 1
     weight: 10
     subtotal: 10
-    documentId: b
-    scopePath: /
+    documentId: a
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: localX
     componentGeneration: 2
+    contractKey: localX
     workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
-    reason: work.1.transition-1-a-local-x.member-finalized.1
+    reason: work.1.finalization.member-finalized.0
   - sequence: 106
+    namespace: processor
+    counter: cyclicMemberFinalized
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: localX
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
+    reason: work.1.finalization.member-finalized.1
+  - sequence: 107
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: localX
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
+    reason: observation-route.sha256:40e10685d74556c0222f903ff09fb85593be2f0c5a37e0738be8fed2a8954535.sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232
+  - sequence: 108
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: localX
+    workOccurrenceId: sha256:d8e177e80b2c2073dbc5a682ff7a9feec8fab8ab5889a3772dd36571e84c681f
+    reason: observation-placement.sha256:1b18f2829301e11780c9e2b828b2cca8052ba4b61995e824de401d3d23e1d456
+  - sequence: 109
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    reason: event-route.sha256:c9c12a50c9f2564a1452438c94e72218956a7e416e319d22d77729aa68a415e4
+  - sequence: 110
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromA
+    logicalPath: work/2
+    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
+    reason: event.0.delivery.1.enqueue
+  - sequence: 111
     namespace: processor
     counter: closureWorkOccurrenceDequeued
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
-    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     logicalPath: work/2
+    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: work.2.dequeue
-  - sequence: 107
+  - sequence: 112
     namespace: processor
     counter: scopeOpened
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: participating-scope
-  - sequence: 108
+  - sequence: 113
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: embedded
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: participating-contract-header
-  - sequence: 109
+  - sequence: 114
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: participating-contract-header
-  - sequence: 110
+  - sequence: 115
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onX
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: participating-contract-header
-  - sequence: 111
+  - sequence: 116
     namespace: processor
     counter: embeddedPathEntryRead
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/a"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /a
     reason: route
-  - sequence: 112
+  - sequence: 117
     namespace: processor
     counter: embeddedPathSegmentValidated
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/a"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /a
     reason: route
-  - sequence: 113
+  - sequence: 118
     namespace: processor
     counter: embeddedEventDelivered
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: embedded-event
-  - sequence: 114
+  - sequence: 119
     namespace: processor
     counter: handlerCandidateTested
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onX
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: matching
-  - sequence: 115
+  - sequence: 120
     namespace: processor
     counter: handlerCall
     quantity: 1
     weight: 50
     subtotal: 50
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onX
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: handler-call
-  - sequence: 116
+  - sequence: 121
     namespace: runtime
     counter: scriptedResultApplied
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: unspecified
-  - sequence: 117
+  - sequence: 122
     namespace: processor
     counter: patchBoundaryChecked
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: patch-boundary
-  - sequence: 118
+  - sequence: 123
     namespace: processor
     counter: patchAddOrReplace
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: application-patch
-  - sequence: 119
+  - sequence: 124
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 120
+  - sequence: 125
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 121
+  - sequence: 126
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 122
+  - sequence: 127
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 123
+  - sequence: 128
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 124
+  - sequence: 129
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
+    logicalPath: "/xHandled"
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    logicalPath: /xHandled
     reason: identity-rebuild
-  - sequence: 125
+  - sequence: 130
     namespace: processor
     counter: tentativeComponentFinalization
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.finalization-boundary
-  - sequence: 126
+    reason: work.2.finalization.finalization-boundary
+  - sequence: 131
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary.1.node-established
-  - sequence: 127
+    reason: work.2.finalization.preliminary.1.node-established
+  - sequence: 132
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary.1.object-members
-  - sequence: 128
+    reason: work.2.finalization.preliminary.1.object-members
+  - sequence: 133
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary.1.direct-hash
-  - sequence: 129
+    reason: work.2.finalization.preliminary.1.direct-hash
+  - sequence: 134
     namespace: semantic
     counter: sortComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary-sort.0
-  - sequence: 130
+    reason: work.2.finalization.preliminary-sort.0
+  - sequence: 135
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary-compare.0
-  - sequence: 131
+    reason: work.2.finalization.preliminary-compare.0
+  - sequence: 136
     namespace: semantic
     counter: textBlockExamined
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.preliminary-text.0
-  - sequence: 132
+    reason: work.2.finalization.preliminary-text.0
+  - sequence: 137
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.canonical-member.1.node-established
-  - sequence: 133
+    reason: work.2.finalization.canonical-member.1.node-established
+  - sequence: 138
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.canonical-member.1.object-members
-  - sequence: 134
+    reason: work.2.finalization.canonical-member.1.object-members
+  - sequence: 139
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 5
     weight: 1
     subtotal: 5
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.canonical-member.1.direct-hash
-  - sequence: 135
+    reason: work.2.finalization.canonical-member.1.direct-hash
+  - sequence: 140
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.master.node-established
-  - sequence: 136
+    reason: work.2.finalization.master.node-established
+  - sequence: 141
     namespace: semantic
     counter: listFoldStepRecomputed
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.master.list-fold
-  - sequence: 137
+    reason: work.2.finalization.master.list-fold
+  - sequence: 142
     namespace: processor
     counter: cyclicMemberFinalized
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.member-finalized.0
-  - sequence: 138
+    reason: work.2.finalization.member-finalized.0
+  - sequence: 143
     namespace: processor
     counter: cyclicMemberFinalized
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromA
     componentGeneration: 2
+    contractKey: fromA
     workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
-    reason: work.2.transition-2-b-handled-x.member-finalized.1
-  - sequence: 139
+    reason: work.2.finalization.member-finalized.1
+  - sequence: 144
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromA
+    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
+    reason: observation-route.sha256:8a78c3876fb10c43b0175b80b59d22f21ba484c4fbc7a478faba9690df433091.sha256:f5d1cd1ca17ac4fa6547d53f85dadb18f4b37e1bca42588f5cb4fb9090023eca
+  - sequence: 145
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromA
+    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
+    reason: observation-placement.sha256:b183c0483d90135a2cb946c4ed66070de3daa9132050516b1a9656cdb8b51a53
+  - sequence: 146
     namespace: processor
     counter: internalEventEnqueued
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: b
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromA
-    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     logicalPath: work/2
+    workOccurrenceId: sha256:ad58b72d23444137a0da21b2dee7150ceaf92c7fed8dbcbe7239e4295fc92cec
     reason: event.1.enqueue
-  - sequence: 140
+  - sequence: 147
     namespace: processor
     counter: internalEventDequeued
     quantity: 1
     weight: 10
     subtotal: 10
     reason: event.1.dequeue
-  - sequence: 141
+  - sequence: 148
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: a
+    reason: event-route.sha256:9e9cb969a670bb88684469427cc4e41d2ad8efd60044be9b6414cccb7b8c6c45
+  - sequence: 149
     namespace: processor
     counter: closureWorkOccurrenceEnqueued
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     logicalPath: work/3
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: event.1.delivery.0.enqueue
-  - sequence: 142
+  - sequence: 150
     namespace: processor
     counter: closureWorkOccurrenceDequeued
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     logicalPath: work/3
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: work.3.dequeue
-  - sequence: 143
+  - sequence: 151
     namespace: processor
     counter: scopeOpened
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-scope
-  - sequence: 144
+  - sequence: 152
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: embedded
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 145
+  - sequence: 153
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: source
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 146
+  - sequence: 154
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: start
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 147
+  - sequence: 155
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: localX
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 148
+  - sequence: 156
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onLocalX
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 149
+  - sequence: 157
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 150
+  - sequence: 158
     namespace: processor
     counter: contractHeaderRecognized
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onY
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: participating-contract-header
-  - sequence: 151
+  - sequence: 159
     namespace: processor
     counter: embeddedPathEntryRead
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/b"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /b
     reason: route
-  - sequence: 152
+  - sequence: 160
     namespace: processor
     counter: embeddedPathSegmentValidated
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/b"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /b
     reason: route
-  - sequence: 153
+  - sequence: 161
     namespace: processor
     counter: embeddedEventDelivered
     quantity: 1
     weight: 10
     subtotal: 10
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: embedded-event
-  - sequence: 154
+  - sequence: 162
     namespace: processor
     counter: handlerCandidateTested
     quantity: 1
     weight: 5
     subtotal: 5
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onY
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: matching
-  - sequence: 155
+  - sequence: 163
     namespace: processor
     counter: handlerCall
     quantity: 1
     weight: 50
     subtotal: 50
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: onY
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: handler-call
-  - sequence: 156
+  - sequence: 164
     namespace: runtime
     counter: scriptedResultApplied
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: unspecified
-  - sequence: 157
+  - sequence: 165
     namespace: processor
     counter: patchBoundaryChecked
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: patch-boundary
-  - sequence: 158
+  - sequence: 166
     namespace: processor
     counter: patchAddOrReplace
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
     reason: application-patch
-  - sequence: 159
+  - sequence: 167
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 160
+  - sequence: 168
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 161
+  - sequence: 169
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 162
+  - sequence: 170
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 163
+  - sequence: 171
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 164
+  - sequence: 172
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
     componentGeneration: 2
     contractKey: fromB
+    logicalPath: "/result"
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    logicalPath: /result
     reason: identity-rebuild
-  - sequence: 165
+  - sequence: 173
     namespace: processor
     counter: tentativeComponentFinalization
     quantity: 1
     weight: 20
     subtotal: 20
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.finalization-boundary
-  - sequence: 166
+    reason: work.3.finalization.finalization-boundary
+  - sequence: 174
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.child.5.node-established
-  - sequence: 167
+    reason: work.3.finalization.preliminary.0.child.5.node-established
+  - sequence: 175
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.child.5.object-members
-  - sequence: 168
+    reason: work.3.finalization.preliminary.0.child.5.object-members
+  - sequence: 176
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.child.5.direct-hash
-  - sequence: 169
+    reason: work.3.finalization.preliminary.0.child.5.direct-hash
+  - sequence: 177
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.node-established
-  - sequence: 170
+    reason: work.3.finalization.preliminary.0.node-established
+  - sequence: 178
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.object-members
-  - sequence: 171
+    reason: work.3.finalization.preliminary.0.object-members
+  - sequence: 179
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary.0.direct-hash
-  - sequence: 172
+    reason: work.3.finalization.preliminary.0.direct-hash
+  - sequence: 180
     namespace: semantic
     counter: sortComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary-sort.0
-  - sequence: 173
+    reason: work.3.finalization.preliminary-sort.0
+  - sequence: 181
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
-    contractKey: fromB
     componentGeneration: 2
+    contractKey: fromB
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary-compare.0
-  - sequence: 174
+    reason: work.3.finalization.preliminary-compare.0
+  - sequence: 182
     namespace: semantic
     counter: textBlockExamined
     quantity: 2
     weight: 1
     subtotal: 2
     documentId: a
-    scopePath: /
+    scopePath: "/"
     activationGeneration: 0
+    componentGeneration: 2
     contractKey: fromB
-    componentGeneration: 2
     workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.preliminary-text.0
-  - sequence: 175
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.canonical-member.0.node-established
-  - sequence: 176
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 6
-    weight: 1
-    subtotal: 6
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.canonical-member.0.object-members
-  - sequence: 177
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 7
-    weight: 1
-    subtotal: 7
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.canonical-member.0.direct-hash
-  - sequence: 178
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.master.node-established
-  - sequence: 179
-    namespace: semantic
-    counter: listFoldStepRecomputed
-    quantity: 2
-    weight: 1
-    subtotal: 2
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.master.list-fold
-  - sequence: 180
-    namespace: processor
-    counter: cyclicMemberFinalized
-    quantity: 1
-    weight: 10
-    subtotal: 10
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.member-finalized.0
-  - sequence: 181
-    namespace: processor
-    counter: cyclicMemberFinalized
-    quantity: 1
-    weight: 10
-    subtotal: 10
-    documentId: b
-    scopePath: /
-    activationGeneration: 0
-    contractKey: fromB
-    componentGeneration: 2
-    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
-    reason: work.3.transition-3-a-finished.member-finalized.1
-  - sequence: 182
-    namespace: processor
-    counter: checkpointWritten
-    quantity: 1
-    weight: 20
-    subtotal: 20
-    documentId: a
-    scopePath: /
-    activationGeneration: 0
-    componentGeneration: 2
-    contractKey: source
-    reason: checkpoint-settlement.0.write.0
+    reason: work.3.finalization.preliminary-text.0
   - sequence: 183
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.canonical-member.0.node-established
   - sequence: 184
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 2
+    quantity: 6
     weight: 1
-    subtotal: 2
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
+    subtotal: 6
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.canonical-member.0.object-members
   - sequence: 185
     namespace: semantic
     counter: directIdentityHashBlock
-    quantity: 2
+    quantity: 7
     weight: 1
-    subtotal: 2
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
+    subtotal: 7
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.canonical-member.0.direct-hash
   - sequence: 186
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.master.node-established
   - sequence: 187
     namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 1
+    counter: listFoldStepRecomputed
+    quantity: 2
     weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.master.list-fold
   - sequence: 188
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 189
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 9
-    weight: 1
-    subtotal: 9
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 190
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 10
-    weight: 1
-    subtotal: 10
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 191
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 192
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 6
-    weight: 1
-    subtotal: 6
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 193
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 7
-    weight: 1
-    subtotal: 7
-    logicalPath: /contracts/checkpoint
-    reason: identity-rebuild
-  - sequence: 194
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 195
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 2
-    weight: 1
-    subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 196
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 3
-    weight: 1
-    subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 197
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 198
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 199
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 2
-    weight: 1
-    subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 200
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 201
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 2
-    weight: 1
-    subtotal: 2
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 202
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 3
-    weight: 1
-    subtotal: 3
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 203
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 204
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 9
-    weight: 1
-    subtotal: 9
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 205
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 10
-    weight: 1
-    subtotal: 10
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 206
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 207
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 6
-    weight: 1
-    subtotal: 6
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 208
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 7
-    weight: 1
-    subtotal: 7
-    logicalPath: /contracts/checkpoint/entries/source
-    reason: identity-rebuild
-  - sequence: 209
     namespace: processor
-    counter: tentativeComponentFinalization
+    counter: cyclicMemberFinalized
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.member-finalized.0
+  - sequence: 189
+    namespace: processor
+    counter: cyclicMemberFinalized
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: work.3.finalization.member-finalized.1
+  - sequence: 190
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: observation-route.sha256:12f48048f026f03ba8bde2481c90e89aac46d16912c825fc880c32efffdeca2d.sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232
+  - sequence: 191
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: b
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: fromB
+    workOccurrenceId: sha256:9e274c53aecbfc099b99b85e83fafa82afed65e61c51a5eaf31d49c9cb1bb934
+    reason: observation-placement.sha256:4843236d1250482bab3ca8c7d2fc1629c39a78cd58d3716b5ed5448453da5960
+  - sequence: 192
+    namespace: processor
+    counter: checkpointWritten
     quantity: 1
     weight: 20
     subtotal: 20
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.finalization-boundary
+    contractKey: source
+    reason: checkpoint-settlement.0.write.0
+  - sequence: 193
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 194
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 195
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 196
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 197
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 198
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 199
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 9
+    weight: 1
+    subtotal: 9
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 200
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 10
+    weight: 1
+    subtotal: 10
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 201
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 202
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 203
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 7
+    weight: 1
+    subtotal: 7
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint"
+    reason: identity-rebuild
+  - sequence: 204
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 205
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 206
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 207
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 208
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 209
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 210
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.child.0.node-established
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 211
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
     weight: 1
     subtotal: 2
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.child.0.object-members
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 212
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 3
     weight: 1
     subtotal: 3
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.child.0.direct-hash
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 213
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.node-established
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 214
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 9
     weight: 1
-    subtotal: 1
-    componentGeneration: 2
+    subtotal: 9
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.object-members
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 215
     namespace: semantic
     counter: directIdentityHashBlock
-    quantity: 2
+    quantity: 10
     weight: 1
-    subtotal: 2
-    componentGeneration: 2
+    subtotal: 10
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.child.0.direct-hash
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 216
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.node-established
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
   - sequence: 217
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 2
-    weight: 1
-    subtotal: 2
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.object-members
-  - sequence: 218
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 3
-    weight: 1
-    subtotal: 3
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.child.0.direct-hash
-  - sequence: 219
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.node-established
-  - sequence: 220
-    namespace: semantic
-    counter: objectMemberRebuilt
-    quantity: 9
-    weight: 1
-    subtotal: 9
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.object-members
-  - sequence: 221
-    namespace: semantic
-    counter: directIdentityHashBlock
-    quantity: 10
-    weight: 1
-    subtotal: 10
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.child.1.direct-hash
-  - sequence: 222
-    namespace: semantic
-    counter: nodeIdentityEstablished
-    quantity: 1
-    weight: 1
-    subtotal: 1
-    componentGeneration: 2
-    documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.node-established
-  - sequence: 223
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.object-members
-  - sequence: 224
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 218
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary.0.direct-hash
+    scopePath: "/"
+    activationGeneration: 0
+    componentGeneration: 2
+    contractKey: source
+    logicalPath: "/contracts/checkpoint/entries/source"
+    reason: identity-rebuild
+  - sequence: 219
+    namespace: processor
+    counter: tentativeComponentFinalization
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.finalization-boundary
+  - sequence: 220
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.child.0.node-established
+  - sequence: 221
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.child.0.object-members
+  - sequence: 222
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.child.0.direct-hash
+  - sequence: 223
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.node-established
+  - sequence: 224
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.object-members
   - sequence: 225
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.child.0.direct-hash
+  - sequence: 226
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.node-established
+  - sequence: 227
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.object-members
+  - sequence: 228
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.child.0.direct-hash
+  - sequence: 229
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.node-established
+  - sequence: 230
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 9
+    weight: 1
+    subtotal: 9
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.object-members
+  - sequence: 231
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 10
+    weight: 1
+    subtotal: 10
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.child.1.direct-hash
+  - sequence: 232
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.node-established
+  - sequence: 233
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.object-members
+  - sequence: 234
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 7
+    weight: 1
+    subtotal: 7
+    documentId: a
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.preliminary.0.direct-hash
+  - sequence: 235
     namespace: semantic
     counter: sortComparison
     quantity: 1
     weight: 1
     subtotal: 1
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary-sort.0
-  - sequence: 226
+    reason: checkpoint-settlement.0.preliminary-sort.0
+  - sequence: 236
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary-compare.0
-  - sequence: 227
+    reason: checkpoint-settlement.0.preliminary-compare.0
+  - sequence: 237
     namespace: semantic
     counter: textBlockExamined
     quantity: 2
     weight: 1
     subtotal: 2
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.preliminary-text.0
-  - sequence: 228
+    reason: checkpoint-settlement.0.preliminary-text.0
+  - sequence: 238
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.canonical-member.0.node-established
-  - sequence: 229
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.canonical-member.0.node-established
+  - sequence: 239
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 6
     weight: 1
     subtotal: 6
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.canonical-member.0.object-members
-  - sequence: 230
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.canonical-member.0.object-members
+  - sequence: 240
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 7
     weight: 1
     subtotal: 7
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.canonical-member.0.direct-hash
-  - sequence: 231
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.canonical-member.0.direct-hash
+  - sequence: 241
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
     weight: 1
     subtotal: 1
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.master.node-established
-  - sequence: 232
+    reason: checkpoint-settlement.0.master.node-established
+  - sequence: 242
     namespace: semantic
     counter: listFoldStepRecomputed
     quantity: 2
     weight: 1
     subtotal: 2
     componentGeneration: 2
-    reason: checkpoint-settlement.checkpoint-settlement-0.master.list-fold
-  - sequence: 233
+    reason: checkpoint-settlement.0.master.list-fold
+  - sequence: 243
     namespace: processor
     counter: cyclicMemberFinalized
     quantity: 1
     weight: 10
     subtotal: 10
-    componentGeneration: 2
     documentId: a
-    reason: checkpoint-settlement.checkpoint-settlement-0.member-finalized.0
-  - sequence: 234
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.member-finalized.0
+  - sequence: 244
     namespace: processor
     counter: cyclicMemberFinalized
     quantity: 1
     weight: 10
     subtotal: 10
-    componentGeneration: 2
     documentId: b
-    reason: checkpoint-settlement.checkpoint-settlement-0.member-finalized.1
+    componentGeneration: 2
+    reason: checkpoint-settlement.0.member-finalized.1
   platformCommitCompanion:
-    companionIdentity: sha256:65b0f1769a015d7359a18d68b06c6fee31d0ef98221f93c133b4e1f209cd00d4
+    companionIdentity: sha256:98248ef429cc1698c63c2aa8a7381476a4a7a4c98df80251ff9e0a5c358c3330
     invocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     inputClosureIdentity: sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d
     outputClosureIdentity: sha256:48ccfd25194138a7cb786940dce3cb416bf491f8cd9beab4a027771bdca5a644
@@ -3734,8 +3984,8 @@ expected:
     checkpointWritesIdentity: sha256:21e1560e48ff9e0c2052bf9b9b86a7e8544267c92489f66214a0f45231943d69
     subscriptionDeltasIdentity: sha256:5a1769ca94371e6a0efa912f6bde17cfecaa9201fd3ae9ecef4fa34a37373061
     publicEventsIdentity: sha256:1d2c533e2bb8d7d3731fcd31e67d82b5ff2201946f7baab9d7bb3c0629ef2983
-    gasTraceIdentity: sha256:be30e1525e651368b07035b59b7bebc49666c9bc6e768066d58abedcddb2f3db
-    managedTransitionReceiptsIdentity: sha256:325573b055fde7cefe6c116fa2eb3374a635b8fd5207f417c4f15e941930f002
+    gasTraceIdentity: sha256:6f2c4cdf54a14267f79247999baa5e6c17a05cad55a7160aea57d4d703190f14
+    managedTransitionReceiptsIdentity: sha256:16391a4a76270de99d1cacea726f0fad4760dec7aadc49874fb7097d7443767f
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
