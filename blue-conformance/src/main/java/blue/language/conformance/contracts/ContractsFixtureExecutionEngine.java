@@ -452,6 +452,18 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
             }
 
             @Override
+            public ResolvedSnapshot fromCanonicalTransient(
+                    FrozenNode canonicalRoot,
+                    Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(canonicalRoot.toNode()));
+                return fixtureLanguage.resolveCanonicalSnapshotPreservingPaths(
+                        canonicalRoot, allPreservedPaths);
+            }
+
+            @Override
             public FrozenNode materializeVerifiedExactReference(
                     FrozenNode reference) {
                 if (!reference.isReferenceOnly()) {
