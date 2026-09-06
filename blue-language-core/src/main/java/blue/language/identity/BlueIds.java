@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import java.math.BigInteger;
 import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Syntax and canonicality checks for plain and cyclic-member BlueIds.
@@ -20,6 +21,10 @@ public class BlueIds {
     private static final int SHA_256_BYTE_COUNT = 32;
     private static final int MAX_SHA_256_BASE58_LENGTH = 44;
     private static final char BASE58_ZERO = BASE58_ALPHABET.charAt(0);
+    // Fixed-size positive syntax cache. An exact String equality hit proves
+    // only this immutable value's grammar; it never authenticates content.
+    private static final AtomicReferenceArray<String> VALIDATED_PLAIN_IDS =
+            new AtomicReferenceArray<>(4096);
 
     /** Placeholder for the current document in a single-document cycle. */
     public static final String THIS_PLACEHOLDER = "this";
@@ -77,12 +82,17 @@ public class BlueIds {
      * @throws IllegalArgumentException when the identity is not canonical
      */
     public static String requirePlainBlueId(String value, String path) {
+        if (value != null && value.equals(VALIDATED_PLAIN_IDS.get(
+                value.hashCode() & (VALIDATED_PLAIN_IDS.length() - 1)))) {
+            return value;
+        }
         if (value == null || value.isEmpty() || !PLAIN_BLUE_ID_PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
         if (!hasCanonicalSha256DecodedLength(value)) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
+        VALIDATED_PLAIN_IDS.set(value.hashCode() & (VALIDATED_PLAIN_IDS.length() - 1), value);
         return value;
     }
 

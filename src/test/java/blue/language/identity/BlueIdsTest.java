@@ -97,6 +97,98 @@ class BlueIdsTest {
         }
     }
 
+    @Test
+    void shouldPreserveInputIdentityAndRejectHashCollisionsAfterCacheChurn() {
+        // given
+        String tail = "qsgVoN3ZL1Sg3b9wMfMK24R6ihV8n4t7zRFiivDbT";
+        String valid = "Aa" + tail;
+        String collision = "C#" + tail;
+        String detached = new String(valid.toCharArray());
+        Random random = new Random(0xB10E_CAC4EL);
+        List<String> candidates = new ArrayList<>();
+        for (int index = 0; index < 8192; index++) {
+            byte[] digest = new byte[32];
+            random.nextBytes(digest);
+            candidates.add(Base58.encode(digest));
+        }
+
+        // when
+        String initial = BlueIds.requirePlainBlueId(valid, "/warm");
+        String repeated = BlueIds.requirePlainBlueId(detached, "/different/path");
+        List<String> validated = new ArrayList<>();
+        List<Boolean> invalidResults = new ArrayList<>();
+        for (String candidate : candidates) {
+            validated.add(BlueIds.requirePlainBlueId(candidate, "/churn"));
+            invalidResults.add(acceptsPlain(candidate + "#0"));
+        }
+        String afterChurn = BlueIds.requirePlainBlueId(valid, "/after-churn");
+
+        // then
+        assertEquals(valid.hashCode(), collision.hashCode());
+        assertEquals(valid, initial);
+        assertSame(detached, repeated);
+        assertEquals(candidates, validated);
+        assertFalse(invalidResults.contains(true));
+        assertEquals(valid, afterChurn);
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> BlueIds.requirePlainBlueId(collision, "/collision"));
+        assertEquals("Expected canonical Base58 SHA-256 BlueId at /collision.", rejected.getMessage());
+        assertThrows(IllegalArgumentException.class,
+                () -> BlueIds.requirePlainBlueId(collision, "/after-churn"));
+    }
+
+    @Test
+    void shouldRetainCanonicalLengthAndNegativeValidationAcrossConcurrentWarmChecks() throws Exception {
+        // given
+        java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(6);
+        List<java.util.concurrent.Callable<List<String>>> checks = new ArrayList<>();
+        for (int worker = 0; worker < 6; worker++) {
+            final int seed = worker;
+            checks.add(() -> concurrentGrammarViolations(seed));
+        }
+
+        // when
+        List<java.util.concurrent.Future<List<String>>> results;
+        try {
+            results = workers.invokeAll(checks);
+        } finally {
+            workers.shutdownNow();
+        }
+
+        // then
+        for (java.util.concurrent.Future<List<String>> result : results) {
+            assertEquals(java.util.Collections.emptyList(), result.get());
+        }
+    }
+
+    private static List<String> concurrentGrammarViolations(int seed) {
+        List<String> violations = new ArrayList<>();
+        Random random = new Random(0xB10E_C011L + seed);
+        for (int index = 0; index < 1024; index++) {
+            byte[] digest = new byte[32];
+            random.nextBytes(digest);
+            String valid = Base58.encode(digest);
+            if (!valid.equals(BlueIds.requirePlainBlueId(valid, "/concurrent"))) {
+                violations.add("cold validation changed " + valid);
+            }
+            if (!valid.equals(BlueIds.requirePlainBlueId(new String(valid.toCharArray()), "/repeat"))) {
+                violations.add("warm validation changed " + valid);
+            }
+            if (acceptsPlain("0" + valid.substring(1))) violations.add("accepted invalid character");
+            if (acceptsPlain(Base58.encode(Arrays.copyOf(digest, 31)))) violations.add("accepted 31 bytes");
+        }
+        return violations;
+    }
+
+    private static boolean acceptsPlain(String candidate) {
+        try {
+            BlueIds.requirePlainBlueId(candidate, "/negative");
+            return true;
+        } catch (IllegalArgumentException expected) {
+            return false;
+        }
+    }
+
     private static boolean[] classify(String[] candidates) {
         boolean[] results = new boolean[candidates.length];
         for (int index = 0; index < candidates.length; index++) {
