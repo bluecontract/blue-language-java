@@ -25,6 +25,7 @@ public class BlueIds {
     // only this immutable value's grammar; it never authenticates content.
     private static final AtomicReferenceArray<String> VALIDATED_PLAIN_IDS =
             new AtomicReferenceArray<>(4096);
+    private static final int VALIDATED_PLAIN_ID_PROBES = 16;
 
     /** Placeholder for the current document in a single-document cycle. */
     public static final String THIS_PLACEHOLDER = "this";
@@ -82,9 +83,14 @@ public class BlueIds {
      * @throws IllegalArgumentException when the identity is not canonical
      */
     public static String requirePlainBlueId(String value, String path) {
-        if (value != null && value.equals(VALIDATED_PLAIN_IDS.get(
-                value.hashCode() & (VALIDATED_PLAIN_IDS.length() - 1)))) {
-            return value;
+        if (value != null) {
+            int mask = VALIDATED_PLAIN_IDS.length() - 1;
+            int first = value.hashCode() & mask;
+            for (int probe = 0; probe < VALIDATED_PLAIN_ID_PROBES; probe++) {
+                if (value.equals(VALIDATED_PLAIN_IDS.get((first + probe) & mask))) {
+                    return value;
+                }
+            }
         }
         if (value == null || value.isEmpty() || !PLAIN_BLUE_ID_PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
@@ -92,7 +98,14 @@ public class BlueIds {
         if (!hasCanonicalSha256DecodedLength(value)) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
-        VALIDATED_PLAIN_IDS.set(value.hashCode() & (VALIDATED_PLAIN_IDS.length() - 1), value);
+        int mask = VALIDATED_PLAIN_IDS.length() - 1;
+        int first = value.hashCode() & mask;
+        for (int probe = 0; probe < VALIDATED_PLAIN_ID_PROBES; probe++) {
+            if (VALIDATED_PLAIN_IDS.compareAndSet((first + probe) & mask, null, value)) {
+                return value;
+            }
+        }
+        VALIDATED_PLAIN_IDS.set(first, value);
         return value;
     }
 
@@ -132,6 +145,9 @@ public class BlueIds {
     public static String requireBlueIdOrCyclicMember(String value, String path) {
         if (value == null) {
             throw new IllegalArgumentException("Expected BlueId at " + path + ".");
+        }
+        if (!hasCyclicMemberSeparator(value)) {
+            return requirePlainBlueId(value, path);
         }
         java.util.regex.Matcher cyclic = CYCLIC_MEMBER_PATTERN.matcher(value);
         if (cyclic.matches()) {

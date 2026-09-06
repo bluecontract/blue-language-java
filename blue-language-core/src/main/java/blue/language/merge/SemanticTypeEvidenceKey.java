@@ -36,12 +36,13 @@ final class SemanticTypeEvidenceKey {
 
     private final SemanticNode root;
     private final int hashCode;
-    private final long retainedWeightBytes;
+    // Lookup-only keys need no admission weight. The immutable copy keeps
+    // deferred accounting exact even if its original mutable source changes.
+    private volatile long retainedWeightBytes = -1L;
 
     private SemanticTypeEvidenceKey(SemanticNode root) {
         this.root = root;
         this.hashCode = root.hashCode;
-        this.retainedWeightBytes = calculateRetainedWeightBytes();
     }
 
     static SemanticTypeEvidenceKey of(Node node) {
@@ -51,7 +52,12 @@ final class SemanticTypeEvidenceKey {
 
     /** Conservative retained-heap estimate used by cache admission bounds. */
     long approximateRetainedWeightBytes() {
-        return retainedWeightBytes;
+        long weight = retainedWeightBytes;
+        if (weight < 0L) {
+            weight = calculateRetainedWeightBytes();
+            retainedWeightBytes = weight;
+        }
+        return weight;
     }
 
     private long calculateRetainedWeightBytes() {

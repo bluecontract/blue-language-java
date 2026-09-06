@@ -69,6 +69,41 @@ final class SemanticTypeEvidenceKeyTest {
     }
 
     @Test
+    void deferredWeightKeepsImmutableSharedGraphAcrossConcurrentReaders()
+            throws Exception {
+        Node shared = new Node().name("Original child")
+                .value(Arrays.asList("retained", BigInteger.ONE));
+        Node source = new Node().name("Original type").type(shared)
+                .properties("first", shared).properties("second", shared);
+        long expectedWeight = SemanticTypeEvidenceKey.of(source)
+                .approximateRetainedWeightBytes();
+        SemanticTypeEvidenceKey captured = SemanticTypeEvidenceKey.of(source);
+        int expectedHash = captured.hashCode();
+        source.name("Changed type").properties("later", keyHeavyType());
+        shared.name("Changed child").value("replacement");
+        java.util.concurrent.ExecutorService readers =
+                java.util.concurrent.Executors.newFixedThreadPool(4);
+
+        try {
+            java.util.List<java.util.concurrent.Future<Long>> weights =
+                    new java.util.ArrayList<>();
+            for (int index = 0; index < 4; index++) {
+                weights.add(readers.submit(
+                        captured::approximateRetainedWeightBytes));
+            }
+
+            for (java.util.concurrent.Future<Long> weight : weights) {
+                assertEquals(expectedWeight, weight.get().longValue());
+            }
+            assertEquals(expectedHash, captured.hashCode());
+            assertEquals(expectedWeight,
+                    captured.approximateRetainedWeightBytes());
+        } finally {
+            readers.shutdownNow();
+        }
+    }
+
+    @Test
     void includesSemanticKeysInEvidenceSnapshotRetainedWeight() {
         CanonicalTypeIdentityIndex.EvidenceSnapshot shallow =
                 evidenceSnapshot(new Node().name("Shallow type"));
