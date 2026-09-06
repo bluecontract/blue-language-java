@@ -2762,15 +2762,16 @@ final class ClosureExecutionSession
             return true;
         }
 
+        // The historical-target exception is about this document's complete
+        // finalizer-only delta, including an indirect containing reference.
+        // Requiring a direct edge to the consumer would create a new target
+        // epoch for every catch-up step and prevent Phase D from completing.
         Node explained = sourceBodies.get(documentId).clone();
         boolean reencodedCurrentSource = false;
         for (ManagedOccurrenceBinding binding
                 : bindingsBeforeFinalization) {
             if (!binding.active()
-                    || !binding.sourceDocumentId().equals(documentId)
-                    || (!deliversImportedSourceReceipt
-                            && !binding.targetDocumentId().equals(
-                                    owner.targetDocumentId()))) {
+                    || !binding.sourceDocumentId().equals(documentId)) {
                 continue;
             }
             Node before = NodePathEditor.getOrNull(
