@@ -1001,6 +1001,15 @@
       ]
     },
     {
+      "id": "stabilization-canonical-processing-input",
+      "requirement": "docs/canonical-processing-api-review.md",
+      "rationale": "Record only the additive default processing SPI introduced by 35de814a to preserve strict canonical input through snapshot-manager decorators. Existing implementations retain binary compatibility and fail closed with UnsupportedOperationException when they do not support canonical resolution. Implementations that support it delegate to the canonical resolver while preserving deferred paths; no fallback interprets completed list payloads as Source append overlays. The original Source resolution methods and all 351 incompatible and 537 earlier additive ledger entries remain unchanged.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: fromCanonicalTransient(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot;"
+      ]
+    },
+    {
       "id": "stabilization-definition-and-managed-birth",
       "requirement": "docs/stabilization-cycle-review.md",
       "rationale": "Record the reviewed additive definition-validation SPI, which validates fixed constraints without inventing instance payloads, and immutable managed-birth input evidence, which binds exact authored content to a host-reserved fresh lineage without claiming initialization. Existing instance validation and publication checks remain mandatory. LanguageRuntimeAccess.canonicalizeWithEvidence is an additive default within the already approved runtime service class: it returns canonical content and its same-resolution semantic companion, without certifying required instance values or opening opaque cyclic references. The borrowed forValueIdentity view retains exact and cyclic overlays while omitting only enclosing root path bindings. The original manager still validates managed document roots. Processing Source canonicalization preserves registered definition/executable boundaries, and matchesTypeOrThrow propagates authoritative failures. Existing methods remain compatible. The already additive BlueContracts and DocumentProcessorAdministration services now expose resolveProcessingSource for read-only projections under the same registered field roles as canonicalizeProcessingSource.",
