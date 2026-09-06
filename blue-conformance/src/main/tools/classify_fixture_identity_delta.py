@@ -964,6 +964,22 @@ def reviewed_typed_patch_transition(
     return review
 
 
+REPRESENTATION_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-historical-representation-transition.json")
+REPRESENTATION_REVIEW_INPUT_SHA256 = "117fa2e267efc605eef9f22718dd5f8e476c312dd5120369b5ac6066082e244f"
+
+
+def reviewed_representation_transition(before_files, after_files):
+    """Proposed closed pair only; no acceptance of future inventory changes."""
+    data = REPRESENTATION_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != REPRESENTATION_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed representation baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1418,6 +1434,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES)
     )
     reviewed_transition = reviewed_typed_patch_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_representation_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1464,11 +1482,14 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": TYPED_PATCH_REVIEW_INPUT_SHA256,
+            "reviewInputSha256": (REPRESENTATION_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "historical-representation-exact-proposed-transition"
+                else TYPED_PATCH_REVIEW_INPUT_SHA256),
             "beforeSourceCommit": reviewed_transition["before"]["sourceCommit"],
             "afterSourceCommit": reviewed_transition["after"]["sourceCommit"],
             "closedInventoryFiles": len(after_files),
-            "executableFixturesUnchanged": reviewed_transition["executableFixtureCount"],
+            "executableFixturesUnchanged": reviewed_transition.get(
+                "executableFixturesUnchanged", reviewed_transition["executableFixtureCount"]),
         },
         "files": rows,
     }
