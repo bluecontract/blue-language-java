@@ -186,6 +186,7 @@ final class ClosureExecutionSession
     private final Map<String, SourceCursor> sourceCursorsByInvocation = new LinkedHashMap<String, SourceCursor>();
     private Set<DocumentId> ownedDocuments;
     private Map<DocumentId, List<SourceObservationGap>> observationGaps = Collections.emptyMap();
+    private Map<DocumentId, String> expectedSourceBases = Collections.emptyMap();
     private String replayedEventOccurrenceIdentity;
     private String replayedPatchTransitionIdentity;
     private String replayedPatchSiteIdentity;
@@ -517,17 +518,28 @@ final class ClosureExecutionSession
         observationGaps = Collections.unmodifiableMap(copy);
     }
 
+    void expectedSourceBases(Map<DocumentId, String> bases) {
+        expectedSourceBases = Collections.unmodifiableMap(new LinkedHashMap<DocumentId, String>(Objects.requireNonNull(bases, "bases")));
+    }
+
+    private void verifySourceContext(Set<DocumentId> owners, ClosureEnvironment environment, ExecutionPolicy policy) {
+        SourceExecutionBasis.requireCompatibleEnvironment(input.environment(), environment);
+        for (DocumentId source : owners) {
+            String expected = expectedSourceBases.get(source);
+            // Compatibility overloads name the invocation's fixed policy. Cross-policy imports require explicit authority.
+            if (expected == null) expected = SourceExecutionBasis.identity(source, input.environment(), input.executionPolicy());
+            SourceExecutionBasis.requireProducerBasis(expected, source, environment, policy);
+        }
+    }
+
     void substituteSource(SourceObservationProgram program) {
         SourceObservationProgram selected = Objects.requireNonNull(program, "program");
         if (executionMode != ExecutionMode.PROCESSING
                 || selected.causeKind() != ProcessingCause.Kind.EXTERNAL
-                || !input.cause().causeIdentity().equals(selected.causeIdentity())
-                || !input.environment().runtimeRegistryIdentity().equals(selected.environment().runtimeRegistryIdentity())
-                || !input.environment().gasManifestIdentity().equals(selected.environment().gasManifestIdentity())
-                || !input.environment().externalOrderPolicyIdentity().equals(selected.environment().externalOrderPolicyIdentity())
-                || !input.environment().managedBindingPolicyIdentity().equals(selected.environment().managedBindingPolicyIdentity())) {
+                || !input.cause().causeIdentity().equals(selected.causeIdentity())) {
             throw new IllegalArgumentException("Source observation cause or runtime mismatch");
         }
+        verifySourceContext(selected.ownedDocumentIds(), selected.environment(), selected.executionPolicy());
         for (SourceObservationProgram.SourceState source : selected.sourcePredecessors()) {
             if (!selected.ownedDocumentIds().contains(source.documentId())) continue;
             ManagedDocumentSnapshot present = input.snapshot().managedDocument(source.documentId());
@@ -700,6 +712,8 @@ final class ClosureExecutionSession
     }
 
     private void registerSourceCursor(SourceObservationProgram selected) {
+        if (selected.causeKind() == ProcessingCause.Kind.EXTERNAL)
+            verifySourceContext(selected.ownedDocumentIds(), selected.environment(), selected.executionPolicy());
         SourceCursor previousProgram = sourceCursorsByInvocation.get(selected.invocationIdentity());
         if (previousProgram != null) {
             if (previousProgram.program != selected && !sourceProgramDigest(previousProgram.program).equals(sourceProgramDigest(selected))) {
@@ -708,10 +722,14 @@ final class ClosureExecutionSession
             return;
         }
         for (SourceObservationProgram borrowed : selected.borrowedPrograms()) {
+            boolean externalSource = borrowed.causeKind() == ProcessingCause.Kind.EXTERNAL
+                    && selected.causeKind() == ProcessingCause.Kind.EXTERNAL;
             if (!SourceObservationProgramCodec.environment(borrowed.environment()).equals(SourceObservationProgramCodec.environment(selected.environment()))
-                    || !SourceObservationProgramCodec.policy(borrowed.executionPolicy()).equals(SourceObservationProgramCodec.policy(selected.executionPolicy()))) {
+                    || !externalSource && !SourceObservationProgramCodec.policy(borrowed.executionPolicy()).equals(SourceObservationProgramCodec.policy(selected.executionPolicy()))) {
                 throw new IllegalArgumentException("Borrowed source program requires its own canonical activation lane");
             }
+            // External children are checked against their own authenticated producer basis
+            // by registerSourceCursor, not against their importing parent's gas budget.
             if (borrowed.causeKind() == ProcessingCause.Kind.ADMISSION && selected.causeKind() == ProcessingCause.Kind.EXTERNAL) {
                 retainDormantInitialization(borrowed);
                 continue;
@@ -788,13 +806,10 @@ final class ClosureExecutionSession
     void retainSourceFailure(SourceOperationFailure failure) {
         Objects.requireNonNull(failure, "sourceFailure");
         if (executionMode != ExecutionMode.PROCESSING || failure.causeKind() != ProcessingCause.Kind.EXTERNAL
-                || !input.cause().causeIdentity().equals(failure.causeIdentity())
-                || !input.environment().runtimeRegistryIdentity().equals(failure.environment().runtimeRegistryIdentity())
-                || !input.environment().gasManifestIdentity().equals(failure.environment().gasManifestIdentity())
-                || !input.environment().managedBindingPolicyIdentity().equals(failure.environment().managedBindingPolicyIdentity())
-                || !input.environment().externalOrderPolicyIdentity().equals(failure.environment().externalOrderPolicyIdentity())) {
+                || !input.cause().causeIdentity().equals(failure.causeIdentity())) {
             throw new IllegalArgumentException("Failed source operation has a different canonical cause or environment");
         }
+        verifySourceContext(failure.ownedDocumentIds(), failure.environment(), failure.executionPolicy());
         if (ownedDocuments == null && sameOrigin == null) throw new IllegalArgumentException("Failed source observation requires explicit consumer ownership");
         failure.verifyObservationBasis(input.snapshot(), consumerOwnershipExcluding(failure.ownedDocumentIds()), observationGaps);
         for (DocumentId source : failure.ownedDocumentIds()) {

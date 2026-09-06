@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 787,
+    "productionSourceCount": 789,
     "productionResourceCount": 749,
-    "productionSourcePathIdentity": "sha256:8081b0f1fc3e25a113f6c479f1efcde50c56506948dee3dcec46ac118ab57d97",
+    "productionSourcePathIdentity": "sha256:27f9d32e4145a6f8f598af37ca660e7833f076cc737c2b7e1a78f7e6117d424e",
     "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -2919,6 +2919,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandCodec.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandCodec.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandException.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -3385,6 +3392,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceExecutionBasis.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SourceExecutionBasis.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {

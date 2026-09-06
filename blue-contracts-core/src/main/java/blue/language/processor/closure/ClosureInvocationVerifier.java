@@ -153,7 +153,7 @@ final class ClosureInvocationVerifier {
                 && binding.expectedTargetBlueId().equals(revision.beforeBlueId());
     }
 
-    private static void verifyEnvironment(ClosureEnvironment environment) {
+    static void verifyEnvironment(ClosureEnvironment environment) {
         requireLabeledEnvironmentIdentity(
                 "managedDocumentIdentityPolicyIdentity",
                 environment.managedDocumentIdentityPolicy(),

@@ -102,6 +102,14 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
             List<SourceOperationFailure> sourceFailures, List<SourceInitialization> sourceInitializations,
             List<SourceFrontierView> frontierViews) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations,
+                frontierViews, Collections.emptyMap());
+    }
+
+    SameOriginProcessAttempt processSameOrigin(ClosureInvocationInput input, SameOriginAttachmentPolicy attachmentPolicy,
+            List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
+            List<SourceOperationFailure> sourceFailures, List<SourceInitialization> sourceInitializations,
+            List<SourceFrontierView> frontierViews, java.util.Map<DocumentId, String> expectedSourceBases) {
         ClosureInvocationVerifier.Verification verification = ClosureInvocationVerifier.verify(Objects.requireNonNull(input, "input"));
         verifyRuntimeBinding(input, verification);
         ClosureExecutionRecorder recorder = new ClosureExecutionRecorder(verification.invocationIdentity());
@@ -109,6 +117,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
         try (ClosureExecutionSession session = new ClosureExecutionSession(owner, input, recorder,
                 ClosureExecutionSession.ExecutionMode.PROCESSING)) {
             session.useSameOriginGroups(owner, attachmentPolicy);
+            session.expectedSourceBases(expectedSourceBases);
             for (SourceInitialization initialization : sourceInitializations) session.offerInitialization(initialization);
             for (SourceFrontierView frontier : frontierViews) session.offerFrontierView(frontier);
             session.failedObservationGaps(gaps);
@@ -147,6 +156,12 @@ final class DefaultClosureProcessor implements ClosureProcessor {
     ClosureAttemptResult processExternalScope(ClosureInvocationInput input, java.util.Set<DocumentId> ownedDocuments,
             List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
             List<SourceOperationFailure> sourceFailures) {
+        return processExternalScope(input, ownedDocuments, sourcePrograms, gaps, sourceFailures, Collections.emptyMap());
+    }
+
+    ClosureAttemptResult processExternalScope(ClosureInvocationInput input, java.util.Set<DocumentId> ownedDocuments,
+            List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
+            List<SourceOperationFailure> sourceFailures, java.util.Map<DocumentId, String> expectedSourceBases) {
         ClosureInvocationInput admitted = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
@@ -172,6 +187,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                 session.ownDocuments(ownedDocuments);
             }
             session.failedObservationGaps(gaps);
+            session.expectedSourceBases(expectedSourceBases);
             for (SourceObservationProgram sourceProgram : sourcePrograms) {
                 session.substituteSource(sourceProgram);
             }

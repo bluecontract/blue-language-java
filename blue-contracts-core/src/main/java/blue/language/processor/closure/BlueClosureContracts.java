@@ -129,13 +129,28 @@ public final class BlueClosureContracts
         return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations, Collections.emptyList());
     }
 
-    /** Exact historical frontier views are offered without activating their prospective occurrences. */
+    /**
+     * Exact historical frontier views are offered without activating their prospective occurrences.
+     * This compatibility overload fixes every external producer to the invocation's execution policy;
+     * independently selected producer policies require the overload with expected source bases.
+     */
     public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
             final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
             final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
             final List<SourceInitialization> sourceInitializations, final List<SourceFrontierView> frontierViews) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations,
+                frontierViews, Collections.emptyMap());
+    }
+
+    /** Expected producer bases are authenticated source authority, independent of the consumer's execution policy. */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final List<SourceInitialization> sourceInitializations, final List<SourceFrontierView> frontierViews,
+            final java.util.Map<DocumentId, String> expectedSourceBases) {
         ensureOpen();
-        return owner.withCapturedConfiguration(() -> processor.processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations, frontierViews));
+        return owner.withCapturedConfiguration(() -> processor.processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures,
+                sourceInitializations, frontierViews, expectedSourceBases));
     }
 
     /**
@@ -143,6 +158,8 @@ public final class BlueClosureContracts
      * continuation and FIFO, executing only newly participating consumers.
      * The input must name the source's original external cause and exact
      * source predecessor. This method does not publish or settle its source.
+     * This compatibility lane fixes the producer policy to the invocation policy;
+     * use the explicit-basis {@code processExternalScope} overload for cross-policy reuse.
      */
     public synchronized ClosureAttemptResult processWithSourceObservation(
             final ClosureInvocationInput input,
@@ -177,28 +194,50 @@ public final class BlueClosureContracts
         return processExternalScope(input, ownedDocuments, sourcePrograms, gaps, Collections.<SourceOperationFailure>emptyList());
     }
 
-    /** Imports terminal producer outcomes without executing or publishing their failed business prefix. */
+    /**
+     * Imports terminal producer outcomes without executing or publishing their failed business prefix.
+     * This compatibility overload fixes external producer policies to the invocation policy.
+     */
     public synchronized ClosureAttemptResult processExternalScope(final ClosureInvocationInput input,
             final java.util.Set<DocumentId> ownedDocuments, final List<SourceObservationProgram> sourcePrograms,
             final java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
             final List<SourceOperationFailure> sourceFailures) {
+        return processExternalScope(input, ownedDocuments, sourcePrograms, gaps, sourceFailures, Collections.emptyMap());
+    }
+
+    /** Cross-policy source interpretation requires independently selected producer bases. */
+    public synchronized ClosureAttemptResult processExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final java.util.Map<DocumentId, String> expectedSourceBases) {
         ensureOpen();
         Objects.requireNonNull(ownedDocuments, "ownedDocuments");
         Objects.requireNonNull(sourcePrograms, "sourcePrograms");
         return owner.withCapturedConfiguration(new Supplier<ClosureAttemptResult>() {
             @Override public ClosureAttemptResult get() {
-                return processor.processExternalScope(input, ownedDocuments, sourcePrograms, gaps, sourceFailures);
+                return processor.processExternalScope(input, ownedDocuments, sourcePrograms, gaps, sourceFailures, expectedSourceBases);
             }
         });
     }
 
-    /** Executes one explicitly selected historical reaction without redelivering the consumer's external input. */
+    /**
+     * Executes one explicitly selected historical reaction without redelivering the consumer's external input.
+     * This compatibility overload fixes external producer policies to the invocation policy.
+     */
     public synchronized ClosureAttemptResult processManagedReaction(final ClosureInvocationInput sourceCauseInput,
             final java.util.Set<DocumentId> consumerOwned, final List<SourceObservationProgram> sourcePrograms,
             final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
             final ManagedReactionContext reaction) {
+        return processManagedReaction(sourceCauseInput, consumerOwned, sourcePrograms, gaps, sourceFailures, reaction, Collections.emptyMap());
+    }
+
+    /** Interprets a managed lane under its original producer basis, not the importing consumer's budget. */
+    public synchronized ClosureAttemptResult processManagedReaction(final ClosureInvocationInput sourceCauseInput,
+            final java.util.Set<DocumentId> consumerOwned, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final ManagedReactionContext reaction, final java.util.Map<DocumentId, String> expectedSourceBases) {
         Objects.requireNonNull(reaction, "reaction");
-        return processExternalScope(sourceCauseInput.withManagedReaction(reaction), consumerOwned, sourcePrograms, gaps, sourceFailures);
+        return processExternalScope(sourceCauseInput.withManagedReaction(reaction), consumerOwned, sourcePrograms, gaps, sourceFailures, expectedSourceBases);
     }
 
     /**
