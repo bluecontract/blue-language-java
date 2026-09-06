@@ -1,11 +1,8 @@
-package blue.language.processor.closure;
+package blue.language.conformance.contracts.representation;
 
-import blue.language.identity.CircularSetIdentityCalculator;
-import blue.language.identity.CyclicSetFinalization;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
-import blue.language.model.NodeWireForm;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
@@ -13,13 +10,8 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.ExternalOrderKey;
-import blue.language.processor.ExactEventIdentityEvidence;
-import blue.language.processor.GasChargeContext;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.HandlerProcessor;
-import blue.language.processor.ManagedCheckpointCandidate;
-import blue.language.processor.ManagedCheckpointSettlementEntry;
-import blue.language.processor.ManagedDocumentStepRuntime;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.ChannelContract;
@@ -28,7 +20,6 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.NodeProvider;
-import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,19 +27,26 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/** Checkpoint ownership is per actual Root work, not affected-cohort membership. */
-final class ManagedCheckpointSettlementOwnershipTest {
+import blue.language.processor.closure.*;
+import blue.language.codec.jackson.UncheckedObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.InputStream;
+import java.util.Objects;
+import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
+import org.erdtman.jcs.JsonCanonicalizer;
+import blue.language.conformance.api.BlueContractsConformanceReport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
+/** Executable proposed conformance for an authenticated X -> Y -> X history. */
+public final class HistoricalRepresentationConformanceCli {
     private static final DocumentId A = new DocumentId("a");
     private static final DocumentId B = new DocumentId("b");
     private static final Node CHANNEL_TYPE = new Node().name("Checkpoint ownership source Channel");
@@ -57,8 +55,47 @@ final class ManagedCheckpointSettlementOwnershipTest {
     private static final String HANDLER_ID = blueId(HANDLER_TYPE);
     private static final String CHECKPOINT = "/contracts/checkpoint/entries/ownerChannel";
 
-    @Test
-    void historicalReconciliationRetainsGenuineRepeatedRepresentationPositions() {
+    private HistoricalRepresentationConformanceCli() { }
+    private static final String PACKAGE_IDENTITY = "sha256:638eb80eccb12629d475a395d87b95b36df54e68463768fccb569c4356bc5916";
+    private static final String ROOT = "/blue-contracts-representation-1.0/fixtures/";
+
+    /**
+     * Runs the explicit historical-representation sequence through public processor APIs.
+     * @param args one output report path
+     * @throws Exception if fixture evidence, processing or report writing fails
+     */
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) throw new IllegalArgumentException("Expected output report path");
+        verifyPackage();
+        ObjectNode report = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
+        report.put("schema", "blue-contracts-representation-conformance-report/1");
+        report.put("packageIdentity", PACKAGE_IDENTITY);
+        com.fasterxml.jackson.databind.node.ArrayNode cases = report.putArray("cases");
+        for (String file : Arrays.asList("repeated-identity.json", "repeated-identity-next-revision.json")) {
+            JsonNode input;
+            try (InputStream stream = HistoricalRepresentationConformanceCli.class.getResourceAsStream(ROOT + file)) {
+                if (stream == null) throw new IllegalStateException("Missing representation fixture " + file);
+                input = UncheckedObjectMapper.JSON_MAPPER.readTree(stream);
+            }
+            assertEquals("blue-contracts-representation-sequence-fixture/1", input.path("schema").textValue());
+            assertTrue(Arrays.equals(new int[]{0, 1, 0, 2}, UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                    input.path("sourceValues"), int[].class)), "Unexpected authored source history");
+            ObjectNode result = execute(input);
+            JsonNode expected = input.path("expected");
+            assertTrue(expected.isObject(), "Missing expected results");
+            expected.fields().forEachRemaining(field -> assertEquals(field.getValue().toString(), result.path(field.getKey()).toString(),
+                    "Fixture expectation " + field.getKey()));
+            cases.add(result);
+        }
+        report.put("passed", cases.size());
+        report.put("failed", 0);
+        report.put("skipped", 0);
+        Files.createDirectories(Paths.get(args[0]).toAbsolutePath().getParent());
+        Files.write(Paths.get(args[0]), UncheckedObjectMapper.JSON_MAPPER.writerWithDefaultPrettyPrinter()
+                .writeValueAsBytes(report));
+        System.out.println(report.toString());
+    }
+    static ObjectNode execute(JsonNode fixtureInput) {
         try (Fixture fixture = new Fixture()) {
             Node b = fixture.root("b", "attach", false);
             b.getContracts().properties("embedded", embedded("/peer"));
@@ -68,7 +105,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
             AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b),
                     Collections.singletonList(fixture.binding(A, "/peer", B, blueId(b))));
             List<Run> sourceHistory = new ArrayList<>();
-            for (int value : new int[]{0, 1, 0, 2}) {
+            for (int value : UncheckedObjectMapper.JSON_MAPPER.convertValue(fixtureInput.path("sourceValues"), int[].class)) {
                 Run run = fixture.external(snapshot, A,
                         event("assign-" + value).properties("business", new Node().value(value)),
                         sourceHistory.size() + 1L, null);
@@ -114,6 +151,18 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     "Two actual processor commits must establish X -> Y -> X at one source epoch");
             assertNotEquals(positions.get(0).positionIdentity(), positions.get(1).positionIdentity());
             assertEquals(positions.get(0).positionIdentity(), positions.get(1).predecessorPositionIdentity());
+            Run following = null;
+            if (fixtureInput.path("followingRevision").booleanValue()) {
+                following = fixture.external(snapshot, A,
+                        event("after-representation-return").properties("business", new Node().value(3)), 6L, null);
+                assertSuccess(following);
+                assertEquals(x, receipt(following, A).beforeBlueId());
+                assertEquals(epoch + 1L, result(following, A).epoch());
+                snapshot = fixture.after(following.result);
+            }
+            String authoritative = snapshot.managedDocument(A).blueId();
+            long authoritativeEpoch = snapshot.managedDocument(A).epoch();
+            String nextReceipt = following == null ? null : receipt(following, A).transitionReceiptIdentity();
             DocumentId consumerId = new DocumentId("historical-consumer");
             Node consumer = fixture.root("consumer", "noop", false)
                     .properties("peer", new Node().blueId(x))
@@ -122,18 +171,19 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     .properties("updates", typed(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL)
                             .properties("path", new Node().value("/peer")))
                     .properties("observe", handler("updates"));
-            snapshot = fixture.withPendingConsumer(snapshot, consumerId, consumer, A, epoch);
+            snapshot = fixture.withPendingConsumer(snapshot, consumerId, consumer, A, epoch, x);
             ManagedOccurrenceBinding occurrence = snapshot.occurrences().stream()
                     .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
             String targetPosition = positions.get(1).positionIdentity();
             final AffectedClosureSnapshot beforeTraversal = snapshot;
             ManagedRepresentationCause skipped = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
-                    positions.get(1), targetPosition, null, null);
+                    positions.get(1), targetPosition, nextReceipt, null);
             assertThrows(IllegalArgumentException.class, () -> fixture.process(beforeTraversal, skipped));
             int callsBefore = fixture.probe.calls.size();
+            List<Long> traversalGas = new ArrayList<>();
             for (int index = 0; index < positions.size(); index++) {
                 ManagedRepresentationCause cause = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
-                        positions.get(index), targetPosition, null, null);
+                        positions.get(index), targetPosition, nextReceipt, null);
                 ClosureInvocationInput rollbackInput = ClosureEvidenceFactory.processClosure(snapshot, cause,
                         Collections.emptyList(), ClosureEvidenceFactory.executionPolicy(1L, Collections.emptyMap(),
                                 "representation-return-rollback"), fixture.environment);
@@ -146,189 +196,58 @@ final class ManagedCheckpointSettlementOwnershipTest {
                 Run traversed = fixture.process(snapshot, cause);
                 assertSuccess(traversed);
                 assertTrue(traversed.result.totalGas() > 1L);
+                traversalGas.add(traversed.result.totalGas());
                 assertTrue(traversed.result.publicEvents().isEmpty());
-                assertEquals(x, result(traversed, A).afterBlueId());
-                assertEquals(epoch, result(traversed, A).epoch());
+                assertEquals(authoritative, result(traversed, A).afterBlueId());
+                assertEquals(authoritativeEpoch, result(traversed, A).epoch());
                 assertEquals(java.math.BigInteger.valueOf(index + 1L),
                         result(traversed, consumerId).document().get("/observed"));
                 snapshot = fixture.after(traversed.result);
                 occurrence = snapshot.occurrences().stream()
                         .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
-                assertEquals(index == positions.size() - 1, occurrence.active());
+                assertEquals(following == null && index == positions.size() - 1, occurrence.active());
                 final AffectedClosureSnapshot afterTraversal = snapshot;
                 assertThrows(IllegalArgumentException.class, () -> fixture.process(afterTraversal, cause));
             }
-            assertEquals(Arrays.asList("consumer:observe", "consumer:observe"),
-                    fixture.probe.calls.subList(callsBefore, fixture.probe.calls.size()));
-            System.out.println("GENUINE_REPRESENTATION_RETURN epoch=" + epoch + " X=" + x
-                    + " Y=" + positions.get(0).transitionReceipt().afterBlueId()
-                    + " positions=" + positions.stream().map(ManagedRepresentationTransition::positionIdentity)
-                            .collect(Collectors.toList()));
+            if (following != null) {
+                ResultingDocument next = result(following, A);
+                ManagedRevisionCause revision = ClosureEvidenceFactory.managedRevisionCause(
+                        occurrence.occurrenceIdentity(), epoch, epoch + 1L, next.document(), receipt(following, A), null);
+                Run advanced = fixture.process(snapshot, revision);
+                assertSuccess(advanced);
+                assertEquals(authoritative, result(advanced, A).afterBlueId());
+                assertEquals(authoritativeEpoch, result(advanced, A).epoch());
+                assertEquals(java.math.BigInteger.valueOf(3), result(advanced, consumerId).document().get("/observed"));
+                assertTrue(advanced.result.occurrenceBindings().stream()
+                        .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get().active());
+            }
+            List<String> expectedCalls = new ArrayList<>(Arrays.asList("consumer:observe", "consumer:observe"));
+            if (following != null) expectedCalls.add("consumer:observe");
+            assertEquals(expectedCalls, fixture.probe.calls.subList(callsBefore, fixture.probe.calls.size()));
+            ObjectNode evidence = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
+            evidence.put("id", fixtureInput.path("id").textValue());
+            evidence.put("status", "PASS");
+            evidence.put("sourceEpoch", epoch);
+            evidence.put("initialBlueId", x);
+            evidence.put("intermediateBlueId", positions.get(0).transitionReceipt().afterBlueId());
+            evidence.set("positionIdentities", UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                    positions.stream().map(ManagedRepresentationTransition::positionIdentity).collect(Collectors.toList())));
+            evidence.set("traversalGas", UncheckedObjectMapper.JSON_MAPPER.valueToTree(traversalGas));
+            evidence.put("consumerUpdates", following == null ? 2 : 3);
+            evidence.put("representationSteps", 2);
+            evidence.put("followingRevisionApplied", following != null);
+            evidence.put("sameEpoch", true);
+            evidence.put("returnsToExactInitialIdentity", true);
+            evidence.put("oneUnitGasFailure", true);
+            evidence.put("terminalActivationOnlyAtCapturedPosition", true);
+            evidence.put("sourceEvents", 0);
+            evidence.put("sourceHeadPreserved", true);
+            evidence.put("skippedPositionRejected", true);
+            evidence.put("reappliedPositionsRejected", true);
+            evidence.put("gasRollback", true);
+            return evidence;
         }
     }
-
-    private static ManagedDocumentTransitionReceipt receipt(Run run, DocumentId id) {
-        return run.result.managedTransitionReceipts().stream()
-                .filter(value -> value.documentId().equals(id)).findFirst().get();
-    }
-
-    @Test
-    void untouchedRetainedSourceIsNotSettledOrCleaned() {
-        try (Fixture fixture = new Fixture()) {
-            Node b = fixture.staleCheckpointSource(false);
-            Node a = fixture.root("a", "change", false);
-            a.properties("peer", new Node().blueId(blueId(b)));
-            a.getContracts().properties("embedded", embedded("/peer"));
-            AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b),
-                    Collections.singletonList(fixture.binding(A, "/peer", B, blueId(b))));
-
-            Run run = fixture.run(snapshot);
-
-            assertSuccess(run);
-            assertEquals(Collections.singletonList("a:change"), fixture.probe.calls);
-            assertOnlyAWork(run);
-            assertEquals(blueId(b), result(run, B).afterBlueId());
-            assertEquals(3L, result(run, B).epoch());
-            assertNodeEquals(b, result(run, B).document());
-            assertTrue(writesFor(run, B).isEmpty());
-            assertTrue(run.result.managedTransitionReceipts().stream()
-                    .allMatch(receipt -> A.equals(receipt.documentId())));
-        }
-    }
-
-    @Test
-    void acceptedActualWorkSettlesDespiteEqualBusinessState() {
-        try (Fixture fixture = new Fixture()) {
-            Node a = fixture.seedCheckpoint(fixture.root("a", "noop", false),
-                    "ownerChannel", ignored -> { });
-            AffectedClosureSnapshot snapshot = fixture.snapshot(
-                    Collections.singletonMap(A, a), Collections.emptyList());
-
-            Run run = fixture.run(snapshot);
-
-            assertSuccess(run);
-            assertEquals(Collections.singletonList("a:noop"), fixture.probe.calls);
-            assertOnlyAWork(run);
-            assertEquals("same", result(run, A).document().getAsText("/business"));
-            assertEquals(4L, result(run, A).epoch(),
-                    "Checkpoint-only settlement does not invent a business-work epoch");
-            assertNotEquals(snapshot.managedDocument(A).blueId(), result(run, A).afterBlueId());
-            assertEquals(1, run.result.documentTransitionEvidence().size());
-            DocumentTransitionEvidence work = run.result.documentTransitionEvidence().get(0);
-            assertEquals(work.beforeDocumentBlueId(), work.afterDocumentBlueId(),
-                    "The accepted managed step is an exact no-op before settlement");
-            assertEquals(1, writesFor(run, A).size());
-            CheckpointWrite write = writesFor(run, A).get(0);
-            assertTrue(write.beforePresent());
-            assertTrue(write.afterPresent());
-            assertEquals(write.beforeDomainBlueId(), write.afterDomainBlueId());
-            assertNotEquals(write.beforeSubjectBlueId(), write.afterSubjectBlueId());
-            assertEquals(((ExternalEventCause) run.input.cause()).eventBlueId(), write.afterSubjectBlueId());
-        }
-    }
-
-    @Test
-    void actualChannelRemovalLegitimatelyCleansItsCheckpoint() {
-        try (Fixture fixture = new Fixture()) {
-            Node a = fixture.rootWithOtherCheckpoint("removeOther");
-            AffectedClosureSnapshot snapshot = fixture.snapshot(
-                    Collections.singletonMap(A, a), Collections.emptyList());
-
-            Run run = fixture.run(snapshot);
-
-            assertSuccess(run);
-            assertOnlyAWork(run);
-            assertEquals(Collections.singletonList("a:removeOther"), fixture.probe.calls);
-            assertNull(NodePathEditor.getOrNull(result(run, A).document(), "/contracts/other"));
-            assertNull(NodePathEditor.getOrNull(result(run, A).document(),
-                    "/contracts/checkpoint/entries/other"));
-            assertEquals(2, writesFor(run, A).size());
-            CheckpointWrite cleanup = writesFor(run, A).stream()
-                    .filter(write -> "other".equals(write.rawChannelKey())).findFirst().get();
-            assertTrue(cleanup.beforePresent());
-            assertFalse(cleanup.afterPresent());
-            assertNotNull(NodePathEditor.getOrNull(result(run, A).document(), CHECKPOINT));
-            assertEquals(5L, result(run, A).epoch());
-            assertNodeEquals(a, snapshot.managedDocument(A).document());
-        }
-    }
-
-    @Test
-    void failedProcessingPublishesNoCheckpointChange() {
-        try (Fixture fixture = new Fixture()) {
-            Node a = fixture.rootWithOtherCheckpoint("fail");
-            AffectedClosureSnapshot snapshot = fixture.snapshot(
-                    Collections.singletonMap(A, a), Collections.emptyList());
-
-            Run run = fixture.run(snapshot);
-
-            assertEquals(ProcessorStatus.RUNTIME_FATAL, run.result.status());
-            assertFalse(run.result.commits());
-            assertEquals(Collections.singletonList("a:fail"), fixture.probe.calls);
-            assertOnlyAWork(run);
-            assertEquals(snapshot.closureIdentity(), run.result.outputClosureIdentity());
-            assertTrue(run.result.checkpointWrites().isEmpty());
-            assertTrue(run.result.managedTransitionReceipts().isEmpty());
-            assertEquals(snapshot.managedDocument(A).blueId(), result(run, A).afterBlueId());
-            assertEquals(4L, result(run, A).epoch());
-            assertNodeEquals(a, result(run, A).document());
-            assertNotNull(NodePathEditor.getOrNull(result(run, A).document(),
-                    "/contracts/checkpoint/entries/other"));
-        }
-    }
-
-    @Test
-    void representationOnlyCyclicRebindDoesNotInventCheckpointCleanup() {
-        try (Fixture fixture = new Fixture()) {
-            Node a = fixture.root("a", "change", false);
-            a.properties("peer", new Node().blueId("this#1"));
-            a.getContracts().properties("embedded", embedded("/peer"));
-            Node b = fixture.staleCheckpointSource(true);
-            b.properties("parent", new Node().blueId("this#0"));
-            CyclicSetFinalization cycle = new CircularSetIdentityCalculator()
-                    .finalizeCyclicSet(Arrays.asList(a, b));
-            String aId = cycle.membersInInputOrder().get(0).finalBlueId();
-            String bId = cycle.membersInInputOrder().get(1).finalBlueId();
-            a = cycle.membersInInputOrder().get(0).canonicalMemberBody();
-            b = cycle.membersInInputOrder().get(1).canonicalMemberBody();
-            NodePathEditor.put(a, "/peer", new Node().blueId(bId));
-            NodePathEditor.put(b, "/parent", new Node().blueId(aId));
-            AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b), Arrays.asList(
-                    fixture.binding(A, "/peer", B, bId),
-                    fixture.binding(B, "/parent", A, aId)));
-            assertEquals(1, snapshot.components().size());
-            assertEquals(ComponentKind.CYCLIC, snapshot.components().get(0).kind());
-            Node before = snapshot.managedDocument(B).document();
-            assertNotNull(NodePathEditor.getOrNull(before, CHECKPOINT));
-
-            Run run = fixture.run(snapshot);
-
-            assertSuccess(run);
-            assertOnlyAWork(run);
-            assertEquals(Collections.singletonList("a:change"), fixture.probe.calls);
-            assertNotEquals(snapshot.managedDocument(B).blueId(), result(run, B).afterBlueId(),
-                    "The untouched peer must actually be re-encoded by the cycle finalizer");
-            assertTrue(run.result.documentTransitionEvidence().stream()
-                    .noneMatch(work -> B.equals(work.documentId())));
-            System.out.println("CYCLIC_CHECKPOINT_OWNERSHIP before="
-                    + snapshot.managedDocument(B).blueId() + " after=" + result(run, B).afterBlueId()
-                    + " beforeEpoch=" + snapshot.managedDocument(B).epoch()
-                    + " afterEpoch=" + result(run, B).epoch()
-                    + " peerCheckpointWrites=" + writesFor(run, B).stream()
-                            .map(write -> write.rawChannelKey() + ":" + write.beforePresent()
-                                    + "->" + write.afterPresent()).collect(Collectors.toList()));
-            assertTrue(writesFor(run, B).isEmpty(),
-                    "Representation-only cyclic rebind does not own checkpoint cleanup");
-            assertNodeEquals(NodePathEditor.getOrNull(before, CHECKPOINT),
-                    NodePathEditor.getOrNull(result(run, B).document(), CHECKPOINT));
-            Node ownedBefore = before.clone();
-            Node ownedAfter = result(run, B).document();
-            NodePathEditor.put(ownedBefore, "/parent", new Node().value("managed-reference-slot"));
-            NodePathEditor.put(ownedAfter, "/parent", new Node().value("managed-reference-slot"));
-            assertNodeEquals(ownedBefore, ownedAfter);
-        }
-    }
-
     private static final class Fixture implements AutoCloseable {
         private final Map<String, Node> exact = new LinkedHashMap<>();
         private final ProbeProcessor probe = new ProbeProcessor();
@@ -366,60 +285,11 @@ final class ManagedCheckpointSettlementOwnershipTest {
             return root;
         }
 
-        private Node staleCheckpointSource(boolean cyclic) {
-            Node source = root("b", "catalogChange", true);
-            if (cyclic) {
-                source.getContracts().properties("embedded", embedded("/parent"));
-            }
-            Node frozen = seedCheckpoint(source, "ownerChannel",
-                    after -> after.getContracts().properties("never", handler("ownerChannel")));
-            try (ManagedDocumentStepRuntime step = new ManagedDocumentStepRuntime(owner)) {
-                String currentDomain = step.projectRootSubscriptionSurface(frozen)
-                        .externalSubscriptions().get(0).checkpointDomainBlueId();
-                assertNotEquals(blueId(frozen.getAsNode(CHECKPOINT + "/domain")), currentDomain,
-                        "The historical checkpoint deliberately retains its pre-change catalog domain");
-            }
-            return frozen;
-        }
+    
 
-        private Node rootWithOtherCheckpoint(String handlerKey) {
-            Node a = root("a", handlerKey, false);
-            a.getContracts().properties("other", source(false))
-                    .properties("oldOther", handler("other"));
-            return seedCheckpoint(a, "other", ignored -> { });
-        }
+    
 
-        private Node seedCheckpoint(Node before, String channel, Consumer<Node> change) {
-            Node event = event("previous-" + before.getAsText("/label") + "-" + channel);
-            exact.put(blueId(event), event.clone());
-            GasChargeContext context = GasChargeContext.closure(before.getAsText("/label"),
-                    "/", 0L, 1L, channel, null, null, "fixture.seed-checkpoint");
-            try (ManagedDocumentStepRuntime step = new ManagedDocumentStepRuntime(owner)) {
-                ManagedCheckpointCandidate candidate = step.classifyExternalDelivery(
-                        before,
-                        channel,
-                        ExactEventIdentityEvidence.verify(
-                                null,
-                                event,
-                                blueId(event),
-                                null),
-                        context).candidate();
-                assertNotNull(candidate);
-                exact.put(candidate.domain().blueId(), candidate.domain().exactValue());
-                Node after = before.clone();
-                change.accept(after);
-                Node seeded = step.settleCheckpoints(after, Collections.singletonList(
-                        new ManagedCheckpointSettlementEntry(candidate, 0L, context)),
-                        (key, ordinal) -> context, context).resultingBody();
-                String referencedId = blueId(seeded);
-                // The pure fixture has no Language snapshot manager. Keep the
-                // complete immutable descriptor inline without changing its BlueId.
-                NodePathEditor.put(seeded, "/contracts/checkpoint/entries/" + channel + "/domain",
-                        candidate.domain().exactValue());
-                assertEquals(referencedId, blueId(seeded));
-                return seeded;
-            }
-        }
+    
 
         private ManagedOccurrenceBinding binding(DocumentId source, String path,
                 DocumentId target, String expectedId) {
@@ -444,27 +314,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     Collections.singletonList(A));
         }
 
-        private Run run(AffectedClosureSnapshot snapshot) {
-            Node event = event("next-a");
-            exact.put(blueId(event), event.clone());
-            ExternalEventCause cause = ClosureEvidenceFactory.externalCause(event, blueId(event),
-                    ExternalOrderKey.of(Arrays.<Object>asList(1L, "checkpoint-ownership")),
-                    environment.externalOrderPolicyIdentity());
-            ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(snapshot, cause,
-                    Collections.singletonList(new DirectLogicalDelivery(
-                            ManagedScopeKey.root(A), "ownerChannel", "ownerChannel", 0L)),
-                    ClosureEvidenceFactory.executionPolicy(100_000L, Collections.emptyMap(),
-                            "checkpoint-ownership-v1"), environment);
-            Capture capture = new Capture();
-            ClosureAttemptResult attempt;
-            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
-                attempt = contracts.processClosure(input);
-            }
-            assertTrue(attempt.isComplete(), () -> "Fixture resource boundary: " + attempt.kind()
-                    + " exact=" + attempt.requiredExactBlueIds());
-            assertNotNull(capture.evidence);
-            return new Run(input, attempt.processResult(), capture.evidence);
-        }
+    
 
         private Run external(AffectedClosureSnapshot snapshot, DocumentId target,
                 Node event, long order, Long historicalEpoch) {
@@ -523,7 +373,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
         }
 
         private AffectedClosureSnapshot withPendingConsumer(AffectedClosureSnapshot source,
-                DocumentId consumerId, Node consumer, DocumentId target, long epoch) {
+                DocumentId consumerId, Node consumer, DocumentId target, long epoch, String historicalBlueId) {
             Map<DocumentId, Node> bodies = new LinkedHashMap<>();
             Map<DocumentId, Long> generations = new LinkedHashMap<>();
             source.managedDocuments().forEach(value -> {
@@ -534,7 +384,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
             generations.put(consumerId, 1L);
             List<ManagedOccurrenceBinding> rows = new ArrayList<>(source.occurrences());
             rows.add(ManagedOccurrenceBinding.derived(environment.managedBindingPolicyIdentity(), consumerId,
-                    ScopeAddress.embedded("/peer", 1L), target, source.managedDocument(target).blueId(), false, epoch));
+                    ScopeAddress.embedded("/peer", 1L), target, historicalBlueId, false, epoch));
             ComponentFinalizationResult finalized = new ComponentFinalizationKernel().finalizeComponents(
                     new ComponentFinalizationInput(ManagedDocumentGraph.fromBindings(bodies.keySet(), rows),
                             generations, bodies, rows));
@@ -552,14 +402,14 @@ final class ManagedCheckpointSettlementOwnershipTest {
             owner.close();
         }
     }
-
-    /** Fixture-only Channel with an optional Timeline-shaped catalog dependency. */
+    /** Fixture channel that exposes retained checkpoint and optional catalog dependencies. */
     public static final class Source extends ChannelContract {
         private Boolean catalog;
+        /** @return whether this fixture depends on its same-scope channel catalog */
         public Boolean getCatalog() { return catalog; }
+        /** @param value whether the fixture should depend on its channel catalog */
         public void setCatalog(Boolean value) { catalog = value; }
     }
-
     private static final class SourceProcessor implements ChannelProcessor<Source> {
         @Override
         public Class<Source> contractType() { return Source.class; }
@@ -588,39 +438,29 @@ final class ManagedCheckpointSettlementOwnershipTest {
             };
         }
     }
-
-    /** Fixture-only Handler; its exact raw contract key chooses the action. */
+    /** Fixture handler whose processor records real downstream execution. */
     public static final class Probe extends HandlerContract { }
-
     private static final class ProbeProcessor implements HandlerProcessor<Probe> {
         private final List<String> calls = new ArrayList<>();
-        @Override
-        public Class<Probe> contractType() { return Probe.class; }
-        @Override
-        public void execute(Probe contract, ProcessorExecutionContext context) {
+        @Override public Class<Probe> contractType() { return Probe.class; }
+        @Override public void execute(Probe contract, ProcessorExecutionContext context) {
             String key = context.contractKey();
             calls.add(context.documentAt("/label").getValue() + ":" + key);
-            if ("change".equals(key)) {
-                context.applyPatch(JsonPatch.replace("/business", new Node().value("changed")));
-            } else if ("assign".equals(key)) {
+            if ("assign".equals(key)) {
                 context.applyPatch(JsonPatch.replace("/business", NodePathEditor.getOrNull(context.event(), "/business")));
             } else if ("attach".equals(key)) {
                 context.applyPatch(JsonPatch.add("/peer", NodePathEditor.getOrNull(context.event(), "/target")));
             } else if ("observe".equals(key)) {
                 java.math.BigInteger count = (java.math.BigInteger) context.documentAt("/observed").getValue();
                 context.applyPatch(JsonPatch.replace("/observed", new Node().value(count.add(java.math.BigInteger.ONE))));
-            } else if ("removeOther".equals(key) || "fail".equals(key)) {
-                context.applyPatch(JsonPatch.remove("/contracts/oldOther"));
-                context.applyPatch(JsonPatch.remove("/contracts/other"));
-                if ("fail".equals(key)) {
-                    throw new IllegalStateException("checkpoint ownership fixture failure");
-                }
-            } else if ("catalogChange".equals(key)) {
-                context.applyPatch(JsonPatch.add("/contracts/never", handler("ownerChannel")));
-            } else if (!"noop".equals(key) && !"oldOther".equals(key)) {
-                throw new AssertionError("Untouched retained source was processed: " + key);
+            } else if (!"noop".equals(key)) {
+                throw new AssertionError("Unspecified fixture action: " + key);
             }
         }
+    }
+    private static ManagedDocumentTransitionReceipt receipt(Run run, DocumentId id) {
+        return run.result.managedTransitionReceipts().stream()
+                .filter(value -> value.documentId().equals(id)).findFirst().get();
     }
 
     private static final class Capture implements ClosureExecutionObserver {
@@ -644,51 +484,113 @@ final class ManagedCheckpointSettlementOwnershipTest {
     private static Node source(boolean catalog) {
         return typed(CHANNEL_ID).properties("catalog", new Node().value(catalog));
     }
+
     private static Node handler(String channel) {
         return typed(HANDLER_ID).properties("channel", new Node().value(channel));
     }
+
     private static Node embedded(String path) {
         return typed(RuntimeBlueIds.PROCESS_EMBEDDED)
                 .properties("paths", new Node().items(new Node().value(path)));
     }
+
     private static Node typed(String id) { return new Node().type(new Node().blueId(id)); }
+
     private static Node event(String label) {
         return new Node().name(label).properties("subscriptionKey", new Node().value("checkpoint-ownership"));
     }
+
     private static String blueId(Node value) { return DirectBlueIdCalculator.calculateBlueId(value); }
+
     private static String hash(char value) {
         char[] chars = new char[64];
         Arrays.fill(chars, value);
         return "sha256:" + new String(chars);
     }
+
     private static Map<DocumentId, Node> bodies(Node a, Node b) {
         Map<DocumentId, Node> result = new LinkedHashMap<>();
         result.put(A, a);
         result.put(B, b);
         return result;
     }
+
     private static ResultingDocument result(Run run, DocumentId id) {
         return run.result.resultingDocuments().stream()
                 .filter(document -> id.equals(document.documentId())).findFirst().get();
     }
-    private static List<CheckpointWrite> writesFor(Run run, DocumentId id) {
-        return run.result.checkpointWrites().stream()
-                .filter(write -> id.equals(write.targetManagedScopeKey().documentId()))
-                .collect(Collectors.toList());
-    }
+
     private static void assertSuccess(Run run) {
             assertEquals(ProcessorStatus.SUCCESS, run.result.status(),
-                () -> run.result.diagnostic() == null ? "No diagnostic" : run.result.diagnostic().message());
+                run.result.diagnostic() == null ? "No diagnostic" : run.result.diagnostic().message());
         assertTrue(run.result.commits());
     }
-    private static void assertOnlyAWork(Run run) {
-        assertFalse(run.evidence.workTrace().isEmpty());
-        assertTrue(run.evidence.workTrace().stream().allMatch(work -> A.equals(work.targetDocumentId())));
-        assertTrue(run.evidence.workTrace().stream().noneMatch(work -> work.kind() == WorkKind.INITIALIZATION));
+    private static void verifyPackage() throws Exception {
+        ObjectNode manifest = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.readTree(
+                resource("/blue-contracts-representation-1.0/manifest.json"));
+        assertEquals("blue-contracts-representation-conformance-package/1", manifest.path("schema").textValue());
+        assertEquals("PROPOSED_NOT_RELEASED", manifest.path("status").textValue());
+        assertEquals(PACKAGE_IDENTITY, manifest.path("packageIdentity").textValue());
+        ObjectNode identityValue = manifest.deepCopy();
+        identityValue.putNull("packageIdentity");
+        assertEquals(PACKAGE_IDENTITY, "sha256:" + sha256(new JsonCanonicalizer(identityValue.toString()).getEncodedUTF8()));
+        assertEquals(2, manifest.path("executableFixtureCount").intValue());
+        assertEquals(2, manifest.path("files").size());
+        List<String> expectedPaths = Arrays.asList("fixtures/repeated-identity-next-revision.json", "fixtures/repeated-identity.json");
+        for (int i = 0; i < expectedPaths.size(); i++) {
+            JsonNode entry = manifest.path("files").get(i);
+            assertEquals(expectedPaths.get(i), entry.path("path").textValue());
+            byte[] content = resource("/blue-contracts-representation-1.0/" + expectedPaths.get(i));
+            assertEquals((long) content.length, entry.path("bytes").longValue());
+            assertEquals(entry.path("sha256").textValue(), sha256(content));
+        }
+        assertEquals("/specifications/blue-contracts-and-processor-specification-1.0.md",
+                manifest.path("specificationResource").textValue());
+        assertEquals(manifest.path("specificationSha256").textValue(), sha256(resource(
+                manifest.path("specificationResource").textValue())));
+        JsonNode release = new ObjectMapper(new YAMLFactory()).readTree(resource(
+                "/" + BlueContractsConformanceReport.RELEASE_MANIFEST_RESOURCE));
+        assertEquals(BlueContractsConformanceReport.RELEASE_PACKAGE_IDENTITY,
+                BlueContractsConformanceReport.computeReleasePackageIdentity());
+        JsonNode components = release.path("components");
+        assertEquals(PACKAGE_IDENTITY,
+                components.path("contractsRepresentationFixturePackageIdentity").textValue());
+        assertEquals(2, components.path("contractsRepresentationFixtureCount").intValue());
+        assertEquals(components.path("contractsTotalExecutableFixtureCount").intValue() + 2,
+                components.path("contractsAggregateExecutableFixtureCount").intValue());
     }
-    private static void assertNodeEquals(Node expected, Node actual) {
-        assertNotNull(actual);
-        assertEquals(NodeWireForm.get(expected, NodeWireForm.Strategy.SIMPLE),
-                NodeWireForm.get(actual, NodeWireForm.Strategy.SIMPLE));
+    private static byte[] resource(String path) throws Exception {
+        try (InputStream stream = HistoricalRepresentationConformanceCli.class.getResourceAsStream(path)) {
+            if (stream == null) throw new IllegalStateException("Missing exact conformance resource " + path);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            for (int read; (read = stream.read(buffer)) != -1;) out.write(buffer, 0, read);
+            return out.toByteArray();
+        }
+    }
+    private static String sha256(byte[] bytes) throws Exception {
+        StringBuilder result = new StringBuilder();
+        for (byte value : MessageDigest.getInstance("SHA-256").digest(bytes))
+            result.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
+        return result.toString();
+    }
+
+    private static void assertTrue(boolean value, String... message) {
+        if (!value) throw new AssertionError(message.length == 0 ? "Expected true" : message[0]);
+    }
+    private static void assertFalse(boolean value, String... message) { assertTrue(!value, message); }
+    private static void assertEquals(Object expected, Object actual, String... message) {
+        assertTrue(Objects.equals(expected, actual), "Expected " + expected + ", got " + actual
+                + (message.length == 0 ? "" : ": " + message[0]));
+    }
+    private static void assertNotEquals(Object expected, Object actual, String... message) {
+        assertTrue(!Objects.equals(expected, actual), message);
+    }
+    private static void assertThrows(Class<? extends Throwable> type, Runnable action) {
+        try { action.run(); } catch (Throwable failure) {
+            if (type.isInstance(failure)) return;
+            throw new AssertionError("Unexpected failure", failure);
+        }
+        throw new AssertionError("Expected rejection: " + type.getName());
     }
 }

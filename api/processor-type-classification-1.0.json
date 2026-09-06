@@ -27,17 +27,17 @@
     }
   },
   "counts": {
-    "productionSourceFiles": 438,
+    "productionSourceFiles": 445,
     "packageDescriptors": 5,
-    "topLevelTypes": 434,
-    "publicTopLevelTypes": 215,
-    "packagePrivateTopLevelTypes": 219,
-    "internallyClassifiedPublicTypes": 85,
+    "topLevelTypes": 441,
+    "publicTopLevelTypes": 219,
+    "packagePrivateTopLevelTypes": 222,
+    "internallyClassifiedPublicTypes": 89,
     "PUBLIC_API": 101,
     "PUBLIC_SPI": 10,
     "PUBLIC_MODEL": 19,
-    "INTERNAL_ENGINE": 125,
-    "INTERNAL_SUPPORT": 179
+    "INTERNAL_ENGINE": 126,
+    "INTERNAL_SUPPORT": 185
   },
   "classifications": [
     {
@@ -312,6 +312,7 @@
         "blue.language.processor.closure.ManagedTransitionReceiptAssembler",
         "blue.language.processor.closure.ProcessEmbeddedDemandDiscovery",
         "blue.language.processor.closure.ProcessEmbeddedSurfaceReconciler",
+        "blue.language.processor.closure.ProspectiveBirthRetry",
         "blue.language.processor.closure.SccPartitioner"
       ]
     },
@@ -399,6 +400,7 @@
         "blue.language.processor.MustUnderstandFailureException",
         "blue.language.processor.MutationCommit",
         "blue.language.processor.MutationGasCharger",
+        "blue.language.processor.OpaqueCyclicMemberPathCatalog",
         "blue.language.processor.PatchImpact",
         "blue.language.processor.PatchInput",
         "blue.language.processor.PatchPlanningCanonicalIdentityEvidence",
@@ -479,11 +481,16 @@
         "blue.language.processor.closure.GasTraceEntry",
         "blue.language.processor.closure.GraphChange",
         "blue.language.processor.closure.LocalDocumentStepResult",
+        "blue.language.processor.closure.ManagedDocumentBirth",
         "blue.language.processor.closure.ManagedDocumentGraph",
         "blue.language.processor.closure.ManagedDocumentSnapshot",
         "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
+        "blue.language.processor.closure.ManagedHistoryStep",
         "blue.language.processor.closure.ManagedOccurrenceBinding",
         "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
+        "blue.language.processor.closure.ManagedRepresentationCause",
+        "blue.language.processor.closure.ManagedRepresentationCursor",
+        "blue.language.processor.closure.ManagedRepresentationTransition",
         "blue.language.processor.closure.ManagedRevisionCause",
         "blue.language.processor.closure.ManagedRootEventOccurrence",
         "blue.language.processor.closure.ManagedScopeKey",

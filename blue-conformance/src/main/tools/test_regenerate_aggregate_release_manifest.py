@@ -96,6 +96,17 @@ class RepositoryFixture:
         self.language_fixtures = language_fixtures
         self.contracts_registry = contracts_registry
         self.contracts_fixtures = contracts_fixtures
+        representation_root = (self.root / aggregate.CONTRACTS_REPRESENTATION).parent
+        fixture = representation_root / "fixtures/position.json"
+        _write(fixture, '{"position": 1}\n')
+        representation = _bind_identity({
+            "specificationSha256": _sha256(self.root / aggregate.CONTRACTS_SPEC),
+            "executableFixtureCount": 1,
+            "files": [{"path": "fixtures/position.json", "sha256": _sha256(fixture),
+                       "bytes": fixture.stat().st_size}],
+            "packageIdentity": None,
+        }, ("packageIdentity",))
+        _write_manifest(self.root / aggregate.CONTRACTS_REPRESENTATION, representation)
 
     def _write_direct_files(self) -> None:
         _write(self.root / aggregate.LANGUAGE_SPEC, "language specification\n")
@@ -186,6 +197,15 @@ class RepositoryFixture:
             },
             ("packageIdentity",),
         )
+        if language:
+            registry = root / "preprocessing/registry/manifest.yaml"
+            manifest["files"].append({
+                "path": "preprocessing/registry/manifest.yaml",
+                "role": "support",
+                "sha256": _sha256(registry),
+                "bytes": registry.stat().st_size,
+            })
+            manifest = _bind_identity(manifest, ("packageIdentity",))
         _write_manifest(self.root / relative_manifest, manifest)
         return manifest
 
@@ -255,6 +275,30 @@ class AggregateReleaseManifestTest(unittest.TestCase):
             aggregate._verified_manifest_source(
                 self.repository, aggregate.LANGUAGE_FIXTURE_SOURCE
             )
+
+    def test_representation_package_is_bound_and_unreviewed_changes_reject(self) -> None:
+        manifest = aggregate.build_manifest(self.repository)
+        paths = {entry["path"] for entry in manifest["files"]}
+        self.assertIn("conformance/contracts/representation/manifest.json", paths)
+        self.assertIn("conformance/contracts/representation/fixtures/position.json", paths)
+        self.assertEqual(1, manifest["components"]["contractsRepresentationFixtureCount"])
+        path = self.repository / aggregate.CONTRACTS_REPRESENTATION
+        original = yaml.safe_load(path.read_text())
+        self.assertEqual(original["packageIdentity"],
+                         manifest["components"]["contractsRepresentationFixturePackageIdentity"])
+        for field, value, message in (
+            ("specificationSha256", "0" * 64, "specification identity is stale"),
+            ("executableFixtureCount", 2, "executable fixture count is stale"),
+        ):
+            changed = deepcopy(original)
+            changed[field] = value
+            _write_manifest(path, _bind_identity(changed, ("packageIdentity",)))
+            with self.assertRaisesRegex(ValueError, message):
+                aggregate.build_manifest(self.repository)
+        _write_manifest(path, original)
+        _write(path.parent / "unreviewed.json", '{}\n')
+        with self.assertRaisesRegex(ValueError, "unmanifested paths"):
+            aggregate.build_manifest(self.repository)
 
     def test_rejects_stale_nested_hash_and_size(self) -> None:
         source = aggregate.LANGUAGE_FIXTURE_SOURCE

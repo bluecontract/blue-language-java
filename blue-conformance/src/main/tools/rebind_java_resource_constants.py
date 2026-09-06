@@ -62,6 +62,8 @@ def main():
     resources = "blue-conformance/src/main/resources/"
     aggregate = read(resources + "release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml")
     closure = resources + "blue-contracts-closure-1.0/"
+    replace("blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/manifest.yaml",
+            r'(fixturePackageIdentity: )[^\n]+(\n)', read(resources + "blue-contracts-1.0/fixtures/manifest.yaml")["packageIdentity"])
     for name, value in {
         "RELEASE_PACKAGE_IDENTITY": aggregate["packageIdentity"],
         "LANGUAGE_FIXTURE_PACKAGE_IDENTITY": fixture_identity,
@@ -72,6 +74,10 @@ def main():
         constant(report, name, value)
     constant("blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixturePackage.java",
              "CONTRACTS_RELEASE_IDENTITY", read(closure + "release-manifest.yaml")["releaseIdentity"])
+    constant("blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
+             "PACKAGE_IDENTITY", read(closure + "fixtures/manifest.yaml")["packageIdentity"])
+    constant("blue-conformance/src/test/java/blue/language/conformance/contracts/closure/ClosureConformanceHarnessTest.java",
+             "C_CLO_34_FIXTURE_SHA256", sha(closure + "fixtures/closure/c-clo-34-separate-document-steps.yaml"))
     changed = [path for path, value in pending.items() if (root / path).read_text() != value]
     if args.write:
         for path in changed:

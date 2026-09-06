@@ -384,10 +384,14 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumen
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentTransitionReceipt.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedHistoryStep.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceDemand.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceResolution.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCause.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCursor.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationTransition.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCause.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCyclicEvidenceVerifier.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRootEventOccurrence.java

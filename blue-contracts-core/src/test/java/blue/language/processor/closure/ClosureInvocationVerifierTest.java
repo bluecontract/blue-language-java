@@ -40,15 +40,15 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:e6aaa6471166daaa602aa8f505d5a467e1de6a0ee8ce4204b2b6211c2dcea8db";
+            "sha256:66c0ad930cd8116e03ce3680c6fbad370b9f2781d764cbc437f2525260087687";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
             "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdentity\":null,\"blue"
                     + "LanguageSpecificationIdentity\":\"sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f551108"
                     + "5bbb3c31c4144\",\"causeIdentity\":\"sha256:08502d369b6bfee172fd72c48637ce4a241fa88348024904e61"
                     + "13f333d3cd57b\",\"contractsSpecificationIdentity\":\"sha256:99445f8ad407c146804ae3bcad1e060a2c"
-                    + "7bac3d32492808ea6fd7caf2fe7bdd\",\"cyclicFinalizerIdentity\":\"sha256:5d62d029bc2e9072ec8e65b0"
-                    + "a4ea2db04a42facc6a6bcd069d694bf69d08922d\",\"cyclicProofVerifierIdentity\":\"sha256:30785ca04a"
-                    + "f90a4c2d303a658ed7354ee82d718d05d394623889943f285e429d\",\"directDeliverySnapshotIdentity\":\""
+                    + "7bac3d32492808ea6fd7caf2fe7bdd\",\"cyclicFinalizerIdentity\":\"sha256:0ea9ccf1f8da23be8f703685"
+                    + "65c3322c1d25aa88ba711fa06456aed2a842942c\",\"cyclicProofVerifierIdentity\":\"sha256:581619ff2a"
+                    + "6909590c8740887d80d0d24659673e5af2de713a181c6664709c84\",\"directDeliverySnapshotIdentity\":\""
                     + "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439\",\"documents\":[{\"bl"
                     + "ueId\":\"8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ\",\"componentGeneration\":1,\"documentId\":"
                     + "\"a\",\"epoch\":0,\"initialized\":true,\"publicRoot\":true,\"terminated\":false},{\"blueId\":\"BTEtRFRt"

@@ -8,6 +8,20 @@
   },
   "approvals": [
     {
+      "id": "historical-representation-proposed-isolated-amendment",
+      "rationale": "PROPOSED, NOT ADOPTED: Explicit independently metered historical representation traversal, preserving ManagedRevisionCause +1 epoch, exact predecessor checks, authenticated original publication evidence and positional receipt ordering. The three public conformance harness types expose executable fixtures for the same protocol. No previous approvals, baseline or checker rule changes. Requires exact normative adoption review after current-tuple graph, proof, rollback and restart evidence.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli",
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe",
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationCause",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationCursor",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationTransition"
+      ],
+      "requirement": "User-authorized isolated historical-representation amendment; maintained adoption remains pending exact review."
+    },
+    {
       "id": "phase-2-language-core-refactor",
       "requirement": "blue-language-java-modernization/prompts/02-CODEX-PROMPT-language-core-refactor.md",
       "rationale": "Approve only the exact JVM API changes required by the ordered Language-core modernization prompt; semantic behavior remains governed by the unchanged characterization baseline.",

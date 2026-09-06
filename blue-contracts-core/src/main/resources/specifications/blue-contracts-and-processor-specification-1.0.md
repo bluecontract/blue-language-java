@@ -1092,6 +1092,14 @@ inventory rows or unproved content are rejected. The original publisher must
 retain sufficient classification evidence; observing zero events is not a
 substitute for that evidence.
 
+Retained inactive rows with no historical cursor remain part of the complete
+inventory proof. Their finalizer-owned target-identity updates must authenticate
+both exact target values against the original input and result members, with
+unchanged lineage, path, activation, lifecycle and cursor metadata. Such a row
+does not authorize replacing or omitting bytes at its former source path.
+Only authenticated live references may be normalized in the body comparison;
+the complete remainder of the historical target must still agree exactly.
+
 An inactive occurrence gains optional `pendingRepresentationPosition`, a
 closed cursor record with exactly `anchorReceiptIdentity`, `positionIdentity`,
 `targetPositionIdentity`, and nullable `nextRevisionReceiptIdentity`. The three

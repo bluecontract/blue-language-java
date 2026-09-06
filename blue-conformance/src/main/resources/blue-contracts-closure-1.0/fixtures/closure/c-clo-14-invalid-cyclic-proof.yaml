@@ -190,10 +190,10 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:eb850926c39cf542f01b47aeaa731e63b166427046438364f4990bbc7d2228ce
   closureIdentity: sha256:e0c5f0fa8c378f1e11730db79901052662015245b9e3360ac5807d26c95c6cd6
-  invocationIdentity: sha256:2325382286894e4dd553da410739c89e93c23517960d4fb0e42e408bbe3aa4ea
+  invocationIdentity: sha256:6eda020b058d7a9512f6520471d00c08da9a10c95146d4a3c4185e763860c8ca
   environment:
     blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
-    contractsSpecificationIdentity: sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
+    contractsSpecificationIdentity: sha256:0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
     runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -278,12 +278,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:5d62d029bc2e9072ec8e65b0a4ea2db04a42facc6a6bcd069d694bf69d08922d
-    cyclicProofVerifierIdentity: sha256:30785ca04af90a4c2d303a658ed7354ee82d718d05d394623889943f285e429d
+    cyclicFinalizerIdentity: sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c
+    cyclicProofVerifierIdentity: sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:2325382286894e4dd553da410739c89e93c23517960d4fb0e42e408bbe3aa4ea
+  invocationIdentity: sha256:6eda020b058d7a9512f6520471d00c08da9a10c95146d4a3c4185e763860c8ca
   inputClosureIdentity: sha256:e0c5f0fa8c378f1e11730db79901052662015245b9e3360ac5807d26c95c6cd6
   outputClosureIdentity: sha256:e0c5f0fa8c378f1e11730db79901052662015245b9e3360ac5807d26c95c6cd6
   atomic: true

@@ -1,0 +1,30 @@
+{
+  "schema": "blue-contracts-representation-sequence-fixture/1",
+  "id": "historical-representation-repeated-identity-next-revision",
+  "sourceValues": [
+    0,
+    1,
+    0,
+    2
+  ],
+  "vectors": [
+    "HR-REPEATED-POSITION",
+    "HR-NO-SKIP",
+    "HR-NO-REAPPLY",
+    "HR-ROLLBACK",
+    "HR-SOURCE-HEAD",
+    "HR-CONSUMER-UPDATE",
+    "HR-EXACT-NEXT-REVISION"
+  ],
+  "expected": {
+    "representationSteps": 2,
+    "sameEpoch": true,
+    "returnsToExactInitialIdentity": true,
+    "consumerUpdates": 3,
+    "sourceEvents": 0,
+    "oneUnitGasFailure": true,
+    "terminalActivationOnlyAtCapturedPosition": true,
+    "followingRevisionApplied": true
+  },
+  "followingRevision": true
+}

@@ -27,6 +27,17 @@ public final class ManagedRepresentationTransition {
     private final ResultingDocument after;
     private final String positionIdentity;
 
+    /**
+     * Verifies complete evidence for one permitted same-epoch representation change.
+     * The host must additionally authenticate this publication against its durable store.
+     * @param documentId authoritative source lineage
+     * @param epoch unchanged source epoch
+     * @param anchorReceiptIdentity numbered receipt anchoring this historical chain
+     * @param predecessorPositionIdentity exact preceding position in that chain
+     * @param originalInput complete original processor invocation
+     * @param originalResult complete committed result and companion
+     * @param transitionReceiptIdentity exact selected source transition receipt
+     */
     public ManagedRepresentationTransition(DocumentId documentId, long epoch,
             String anchorReceiptIdentity, String predecessorPositionIdentity,
             ClosureInvocationInput originalInput, ClosureProcessResult originalResult,
@@ -115,7 +126,7 @@ public final class ManagedRepresentationTransition {
         return false;
     }
 
-    private static boolean referenceOnly(Node before, Node after,
+    private boolean referenceOnly(Node before, Node after,
             List<ManagedOccurrenceBinding> prior, List<ManagedOccurrenceBinding> next) {
         if (prior.isEmpty() || prior.size() != next.size()) return false;
         Map<String, ManagedOccurrenceBinding> unmatched = new HashMap<String, ManagedOccurrenceBinding>();
@@ -132,6 +143,22 @@ public final class ManagedRepresentationTransition {
                     || successor.active() != row.active()
                     || !Objects.equals(successor.pendingHistoricalEpoch(), row.pendingHistoricalEpoch())
                     || !Objects.equals(successor.pendingRepresentationCursor(), row.pendingRepresentationCursor())) return false;
+            if (!row.active() && row.pendingHistoricalEpoch() == null) {
+                // Retired binding metadata follows the finalized target, although
+                // its former source path no longer participates in the graph.
+                // Prove both exact target values; normalize no source-path bytes.
+                ManagedDocumentSnapshot oldTarget = originalInput.snapshot().managedDocument(row.targetDocumentId());
+                ResultingDocument newTarget = null;
+                for (ResultingDocument candidate : originalResult.resultingDocuments()) {
+                    if (!candidate.documentId().equals(row.targetDocumentId())) continue;
+                    if (newTarget != null) return false;
+                    newTarget = candidate;
+                }
+                if (oldTarget == null || newTarget == null
+                        || !exact(oldTarget.document()).equals(row.expectedTargetBlueId())
+                        || !exact(newTarget.document()).equals(successor.expectedTargetBlueId())) return false;
+                continue;
+            }
             Node previous = NodePathEditor.getOrNull(before, row.sourcePath());
             Node current = NodePathEditor.getOrNull(after, row.sourcePath());
             if (previous == null || current == null || !exact(previous).equals(row.expectedTargetBlueId())
@@ -162,13 +189,22 @@ public final class ManagedRepresentationTransition {
         value.put("commitCompanionIdentity", originalResult.platformCommitCompanion().companionIdentity());
         return value;
     }
+    /** @return the authoritative source lineage */
     public DocumentId documentId() { return documentId; }
+    /** @return the unchanged source epoch */
     public long epoch() { return epoch; }
+    /** @return the numbered receipt anchoring this chain */
     public String anchorReceiptIdentity() { return anchorReceiptIdentity; }
+    /** @return the exact preceding historical position */
     public String predecessorPositionIdentity() { return predecessorPositionIdentity; }
+    /** @return the identity binding this transition and its historical position */
     public String positionIdentity() { return positionIdentity; }
+    /** @return the complete original processor invocation */
     public ClosureInvocationInput originalInput() { return originalInput; }
+    /** @return the complete original committed result */
     public ClosureProcessResult originalResult() { return originalResult; }
+    /** @return the selected complete source transition receipt */
     public ManagedDocumentTransitionReceipt transitionReceipt() { return transition; }
+    /** @return a detached copy of the exact historical successor document */
     public Node afterDocument() { return after.document(); }
 }

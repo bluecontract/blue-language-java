@@ -19,6 +19,20 @@ dependencies {
     implementation 'org.yaml:snakeyaml:2.0'
 }
 
+tasks.register('historicalRepresentationConformanceTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs the proposed authenticated historical-representation sequence.'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli'
+    args layout.buildDirectory.file('reports/conformance/historical-representation.json').get().asFile.absolutePath
+    inputs.files(fileTree('src/main/resources/blue-contracts-representation-1.0'))
+    outputs.file(layout.buildDirectory.file('reports/conformance/historical-representation.json'))
+}
+
+tasks.named('check') { dependsOn tasks.named('historicalRepresentationConformanceTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('historicalRepresentationConformanceTest') }
+
 tasks.register('exportFullLifecycleFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath

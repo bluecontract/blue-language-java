@@ -6,6 +6,7 @@ import java.util.Optional;
 
 /** One explicit historical step; revision and representation causes stay distinct. */
 interface ManagedHistoryStep {
+    /** @return exact identity of this independently processed cause */
     String causeIdentity();
     String targetOccurrenceIdentity();
     DocumentId childDocumentId();

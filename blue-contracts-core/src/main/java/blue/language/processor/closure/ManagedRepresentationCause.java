@@ -15,6 +15,14 @@ public final class ManagedRepresentationCause extends ProcessingCause implements
     private final String nextRevisionReceiptIdentity;
     private final CyclicSetProof afterCyclicProof;
 
+    /**
+     * Describes one authenticated representation transition for a pending occurrence.
+     * @param targetOccurrenceIdentity exact occurrence selected for this step
+     * @param transition original committed transition and its historical position
+     * @param targetPositionIdentity captured terminal position for this chain
+     * @param nextRevisionReceiptIdentity next immutable numbered receipt, or null for a terminal tail
+     * @param afterCyclicProof exact successor proof, required only for cyclic members
+     */
     public ManagedRepresentationCause(String targetOccurrenceIdentity,
             ManagedRepresentationTransition transition, String targetPositionIdentity,
             String nextRevisionReceiptIdentity, CyclicSetProof afterCyclicProof) {
@@ -52,12 +60,16 @@ public final class ManagedRepresentationCause extends ProcessingCause implements
     public String sourceRevisionReceiptIdentity() { return transition.transitionReceipt().transitionReceiptIdentity(); }
     public Optional<ManagedDocumentTransitionReceipt> sourceTransitionReceipt() { return Optional.of(transition.transitionReceipt()); }
     public Optional<CyclicSetProof> afterCyclicProof() { return Optional.ofNullable(copyProof(afterCyclicProof)); }
+    /** @return the original transition whose evidence this cause carries */
     public ManagedRepresentationTransition transition() { return transition; }
+    /** @return the captured terminal position, unchanged by intermediate progress */
     public String targetPositionIdentity() { return targetPositionIdentity; }
+    /** @return the next immutable numbered receipt, or null for a representation-only tail */
     public String nextRevisionReceiptIdentity() { return nextRevisionReceiptIdentity; }
     private static CyclicSetProof copyProof(CyclicSetProof proof) {
         return proof == null ? null : CyclicSetProof.fromDeclaredPlaceholderSet(proof.declaredPlaceholderSet());
     }
+    /** @return whether this step reaches the captured end of a representation-only tail */
     public boolean terminalPositionReached() {
         return nextRevisionReceiptIdentity == null && targetPositionIdentity.equals(transition.positionIdentity());
     }

@@ -27,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ClosureConformanceHarnessTest {
 
+    private static final String C_CLO_34_FIXTURE_SHA256 =
+            "654520fda2296ffb62eaa4ff3b1488158b362b76a93f4907fcf4c4a31dbe445f";
+
     @Test
     void shouldVerifyAndInventoryExactFinalClosureFixtures() {
         ClosureConformanceSuite.InventoryReport report =
@@ -50,7 +53,7 @@ final class ClosureConformanceHarnessTest {
                 Collections.singletonList("C-CLO-34"),
                 separateDocuments.vectors());
         assertEquals(
-                "c2c159ec566c6b6f484d930a6e47cd6cfab0c7db510724f3f030e1a9355eeb71",
+                C_CLO_34_FIXTURE_SHA256,
                 separateDocuments.sha256());
         assertEquals(119322L, separateDocuments.bytes());
     }

@@ -42,6 +42,9 @@ CONTRACTS_FIXTURES = (
     "blue-conformance/src/main/resources/"
     "blue-contracts-closure-1.0/fixtures/manifest.yaml"
 )
+CONTRACTS_REPRESENTATION = (
+    "blue-conformance/src/main/resources/blue-contracts-representation-1.0/manifest.json"
+)
 CONTRACTS_GAS = (
     "blue-contracts-core/src/main/resources/blue/language/processor/"
     "contracts-gas-1.0.yaml"
@@ -107,8 +110,17 @@ CONTRACTS_FIXTURE_SOURCE = ManifestSource(
     ("packageIdentity",),
     True,
 )
+CONTRACTS_REPRESENTATION_SOURCE = ManifestSource(
+    "Contracts representation fixtures",
+    CONTRACTS_REPRESENTATION,
+    "conformance/contracts/representation",
+    "files",
+    ("packageIdentity",),
+    True,
+)
 MANIFEST_SOURCES = (
     CONTRACTS_FIXTURE_SOURCE,
+    CONTRACTS_REPRESENTATION_SOURCE,
     CONTRACTS_REGISTRY_SOURCE,
     LANGUAGE_FIXTURE_SOURCE,
     LANGUAGE_REGISTRY_SOURCE,
@@ -298,7 +310,7 @@ def _source_tree_paths(source_root: Path, source: ManifestSource) -> set[str]:
         if not path.is_file():
             continue
         relative = path.relative_to(source_root).as_posix()
-        if relative == "manifest.yaml":
+        if relative == PurePosixPath(source.manifest_path).name:
             continue
         result.add(_safe_relative_path(relative, source.name + " source tree"))
     return result
@@ -338,7 +350,7 @@ def _verified_manifest_source(
         )
 
     aggregate_entries.append(
-        _inventory_entry(source.logical_prefix + "/manifest.yaml", manifest_path)
+        _inventory_entry(source.logical_prefix + "/" + manifest_path.name, manifest_path)
     )
     return manifest, aggregate_entries
 
@@ -371,6 +383,12 @@ def _authoritative_state(
     language_fixtures = verified[LANGUAGE_FIXTURE_SOURCE.name]
     contracts_registry = verified[CONTRACTS_REGISTRY_SOURCE.name]
     contracts_fixtures = verified[CONTRACTS_FIXTURE_SOURCE.name]
+    representation = verified[CONTRACTS_REPRESENTATION_SOURCE.name]
+    representation_count = _count(representation, "executableFixtureCount", CONTRACTS_REPRESENTATION)
+    if representation_count != len(representation["files"]):
+        raise ValueError("Contracts representation executable fixture count is stale")
+    if representation.get("specificationSha256") != _sha256(repository / CONTRACTS_SPEC):
+        raise ValueError("Contracts representation specification identity is stale")
     contracts_gas = _validated_gas_manifest(repository)
 
     if language_fixtures.get("registryPackageIdentity") != language_registry.get(
@@ -406,6 +424,13 @@ def _authoritative_state(
         ),
         "contractsFixturePackageIdentity": _text(
             contracts_fixtures, "packageIdentity", CONTRACTS_FIXTURES
+        ),
+        "contractsRepresentationFixturePackageIdentity": _text(
+            representation, "packageIdentity", CONTRACTS_REPRESENTATION
+        ),
+        "contractsRepresentationFixtureCount": representation_count,
+        "contractsAggregateExecutableFixtureCount": representation_count + _count(
+            contracts_fixtures, "totalExecutableFixtureCount", CONTRACTS_FIXTURES
         ),
         "contractsGasPackageIdentity": _text(
             contracts_gas, "packageIdentity", CONTRACTS_GAS

@@ -6,13 +6,15 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import tarfile
 import unittest
 from unittest.mock import patch
 
 import yaml
 import classify_fixture_identity_delta as classifier
 
-RESOURCE_ROOT = Path(__file__).parent.parent / "resources/blue-contracts-closure-1.0"
+REVIEWED_AFTER_ARCHIVE = Path(__file__).parent / "migration/classify-typed-patch-reviewed-after.tar.gz"
+REVIEWED_AFTER_ARCHIVE_SHA256 = "de5623c9941e9640d73d3eda9ba39977bc434bfdd056c2a1a4eda41d983da250"
 
 
 class ReviewedTypedPatchTransitionTest(unittest.TestCase):
@@ -21,9 +23,22 @@ class ReviewedTypedPatchTransitionTest(unittest.TestCase):
         cls.temporary = tempfile.TemporaryDirectory(prefix="classifier-reviewed-")
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.root = Path(cls.temporary.name).resolve()
+        cls.reviewed_after = cls.root / "reviewed-after"
+        if hashlib.sha256(REVIEWED_AFTER_ARCHIVE.read_bytes()).hexdigest() != REVIEWED_AFTER_ARCHIVE_SHA256:
+            raise AssertionError("reviewed typed-patch endpoint archive bytes changed")
+        cls.reviewed_after.mkdir()
+        with tarfile.open(REVIEWED_AFTER_ARCHIVE) as archive:
+            for member in archive.getmembers():
+                target = cls.reviewed_after / member.name
+                if not member.isfile() or not target.resolve().is_relative_to(cls.reviewed_after):
+                    raise AssertionError("invalid reviewed endpoint archive member")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(archive.extractfile(member).read())
         cls.before = cls.root / "before"
-        shutil.copytree(RESOURCE_ROOT, cls.before)
+        shutil.copytree(cls.reviewed_after, cls.before)
         cls.review = json.loads(classifier.TYPED_PATCH_REVIEW_INPUT_PATH.read_bytes())
+        if {path: classifier.sha256(file) for path, file in classifier.package_files(cls.reviewed_after).items()} != cls.review["after"]["files"]:
+            raise AssertionError("reviewed endpoint archive inventory is not the approved exact pair")
         reconstruction = classifier.TYPED_PATCH_REVIEW_INPUT_PATH.with_name(
             cls.review["reconstructionPatch"]["path"])
         if hashlib.sha256(reconstruction.read_bytes()).hexdigest() != cls.review["reconstructionPatch"]["sha256"]:
@@ -36,7 +51,7 @@ class ReviewedTypedPatchTransitionTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="classifier-candidate-")
         self.addCleanup(self.temporary.cleanup)
         self.after = Path(self.temporary.name).resolve() / "after"
-        shutil.copytree(RESOURCE_ROOT, self.after)
+        shutil.copytree(self.reviewed_after, self.after)
 
     def assert_not_reviewed(self):
         self.assertIsNone(classifier.reviewed_typed_patch_transition(

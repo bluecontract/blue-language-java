@@ -299,8 +299,14 @@ public final class ManagedOccurrenceBinding
         return pendingHistoricalEpoch;
     }
 
+    /** @return the pending exact representation position, or null outside such traversal */
     public ManagedRepresentationCursor pendingRepresentationCursor() { return pendingRepresentationCursor; }
 
+    /**
+     * Copies this binding with the specified historical representation cursor.
+     * @param cursor new position, or null to clear representation traversal
+     * @return a new binding retaining every other field
+     */
     public ManagedOccurrenceBinding withRepresentationCursor(ManagedRepresentationCursor cursor) {
         return new ManagedOccurrenceBinding(occurrenceIdentity, bindingIdentity, bindingPolicyIdentity,
                 sourceDocumentId, sourceAddress, targetDocumentId, expectedTargetBlueId,
