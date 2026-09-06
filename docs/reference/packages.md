@@ -17,6 +17,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.conformance.cli` | 1 | present |
 | `blue.language.conformance.contracts` | 4 | present |
 | `blue.language.conformance.contracts.closure` | 1 | present |
+| `blue.language.conformance.contracts.representation` | 1 | present |
 | `blue.language.conformance.runner` | 1 | present |
 | `blue.language.dictionary` | 4 | present |
 | `blue.language.graph` | 3 | present |
@@ -33,7 +34,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
 | `blue.language.processor` | 127 | present |
-| `blue.language.processor.closure` | 62 | present |
+| `blue.language.processor.closure` | 65 | present |
 | `blue.language.processor.model` | 19 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -104,6 +105,10 @@ Package ownership is derived from production Java source files. Only top-level p
 ## `blue.language.conformance.contracts.closure`
 
 - `blue.language.conformance.contracts.closure.ClosureFixtureConformance`
+
+## `blue.language.conformance.contracts.representation`
+
+- `blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli`
 
 ## `blue.language.conformance.runner`
 
@@ -451,6 +456,9 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.ManagedOccurrenceBinding`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceDemand`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceResolution`
+- `blue.language.processor.closure.ManagedRepresentationCause`
+- `blue.language.processor.closure.ManagedRepresentationCursor`
+- `blue.language.processor.closure.ManagedRepresentationTransition`
 - `blue.language.processor.closure.ManagedRevisionCause`
 - `blue.language.processor.closure.ManagedRootEventOccurrence`
 - `blue.language.processor.closure.ManagedScopeKey`

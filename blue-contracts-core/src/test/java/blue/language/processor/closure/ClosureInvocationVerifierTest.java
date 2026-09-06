@@ -40,13 +40,13 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:66c0ad930cd8116e03ce3680c6fbad370b9f2781d764cbc437f2525260087687";
+            "sha256:d47c4c728d36948b3a02e00f37a6f8ab3f7ff844913f7e35b6b0a5618407787f";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
             "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdentity\":null,\"blue"
                     + "LanguageSpecificationIdentity\":\"sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f551108"
                     + "5bbb3c31c4144\",\"causeIdentity\":\"sha256:08502d369b6bfee172fd72c48637ce4a241fa88348024904e61"
-                    + "13f333d3cd57b\",\"contractsSpecificationIdentity\":\"sha256:99445f8ad407c146804ae3bcad1e060a2c"
-                    + "7bac3d32492808ea6fd7caf2fe7bdd\",\"cyclicFinalizerIdentity\":\"sha256:0ea9ccf1f8da23be8f703685"
+                    + "13f333d3cd57b\",\"contractsSpecificationIdentity\":\"sha256:0d7496790fb87d4589628c81fa8ca5e72b"
+                    + "7d955458e20bc393f7837115ecb3b7\",\"cyclicFinalizerIdentity\":\"sha256:0ea9ccf1f8da23be8f703685"
                     + "65c3322c1d25aa88ba711fa06456aed2a842942c\",\"cyclicProofVerifierIdentity\":\"sha256:581619ff2a"
                     + "6909590c8740887d80d0d24659673e5af2de713a181c6664709c84\",\"directDeliverySnapshotIdentity\":\""
                     + "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439\",\"documents\":[{\"bl"
@@ -593,7 +593,7 @@ final class ClosureInvocationVerifierTest {
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
                 "sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
-                "sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd",
+                "sha256:0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7",
                 "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(

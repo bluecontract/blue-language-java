@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 807,
+    "productionSourceCount": 808,
     "productionResourceCount": 820,
-    "productionSourcePathIdentity": "sha256:99cd56186e57758233a3072d56b73ff6188c9b822327b728cc59e4a88587796d",
+    "productionSourcePathIdentity": "sha256:ed9c7fbec79ac526dd9b1f3a97115e2969ab0605765c66527d1d672c2da1ad70",
     "productionResourcePathIdentity": "sha256:1664587821c739163b7449385af9c1e362392c05c966af93a47dbef282d8f238"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -592,6 +592,13 @@
       "currentPackage": "blue.language.conformance.contracts.representation",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "targetPackage": "blue.language.conformance.contracts.representation"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/package-info.java",
+      "currentPackage": "blue.language.conformance.contracts.representation",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/package-info.java",
       "targetPackage": "blue.language.conformance.contracts.representation"
     },
     {

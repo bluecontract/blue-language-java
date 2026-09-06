@@ -8,14 +8,14 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
-| `blue-conformance` | 24 | 178 | 68 | 270 |
-| `blue-contracts-core` | 302 | 1989 | 675 | 2966 |
+| `blue-conformance` | 27 | 183 | 68 | 278 |
+| `blue-contracts-core` | 305 | 2026 | 676 | 3007 |
 | `blue-language-core` | 164 | 895 | 97 | 1156 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 107 | 1 | 133 |
 | `blue-language-model` | 23 | 216 | 80 | 319 |
-| **Distribution** | **544** | **3433** | **921** | **4898** |
+| **Distribution** | **550** | **3475** | **922** | **4947** |
 
 ## blue-conformance
 
@@ -23,12 +23,12 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 field blue.language.conformance.api.BlueConformanceReport#BLUE_SPEC_SOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-final-implementation-baseline"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_MANIFEST_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="specifications/blue-contracts-and-processor-specification-1.0.md"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_ROOT_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/"
 field blue.language.conformance.api.BlueContractsConformanceReport#GAS_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue/language/processor/contracts-gas-1.0.yaml"
@@ -39,7 +39,7 @@ field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPEC
 field blue.language.conformance.api.BlueContractsConformanceReport#REGISTRY_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-contracts-1.0/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_NAME descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-contracts-embedded-modules-collection-paths"
-field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:b2477354910cde66b7c06b51956df98f0873d57033a5e7fa8e5e301096bd5e64"
+field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa"
 field blue.language.conformance.api.BlueContractsFixtureCategory#ADMISSION descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#ATOMICITY descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#CHK descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
@@ -262,6 +262,11 @@ method blue.language.conformance.contracts.MockOperation$Value#setResult descrip
 method blue.language.conformance.contracts.closure.ClosureFixtureConformance#execute descriptor=(Lblue/language/conformance/api/BlueContractsConformanceReport$FixtureInventoryEntry;Lcom/fasterxml/jackson/databind/JsonNode;Lblue/language/processor/DocumentProcessor;)V access=public,static signature=- throws=-
 method blue.language.conformance.contracts.closure.ClosureFixtureConformance#parseAdmissionInput descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; access=public,static signature=(Ljava/lang/String;Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; throws=-
 method blue.language.conformance.contracts.closure.ClosureFixtureConformance#parseInvocationInput descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; access=public,static signature=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; throws=-
+method blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli#main descriptor=([Ljava/lang/String;)V access=public,static signature=- throws=java.lang.Exception
+method blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source#getCatalog descriptor=()Ljava/lang/Boolean; access=public signature=- throws=-
+method blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source#setCatalog descriptor=(Ljava/lang/Boolean;)V access=public signature=- throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#run descriptor=()Lblue/language/conformance/api/BlueContractsConformanceReport; access=public,static signature=- throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#runFixtureSpecForTest descriptor=(Lcom/fasterxml/jackson/databind/JsonNode;)V access=public,static signature=- throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#unexecutedReport descriptor=()Lblue/language/conformance/api/BlueContractsConformanceReport; access=public,static signature=- throws=-
@@ -289,6 +294,9 @@ type blue.language.conformance.contracts.MockExternalChannel$Value access=public
 type blue.language.conformance.contracts.MockHandler$Value access=public,final super=blue.language.processor.model.HandlerContract interfaces=- signature=-
 type blue.language.conformance.contracts.MockOperation$Value access=public,final super=blue.language.processor.model.HandlerContract interfaces=- signature=-
 type blue.language.conformance.contracts.closure.ClosureFixtureConformance access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe access=public,final super=blue.language.processor.model.HandlerContract interfaces=- signature=-
+type blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source access=public,final super=blue.language.processor.model.ChannelContract interfaces=- signature=-
 type blue.language.conformance.runner.BlueContractsConformanceSuiteRunner access=public,final super=java.lang.Object interfaces=- signature=-
 ```
 
@@ -298,8 +306,8 @@ type blue.language.conformance.runner.BlueContractsConformanceSuiteRunner access
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:5d62d029bc2e9072ec8e65b0a4ea2db04a42facc6a6bcd069d694bf69d08922d"
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:30785ca04af90a4c2d303a658ed7354ee82d718d05d394623889943f285e429d"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84"
 field blue.language.processor.DirectSubscriptionSurfaceValidator#INSTANCE descriptor=Lblue/language/processor/DirectSubscriptionSurfaceValidator; access=public,static,final signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#APPLICATION_EVENT_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#PATCH_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-
@@ -837,6 +845,7 @@ field blue.language.processor.closure.GraphChange$Kind#REBIND descriptor=Lblue/l
 field blue.language.processor.closure.GraphChange$Kind#REMOVE descriptor=Lblue/language/processor/closure/GraphChange$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.closure.ProcessingCause$Kind#ADMISSION descriptor=Lblue/language/processor/closure/ProcessingCause$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.closure.ProcessingCause$Kind#EXTERNAL descriptor=Lblue/language/processor/closure/ProcessingCause$Kind; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.closure.ProcessingCause$Kind#MANAGED_REPRESENTATION descriptor=Lblue/language/processor/closure/ProcessingCause$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.closure.ProcessingCause$Kind#MANAGED_REVISION descriptor=Lblue/language/processor/closure/ProcessingCause$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.closure.RejectedCharge$ApplicableCap$Kind#LOCAL descriptor=Lblue/language/processor/closure/RejectedCharge$ApplicableCap$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.closure.RejectedCharge$ApplicableCap$Kind#SHARED descriptor=Lblue/language/processor/closure/RejectedCharge$ApplicableCap$Kind; access=public,static,final,enum signature=- constant=-
@@ -2617,11 +2626,13 @@ method blue.language.processor.closure.ManagedOccurrenceBinding#derived descript
 method blue.language.processor.closure.ManagedOccurrenceBinding#expectedTargetBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#occurrenceIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#pendingHistoricalEpoch descriptor=()Ljava/lang/Long; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedOccurrenceBinding#pendingRepresentationCursor descriptor=()Lblue/language/processor/closure/ManagedRepresentationCursor; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#sourceAddress descriptor=()Lblue/language/processor/closure/ScopeAddress; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#sourceDocumentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#sourcePath descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#targetDocumentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceBinding#verified descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/closure/DocumentId;Lblue/language/processor/closure/ScopeAddress;Lblue/language/processor/closure/DocumentId;Ljava/lang/String;ZLjava/lang/Long;)Lblue/language/processor/closure/ManagedOccurrenceBinding; access=public,static signature=- throws=-
+method blue.language.processor.closure.ManagedOccurrenceBinding#withRepresentationCursor descriptor=(Lblue/language/processor/closure/ManagedRepresentationCursor;)Lblue/language/processor/closure/ManagedOccurrenceBinding; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceEvidenceDemand#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLblue/language/processor/closure/DocumentId;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceEvidenceDemand#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLblue/language/processor/closure/DocumentId;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLblue/language/model/Node;)V access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceEvidenceDemand#demandOrdinal descriptor=()J access=public signature=- throws=-
@@ -2639,6 +2650,41 @@ method blue.language.processor.closure.ManagedOccurrenceEvidenceResolution#deriv
 method blue.language.processor.closure.ManagedOccurrenceEvidenceResolution#pendingHistoricalEpoch descriptor=()J access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceEvidenceResolution#resolutionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedOccurrenceEvidenceResolution#targetDocumentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#<init> descriptor=(Ljava/lang/String;Lblue/language/processor/closure/ManagedRepresentationTransition;Ljava/lang/String;Ljava/lang/String;Lblue/language/provider/CyclicSetProof;)V access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#afterBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#afterCyclicProof descriptor=()Ljava/util/Optional; access=public signature=()Ljava/util/Optional<Lblue/language/provider/CyclicSetProof;>; throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#afterDocument descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#beforeBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#childDocumentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#fromEpoch descriptor=()J access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#kind descriptor=()Lblue/language/processor/closure/ProcessingCause$Kind; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#nextRevisionReceiptIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#originalSourceCauseIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#sourceRevisionReceiptIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#sourceTransitionReceipt descriptor=()Ljava/util/Optional; access=public signature=()Ljava/util/Optional<Lblue/language/processor/closure/ManagedDocumentTransitionReceipt;>; throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#targetOccurrenceIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#targetPositionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#terminalPositionReached descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#toEpoch descriptor=()J access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCause#transition descriptor=()Lblue/language/processor/closure/ManagedRepresentationTransition; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#anchorReceiptIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#equals descriptor=(Ljava/lang/Object;)Z access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#hashCode descriptor=()I access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#identityValue descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>; throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#nextRevisionReceiptIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#positionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationCursor#targetPositionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#<init> descriptor=(Lblue/language/processor/closure/DocumentId;JLjava/lang/String;Ljava/lang/String;Lblue/language/processor/closure/ClosureInvocationInput;Lblue/language/processor/closure/ClosureProcessResult;Ljava/lang/String;)V access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#afterDocument descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#anchorReceiptIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#documentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#epoch descriptor=()J access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#originalInput descriptor=()Lblue/language/processor/closure/ClosureInvocationInput; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#originalResult descriptor=()Lblue/language/processor/closure/ClosureProcessResult; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#positionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#predecessorPositionIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ManagedRepresentationTransition#transitionReceipt descriptor=()Lblue/language/processor/closure/ManagedDocumentTransitionReceipt; access=public signature=- throws=-
 method blue.language.processor.closure.ManagedRevisionCause#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/closure/DocumentId;JJLjava/lang/String;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/processor/closure/ManagedDocumentTransitionReceipt;)V access=public signature=- throws=-
 method blue.language.processor.closure.ManagedRevisionCause#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/closure/DocumentId;JJLjava/lang/String;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/processor/closure/ManagedDocumentTransitionReceipt;Lblue/language/provider/CyclicSetProof;)V access=public signature=- throws=-
 method blue.language.processor.closure.ManagedRevisionCause#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/closure/DocumentId;JJLjava/lang/String;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
@@ -3202,7 +3248,10 @@ type blue.language.processor.closure.ManagedDocumentTransitionReceipt access=pub
 type blue.language.processor.closure.ManagedOccurrenceBinding access=public,final super=java.lang.Object interfaces=java.lang.Comparable signature=Ljava/lang/Object;Ljava/lang/Comparable<Lblue/language/processor/closure/ManagedOccurrenceBinding;>;
 type blue.language.processor.closure.ManagedOccurrenceEvidenceDemand access=public,final super=blue.language.processor.closure.ClosureResourceDemand interfaces=- signature=-
 type blue.language.processor.closure.ManagedOccurrenceEvidenceResolution access=public,final super=java.lang.Object interfaces=java.lang.Comparable signature=Ljava/lang/Object;Ljava/lang/Comparable<Lblue/language/processor/closure/ManagedOccurrenceEvidenceResolution;>;
-type blue.language.processor.closure.ManagedRevisionCause access=public,final super=blue.language.processor.closure.ProcessingCause interfaces=- signature=-
+type blue.language.processor.closure.ManagedRepresentationCause access=public,final super=blue.language.processor.closure.ProcessingCause interfaces=blue.language.processor.closure.ManagedHistoryStep signature=-
+type blue.language.processor.closure.ManagedRepresentationCursor access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.closure.ManagedRepresentationTransition access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.closure.ManagedRevisionCause access=public,final super=blue.language.processor.closure.ProcessingCause interfaces=blue.language.processor.closure.ManagedHistoryStep signature=-
 type blue.language.processor.closure.ManagedRootEventOccurrence access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.closure.ManagedScopeKey access=public,final super=java.lang.Object interfaces=java.lang.Comparable signature=Ljava/lang/Object;Ljava/lang/Comparable<Lblue/language/processor/closure/ManagedScopeKey;>;
 type blue.language.processor.closure.ProcessingCause access=public,abstract super=java.lang.Object interfaces=- signature=-
