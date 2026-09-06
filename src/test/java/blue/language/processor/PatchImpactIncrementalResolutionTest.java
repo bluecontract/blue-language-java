@@ -27,6 +27,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
@@ -500,20 +501,58 @@ class PatchImpactIncrementalResolutionTest {
         // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
         incremental.applyPatch("/", patch);
-        IllegalStateException mismatch = FailureCapture.captureFailure(
-                () -> oracle.applyPatch("/", patch));
+        oracle.applyPatch("/", patch);
 
         // then
         assertEquals(1L, metrics.snapshot().counter("incrementalSnapshotResolutions"));
         assertEquals(0L, metrics.snapshot().counter("fullSnapshotFallbacks"));
-        assertTrue(mismatch.getMessage().contains("Canonical and resolved roots do not match"));
-        assertSnapshotEquals(wrappedBlue, base, oracle.snapshot());
+        assertEquals("confirmed", oracle.snapshot().resolvedRoot()
+                .getAsText("/wrapperObservedStatus"));
+        assertEquals("draft", incremental.snapshot().resolvedRoot()
+                .getAsText("/wrapperObservedStatus"));
+        assertEquals("confirmed", oracle.snapshot().resolvedRoot()
+                .getAsText("/status"));
+        assertEquals("confirmed", incremental.snapshot().resolvedRoot()
+                .getAsText("/status"));
+        assertEquals("draft", base.resolvedRoot().getAsText("/status"));
         assertNotEquals(wrappedBlue.nodeToJson(oracle.snapshot().resolvedRoot()),
                 wrappedBlue.nodeToJson(incremental.snapshot().resolvedRoot()),
-                "The explicit full oracle rejects dishonest canonical evidence and rolls back; "
-                        + "the advertised incremental capability still avoids that expensive oracle");
+                "The Source oracle performs the advertised custom merge, while the dishonest "
+                        + "incremental capability omits its dependent side effect");
     }
 
+
+    @Test
+    void shouldRejectMismatchedCanonicalEvidenceAfterCustomSourceResolution() {
+        // given
+        Fixture fixture = Fixture.withBasicStatusTypeContribution();
+        DishonestWrapper wrapper = new DishonestWrapper(fixture.blue.getMergingProcessor());
+        Blue wrappedBlue = new Blue(fixture.provider, wrapper);
+        ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
+        Node canonical = base.canonicalRoot();
+        canonical.properties("status", canonical.getProperties().get("status")
+                .clone().value("confirmed"));
+        String inputBefore = wrappedBlue.nodeToJson(canonical);
+        FullOracleSnapshotManager manager = new FullOracleSnapshotManager(wrappedBlue, false);
+        DocumentProcessingRuntime oracle = new DocumentProcessingRuntime(
+                base, wrappedBlue.conformanceEngine(), manager);
+        oracle.applyPatch("/", JsonPatch.replace("/status", new Node().value("confirmed")));
+        ResolvedSnapshot fullyResolved = oracle.snapshot();
+
+        // when
+        IllegalStateException mismatch = FailureCapture.captureFailure(
+                () -> ResolvedSnapshot.withCanonicalTypeIdentities(
+                        FrozenNode.fromNode(canonical),
+                        fullyResolved.frozenResolvedRoot(),
+                        fullyResolved.canonicalTypeIdentities()));
+
+        // then
+        assertNotNull(mismatch, "Custom resolution must not certify a different canonical value");
+        assertTrue(mismatch.getMessage().contains("Canonical and resolved roots do not match"));
+        assertEquals(inputBefore, wrappedBlue.nodeToJson(canonical));
+        assertEquals("draft", base.resolvedRoot().getAsText("/status"));
+        assertEquals("draft", base.resolvedRoot().getAsText("/wrapperObservedStatus"));
+    }
 
     @Test
     void shouldVerifyImpactModelCarriesTypedBoundaryAndDependencyEvidence() {
