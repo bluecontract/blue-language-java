@@ -1328,6 +1328,14 @@ class DocumentProcessorGeneralizationTest {
             }
 
             @Override
+            public ResolvedSnapshot fromCanonicalTransient(
+                    FrozenNode canonicalRoot,
+                    java.util.Collection<String> preservedPaths) {
+                return blue.getDocumentProcessor().snapshotManager()
+                        .fromCanonicalTransient(canonicalRoot, preservedPaths);
+            }
+
+            @Override
             public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
                 return blue.applyCanonicalPatch(snapshot, patch);
             }

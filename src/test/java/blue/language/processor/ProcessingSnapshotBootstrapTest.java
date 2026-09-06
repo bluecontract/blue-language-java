@@ -26,6 +26,47 @@ final class ProcessingSnapshotBootstrapTest {
             "/lessons/lesson-a/contracts/handler/event";
 
     @Test
+    void shouldValidateUncheckedCanonicalIdentityBeforeExecution() {
+        // given
+        Node source = new Node().properties("value", new Node().value(7));
+        FrozenNode unchecked = FrozenNode.fromUncheckedCanonicalNode(source);
+        ResolvedSnapshot input = new ResolvedSnapshot(unchecked,
+                FrozenNode.fromResolvedNode(source), unchecked.blueId());
+        RecordingProcessingObserver observer = new RecordingProcessingObserver();
+
+        // when
+        ResolvedSnapshot prepared = ProcessingSnapshotBootstrap.prepare(
+                input, Collections.emptyMap(), observer);
+
+        // then
+        assertTrue(prepared.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertTrue(prepared.frozenSourceRoot().isStrictBlueIdValidation());
+        assertFalse(input.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertEquals(input.blueId(), prepared.blueId());
+        assertEquals(1L, observer.snapshot().counter("processorInputUncheckedCanonical"));
+        assertEquals(0L, observer.snapshot().counter("processorInputStrictCanonical"));
+    }
+
+    @Test
+    void shouldRejectMalformedUncheckedReferenceBeforeExecution() {
+        // given
+        Node source = new Node().properties("child", new Node().blueId("not-a-blue-id"));
+        FrozenNode unchecked = FrozenNode.fromUncheckedCanonicalNode(source);
+        ResolvedSnapshot input = new ResolvedSnapshot(unchecked,
+                FrozenNode.fromResolvedNode(source), unchecked.blueId());
+
+        // when
+        IllegalArgumentException failure = FailureCapture.captureFailure(
+                () -> ProcessingSnapshotBootstrap.prepare(
+                        input, Collections.emptyMap(), NoOpProcessingObserver.INSTANCE));
+
+        // then
+        assertNotNull(failure);
+        assertFalse(input.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertEquals("not-a-blue-id", input.canonicalAt("/child").getReferenceBlueId());
+    }
+
+    @Test
     void shouldPreserveColdExecutableBodyInCollectionGeneratedScope() {
         // given
         Node body = new Node().properties(

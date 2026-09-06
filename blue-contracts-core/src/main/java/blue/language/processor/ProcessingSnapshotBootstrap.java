@@ -52,6 +52,11 @@ final class ProcessingSnapshotBootstrap {
                         ? ProcessingMetricId.PROCESSOR_INPUT_STRICT_CANONICAL
                         : ProcessingMetricId.PROCESSOR_INPUT_UNCHECKED_CANONICAL,
                 1L);
+        if (snapshot.hasCanonicalIdentity()) {
+            // Record the input's actual provenance above, then enforce strict
+            // reference syntax before any executable body can be selected.
+            snapshot = snapshot.toStrictBlueIdValidatedCanonical();
+        }
         Map<String, FrozenNode> preservedBodies =
                 initialExecutableBodyOverlays(
                         snapshot.frozenSourceRoot(),

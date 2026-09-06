@@ -538,6 +538,14 @@ final class EffectiveContractRefreshAndReferenceResultTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            // This fixture records the exact input and adds its synthetic resolved header.
+            return fromDocument(canonicalRoot.toNode());
+        }
+
+        @Override
         public FrozenNode materializeVerifiedReference(
                 FrozenNode reference) {
             String blueId =

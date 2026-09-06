@@ -471,7 +471,7 @@ public final class ResolvedSnapshot {
         }
         FrozenNode strictCanonicalRoot = FrozenNode.fromNode(canonicalRoot.toNode());
         return new ResolvedSnapshot(
-                sourceRoot,
+                sourceBacked ? sourceRoot : strictCanonicalRoot,
                 strictCanonicalRoot,
                 resolvedRoot,
                 strictCanonicalRoot.blueId(),

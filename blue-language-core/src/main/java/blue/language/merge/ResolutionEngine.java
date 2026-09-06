@@ -536,6 +536,8 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     void mergeInstanceObject(Node target, Node source, ResolutionLimits limits) {
+        Object retainedBody = target.getBlueId() != null && source.getBlueId() == null
+                ? blue.language.model.NodeWireForm.get(target) : null;
         LabelProvenanceTracker.MergeMode labelMergeMode =
                 labelProvenanceTracker.mergeMode(
                         activeResolutionState().contribution);
@@ -547,6 +549,12 @@ final class ResolutionEngine implements NodeResolver {
                     target, source, inheritedDeclarationOnly);
         }
         mergeObject(target, source, limits);
+        if (retainedBody != null && !retainedBody.equals(
+                blue.language.model.NodeWireForm.get(target))) {
+            // A changed body no longer authenticates the inherited reference.
+            // Preserve unchanged exact references and explicit source references.
+            target.blueId(null);
+        }
         if (labelMergeMode == LabelProvenanceTracker.MergeMode.AUTHORED_OVERLAY) {
             labelProvenanceTracker.applyExplicitInstanceLabels(
                     target, source, inheritedDeclarationOnly);

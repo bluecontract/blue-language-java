@@ -428,8 +428,11 @@ final class PatchPlanningEngine {
                     ProcessingMetricId.FULL_CANONICAL_ROOT_MATERIALIZATIONS, 1L);
             ProcessingObservations.record(metrics,
                     ProcessingMetricId.FULL_FROZEN_ROOT_TO_NODE_MATERIALIZATIONS, 1L);
-            if (finalSourceBacked) {
-                // An exact runtime replacement already produced the desired
+            if (!finalSourceBacked || canonicalIdentityEvidence.affectsListPayload(records)) {
+                // Canonical patches must remove derivable property overrides.
+                // Source patches retain their lane unless an affected List
+                // requires complete-payload resolution. An exact runtime
+                // replacement already produced the desired
                 // final List in the resolved lane. Reusing the patched Source
                 // bytes would append that full list to its inherited prefix.
                 // Project once after the whole atomic batch, using only the
@@ -693,7 +696,7 @@ final class PatchPlanningEngine {
                                 resolvedRoot,
                                 changedPaths,
                                 canonicalTypeIdentities,
-                                preservedExecutableBodies(
+                                canonicalIdentityEvidence.preservedExecutableBodies(
                                         canonicalRoot,
                                         resolvedRoot,
                                         canonicalTypeIdentities));
@@ -763,61 +766,10 @@ final class PatchPlanningEngine {
                         resolvedRoot,
                         Collections.singletonList(record.path()),
                         canonicalTypeIdentities,
-                        preservedExecutableBodies(
+                        canonicalIdentityEvidence.preservedExecutableBodies(
                                 canonicalRoot,
                                 resolvedRoot,
                                 canonicalTypeIdentities));
-    }
-
-    private Set<String> preservedExecutableBodies(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
-        Set<String> preservedBodies =
-                new LinkedHashSet<>(
-                        DocumentProcessingRuntime.executableBodyPaths(
-                                /*
-                                 * Reference-only contracts maps and contract
-                                 * entries have no direct type header in the
-                                 * canonical lane. The effective lane has
-                                 * already resolved those headers while the
-                                 * executable subtree remains deferred, so it
-                                 * is the authoritative source for locating
-                                 * paths that conformance must not demand.
-                                 */
-                                resolvedRoot,
-                                openedScopePaths,
-                                executableBodyFieldsByType,
-                                canonicalTypeIdentities));
-        if (invocationEvidenceSnapshotManager == null) {
-            return preservedBodies;
-        }
-        Node canonicalDocument = canonicalRoot.toNode();
-        preservedBodies.addAll(
-                strictPlatformInvocation
-                        ? ExecutableBodyPathCatalog
-                                .fromNodeIncludingTypeContracts(
-                                        canonicalDocument,
-                                        openedScopePaths,
-                                        executableBodyFieldsByType,
-                                        invocationEvidenceSnapshotManager)
-                        : ExecutableBodyPathCatalog
-                                .fromNodeDirectContracts(
-                                        canonicalDocument,
-                                        openedScopePaths,
-                                        executableBodyFieldsByType,
-                                        invocationEvidenceSnapshotManager));
-        if (strictPlatformInvocation) {
-            preservedBodies.addAll(
-                    ExecutableBodyPathCatalog.ordinaryReferencePaths(
-                            canonicalDocument,
-                            openedScopePaths));
-        }
-        preservedBodies.addAll(
-                ExecutableBodyPathCatalog.processorStateReferencePaths(
-                        canonicalDocument,
-                        openedScopePaths));
-        return preservedBodies;
     }
 
     private String originScopeForGeneratedUpdate(List<BatchPatchRecord> records) {

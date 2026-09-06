@@ -2,10 +2,12 @@ package blue.language.processor;
 
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -84,6 +86,101 @@ final class PatchPlanningCanonicalIdentityEvidence {
         return CanonicalTypeIdentityEvidenceUnion.establishForResolvedGraph(
                 Objects.requireNonNull(resolvedRoot, "resolvedRoot").toNode(),
                 constituents);
+    }
+
+    /** Tests the actual changed subtrees and their enclosing List boundaries. */
+    boolean affectsListPayload(List<BatchPatchRecord> records) {
+        for (BatchPatchRecord record : records) {
+            if (containsListPayload(record.beforeAtPatchTime())
+                    || containsListPayload(record.afterAtPatchTime())) {
+                return true;
+            }
+            for (String ancestor : record.impact().ancestorChain()) {
+                FrozenNode enclosing = record.resolvedPlan().root().at(ancestor);
+                if (enclosing != null && enclosing.hasItems()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean containsListPayload(FrozenNode root) {
+        if (root == null || root.isReferenceOnly()) {
+            return false;
+        }
+        java.util.Deque<FrozenNode> pending = new java.util.ArrayDeque<>();
+        pending.push(root);
+        while (!pending.isEmpty()) {
+            FrozenNode node = pending.pop();
+            if (node.isReferenceOnly()) {
+                continue;
+            }
+            if (node.hasItems()) {
+                return true;
+            }
+            if (node.getProperties() != null) {
+                pending.addAll(node.getProperties().values());
+            }
+            if (node.getContracts() != null) {
+                pending.push(node.getContracts());
+            }
+            if (node.getType() != null) {
+                pending.push(node.getType());
+            }
+        }
+        return false;
+    }
+
+    Set<String> preservedExecutableBodies(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        Set<String> preservedBodies =
+                new LinkedHashSet<>(
+                        DocumentProcessingRuntime.executableBodyPaths(
+                                /*
+                                 * Reference-only contracts maps and contract
+                                 * entries have no direct type header in the
+                                 * canonical lane. The effective lane has
+                                 * already resolved those headers while the
+                                 * executable subtree remains deferred, so it
+                                 * is the authoritative source for locating
+                                 * paths that conformance must not demand.
+                                 */
+                                resolvedRoot,
+                                openedScopePaths,
+                                executableBodyFieldsByType,
+                                canonicalTypeIdentities));
+        if (snapshotManager == null) {
+            return preservedBodies;
+        }
+        Node canonicalDocument = canonicalRoot.toNode();
+        preservedBodies.addAll(
+                strictPlatformInvocation
+                        ? ExecutableBodyPathCatalog
+                                .fromNodeIncludingTypeContracts(
+                                        canonicalDocument,
+                                        openedScopePaths,
+                                        executableBodyFieldsByType,
+                                        snapshotManager)
+                        : ExecutableBodyPathCatalog
+                                .fromNodeDirectContracts(
+                                        canonicalDocument,
+                                        openedScopePaths,
+                                        executableBodyFieldsByType,
+                                        snapshotManager));
+        if (strictPlatformInvocation) {
+            preservedBodies.addAll(
+                    ExecutableBodyPathCatalog.ordinaryReferencePaths(
+                            canonicalDocument,
+                            openedScopePaths));
+        }
+        preservedBodies.addAll(
+                ExecutableBodyPathCatalog.processorStateReferencePaths(
+                        canonicalDocument,
+                        openedScopePaths));
+        return preservedBodies;
     }
 
     private CanonicalTypeIdentityLookup resolveCompleteEvidence() {

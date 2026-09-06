@@ -285,6 +285,14 @@ class DeferredSnapshotProvenancePropagationTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            // This recording fixture only clones exact nodes; it never resolves Source.
+            return fromDocumentTransientPreservingPaths(canonicalRoot.toNode(), preservedPaths);
+        }
+
+        @Override
         public ResolvedSnapshot cacheSnapshot(
                 ResolvedSnapshot snapshot) {
             cacheCalls++;
@@ -393,6 +401,18 @@ class DeferredSnapshotProvenancePropagationTest {
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             transientCalls++;
             return canonicalOnly(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            transientCalls++;
+            Node effective = canonicalRoot.toNode();
+            assertEquals(typeBlueId, effective.getType().getBlueId());
+            effective.type(inlineType.toNode());
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    canonicalRoot, FrozenNode.fromResolvedNode(effective), identities);
         }
 
         @Override

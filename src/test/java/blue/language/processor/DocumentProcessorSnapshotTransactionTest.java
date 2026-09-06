@@ -1147,6 +1147,22 @@ class DocumentProcessorSnapshotTransactionTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            if (blue == null) {
+                // Synthetic fixtures clone their lanes and never reinterpret list Source controls.
+                return fromDocument(canonicalRoot.toNode());
+            }
+            fromDocumentCalls++;
+            if (!canonicalIdentityResolution) fromDocumentInputs.add(canonicalRoot.toNode());
+            if (fromDocumentCalls == failFromDocumentOnCall)
+                throw new IllegalStateException("snapshot rebuild failed");
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromCanonicalTransient(canonicalRoot, preservedPaths);
+        }
+
+        @Override
         public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
             applyPatchCalls++;
             if (failApplyPatch) {

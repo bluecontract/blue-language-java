@@ -718,6 +718,14 @@ class DocumentProcessorResolvedSnapshotParityTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            // The identity-only fixture preserves all nodes without resolver interpretation.
+            return preserving(canonicalRoot.toNode());
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
                 Node document) {
             return fromDocument(document);
