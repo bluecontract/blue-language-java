@@ -241,6 +241,18 @@ public final class BlueContracts implements AutoCloseable {
     }
 
     /**
+     * Returns one verified immutable snapshot of processing Source without execution.
+     *
+     * @param source preprocessed processing Source or an exact top-level reference
+     * @return canonical identity and resolved view with registered exact fields preserved
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when this service is closed or evidence is unavailable
+     */
+    public blue.language.merge.ResolvedSnapshot processingSourceSnapshot(Node source) {
+        return call(() -> processor.administration().processingSourceSnapshot(source));
+    }
+
+    /**
      * Returns the configured subscription-surface projection service.
      *
      * @return lifecycle-bound read-only projection service

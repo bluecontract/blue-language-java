@@ -928,6 +928,12 @@ class EffectiveFragmentationCatalogTest {
             assertFalse(fixture.providerRequests.contains(fixture.programBlueId));
             assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
                     catalog.rootBlueId());
+            blue.language.merge.ResolvedSnapshot sourceSnapshot =
+                    administration.processingSourceSnapshot(document);
+            assertEquals(catalog.rootBlueId(), sourceSnapshot.blueId());
+            assertTrue(sourceSnapshot.resolvedRoot()
+                    .getNode("/inactive/contracts/run/request/amount")
+                    .getSchema().getRequiredValue());
             assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
                     canonical.getNode("/inactive/contracts/run/event/type").getBlueId());
         }

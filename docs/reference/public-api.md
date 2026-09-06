@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 24 | 178 | 68 | 270 |
-| `blue-contracts-core` | 302 | 1986 | 675 | 2963 |
+| `blue-contracts-core` | 302 | 1988 | 675 | 2965 |
 | `blue-language-core` | 164 | 893 | 97 | 1154 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 107 | 1 | 133 |
 | `blue-language-model` | 23 | 216 | 80 | 319 |
-| **Distribution** | **544** | **3428** | **921** | **4893** |
+| **Distribution** | **544** | **3430** | **921** | **4895** |
 
 ## blue-conformance
 
@@ -981,6 +981,7 @@ method blue.language.processor.BlueContracts#process descriptor=(Lblue/language/
 method blue.language.processor.BlueContracts#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/PlatformProcessInvocation;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/VerifiedExecutionEvidence;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#processingSourceSnapshot descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#resolveProcessingSource descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#runtimeAccess descriptor=()Lblue/language/processor/ProcessorRuntimeAccess; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#subscriptionSurfaceProjection descriptor=()Lblue/language/processor/SubscriptionSurfaceProjection; access=public signature=- throws=-
@@ -1203,6 +1204,7 @@ method blue.language.processor.DocumentProcessorAdministration#effectiveFragment
 method blue.language.processor.DocumentProcessorAdministration#indexedDeliveryEvaluator descriptor=()Lblue/language/processor/IndexedDeliveryEvaluator; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#isClosed descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#markersFor descriptor=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map; access=public signature=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/model/MarkerContract;>; throws=-
+method blue.language.processor.DocumentProcessorAdministration#processingSourceSnapshot descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#resolveProcessingSource descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#runtimeAccess descriptor=()Lblue/language/processor/ProcessorRuntimeAccess; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#subscriptionSurfaceProjection descriptor=()Lblue/language/processor/SubscriptionSurfaceProjection; access=public signature=- throws=-

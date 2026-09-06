@@ -279,7 +279,15 @@ public final class DocumentProcessorAdministration {
         return processingSourceSnapshot(source).resolvedRoot();
     }
 
-    private blue.language.merge.ResolvedSnapshot processingSourceSnapshot(Node source) {
+    /**
+     * Returns the verified immutable snapshot underlying processing Source inspection.
+     *
+     * @param source preprocessed processing Source or an exact top-level reference
+     * @return canonical identity and resolved view from the same declaration boundary
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when exact evidence is unavailable
+     */
+    public blue.language.merge.ResolvedSnapshot processingSourceSnapshot(Node source) {
         Node checked = Objects.requireNonNull(source, "source").clone();
         try (DocumentProcessorLifecycle.ReadScope ignored =
                      lifecycle.openRead(processor.registry())) {

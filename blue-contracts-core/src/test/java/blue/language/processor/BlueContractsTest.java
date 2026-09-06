@@ -63,6 +63,31 @@ final class BlueContractsTest {
     }
 
     @Test
+    void shouldRetainDetachedProcessingSnapshotAndRejectCallsAfterClose() {
+        // given
+        Node source = new Node().value("snapshot source");
+        String originalBlueId = DirectBlueIdCalculator.calculateBlueId(source);
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             BlueContracts contracts = BlueContracts.builder(language.processing()).build()) {
+            // when
+            blue.language.merge.ResolvedSnapshot snapshot =
+                    contracts.processingSourceSnapshot(source);
+            source.value("caller mutation");
+            snapshot.canonicalRoot().value("returned copy mutation");
+            contracts.close();
+
+            // then
+            assertEquals(originalBlueId, snapshot.blueId());
+            assertEquals("snapshot source", snapshot.canonicalRoot().getValue());
+            assertEquals("snapshot source", snapshot.resolvedRoot().getValue());
+            assertThrows(IllegalStateException.class,
+                    () -> contracts.processingSourceSnapshot(source));
+            assertEquals(originalBlueId,
+                    language.identity().directBlueId(snapshot.canonicalRoot()));
+        }
+    }
+
+    @Test
     void shouldExposeManagedHostServicesOnlyWhileOpen() {
         // given
         BlueLanguage language = BlueLanguage.builder().build();
