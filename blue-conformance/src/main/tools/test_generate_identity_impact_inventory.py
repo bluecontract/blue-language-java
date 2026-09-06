@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import unittest
@@ -29,13 +30,59 @@ class IdentityImpactInventoryTest(unittest.TestCase):
         baseline = inventory._full_lifecycle_oracle_baseline(
             self.repository
         )["oracles"]
-        current = inventory._current_bytes(
-            self.repository,
-            inventory.FULL_LIFECYCLE_JAVA_TEST,
+        # Existing literal oracle/mutation cases describe this historical source.
+        # Keep their exact bytes and all assertions when current runtime IDs move.
+        current = (TOOLS / "testdata/identity-impact-full-lifecycle-d1194293.java.txt").read_bytes()
+        self.assertEqual(
+            "7ba009d1e6e53e48e3d9ee1f745482d1ac24cb89e9b89a2a8d7b03399399c4a9",
+            hashlib.sha256(current).hexdigest(),
         )
-        self.assertIsNotNone(current)
-        assert current is not None
         return baseline, current
+
+    def test_current_lifecycle_oracles_keep_exact_roles_and_reject_mutations(self) -> None:
+        baseline = inventory._full_lifecycle_oracle_baseline(self.repository)["oracles"]
+        current = (self.repository / inventory.FULL_LIFECYCLE_JAVA_TEST).read_bytes()
+        expected = {'fixture:full-lifecycle:duplicate-event:first-occurrence-identity': 'sha256:c465b987961e2f0ae79cfe699f48f5bf2ed898cfceb47e977ac448dd5a28f22a',
+         'fixture:full-lifecycle:duplicate-event:invocation-identity': 'sha256:4e9cc1c2dad1b3ff442efafb3c867104032c681c8d89a64c42cb1fae0fbdf1cb',
+         'fixture:full-lifecycle:duplicate-event:second-occurrence-identity': 'sha256:2ffc73ae79ee5ac50860995647139a2e106cc474668ae1dab9ef27c6ae272464',
+         'fixture:full-lifecycle:gas-failure:embedded-work-identity': 'sha256:1cc6e957d2b9657fe61696e53c817fb928391072f25f7627023df3453549ff1a',
+         'fixture:full-lifecycle:gas-failure:gas-trace-identity': 'sha256:b7c504bfac0774539471a251eb7b6e878648f4b32024621df9f647c8dcb7f8d3',
+         'fixture:full-lifecycle:gas-failure:initialization-work-identity': 'sha256:c7660e2af3f67df690726f1b3fd4a404417d9b8d4fe2415d317f966f22ee6207',
+         'fixture:full-lifecycle:gas-failure:invocation-identity': 'sha256:490cb3215bb7316ec47979ba173a539e61185b63dee9f896111147f02b2b593b',
+         'fixture:full-lifecycle:gas-failure:rejected-charge-identity': 'sha256:0a405e3df4cda10a75658d7249b08467cd4d329fc6d5393e6dfbdad666b6bb55'}
+        rotations = inventory._full_lifecycle_oracle_identity_rotations(baseline, current)
+        self.assertEqual(expected, {value["stableKey"]: value["new"] for value in rotations})
+        self.assertEqual(8, len(rotations))
+        self.assertEqual([7, 9], next(value["positions"] for value in rotations
+            if value["role"] == "embedded-work-identity"))
+        # Concrete mutations retain each original negative validation boundary.
+        mutations = [
+            (current.replace(b"|20000|2123", b"|20001|2123", 1),
+             "GAS_FAILURE_ORACLE non-identity skeleton changed"),
+            (current.replace(b"31JtLEZds6saFSDKKWh4XZrWf63BQywpRUB4wDt766Jo",
+                             b"44444444444444444444444444444444444444444444", 1),
+             "stable identity anchor rotated: event-blue-id"),
+        ]
+        embedded = expected["fixture:full-lifecycle:gas-failure:embedded-work-identity"].encode()
+        prefix, separator, suffix = current.rpartition(embedded)
+        self.assertEqual(embedded, separator)
+        mutations.append((prefix + b"sha256:" + b"a" * 64 + suffix,
+                          "duplicate semantic role diverged: embedded-work-identity"))
+        for mutated, diagnostic in mutations:
+            with self.subTest(diagnostic=diagnostic):
+                self.assertNotEqual(current, mutated)
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    inventory._full_lifecycle_oracle_identity_rotations(baseline, mutated)
+        malformed_baseline = dict(baseline)
+        malformed_baseline["DUPLICATE_EVENT_IDENTITY_ORACLE"] = malformed_baseline[
+            "DUPLICATE_EVENT_IDENTITY_ORACLE"].replace(
+                "sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97",
+                "not-an-identity", 1)
+        malformed_current = current.replace(expected[
+            "fixture:full-lifecycle:duplicate-event:invocation-identity"].encode(), b"not-an-identity", 1)
+        self.assertNotEqual(current, malformed_current)
+        with self.assertRaisesRegex(ValueError, "unexpected exact identity layout"):
+            inventory._full_lifecycle_oracle_identity_rotations(malformed_baseline, malformed_current)
 
     def test_classifies_direct_transitive_new_and_unchanged(self) -> None:
         self.assertEqual(
@@ -287,7 +334,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             invocation["oldExactIdentity"],
         )
         self.assertEqual(
-            "sha256:bf6ac22af9a1b4a4492c4e699feeace4638dcd8252781d91af70c73b371a8ef8",
+            "sha256:e6aaa6471166daaa602aa8f505d5a467e1de6a0ee8ce4204b2b6211c2dcea8db",
             invocation["newExactIdentity"],
         )
         contracts_specification = artifacts[

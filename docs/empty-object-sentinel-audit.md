@@ -4,10 +4,10 @@ This report records every prompt-mandated production Java search hit, then expli
 
 ## Result
 
-- Production matches: 2073
-- Decision-relevant matches: 253
-- Context-only broad-search matches: 1820
-- Matches in files changed since the RC baseline: 1170
+- Production matches: 2079
+- Decision-relevant matches: 256
+- Context-only broad-search matches: 1823
+- Matches in files changed since the RC baseline: 1176
 - Matches in unchanged files: 903
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
@@ -18,11 +18,11 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 
 | Audit | Hits |
 | --- | ---: |
-| `empty-shape-and-builder` | 432 |
+| `empty-shape-and-builder` | 436 |
 | `empty-to-null-return` | 0 |
 | `list-placeholder` | 25 |
 | `property-shape` | 51 |
-| `raw-blue-id-access` | 96 |
+| `raw-blue-id-access` | 98 |
 | `schema-presence` | 1469 |
 
 ## Classification totals
@@ -45,17 +45,17 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `B-contracts-identity-evidence-boundary` | 12 |
 | `B-empty-reserved-container-shape` | 9 |
 | `B-fieldless-metadata-or-control-container` | 10 |
-| `B-identity-metadata-versus-value-payload` | 29 |
+| `B-identity-metadata-versus-value-payload` | 31 |
 | `B-nullable-identity-wire-header` | 10 |
 | `B-structural-fieldlessness-helper` | 3 |
-| `B-temporary-fieldless-builder-or-control-container` | 20 |
+| `B-temporary-fieldless-builder-or-control-container` | 21 |
 | `B-temporary-reconstruction-builder` | 6 |
 | `B-unverified-identity-claim-boundary` | 36 |
 | `C-source-null-before-preprocessing` | 1 |
 | `D-host-absence-from-fieldless-source-control` | 1 |
 | `E-explicit-list-hole-control` | 16 |
 | `E-invalid-fieldless-list-position` | 5 |
-| `context-only-not-empty-sentinel-decision` | 1820 |
+| `context-only-not-empty-sentinel-decision` | 1823 |
 
 ## Load-bearing decisions
 

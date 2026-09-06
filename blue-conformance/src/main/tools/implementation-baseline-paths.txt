@@ -452,7 +452,9 @@ blue-language-core/src/main/java/blue/language/api/package-info.java
 blue-language-core/src/main/java/blue/language/codec/BlueCodec.java
 blue-language-core/src/main/java/blue/language/codec/BlueFormat.java
 blue-language-core/src/main/java/blue/language/codec/StandardBlueCodec.java
+blue-language-core/src/main/java/blue/language/codec/jackson/BlueYamlStringQuotingChecker.java
 blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java
+blue-language-core/src/main/java/blue/language/codec/jackson/YamlObjectKeyValidator.java
 blue-language-core/src/main/java/blue/language/codec/jackson/package-info.java
 blue-language-core/src/main/java/blue/language/codec/package-info.java
 blue-language-core/src/main/java/blue/language/conformance/CanonicalGeneralizationPatch.java

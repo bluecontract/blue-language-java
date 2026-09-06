@@ -848,8 +848,8 @@ These migration-only inputs are checked-in review evidence and are explicitly ex
 | `package:contracts-ordinary-fixtures` | `transitively-changed` | `sha256:adf4c1542c265d90c4a1181a8691d40e10f61fcc5510d30c55c0c50b8e2d522b` | `sha256:d2141ee6c13b76e3c9afa70273cdec53ff01ee448a27a06ea441f40b4efb4bde` | package:contracts-registry |
 | `package:contracts-registry` | `transitively-changed` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` | `sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4` | contracts:ProcessEmbedded |
 | `package:contracts-release` | `transitively-changed` | `sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3` | `sha256:b112c1995934700899762b741610c3d306ecd10205fa643bdaa30b28fecf6643` | document:contracts-specification |
-| `package:language-contracts-aggregate` | `stale-binding-regenerated` | `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6` | `sha256:0b94e3ad61b650abb4b249eeb51d910ef93ec25133d3717cf90714c07032148a` | document:language-specification |
-| `package:language-fixtures` | `transitively-changed` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` | `sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e` | package:language-registry |
+| `package:language-contracts-aggregate` | `stale-binding-regenerated` | `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6` | `sha256:b2477354910cde66b7c06b51956df98f0873d57033a5e7fa8e5e301096bd5e64` | document:language-specification |
+| `package:language-fixtures` | `transitively-changed` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` | `sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695` | package:language-registry |
 | `package:language-registry` | `transitively-changed` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` | language:Dictionary |
 
 ## Intentionally excluded invalid vectors
@@ -875,8 +875,8 @@ The aggregate package was regenerated from its complete component set; these are
 | `contractsSpecificationSha256` | `6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81` | `99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd` |
 | `contractsTotalExecutableFixtureCount` | `None` | `295` |
 | `contractsVectorCount` | `100` | `182` |
-| `languageBehaviorFixtureCount` | `153` | `184` |
-| `languageFixturePackageIdentity` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` | `sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e` |
+| `languageBehaviorFixtureCount` | `153` | `185` |
+| `languageFixturePackageIdentity` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` | `sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695` |
 | `languageRegistryPackageIdentity` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` |
 | `languageSpecificationSha256` | `a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869` | `77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144` |
 | `languageVectorCount` | `126` | `150` |
