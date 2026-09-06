@@ -683,6 +683,11 @@ final class ClosureExecutionSession
                 // and still receives settlement here.
                 continue;
             }
+            if (terminatedDocuments.contains(document.documentId())) {
+                // Termination completed in this invocation cuts off later
+                // checkpoint Direct Writes, while its lifecycle still commits.
+                continue;
+            }
             String targetManagedScopeIdentity = IDENTITIES
                     .managedScopeKeyIdentity(
                             ManagedScopeKey.root(document.documentId()));
@@ -1639,11 +1644,6 @@ final class ClosureExecutionSession
             String cause,
             String reason) {
         requireRoot(scopePath);
-        if (executionMode != ExecutionMode.ADMISSION) {
-            throw new ClosureCapabilityGapException(
-                    "LIFECYCLE_TERMINATION_REQUIRED",
-                    "Termination requires the lifecycle and marker batch lane");
-        }
         ActiveFrame frame = activeFrame();
         DocumentId documentId = frame.work.targetDocumentId();
         if (terminatingDocuments.contains(documentId)

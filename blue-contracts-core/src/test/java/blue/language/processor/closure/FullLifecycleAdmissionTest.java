@@ -2023,6 +2023,89 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void processingTerminationRunsLifecycleAndRollsBackWhenGasCannotCommit() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        exactNodes.put(HANDLER_BLUE_ID, HANDLER_TYPE.clone());
+        exactNodes.put(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE.clone());
+        NodeProvider provider = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone())
+                : Collections.<Node>emptyList();
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(HANDLER_BLUE_ID, HANDLER_TYPE, probe)
+                .register(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE,
+                        new RetainedSourceChannelProcessor()).build();
+        try (DocumentProcessor owner = DocumentProcessor.builder().runtimeRegistry(registry)
+                .nodeProvider(new TestNodeProvider(provider)).build()) {
+            ClosureEnvironment environment = environment(owner);
+            Node body = new Node().name("External termination lifecycle")
+                    .contracts(new Node()
+                            .properties("ownerChannel", typed(RETAINED_SOURCE_CHANNEL_BLUE_ID))
+                            .properties("nestedTerminate", handler("ownerChannel"))
+                            .properties("lifecycle", typed(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))
+                            .properties("nestedEmitOne", handler("lifecycle")));
+            String authored = blueId(body);
+            exactNodes.put(authored, body.clone());
+            installInitializedMarker(body, authored);
+            exactNodes.put(blueId(body), body.clone());
+            Node event = new Node().name("Finish external source")
+                    .properties("subscriptionKey", new Node().value("retained-source"));
+            exactNodes.put(blueId(event), event.clone());
+            AffectedClosureSnapshot snapshot = initializedSnapshot(finalizedSnapshot(
+                    Collections.singletonMap(A, body), Collections.<ManagedOccurrenceBinding>emptyList(),
+                    Collections.singletonList(A)), 4L, 1L);
+            ExternalEventCause cause = ClosureEvidenceFactory.externalCause(event, blueId(event),
+                    ExternalOrderKey.of(Arrays.<Object>asList(Long.valueOf(1L), "finish-a")),
+                    environment.externalOrderPolicyIdentity());
+            List<DirectLogicalDelivery> deliveries = Collections.singletonList(
+                    new DirectLogicalDelivery(ManagedScopeKey.root(A),
+                            "ownerChannel", "ownerChannel", 0L));
+            ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                    deliveries, ClosureEvidenceFactory.executionPolicy(GENEROUS_GAS,
+                            Collections.<DocumentId, Long>emptyMap(),
+                            "external-termination-fixture-v1"), environment);
+            Capture capture = new Capture();
+            ClosureProcessResult result;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                result = contracts.processClosure(input).processResult();
+            }
+            assertSuccess(result);
+            ResultingDocument terminated = document(result, A);
+            assertTrue(terminated.initialized());
+            assertTrue(terminated.terminated());
+            assertEquals(5L, terminated.epoch());
+            assertNotNull(NodePathEditor.getOrNull(terminated.document(), "/contracts/terminated"));
+            assertEquals(1L, countKind(capture.evidence, WorkKind.LIFECYCLE));
+            assertEquals(0L, countKind(capture.evidence, WorkKind.INITIALIZATION));
+            assertEquals(1, result.publicEvents().size());
+            assertTrue(result.checkpointWrites().isEmpty());
+            assertNull(NodePathEditor.getOrNull(terminated.document(), "/contracts/checkpoint"));
+            assertEquals(2, probe.executionCount);
+            assertNodeEquals(body, input.snapshot().managedDocument(A).document());
+
+            ClosureInvocationInput limited = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                    deliveries, ClosureEvidenceFactory.executionPolicy(result.totalGas() - 1L,
+                            Collections.<DocumentId, Long>emptyMap(),
+                            "external-termination-fixture-v1"), environment);
+            ClosureProcessResult rejected;
+            ClosureProcessResult retry;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                rejected = contracts.processClosure(limited).processResult();
+                retry = contracts.processClosure(limited).processResult();
+            }
+            assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, rejected.status());
+            assertLiteralRollback(limited, rejected);
+            assertLiteralRollback(limited, retry);
+            assertEquals(rejected.totalGas(), retry.totalGas());
+            assertEquals(rejected.gasTraceIdentity(), retry.gasTraceIdentity());
+            assertEquals(rejectedChargeProjection(rejected.rejectedCharge()),
+                    rejectedChargeProjection(retry.rejectedCharge()));
+            assertTrue(rejected.publicEvents().isEmpty());
+            assertTrue(rejected.checkpointWrites().isEmpty());
+        }
+    }
+
+    @Test
     void requirement08CanonicalInitializationIgnoresInputMapOrder() {
         ProbeProcessor forwardProbe = new ProbeProcessor();
         ProbeProcessor reverseProbe = new ProbeProcessor();
