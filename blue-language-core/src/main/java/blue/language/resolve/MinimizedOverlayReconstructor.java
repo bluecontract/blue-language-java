@@ -233,6 +233,9 @@ final class MinimizedOverlayReconstructor {
     }
 
     private boolean requiresWholeItemReplacement(Node resolved, Node inherited) {
+        if (Nodes.isEmptyPlaceholder(inherited) && resolved.getValue() != null) {
+            return false;
+        }
         if (resolved.getItems() != null || inherited.getItems() != null
                 || resolved.isReferenceOnly() || inherited.isReferenceOnly()) {
             return true;
@@ -242,13 +245,33 @@ final class MinimizedOverlayReconstructor {
                 return true;
             }
             for (Map.Entry<String, Node> field : inherited.getProperties().entrySet()) {
-                if (!sameNodeBlueId(field.getValue(),
+                if (!isUnchangedOrAdditiveObject(field.getValue(),
                         resolved.getProperties().get(field.getKey()))) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private boolean isUnchangedOrAdditiveObject(Node inherited, Node resolved) {
+        if (sameNodeBlueId(inherited, resolved)) return true;
+        if (inherited == null || resolved == null
+                || inherited.getValue() != null || resolved.getValue() != null
+                || inherited.getItems() != null || resolved.getItems() != null
+                || inherited.getBlueId() != null || resolved.getBlueId() != null) {
+            return false;
+        }
+        Node beforeHeader = inherited.clone().properties(new LinkedHashMap<String, Node>());
+        Node afterHeader = resolved.clone().properties(new LinkedHashMap<String, Node>());
+        if (!sameNodeBlueId(beforeHeader, afterHeader)) return false;
+        if (inherited.getProperties() == null) return true;
+        if (resolved.getProperties() == null) return false;
+        for (Map.Entry<String, Node> field : inherited.getProperties().entrySet()) {
+            if (!isUnchangedOrAdditiveObject(field.getValue(),
+                    resolved.getProperties().get(field.getKey()))) return false;
+        }
+        return true;
     }
 
     private void reconstructProperties(

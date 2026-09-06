@@ -48,6 +48,8 @@ public class UncheckedObjectMapper extends ObjectMapper {
     public static final UncheckedObjectMapper YAML_MAPPER =  new UncheckedObjectMapper(
             YAMLFactory.builder()
                     .enable(MINIMIZE_QUOTES)
+                    .enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
+                    .stringQuotingChecker(new BlueYamlStringQuotingChecker())
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
                     .build());
 
@@ -223,6 +225,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
         if (YAML_ANCHOR_OR_ALIAS_PATTERN.matcher(content).find()) {
             throw new JsonException(new IllegalArgumentException("YAML anchors and aliases are not part of the Blue JSON data model."));
         }
+        YamlObjectKeyValidator.validate(content);
     }
 
     private String readUtf8(InputStream src) throws IOException {
