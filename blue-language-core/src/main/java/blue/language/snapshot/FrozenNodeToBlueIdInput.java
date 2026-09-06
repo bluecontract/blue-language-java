@@ -210,7 +210,8 @@ public final class FrozenNodeToBlueIdInput {
         if (node.getPosition() != null) {
             throw new IllegalArgumentException("\"$pos\" overlays are not valid direct BlueId input. Path: " + path);
         }
-        if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
+        if (context == Context.LIST_ELEMENT && node.getProperties() != null
+                && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
             throw new IllegalArgumentException("\"$replace\" overlays are not valid direct BlueId input. Path: " + path);
         }
         if (context == Context.LIST_ELEMENT) {

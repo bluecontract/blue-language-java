@@ -127,8 +127,13 @@ public final class StandardPreprocessingPipeline {
         }
         if (node.getItems() != null) {
             for (int index = 0; index < node.getItems().size(); index++) {
-                validateNode(node.getItems().get(index),
-                        child(path, String.valueOf(index)), visited);
+                Node item = node.getItems().get(index);
+                String itemPath = child(path, String.valueOf(index));
+                if (item != null && item.getProperties() != null
+                        && item.getProperties().containsKey(BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
+                    Nodes.validateEmptyPlaceholder(item, itemPath);
+                }
+                validateNode(item, itemPath, visited);
             }
         }
     }
@@ -162,11 +167,6 @@ public final class StandardPreprocessingPipeline {
             throw new IllegalArgumentException(
                     "A Preprocessed Document blueId node must be a pure reference. Path: "
                             + path);
-        }
-        if (node.getProperties() != null
-                && node.getProperties().containsKey(
-                BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
-            Nodes.validateEmptyPlaceholder(node, path);
         }
     }
 

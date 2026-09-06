@@ -191,14 +191,21 @@ final class MinimizedOverlayReconstructor {
                 throw new IllegalStateException(
                         "Cannot minimize a modified inherited item in an append-only list.");
             }
-            Node item = new Node();
-            reconstructNode(
-                    item,
-                    resolved.getItems().get(index),
-                    inheritedItems.get(index),
-                    false);
-            if (!Nodes.isEmptyNode(item)) {
-                result.add(item.position(index));
+            Node resolvedItem = resolved.getItems().get(index);
+            Node inheritedItem = inheritedItems.get(index);
+            if (requiresWholeItemReplacement(resolvedItem, inheritedItem)) {
+                Node replacement = new Node();
+                reconstructNode(replacement, resolvedItem,
+                        derivationBaseline(null, resolvedItem),
+                        usesOwnTypeBaseline(null, resolvedItem));
+                result.add(new Node().position(index)
+                        .properties("$replace", replacement));
+            } else {
+                Node item = new Node();
+                reconstructNode(item, resolvedItem, inheritedItem, false);
+                if (!Nodes.isEmptyNode(item)) {
+                    result.add(item.position(index));
+                }
             }
         }
         for (int index = inheritedSize;
@@ -223,6 +230,25 @@ final class MinimizedOverlayReconstructor {
             result.add(0, new Node().previousBlueId(
                     comparisonBlueId(inheritedItems)));
         }
+    }
+
+    private boolean requiresWholeItemReplacement(Node resolved, Node inherited) {
+        if (resolved.getItems() != null || inherited.getItems() != null
+                || resolved.isReferenceOnly() || inherited.isReferenceOnly()) {
+            return true;
+        }
+        if (inherited.getProperties() != null) {
+            if (resolved.getProperties() == null) {
+                return true;
+            }
+            for (Map.Entry<String, Node> field : inherited.getProperties().entrySet()) {
+                if (!sameNodeBlueId(field.getValue(),
+                        resolved.getProperties().get(field.getKey()))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void reconstructProperties(

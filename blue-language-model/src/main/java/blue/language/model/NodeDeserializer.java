@@ -217,12 +217,20 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                                 ParseContext.DIRECTIVE));
                         break;
                     case LIST_CONTROL_PREVIOUS:
+                        if (parseContext != ParseContext.LIST_ELEMENT) {
+                            properties.put(key, handleNode(value, appendPath(path, key), false));
+                            break;
+                        }
                         if (node.size() != 1) {
                             throw new IllegalArgumentException("\"$previous\" list anchors must be single-key list items.");
                         }
                         obj.previousBlueId(handlePreviousBlueId(value));
                         break;
                     case LIST_CONTROL_POS:
+                        if (parseContext != ParseContext.LIST_ELEMENT) {
+                            properties.put(key, handleNode(value, appendPath(path, key), false));
+                            break;
+                        }
                         obj.position(handlePosition(value));
                         break;
                     case LIST_CONTROL_REPLACE:
@@ -277,7 +285,8 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             if (obj.getPosition() != null && node.size() == 1) {
                 throw new IllegalArgumentException("\"$pos\" items must contain an overlay.");
             }
-            if (properties.containsKey(LIST_CONTROL_REPLACE)) {
+            if (parseContext == ParseContext.LIST_ELEMENT
+                    && properties.containsKey(LIST_CONTROL_REPLACE)) {
                 if (obj.getPosition() == null) {
                     throw new IllegalArgumentException("\"$replace\" is valid only inside a \"$pos\" list overlay. Path: " + appendPath(path, LIST_CONTROL_REPLACE));
                 }
@@ -321,6 +330,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
 
     private enum ParseContext {
         NORMAL,
+        LIST_ELEMENT,
         DIRECTIVE,
         TRANSFORMATION_CONFIGURATION
     }
@@ -390,7 +400,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             ArrayNode arrayNode = (ArrayNode) value;
             List<Node> items = new ArrayList<>();
             for (int i = 0; i < arrayNode.size(); i++) {
-                items.add(handleNode(arrayNode.get(i), appendPath(path, i), false));
+                items.add(handleNode(arrayNode.get(i), appendPath(path, i), false, ParseContext.LIST_ELEMENT));
             }
             return items;
         } else {

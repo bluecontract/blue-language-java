@@ -58,6 +58,7 @@ final class CanonicalIdentityInputReconstructor {
         if (resolved.getBlueId() != null
                 && inherited != null
                 && resolved.getBlueId().equals(inherited.getBlueId())
+                && resolved.getItems() == null
                 && !isSourceReference(source)) {
             return;
         }
@@ -254,6 +255,7 @@ final class CanonicalIdentityInputReconstructor {
                     ? source.getProperties().get(key)
                     : null;
             if (sameNodeBlueId(resolvedProperty, inheritedProperty)
+                    && resolvedProperty.getItems() == null
                     && !isSourceReference(sourceProperty)) {
                 continue;
             }

@@ -112,9 +112,18 @@ final class ListOverlayCanonicalIdentityParityTest {
                             + "    marker: A\n",
                     BlueFormat.YAML);
 
+            // Authored plain items append; the same bytes supplied as a
+            // complete canonical payload may not reorder inherited items.
+            assertEquals(4, language.resolution().resolve(reordered)
+                    .getItems().size());
+            Node canonicalBase = language.identity().canonicalIdentityInput(reordered.getType());
+            provider.addSingleNodes(canonicalBase);
+            reordered.type(new Node().blueId(DirectBlueIdCalculator.calculateBlueId(canonicalBase)));
+            provider.addSingleNodes(reordered);
+            String exactBlueId = DirectBlueIdCalculator.calculateBlueId(reordered);
             IllegalArgumentException failure = assertThrows(
                     IllegalArgumentException.class,
-                    () -> language.resolution().resolve(reordered));
+                    () -> language.snapshots().load(exactBlueId));
 
             assertTrue(failure.getMessage().contains(
                     "cannot reorder inherited items"));

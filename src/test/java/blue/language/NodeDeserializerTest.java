@@ -240,24 +240,17 @@ public class NodeDeserializerTest {
 
     @Test
     public void shouldRejectInvalidListControlMetadata() {
-        // given
+        // given: controls are recognized only at the top of a list element (§11.3).
         String[] invalidDocuments = {
                 "mergePolicy: replace-all",
-                "$previous: prevHash",
-                "$previous:\n" +
-                        "  blueId: prevHash\n" +
-                        "  extra: value",
-                "$pos: -1\n" +
-                        "value: C",
-                "$pos: 1.5\n" +
-                        "value: C",
-                "$pos: \"1\"\n" +
-                        "value: C",
-                "$pos: 2147483648\n" +
-                        "value: C",
-                "$pos: 0",
-                "$previous:\n" +
-                        "  blueId: 123"
+                "items: [{ $previous: prevHash }]",
+                "items: [{ $previous: {blueId: prevHash, extra: value} }]",
+                "items: [{ $pos: -1, value: C }]",
+                "items: [{ $pos: 1.5, value: C }]",
+                "items: [{ $pos: \"1\", value: C }]",
+                "items: [{ $pos: 2147483648, value: C }]",
+                "items: [{ $pos: 0 }]",
+                "items: [{ $previous: {blueId: 123} }]"
         };
 
         // when

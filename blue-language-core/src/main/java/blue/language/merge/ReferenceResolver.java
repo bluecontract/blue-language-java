@@ -355,7 +355,7 @@ final class ReferenceResolver {
         if (mergeable.getBlueId() != null && !mergeable.isReferenceOnly()) {
             mergeable.blueId(null);
         }
-        engine.mergeObjectWithContribution(target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
+        engine.mergeCanonicalObjectWithContribution(target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
         engine.copyMaterializedReferenceLabels(target, materialized);
         target.blueId(blueId);
     }
@@ -373,13 +373,13 @@ final class ReferenceResolver {
                     + engine.currentPath(state) + " for blueId: " + blueId);
         }
         try {
-            Node materialized = engine.resolveWithContribution(
+            Node materialized = engine.resolveCanonicalWithContribution(
                     canonicalReference.canonical.toNode(), limits, ResolutionEngine.Contribution.INSTANCE);
             Node mergeable = materialized.clone();
             if (mergeable.getBlueId() != null && !mergeable.isReferenceOnly()) {
                 mergeable.blueId(null);
             }
-            engine.mergeObjectWithContribution(
+            engine.mergeCanonicalObjectWithContribution(
                     target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
             engine.copyMaterializedReferenceLabels(target, materialized);
             target.blueId(blueId);
@@ -431,7 +431,7 @@ final class ReferenceResolver {
         }
 
         try {
-            Node resolved = engine.resolveWithContribution(
+            Node resolved = engine.resolveCanonicalWithContribution(
                     canonical.toNode(), limits, ResolutionEngine.Contribution.INSTANCE);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified

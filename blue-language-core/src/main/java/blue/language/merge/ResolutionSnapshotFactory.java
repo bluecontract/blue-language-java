@@ -46,7 +46,7 @@ final class ResolutionSnapshotFactory {
             throw new IllegalArgumentException(
                     "Snapshot resolution requires a strict canonical root.");
         }
-        Node resolved = engine.resolve(canonicalRoot.toNode(), limits);
+        Node resolved = engine.resolveCanonical(canonicalRoot.toNode(), limits);
         return snapshot(
                 canonicalRoot,
                 resolved,

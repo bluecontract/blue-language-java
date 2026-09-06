@@ -201,8 +201,9 @@ final class DeclaredTypeContributionResolver {
         if (typeBlueId != null) {
             referenceResolver.expandTypeReference(typeNode, typeBlueId);
         }
-        Node resolvedType = engine.resolveWithContribution(
-                typeNode, limits, contribution);
+        Node resolvedType = typeBlueId != null
+                ? engine.resolveCanonicalWithContribution(typeNode, limits, contribution)
+                : engine.resolveWithContribution(typeNode, limits, contribution);
         referenceResolver.cacheResolvedReference(
                 typeBlueId, resolvedType, limits);
         return resolvedType;
@@ -218,11 +219,12 @@ final class DeclaredTypeContributionResolver {
             boolean cacheHit) {
         if (cacheHit || referenceResolver.cachedResolvedType(
                 typeBlueId, limits) != null) {
-            engine.mergeObjectWithContribution(
+            engine.mergeCanonicalObjectWithContribution(
                     target, resolvedType, limits, contribution);
+        } else if (typeBlueId != null) {
+            engine.mergeCanonicalWithContribution(target, typeNode, limits, contribution);
         } else {
-            engine.mergeWithContribution(
-                    target, typeNode, limits, contribution);
+            engine.mergeWithContribution(target, typeNode, limits, contribution);
         }
     }
 
@@ -236,7 +238,7 @@ final class DeclaredTypeContributionResolver {
             ResolutionEngine.Contribution contribution) {
         source.type(detachedTypeMetadata(resolvedType, typeBlueId));
         if (!contributionApplied) {
-            engine.mergeObjectWithContribution(
+            engine.mergeCanonicalObjectWithContribution(
                     target, resolvedType, limits, contribution);
             recordAppliedContribution(target, typeBlueId);
         }

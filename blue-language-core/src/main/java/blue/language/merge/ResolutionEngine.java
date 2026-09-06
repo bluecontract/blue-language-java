@@ -41,6 +41,7 @@ final class ResolutionEngine implements NodeResolver {
     private final ReferenceCacheAdmissionPolicy referenceCacheAdmissionPolicy;
     private final ResolutionSession resolutionSession;
     private final ListOverlayMerger listOverlayMerger;
+    private boolean canonicalListPayloads;
     private final LabelProvenanceTracker labelProvenanceTracker;
     private final ActiveTypeStack activeTypeStack;
     private final ReferenceResolver referenceResolver;
@@ -146,22 +147,15 @@ final class ResolutionEngine implements NodeResolver {
                 new ResolutionSession());
     }
 
-    /**
-     * Resolves one authored contribution with an independent invocation and
-     * returns its immutable canonical/resolved evidence pair.
-     *
-     * <p>This hook deliberately bypasses the active mutable session. It is
-     * used only when merge-time validation needs a complete semantic view of
-     * authored input; sharing the current session would let partially merged
-     * target state or incomplete type evidence influence that validation.</p>
-     */
-    SnapshotResolution resolveDetachedContributionSnapshot(
-            Node authoredContribution) {
-        Objects.requireNonNull(
-                authoredContribution, "authoredContribution");
-        return invocationMerger().resolveSnapshot(
-                authoredContribution.clone(),
-                ResolutionLimits.NO_LIMITS);
+    /** Resolves exact comparison input independently under the owning semantic goal. */
+    TypeEvidenceResolution resolveDetachedCanonicalContribution(Node canonicalContribution) {
+        Objects.requireNonNull(canonicalContribution, "canonicalContribution");
+        ResolutionEngine detached = invocationMerger();
+        Contribution contribution = activeResolutionState().contribution;
+        Node resolved = detached.withCanonicalListPayloads(() -> detached.resolveRoot(
+                canonicalContribution.clone(), ResolutionLimits.NO_LIMITS, contribution));
+        return new TypeEvidenceResolution(FrozenNode.fromResolvedNode(resolved),
+                detached.completedTypeIdentityEvidence());
     }
 
     private boolean requiresFreshInvocation() {
@@ -642,6 +636,49 @@ final class ResolutionEngine implements NodeResolver {
             return resolve(node, limits);
         } finally {
             state.contribution = previous;
+        }
+    }
+
+    boolean hasCanonicalListPayloads() {
+        return canonicalListPayloads;
+    }
+
+    Node resolveCanonical(Node node, ResolutionLimits limits) {
+        if (requiresFreshInvocation()) {
+            return invocationMerger().resolveCanonical(node, limits);
+        }
+        return withCanonicalListPayloads(() -> resolve(node, limits));
+    }
+
+    Node resolveCanonicalWithContribution(
+            Node node, ResolutionLimits limits, Contribution contribution) {
+        return withCanonicalListPayloads(
+                () -> resolveWithContribution(node, limits, contribution));
+    }
+
+    void mergeCanonicalWithContribution(
+            Node target, Node source, ResolutionLimits limits, Contribution contribution) {
+        withCanonicalListPayloads(() -> {
+            mergeWithContribution(target, source, limits, contribution);
+            return null;
+        });
+    }
+
+    void mergeCanonicalObjectWithContribution(
+            Node target, Node source, ResolutionLimits limits, Contribution contribution) {
+        withCanonicalListPayloads(() -> {
+            mergeObjectWithContribution(target, source, limits, contribution);
+            return null;
+        });
+    }
+
+    private <T> T withCanonicalListPayloads(java.util.function.Supplier<T> action) {
+        boolean previous = canonicalListPayloads;
+        canonicalListPayloads = true;
+        try {
+            return action.get();
+        } finally {
+            canonicalListPayloads = previous;
         }
     }
 

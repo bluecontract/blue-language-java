@@ -1071,13 +1071,21 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "        schema:",
                 "          required: true"));
         String baseTypeId = provider.getBlueIdByName("Base Metadata List Type");
-        provider.addSingleDocs(String.join("\n",
+        String derivedSource = String.join("\n",
                 "name: Derived Metadata List Type",
                 "type:",
                 "  blueId: " + baseTypeId,
                 "entries:",
                 "  items:",
-                "    - name: Derived Entry"));
+                "    - $pos: 0",
+                "      name: Derived Entry");
+        // The provider stores full canonical list payloads, so prepare the
+        // authored label refinement before assigning its exact content ID.
+        try (blue.language.runtime.BlueLanguage language =
+                     blue.language.runtime.BlueLanguage.builder().nodeProvider(provider).build()) {
+            provider.addSingleNodes(language.identity().canonicalIdentityInput(
+                    language.codec().parseSource(derivedSource, blue.language.codec.BlueFormat.YAML)));
+        }
         return provider;
     }
 

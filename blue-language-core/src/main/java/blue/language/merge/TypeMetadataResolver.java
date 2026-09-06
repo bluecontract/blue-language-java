@@ -76,7 +76,7 @@ final class TypeMetadataResolver {
         try {
             long incompleteEpoch = incompleteTraversalEpoch();
             referenceResolver.expandTypeReference(metadataType, typeBlueId);
-            Node resolved = engine.resolveWithContribution(
+            Node resolved = engine.resolveCanonicalWithContribution(
                     metadataType,
                     limits,
                     ResolutionEngine.Contribution.TYPE_METADATA);

@@ -80,12 +80,8 @@ final class ListOverlayMerger {
         for (int index = start; index < sourceChildren.size(); index++) {
             Node child = sourceChildren.get(index);
             if (child.getPosition() != null) {
-                int position = child.getPosition();
-                if (position != result.size()) {
-                    throw new IllegalArgumentException(
-                            "\"$pos\" is out of range for a list without inherited items.");
-                }
-                child = withoutPosition(child);
+                throw new IllegalArgumentException(
+                        "\"$pos\" is out of range for a list without inherited items.");
             }
             Node resolved = resolveListChild(
                     child, limits, String.valueOf(result.size()), itemType);
@@ -101,8 +97,12 @@ final class ListOverlayMerger {
             List<Node> sourceChildren,
             ResolutionLimits limits,
             Node itemType) {
-        appendChildren(targetChildren, sourceChildren,
-                startsWithPrevious(sourceChildren) ? 1 : 0, limits, itemType);
+        if (engine.hasCanonicalListPayloads() && !startsWithPrevious(sourceChildren)) {
+            mergeCanonicalChildren(targetChildren, sourceChildren, 0, limits, itemType, false);
+        } else {
+            appendChildren(targetChildren, sourceChildren,
+                    startsWithPrevious(sourceChildren) ? 1 : 0, limits, itemType);
+        }
     }
 
     private void mergePositionalChildren(
@@ -114,21 +114,22 @@ final class ListOverlayMerger {
                 .anyMatch(child -> child.getPosition() != null);
         int start = startsWithPrevious(sourceChildren) ? 1 : 0;
         if (!hasPositionControls) {
-            if (start > 0) {
+            if (start > 0 || !engine.hasCanonicalListPayloads()) {
                 appendChildren(targetChildren, sourceChildren, start, limits, itemType);
             } else {
-                mergePlainPositionalChildren(
-                        targetChildren, sourceChildren, start, limits, itemType);
+                mergeCanonicalChildren(
+                        targetChildren, sourceChildren, start, limits, itemType, true);
             }
             return;
         }
 
+        int inheritedPrefixSize = targetChildren.size();
         Set<Integer> positions = new HashSet<>();
         for (int index = start; index < sourceChildren.size(); index++) {
             Node sourceChild = sourceChildren.get(index);
             if (sourceChild.getPosition() != null) {
                 int position = sourceChild.getPosition();
-                if (position >= targetChildren.size()) {
+                if (position >= inheritedPrefixSize) {
                     throw new IllegalArgumentException(
                             "\"$pos\" is out of range: " + position);
                 }
@@ -148,12 +149,13 @@ final class ListOverlayMerger {
         }
     }
 
-    private void mergePlainPositionalChildren(
+    private void mergeCanonicalChildren(
             List<Node> targetChildren,
             List<Node> sourceChildren,
             int start,
             ResolutionLimits limits,
-            Node itemType) {
+            Node itemType,
+            boolean positional) {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
@@ -178,8 +180,8 @@ final class ListOverlayMerger {
                 }
                 continue;
             }
-            SnapshotResolution sourceResolution = engine
-                    .resolveDetachedContributionSnapshot(
+            TypeEvidenceResolution sourceResolution = engine
+                    .resolveDetachedCanonicalContribution(
                             applyCompletedItemType(
                                     sourceChild,
                                     itemType));
@@ -192,9 +194,18 @@ final class ListOverlayMerger {
                         "Positional list overlays cannot reorder inherited items; "
                                 + "use a valid $pos replacement at index " + index + ".");
             }
-            mergeExistingPosition(
-                    targetChildren.get(index), sourceChild,
-                    String.valueOf(index), limits);
+            if (!sourceIdentity.equals(inheritedIdentities.get(index))) {
+                if (!positional) {
+                    throw new IllegalArgumentException(
+                            "Append-only canonical payload cannot modify its inherited prefix.");
+                }
+                Node inherited = targetChildren.get(index);
+                replacePosition(targetChildren, index, sourceChild, limits,
+                        inherited.getType() != null ? inherited.getType() : itemType);
+            } else {
+                mergeExistingPosition(targetChildren.get(index), sourceChild,
+                        String.valueOf(index), limits);
+            }
         }
     }
 
