@@ -35,6 +35,24 @@ public final class SourceExecutionBasis {
             throw new IllegalArgumentException("Source receipt differs from its expected producer execution basis");
     }
 
+    static java.util.Map<DocumentId, String> fixedPolicyBases(java.util.Set<DocumentId> sources,
+            ClosureEnvironment environment, ExecutionPolicy policy) {
+        java.util.Map<DocumentId, String> bases = new java.util.LinkedHashMap<DocumentId, String>();
+        for (DocumentId source : sources) bases.put(source, identity(source, environment, policy));
+        return bases;
+    }
+
+    static void requireProducerBases(java.util.Set<DocumentId> sources, ClosureEnvironment expectedEnvironment,
+            ClosureEnvironment actualEnvironment, ExecutionPolicy producerPolicy, java.util.Map<DocumentId, String> expectedBases) {
+        requireCompatibleEnvironment(expectedEnvironment, actualEnvironment);
+        Objects.requireNonNull(expectedBases, "expectedBases");
+        for (DocumentId source : sources) {
+            String expected = expectedBases.get(source);
+            if (expected == null) throw new IllegalArgumentException("Missing expected source execution basis: " + source.value());
+            requireProducerBasis(expected, source, actualEnvironment, producerPolicy);
+        }
+    }
+
     private static void verifyConstructorEvidence(ClosureEnvironment environment, ExecutionPolicy policy) {
         ClosureInvocationVerifier.verifyEnvironment(Objects.requireNonNull(environment, "environment"));
         if (!Objects.requireNonNull(policy, "policy").identity().equals(ClosureIdentityService.INSTANCE.executionPolicyIdentity(policy)))

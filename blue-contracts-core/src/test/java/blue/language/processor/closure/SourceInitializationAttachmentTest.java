@@ -26,6 +26,43 @@ class SourceInitializationAttachmentTest {
     private static final String CHANNEL_ID = id(CHANNEL), HANDLER_ID = id(HANDLER);
 
     @Test
+    void failedBeforeCreationStillRetainsOriginalUnusedChoicesThroughColdFailureEvidence() {
+        try (Fixture f = new Fixture()) {
+            ClosureInvocationInput zero = ClosureEvidenceFactory.processClosure(f.input.snapshot(), f.input.cause(), f.input.directDeliveries(),
+                    ClosureEvidenceFactory.executionPolicy(0L, Collections.emptyMap(), "zero creator budget"), f.input.environment());
+            SameOriginProcessAttempt attempt = f.contracts.processSameOrigin(zero, f.attachments, Collections.emptyList(),
+                    Collections.emptyMap(), Collections.emptyList());
+            assertTrue(attempt.complete()); assertEquals(1, attempt.operations().size());
+            SameOriginOperationResult failed = attempt.operations().get(0);
+            assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, failed.status()); assertEquals(0, f.creatorExecutions);
+            SourceOperationFailure original = SourceOperationFailure.fromSameOrigin(failed);
+            assertEquals(f.attachments.originalSelectionIdentities(Collections.singleton(ORDER)), original.originalAttachmentSelections().get());
+            assertEquals(1, original.originalAttachmentSelections().get().get(ORDER).size(), "An unused choice is still original seed input");
+            Map<String, byte[]> fragments = new HashMap<>();
+            String root = SourceOperationFailureCodec.encode(original, fragments::put, FrozenNodeEvidenceCodec.Limits.defaults());
+            SourceOperationFailure cold = SourceOperationFailureCodec.decode(root, fragments::get, FrozenNodeEvidenceCodec.Limits.defaults());
+            assertEquals(original.originalAttachmentSelections(), cold.originalAttachmentSelections());
+            assertThrows(UnsupportedOperationException.class, () -> cold.originalAttachmentSelections().get().get(ORDER).clear());
+            SameOriginAttachmentPolicy alternate = new SameOriginAttachmentPolicy(Collections.singletonList(
+                    new SameOriginAttachmentPolicy.Selection(SameOriginAttachmentPolicy.Mode.FROM_NOW, ORDER,
+                            f.binding.occurrenceIdentity(), f.binding.targetDocumentId(), f.binding.expectedTargetBlueId())));
+            SameOriginOperationResult alternateFailure = f.contracts.processSameOrigin(zero, alternate, Collections.emptyList(),
+                    Collections.emptyMap(), Collections.emptyList()).operations().get(0);
+            assertNotEquals(failed.operationIdentity(), alternateFailure.operationIdentity());
+            assertNotEquals(original.originalAttachmentSelections(), SourceOperationFailure.fromSameOrigin(alternateFailure).originalAttachmentSelections());
+            com.fasterxml.jackson.databind.node.ObjectNode changed = (com.fasterxml.jackson.databind.node.ObjectNode)
+                    FrozenNodeEvidenceCodec.json(fragments.get(root));
+            ((com.fasterxml.jackson.databind.node.ObjectNode) changed.get("originalAttachmentSelections")).remove(ORDER.value());
+            byte[] bytes = FrozenNodeEvidenceCodec.bytes(changed);
+            assertThrows(InvalidExecutionEvidenceException.class, () -> SourceOperationFailureCodec.decode(root, key -> key.equals(root) ? bytes : fragments.get(key),
+                    FrozenNodeEvidenceCodec.Limits.defaults()), "Retained root authenticates the original selection map");
+            String malformed = FrozenNodeEvidenceCodec.digest(bytes); fragments.put(malformed, bytes);
+            assertThrows(IllegalArgumentException.class, () -> SourceOperationFailureCodec.decode(malformed, fragments::get,
+                    FrozenNodeEvidenceCodec.Limits.defaults()), "A self-hashed map cannot omit one group owner");
+        }
+    }
+
+    @Test
     void twoCreationSitesReplayTheSameInitializationOnlyForTheirOwnPlacements() {
         try (Fixture f = new Fixture(Action.ATTACH_TWICE)) {
             SameOriginProcessAttempt attempt = f.install(f.initialization);

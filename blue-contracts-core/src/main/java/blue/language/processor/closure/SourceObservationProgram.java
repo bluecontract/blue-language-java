@@ -47,6 +47,8 @@ public final class SourceObservationProgram {
     private final List<AcceptedAttachmentView> acceptedViews;
     private final List<AcceptedInitializationInstallation> acceptedInitializations;
     private final ManagedReactionContext managedReaction;
+    private final Map<DocumentId, List<String>> originalAttachmentSelections;
+    private final List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence;
 
     SourceObservationProgram(ClosureInvocationInput input,
                              ClosureProcessResult result,
@@ -194,6 +196,39 @@ public final class SourceObservationProgram {
                              List<ManagedReadPin> readPins, List<AcceptedAttachmentView> acceptedViews,
                              ManagedReactionContext managedReaction, List<AcceptedInitializationInstallation> acceptedInitializations,
                              List<SkippedWork> skippedWork) {
+        this(invocationIdentity, causeKind, causeIdentity, externalCause, environment, executionPolicy, predecessors, results,
+                owned, steps, projections, beforeBindings, afterBindings, beforeComponents, afterComponents, borrowed, readPins,
+                acceptedViews, managedReaction, acceptedInitializations, skippedWork, null);
+    }
+
+    SourceObservationProgram(String invocationIdentity, ProcessingCause.Kind causeKind, String causeIdentity,
+                             ExternalEventCause externalCause, ClosureEnvironment environment,
+                             ExecutionPolicy executionPolicy, List<SourceState> predecessors,
+                             List<SourceState> results, Set<DocumentId> owned, List<Step> steps,
+                             List<ReferenceProjection> projections, List<ManagedOccurrenceBinding> beforeBindings,
+                             List<ManagedOccurrenceBinding> afterBindings, List<ComponentSnapshot> beforeComponents,
+                             List<ComponentSnapshot> afterComponents, List<SourceObservationProgram> borrowed,
+                             List<ManagedReadPin> readPins, List<AcceptedAttachmentView> acceptedViews,
+                             ManagedReactionContext managedReaction, List<AcceptedInitializationInstallation> acceptedInitializations,
+                             List<SkippedWork> skippedWork, Map<DocumentId, List<String>> originalAttachmentSelections) {
+        this(invocationIdentity, causeKind, causeIdentity, externalCause, environment, executionPolicy, predecessors, results,
+                owned, steps, projections, beforeBindings, afterBindings, beforeComponents, afterComponents, borrowed, readPins,
+                acceptedViews, managedReaction, acceptedInitializations, skippedWork, originalAttachmentSelections, Collections.emptyList());
+    }
+
+    SourceObservationProgram(String invocationIdentity, ProcessingCause.Kind causeKind, String causeIdentity,
+                             ExternalEventCause externalCause, ClosureEnvironment environment,
+                             ExecutionPolicy executionPolicy, List<SourceState> predecessors,
+                             List<SourceState> results, Set<DocumentId> owned, List<Step> steps,
+                             List<ReferenceProjection> projections, List<ManagedOccurrenceBinding> beforeBindings,
+                             List<ManagedOccurrenceBinding> afterBindings, List<ComponentSnapshot> beforeComponents,
+                             List<ComponentSnapshot> afterComponents, List<SourceObservationProgram> borrowed,
+                             List<ManagedReadPin> readPins, List<AcceptedAttachmentView> acceptedViews,
+                             ManagedReactionContext managedReaction, List<AcceptedInitializationInstallation> acceptedInitializations,
+                             List<SkippedWork> skippedWork, Map<DocumentId, List<String>> originalAttachmentSelections,
+                             List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence) {
+        this.interpretedSourceEvidence = SameOriginGroupEvidence.canonicalSourceEvidence(interpretedSourceEvidence);
+        this.originalAttachmentSelections = SameOriginAttachmentPolicy.freezeOriginalSelections(originalAttachmentSelections, owned);
         this.invocationIdentity = ClosureValueSupport.requireSha256Identity(invocationIdentity, "source invocation");
         this.causeKind = Objects.requireNonNull(causeKind, "causeKind");
         this.causeIdentity = ClosureValueSupport.requireSha256Identity(causeIdentity, "source cause");
@@ -273,6 +308,15 @@ public final class SourceObservationProgram {
                 if (!borrowedOwners.add(borrowedOwnershipKey(dependency, dependencyOwner)))
                 throw new IllegalArgumentException("Two borrowed operations own one source at this causal position");
         }
+        if (originalAttachmentSelections != null) {
+            Set<SameOriginGroupEvidence.SourceEvidence> actual = new TreeSet<>();
+            for (SourceObservationProgram dependency : borrowed) if (dependency.causeKind() == ProcessingCause.Kind.ADMISSION)
+                actual.add(new SameOriginGroupEvidence.SourceEvidence(SameOriginGroupEvidence.SourceEvidence.Kind.INITIALIZATION, dependency.invocationIdentity()));
+            for (AcceptedAttachmentView view : acceptedViews) if (view.frontierView().isPresent())
+                actual.add(new SameOriginGroupEvidence.SourceEvidence(SameOriginGroupEvidence.SourceEvidence.Kind.FRONTIER, view.frontierView().get().identity()));
+            if (!new ArrayList<>(actual).equals(this.interpretedSourceEvidence))
+                throw new IllegalArgumentException("Retained source program differs from its interpreted preparation evidence");
+        }
     }
 
     /** Canonical init0 and this origin's processing view are independent interpretation contexts. */
@@ -306,6 +350,11 @@ public final class SourceObservationProgram {
     public List<AcceptedAttachmentView> acceptedViews() { return acceptedViews; }
     public List<AcceptedInitializationInstallation> acceptedInitializations() { return acceptedInitializations; }
     public java.util.Optional<ManagedReactionContext> managedReaction() { return java.util.Optional.ofNullable(managedReaction); }
+    /** Original seed choices, including unused choices and explicit empty; present for same-origin producers. */
+    public java.util.Optional<Map<DocumentId, List<String>>> originalAttachmentSelections() {
+        return java.util.Optional.ofNullable(originalAttachmentSelections);
+    }
+    public List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence() { return interpretedSourceEvidence; }
 
     private static List<ManagedReadPin> retainedPins(List<AcceptedAttachmentView> acceptedViews,
                                                     List<AcceptedInitializationInstallation> acceptedInitializations) {

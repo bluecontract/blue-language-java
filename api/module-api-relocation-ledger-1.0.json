@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 591,
-    "publicTypeIdentity": "sha256:b8675a1b6d338a532e7bc8bcd22dbf084d0dcdd81f4afadf2ebd05f9fa018da3",
+    "publicProductionTypeCount": 593,
+    "publicTypeIdentity": "sha256:fa67b416123366f42601af5f46f0eb4aa42bdc0e2cf8c826c8fc0c4427e59a4b",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "internal-type-removed-from-public-surface": 267,
-      "new-supported-api-spi": 124
+      "new-supported-api-spi": 126
     }
   },
   "allowedClassifications": [
@@ -5217,6 +5217,28 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.closure.SameOriginGroupEvidence$Admission",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginGroupEvidence$SourceEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginGroupEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginGroupEvidence$SourceEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.SameOriginGroupEvidence$SourceEvidence$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SameOriginGroupEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SameOriginGroupEvidence$SourceEvidence$Kind",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "new-supported-api-spi",

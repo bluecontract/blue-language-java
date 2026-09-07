@@ -1108,7 +1108,10 @@ final class ClosureIdentityService {
 
     private static void validateConstructor(
             Constructor constructor, Object value) {
-        if (!constructor.fields.isEmpty()) {
+        if (constructor == Constructor.SAME_ORIGIN_GROUP) {
+            SameOriginGroupIdentity.validateConstructor(requireObject(value, OBJECT_VALUE));
+            return;
+        } else if (!constructor.fields.isEmpty()) {
             requireExactFields(requireObject(value, OBJECT_VALUE),
                     constructor.fields);
         } else if (!(value instanceof List)) {

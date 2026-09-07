@@ -766,10 +766,42 @@ final class DefaultClosureProcessorTest {
                             A, bindings.get(2).occurrenceIdentity(), C, c.blueId()),
                     new SameOriginAttachmentPolicy.Selection(SameOriginAttachmentPolicy.Mode.FROM_NOW,
                             B, bindings.get(3).occurrenceIdentity(), A, a.blueId())));
+            if (authorizeViews && !rejected && !joinedFatal) {
+                // A fresh producer cannot publish its own partial result before its returning
+                // dependency has authorized the same input and the shared policy.
+                java.util.Map<DocumentId, String> bases = new java.util.HashMap<>();
+                for (DocumentId member : Arrays.asList(A, B, C)) bases.put(member,
+                        SourceExecutionBasis.identity(member, input.environment(), input.executionPolicy()));
+                SameOriginProcessAttempt missing = new DefaultClosureProcessor(owner).processSameOrigin(input, attachmentPolicy,
+                        Collections.emptyList(), Collections.emptyMap(), Collections.emptyList(), Collections.emptyList(),
+                        Collections.emptyList(), bases, new java.util.HashSet<>(Arrays.asList(A, B)));
+                assertFalse(missing.complete()); assertEquals(Collections.singleton(C), missing.requiredSourceAdmissions());
+                assertTrue(missing.operations().isEmpty()); assertTrue(missing.requiredExactBlueIds().isEmpty());
+                assertTrue(missing.resourceDemands().isEmpty());
+                calls.clear();
+                java.util.Map<DocumentId, String> returningBasis = new java.util.HashMap<>(bases);
+                returningBasis.put(C, SourceExecutionBasis.identity(C, input.environment(),
+                        ClosureEvidenceFactory.executionPolicy(cap + 1, Collections.emptyMap(), "returning C policy")));
+                SameOriginProcessAttempt crossPolicyReturn = new DefaultClosureProcessor(owner).processSameOrigin(input, attachmentPolicy,
+                        Collections.emptyList(), Collections.emptyMap(), Collections.emptyList(), Collections.emptyList(),
+                        Collections.emptyList(), returningBasis, new java.util.HashSet<>(Arrays.asList(A, B)));
+                assertEquals(Collections.singleton(C), crossPolicyReturn.requiredSourceAdmissions());
+                assertTrue(crossPolicyReturn.operations().isEmpty(), "A returning different-policy participant cannot leave an independently published prefix");
+                calls.clear();
+                java.util.Map<DocumentId, String> wrongBasis = new java.util.HashMap<>(bases);
+                wrongBasis.put(B, SourceExecutionBasis.identity(B, input.environment(),
+                        ClosureEvidenceFactory.executionPolicy(cap + 1, Collections.emptyMap(), "independent B policy")));
+                assertThrows(IllegalArgumentException.class, () -> new DefaultClosureProcessor(owner)
+                        .processSameOrigin(input, attachmentPolicy, Collections.emptyList(), Collections.emptyMap(), Collections.emptyList(),
+                                Collections.emptyList(), Collections.emptyList(), wrongBasis),
+                        "An explicit independent expected basis is checked even on a fresh compatibility invocation");
+                assertTrue(calls.isEmpty(), "Wrong-policy source cannot execute its authored handler");
+            }
             ClosureExecutionRecorder recorder = new ClosureExecutionRecorder(input.invocationIdentity()); recorder.captureSourceObservation();
             try (ClosureExecutionSession driver = new ClosureExecutionSession(owner, input, recorder, ClosureExecutionSession.ExecutionMode.PROCESSING)) {
                 SameOriginAttemptCoordinator groups = driver.useSameOriginGroups(owner,
                         authorizeViews ? attachmentPolicy : SameOriginAttachmentPolicy.empty());
+                driver.admittedFreshSources(new java.util.HashSet<>(Arrays.asList(A, B, C)));
                 if (!authorizeViews) {
                     assertThrows(blue.language.processor.InvalidExecutionEvidenceException.class, driver::execute);
                     assertTrue(groups.attempt(B).admissions().isEmpty(), "Historical A0 does not authorize installing tentative A1");

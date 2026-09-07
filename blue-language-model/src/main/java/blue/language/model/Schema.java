@@ -1,7 +1,5 @@
 package blue.language.model;
 
-import blue.language.model.value.ScalarValues;
-
 import blue.language.model.wire.SchemaPropertyConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,7 +11,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static blue.language.model.value.ScalarValues.*;
 import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
 
 /**
@@ -21,7 +18,9 @@ import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
  *
  * <p>Keyword values remain Blue {@link Node} instances so exact type and
  * identity information is preserved. Typed convenience getters expose numeric
- * and boolean values. {@link #clone()} deep-copies keyword and enum nodes.</p>
+ * and boolean values, rejecting invalid scalar kinds or fractional counts with
+ * {@link InvalidNodeStructureException}. {@link #clone()} deep-copies keyword
+ * and enum nodes.</p>
  */
 public class Schema implements Cloneable {
 
@@ -195,7 +194,7 @@ public class Schema implements Cloneable {
      * @return required value, or {@code null}
      */
     public Boolean getRequiredValue() {
-        return required == null ? null : getBooleanFromObject(required.getValue());
+        return booleanKeyword(required, SchemaPropertyConstants.KEY_REQUIRED);
     }
 
     /**
@@ -204,7 +203,7 @@ public class Schema implements Cloneable {
      * @return exact minimum length, or {@code null}
      */
     public BigInteger getMinLengthExact() {
-        return minLength == null ? null : getBigIntegerFromObject(minLength.getValue());
+        return integerKeyword(minLength, SchemaPropertyConstants.KEY_MIN_LENGTH);
     }
 
     /**
@@ -213,7 +212,7 @@ public class Schema implements Cloneable {
      * @return exact maximum length, or {@code null}
      */
     public BigInteger getMaxLengthExact() {
-        return maxLength == null ? null : getBigIntegerFromObject(maxLength.getValue());
+        return integerKeyword(maxLength, SchemaPropertyConstants.KEY_MAX_LENGTH);
     }
 
     /**
@@ -222,7 +221,7 @@ public class Schema implements Cloneable {
      * @return minimum value, or {@code null}
      */
     public BigDecimal getMinimumValue() {
-        return minimum == null ? null : getBigDecimalFromObject(minimum.getValue());
+        return numericKeyword(minimum, SchemaPropertyConstants.KEY_MINIMUM);
     }
 
     /**
@@ -231,7 +230,7 @@ public class Schema implements Cloneable {
      * @return maximum value, or {@code null}
      */
     public BigDecimal getMaximumValue() {
-        return maximum == null ? null : getBigDecimalFromObject(maximum.getValue());
+        return numericKeyword(maximum, SchemaPropertyConstants.KEY_MAXIMUM);
     }
 
     /**
@@ -240,7 +239,7 @@ public class Schema implements Cloneable {
      * @return exclusive minimum, or {@code null}
      */
     public BigDecimal getExclusiveMinimumValue() {
-        return exclusiveMinimum == null ? null : getBigDecimalFromObject(exclusiveMinimum.getValue());
+        return numericKeyword(exclusiveMinimum, SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM);
     }
 
     /**
@@ -249,7 +248,7 @@ public class Schema implements Cloneable {
      * @return exclusive maximum, or {@code null}
      */
     public BigDecimal getExclusiveMaximumValue() {
-        return exclusiveMaximum == null ? null : getBigDecimalFromObject(exclusiveMaximum.getValue());
+        return numericKeyword(exclusiveMaximum, SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM);
     }
 
     /**
@@ -258,7 +257,7 @@ public class Schema implements Cloneable {
      * @return multiple-of value, or {@code null}
      */
     public BigDecimal getMultipleOfValue() {
-        return multipleOf == null ? null : getBigDecimalFromObject(multipleOf.getValue());
+        return numericKeyword(multipleOf, SchemaPropertyConstants.KEY_MULTIPLE_OF);
     }
 
     /**
@@ -267,7 +266,7 @@ public class Schema implements Cloneable {
      * @return exact minimum item count, or {@code null}
      */
     public BigInteger getMinItemsExact() {
-        return minItems == null ? null : getBigIntegerFromObject(minItems.getValue());
+        return integerKeyword(minItems, SchemaPropertyConstants.KEY_MIN_ITEMS);
     }
 
     /**
@@ -276,7 +275,7 @@ public class Schema implements Cloneable {
      * @return exact maximum item count, or {@code null}
      */
     public BigInteger getMaxItemsExact() {
-        return maxItems == null ? null : getBigIntegerFromObject(maxItems.getValue());
+        return integerKeyword(maxItems, SchemaPropertyConstants.KEY_MAX_ITEMS);
     }
 
     /**
@@ -285,7 +284,7 @@ public class Schema implements Cloneable {
      * @return unique-items value, or {@code null}
      */
     public Boolean getUniqueItemsValue() {
-        return uniqueItems == null ? null : getBooleanFromObject(uniqueItems.getValue());
+        return booleanKeyword(uniqueItems, SchemaPropertyConstants.KEY_UNIQUE_ITEMS);
     }
 
     /**
@@ -322,7 +321,7 @@ public class Schema implements Cloneable {
      * @return exact minimum field count, or {@code null}
      */
     public BigInteger getMinFieldsExact() {
-        return minFields == null ? null : getBigIntegerFromObject(minFields.getValue());
+        return integerKeyword(minFields, SchemaPropertyConstants.KEY_MIN_FIELDS);
     }
 
     /**
@@ -331,7 +330,68 @@ public class Schema implements Cloneable {
      * @return exact maximum field count, or {@code null}
      */
     public BigInteger getMaxFieldsExact() {
-        return maxFields == null ? null : getBigIntegerFromObject(maxFields.getValue());
+        return integerKeyword(maxFields, SchemaPropertyConstants.KEY_MAX_FIELDS);
+    }
+
+    private static Boolean booleanKeyword(Node node, String keyword) {
+        if (node == null) {
+            return null;
+        }
+        Object value = keywordValue(node, keyword);
+        if (!(value instanceof Boolean)) {
+            throw invalidKeyword(keyword, "a Boolean");
+        }
+        return (Boolean) value;
+    }
+
+    private static BigInteger integerKeyword(Node node, String keyword) {
+        if (node == null) {
+            return null;
+        }
+        Object value = keywordValue(node, keyword);
+        if (value instanceof BigInteger) {
+            return (BigInteger) value;
+        }
+        if (value instanceof BigDecimal) {
+            BigDecimal decimal = (BigDecimal) value;
+            if (decimal.stripTrailingZeros().scale() > 0) {
+                throw invalidKeyword(keyword, "an exact integer");
+            }
+            // Representation/resource failures are not malformed authored counts.
+            return decimal.toBigIntegerExact();
+        }
+        throw invalidKeyword(keyword, "an exact integer");
+    }
+
+    private static BigDecimal numericKeyword(Node node, String keyword) {
+        if (node == null) {
+            return null;
+        }
+        Object value = keywordValue(node, keyword);
+        if (value instanceof BigInteger) {
+            return new BigDecimal((BigInteger) value);
+        }
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        throw invalidKeyword(keyword, "a number");
+    }
+
+    private static InvalidNodeStructureException invalidKeyword(String keyword, String expected) {
+        return new InvalidNodeStructureException(
+                "Schema keyword \"" + keyword + "\" must be " + expected + ".");
+    }
+
+    private static Object keywordValue(Node node, String keyword) {
+        Object value = node.getValue();
+        if (value == null && (node.getBlueId() != null || node.getType() != null)) {
+            // These getters do not acquire per-keyword references or type-supplied
+            // values. Preserve their unresolved operational failure; absence of
+            // locally available evidence is not a malformed authored scalar.
+            throw new IllegalArgumentException(
+                    "Schema keyword \"" + keyword + "\" requires a resolved scalar value.");
+        }
+        return value;
     }
 
     /**

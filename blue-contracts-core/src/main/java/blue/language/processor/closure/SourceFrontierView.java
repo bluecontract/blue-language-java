@@ -87,7 +87,14 @@ public final class SourceFrontierView {
     public ExecutionPolicy executionPolicy() { return executionPolicy; }
     public String identity() { return identity; }
     public void verifyInvocation(ClosureInvocationInput input) {
-        requireEnvironment(environment, executionPolicy, input.environment(), input.executionPolicy());
+        verifyInvocation(input, SourceExecutionBasis.fixedPolicyBases(Collections.singleton(selection.targetLineage()),
+                input.environment(), input.executionPolicy()));
+    }
+
+    /** Verifies the selected source's own basis, not the creator's independent gas budget. */
+    public void verifyInvocation(ClosureInvocationInput input, Map<DocumentId, String> expectedSourceBases) {
+        SourceExecutionBasis.requireProducerBases(Collections.singleton(selection.targetLineage()), input.environment(),
+                environment, executionPolicy, expectedSourceBases);
         ExternalOrderKey creator = producingOrder(input.cause() instanceof ExternalEventCause ? (ExternalEventCause) input.cause() : null, input.managedReaction());
         if (creator == null || selection.frontier().get().compareTo(creator) > 0)
             throw new IllegalArgumentException("Frontier is after the actual creator producing position");

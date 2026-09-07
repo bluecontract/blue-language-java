@@ -33,6 +33,7 @@ import blue.language.snapshot.FrozenNode;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * One real affected-closure execution loop over independent document Roots.
@@ -187,6 +189,8 @@ final class ClosureExecutionSession
     private Set<DocumentId> ownedDocuments;
     private Map<DocumentId, List<SourceObservationGap>> observationGaps = Collections.emptyMap();
     private Map<DocumentId, String> expectedSourceBases = Collections.emptyMap();
+    private boolean requireExplicitSourceBases;
+    private Set<DocumentId> admittedFreshSources;
     private String replayedEventOccurrenceIdentity;
     private String replayedPatchTransitionIdentity;
     private String replayedPatchSiteIdentity;
@@ -209,6 +213,7 @@ final class ClosureExecutionSession
     private final Map<DocumentId, String> sourcePrefixSites = new LinkedHashMap<>();
     private final Map<SourceCursor, Set<String>> assignedRetainedWork = new java.util.IdentityHashMap<>();
     private final Map<Object, Map<DocumentId, String>> consumedRetainedOperations = new java.util.IdentityHashMap<>();
+    private final Map<Object, Set<SameOriginGroupEvidence.SourceEvidence>> interpretedSourceEvidence = new java.util.IdentityHashMap<>();
     private final Map<Object, Map<DocumentId, Set<DocumentId>>> observedSourcesByAttempt = new java.util.IdentityHashMap<>();
     private final Map<DocumentId, ManagedReactionContext> managedReactionByConsumer = new LinkedHashMap<>();
     private final Map<String, ManagedReactionContext.DueOccurrence> dueReactionOccurrences = new LinkedHashMap<>();
@@ -299,6 +304,7 @@ final class ClosureExecutionSession
         java.util.SortedSet<SameOriginAttemptCoordinator.Attempt> ready = new java.util.TreeSet<>(
                 Comparator.comparing(SameOriginAttemptCoordinator.Attempt::firstDocument));
         for (SameOriginAttemptCoordinator.Attempt attempt : attempts) {
+            verifyFreshSourceAdmission(attempt.members());
             if (attempt.firstRuntime().groupReservedGas() != 0L)
                 throw new IllegalStateException("A source result cannot contain unsettled runtime reservations");
             if (attempt.failure() == null) {
@@ -315,7 +321,7 @@ final class ClosureExecutionSession
         }
         SameOriginOperationResultAssembler assembler = new SameOriginOperationResultAssembler(input, state(),
                 new LinkedHashSet<>(failedSources.values()), observationGaps, sourceCursors.stream()
-                        .map(cursor -> cursor.program).collect(java.util.stream.Collectors.toList()));
+                        .map(cursor -> cursor.program).collect(java.util.stream.Collectors.toList()), attachmentPolicy);
         Map<SameOriginAttemptCoordinator.Attempt, SameOriginOperationResult> completed = new java.util.IdentityHashMap<>();
         List<SameOriginOperationResult> operations = new ArrayList<>();
         while (!ready.isEmpty()) {
@@ -356,7 +362,7 @@ final class ClosureExecutionSession
             SameOriginOperationResult operation = assembler.assemble(attempt.members(), seeds, admissions, consumed,
                     attempt.failure() == null ? attempt.canonicalGasTrace() : attempt.failure().canonicalGasTrace,
                     attempt.failure(), attempt.failure() == null ? captureSameOriginGroup(attempt.firstDocument()) : null,
-                    observedByConsumer);
+                    observedByConsumer, interpretedSourceEvidence(attempt.members()));
             completed.put(attempt, operation); operations.add(operation);
             for (SameOriginAttemptCoordinator.Attempt consumer : dependents.getOrDefault(attempt, Collections.emptySet())) {
                 int remaining = unresolved.get(consumer) - 1; unresolved.put(consumer, remaining);
@@ -390,6 +396,8 @@ final class ClosureExecutionSession
     /** Committed evidence is a dependency, never a provisional attempt or a newly published operation. */
     private void observesSource(DocumentId consumer, DocumentId producer, String site) {
         if (projectingInitialization != null && projectingInitialization.source(producer) != null) {
+            if (projectingInitialization.source(consumer) == null)
+                consultInitialization(consumer, projectingInitialization.installation.initialization);
             if (sameOrigin != null && projectingInitialization.source(consumer) == null && recorder.sourceObservation() != null)
                 recorder.sourceObservation().borrowedProgram(projectingInitialization.installation.initialization.program(),
                         seedStreams.get(consumer).originalAttemptToken);
@@ -399,6 +407,7 @@ final class ClosureExecutionSession
         SourceCursor source = sourcesByDocument.get(producer);
         SourceOperationFailure failure = failedSources.get(producer);
         if (source != null && source.program.causeKind() == ProcessingCause.Kind.ADMISSION) {
+            consultSourceEvidence(consumer, SameOriginGroupEvidence.SourceEvidence.Kind.INITIALIZATION, source.program.invocationIdentity());
             // Initialization is an immutable preparation fact. Its publication is authorized by
             // a surviving installation, not by pretending it is a previously committed external
             // source operation (create-then-retire must not publish an orphan source).
@@ -424,6 +433,30 @@ final class ClosureExecutionSession
         observedSourcesByAttempt.computeIfAbsent(seedStreams.get(consumer).originalAttemptToken,
                 ignored -> new java.util.TreeMap<>()).computeIfAbsent(consumer,
                 ignored -> new java.util.TreeSet<>()).add(producer);
+    }
+
+    private void consultInitialization(DocumentId consumer, SourceInitialization initialization) {
+        consultSourceEvidence(consumer, SameOriginGroupEvidence.SourceEvidence.Kind.INITIALIZATION, initialization.program().invocationIdentity());
+        if (sameOrigin != null && !isRetainedSource(consumer) && recorder.sourceObservation() != null)
+            recorder.sourceObservation().borrowedProgram(initialization.program(), seedStreams.get(consumer).originalAttemptToken);
+    }
+
+    private void consultSourceEvidence(DocumentId consumer, SameOriginGroupEvidence.SourceEvidence.Kind kind, String identity) {
+        if (sameOrigin == null || isRetainedSource(consumer)) return;
+        SeedStream seed = seedStreams.get(consumer);
+        if (seed == null || invalidatedSeedTokens.contains(seed.originalAttemptToken)) return;
+        interpretedSourceEvidence.computeIfAbsent(seed.originalAttemptToken, ignored -> new TreeSet<>())
+                .add(new SameOriginGroupEvidence.SourceEvidence(kind, identity));
+    }
+
+    private List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence(Set<DocumentId> owners) {
+        Set<SameOriginGroupEvidence.SourceEvidence> evidence = new TreeSet<>();
+        for (DocumentId owner : owners) {
+            Object token = seedStreams.get(owner).originalAttemptToken;
+            if (invalidatedSeedTokens.contains(token)) throw new IllegalStateException("Discarded evidence cannot settle");
+            evidence.addAll(interpretedSourceEvidence.getOrDefault(token, Collections.emptySet()));
+        }
+        return new ArrayList<>(evidence);
     }
 
     private String ownWorkIdentity(long globalOrdinal, WorkKind kind, DocumentId target, String channel, String source) {
@@ -522,14 +555,40 @@ final class ClosureExecutionSession
         expectedSourceBases = Collections.unmodifiableMap(new LinkedHashMap<DocumentId, String>(Objects.requireNonNull(bases, "bases")));
     }
 
-    private void verifySourceContext(Set<DocumentId> owners, ClosureEnvironment environment, ExecutionPolicy policy) {
-        SourceExecutionBasis.requireCompatibleEnvironment(input.environment(), environment);
-        for (DocumentId source : owners) {
-            String expected = expectedSourceBases.get(source);
-            // Compatibility overloads name the invocation's fixed policy. Cross-policy imports require explicit authority.
-            if (expected == null) expected = SourceExecutionBasis.identity(source, input.environment(), input.executionPolicy());
-            SourceExecutionBasis.requireProducerBasis(expected, source, environment, policy);
+    void requireExplicitSourceBases() { requireExplicitSourceBases = true; }
+
+    void admittedFreshSources(Set<DocumentId> sources) {
+        admittedFreshSources = sources == null ? null : Collections.unmodifiableSet(new LinkedHashSet<>(sources));
+        if (admittedFreshSources != null) for (DocumentId source : admittedFreshSources)
+            if (source == null || input.snapshot().managedDocument(source) == null)
+                throw new IllegalArgumentException("Fresh source admission is outside the original invocation");
+    }
+
+    private void verifyFreshSourceAdmission(Collection<DocumentId> members) {
+        if (admittedFreshSources != null) {
+            Set<DocumentId> missing = new TreeSet<>(members);
+            missing.removeAll(admittedFreshSources);
+            if (!missing.isEmpty()) throw new SameOriginProcessAttempt.SourceAdmissionNeed(missing);
         }
+        verifySourceContext(new LinkedHashSet<>(members), input.environment(), input.executionPolicy());
+    }
+
+    private void verifySourceContext(Set<DocumentId> owners, ClosureEnvironment environment, ExecutionPolicy policy) {
+        SourceExecutionBasis.requireProducerBases(owners, input.environment(), environment, policy, sourceBases(owners));
+    }
+
+    private Map<DocumentId, String> sourceBases(Set<DocumentId> owners) {
+        if (requireExplicitSourceBases) return expectedSourceBases;
+        Map<DocumentId, String> bases = new LinkedHashMap<DocumentId, String>();
+        // Compatibility calls fix absent producer entries to the invocation policy. Core verifies
+        // complete independently admitted authority before invoking this boundary.
+        for (DocumentId source : owners) bases.put(source, expectedSourceBases.containsKey(source)
+                ? expectedSourceBases.get(source) : SourceExecutionBasis.identity(source, input.environment(), input.executionPolicy()));
+        return bases;
+    }
+
+    private Map<DocumentId, String> initializationBases(SourceInitialization initialization) {
+        return sourceBases(initialization.ownedDocumentIds());
     }
 
     void substituteSource(SourceObservationProgram program) {
@@ -570,7 +629,7 @@ final class ClosureExecutionSession
 
     void substituteInitialization(SourceInitialization initialization) {
         Objects.requireNonNull(initialization, "initialization").verifyInstallationBasis(
-                input.snapshot(), ownedDocuments, input.environment(), input.executionPolicy());
+                input.snapshot(), ownedDocuments, input.environment(), initializationBases(initialization));
         if (executionMode != ExecutionMode.ADMISSION) throw new IllegalArgumentException("Initialization evidence requires admission mode");
         registerSourceCursor(initialization.program());
         initializingSources.addAll(initialization.ownedDocumentIds());
@@ -582,7 +641,7 @@ final class ClosureExecutionSession
         if (executionMode != ExecutionMode.PROCESSING || sameOrigin == null)
             throw new IllegalStateException("Prospective initialization requires the grouped external interpreter");
         initialization.verifySourceBasis(input.snapshot(), consumerOwnershipExcluding(initialization.ownedDocumentIds()),
-                input.environment(), input.executionPolicy());
+                input.environment(), initializationBases(initialization));
         for (DocumentId source : initialization.ownedDocumentIds()) {
             SourceInitialization previous = offeredInitializations.putIfAbsent(source, initialization);
             if (previous != null && !sourceProgramDigest(previous.program()).equals(sourceProgramDigest(initialization.program())))
@@ -591,7 +650,7 @@ final class ClosureExecutionSession
     }
 
     void offerFrontierView(SourceFrontierView frontier) {
-        Objects.requireNonNull(frontier, "frontier").verifyInvocation(input);
+        Objects.requireNonNull(frontier, "frontier").verifyInvocation(input, sourceBases(Collections.singleton(frontier.selection().targetLineage())));
         if (sameOrigin == null || !attachmentPolicy.selection(frontier.selection().occurrenceIdentity())
                 .map(selection -> selection.identity().equals(frontier.selection().identity())).orElse(false))
             throw new IllegalArgumentException("Frontier evidence has no frozen selected attachment policy");
@@ -627,6 +686,7 @@ final class ClosureExecutionSession
         }
         private SourceCursor add(SourceInitialization initialization) {
             SourceObservationProgram program = initialization.program();
+            verifySourceContext(program.ownedDocumentIds(), program.environment(), program.executionPolicy());
             SourceCursor previous = programs.get(program.invocationIdentity());
             if (previous != null) return previous;
             for (SourceObservationProgram borrowed : program.borrowedPrograms()) add(SourceInitialization.fromProgram(borrowed));
@@ -712,8 +772,7 @@ final class ClosureExecutionSession
     }
 
     private void registerSourceCursor(SourceObservationProgram selected) {
-        if (selected.causeKind() == ProcessingCause.Kind.EXTERNAL)
-            verifySourceContext(selected.ownedDocumentIds(), selected.environment(), selected.executionPolicy());
+        verifySourceContext(selected.ownedDocumentIds(), selected.environment(), selected.executionPolicy());
         SourceCursor previousProgram = sourceCursorsByInvocation.get(selected.invocationIdentity());
         if (previousProgram != null) {
             if (previousProgram.program != selected && !sourceProgramDigest(previousProgram.program).equals(sourceProgramDigest(selected))) {
@@ -722,13 +781,8 @@ final class ClosureExecutionSession
             return;
         }
         for (SourceObservationProgram borrowed : selected.borrowedPrograms()) {
-            boolean externalSource = borrowed.causeKind() == ProcessingCause.Kind.EXTERNAL
-                    && selected.causeKind() == ProcessingCause.Kind.EXTERNAL;
-            if (!SourceObservationProgramCodec.environment(borrowed.environment()).equals(SourceObservationProgramCodec.environment(selected.environment()))
-                    || !externalSource && !SourceObservationProgramCodec.policy(borrowed.executionPolicy()).equals(SourceObservationProgramCodec.policy(selected.executionPolicy()))) {
-                throw new IllegalArgumentException("Borrowed source program requires its own canonical activation lane");
-            }
-            // External children are checked against their own authenticated producer basis
+            SourceExecutionBasis.requireCompatibleEnvironment(selected.environment(), borrowed.environment());
+            // Independent children are checked against their own authenticated producer basis
             // by registerSourceCursor, not against their importing parent's gas budget.
             if (borrowed.causeKind() == ProcessingCause.Kind.ADMISSION && selected.causeKind() == ProcessingCause.Kind.EXTERNAL) {
                 retainDormantInitialization(borrowed);
@@ -796,10 +850,12 @@ final class ClosureExecutionSession
     }
 
     private void retainDormantInitialization(SourceObservationProgram program) {
+        verifySourceContext(program.ownedDocumentIds(), program.environment(), program.executionPolicy());
         SourceInitialization initialization = SourceInitialization.fromProgram(program);
         SourceInitialization previous = dormantInitializations.putIfAbsent(program.invocationIdentity(), initialization);
         if (previous != null && previous.program() != program && !sourceProgramDigest(previous.program()).equals(sourceProgramDigest(program)))
             throw new IllegalArgumentException("Conflicting dormant initialization program");
+        if (previous != null) return;
         for (SourceObservationProgram borrowed : program.borrowedPrograms()) retainDormantInitialization(borrowed);
     }
 
@@ -1828,8 +1884,11 @@ final class ClosureExecutionSession
     private void ensureSameOriginAdmission(DocumentId document) {
         SeedStream stream = seedStreams.get(document);
         if (stream == null) throw new IllegalArgumentException("Semantic charge has no original admitted seed");
-        if (admittedSeedTokens.add(stream.originalAttemptToken))
+        if (!admittedSeedTokens.contains(stream.originalAttemptToken)) {
+            verifyFreshSourceAdmission(originalSeedComponents.get(document).orderedMemberDocumentIds());
+            admittedSeedTokens.add(stream.originalAttemptToken);
             chargeSameOriginAdmission(originalSeedComponents.get(document));
+        }
     }
 
     private void chargeAdmission() {
@@ -2955,7 +3014,8 @@ final class ClosureExecutionSession
                                 input.environment(), input.executionPolicy())));
                 initialization.verifyInstallationOccurrence(currentSnapshot, retained == null ? sameOrigin.attempt(binding.sourceDocumentId()).members()
                                 : sourcesByDocument.get(binding.sourceDocumentId()).program.ownedDocumentIds(),
-                        binding.occurrenceIdentity(), input.environment(), input.executionPolicy());
+                        binding.occurrenceIdentity(), input.environment(), initializationBases(initialization));
+                consultInitialization(binding.sourceDocumentId(), initialization);
                 InitializationInstallation installation = new InitializationInstallation(selection,
                         retained == null ? creator.identity.identity() : retained.creatorSeedIdentity(),
                         site, creator == null ? null : creator.originalAttemptToken, initialization);
@@ -4776,6 +4836,7 @@ final class ClosureExecutionSession
                             ProcessorErrorCategory.InvalidProcessingDocument);
                 return;
             }
+            verifyFreshSourceAdmission(component);
             Set<SameOriginAttemptCoordinator.Attempt> groups = Collections.newSetFromMap(
                     new java.util.IdentityHashMap<SameOriginAttemptCoordinator.Attempt, Boolean>());
             for (DocumentId member : component) groups.add(sameOrigin.attempt(member));
@@ -5591,7 +5652,7 @@ final class ClosureExecutionSession
                 if (selected.frontierView().isPresent()) {
                     if (!selected.selection().suppliedExactRefBlueId().equals(supplied.getBlueId()))
                         throw new IllegalArgumentException("Retained frontier placement starts at another exact authored reference");
-                    selected.frontierView().get().verifyInvocation(input);
+                    selected.frontierView().get().verifyInvocation(input, sourceBases(Collections.singleton(binding.targetDocumentId())));
                     initializationPlacementPins.put(binding.occurrenceIdentity(), selected.selectedView());
                     retainedReadPins.add(selected.selectedView());
                     NodePathEditor.put(latestBodies.get(binding.sourceDocumentId()), binding.sourcePath(), new Node().blueId(selected.selectedView().blueId()));
@@ -5614,6 +5675,7 @@ final class ClosureExecutionSession
                     && selection.suppliedExactRefBlueId().equals(supplied.getBlueId())) {
                 SourceFrontierView frontier = offeredFrontierViews.get(binding.occurrenceIdentity());
                 if (frontier == null) throw new IllegalArgumentException("FROM_FRONTIER requires exact selected frontier evidence before execution");
+                consultSourceEvidence(binding.sourceDocumentId(), SameOriginGroupEvidence.SourceEvidence.Kind.FRONTIER, frontier.identity());
                 SeedStream creator = seedStreams.get(binding.sourceDocumentId());
                 selected = AcceptedAttachmentView.fromFrontierSite(selection, creator.identity.identity(), observationSiteIdentity, frontier);
                 acceptedAttachmentViews.put(key, new AttemptAttachmentView(selected, creator.originalAttemptToken));
@@ -5631,6 +5693,7 @@ final class ClosureExecutionSession
                     throw new ClosureResourceDemandException(Collections.singletonList(new SourceInitializationDemand(selection,
                             binding.sourcePath(), creator.identity.identity(), observationSiteIdentity, input.environment(), input.executionPolicy())));
                 }
+                consultInitialization(binding.sourceDocumentId(), initialization);
                 SourceInterpretationView initial = SourceInterpretationView.from(initialization);
                 ManagedReadPin pin = initial.selectedPin(binding.targetDocumentId());
                 if (!pin.blueId().equals(supplied.getBlueId())) throw new IllegalArgumentException("Initialization placement must begin at its authored exact source");

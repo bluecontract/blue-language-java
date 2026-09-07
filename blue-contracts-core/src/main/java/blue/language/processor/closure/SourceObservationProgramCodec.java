@@ -47,6 +47,8 @@ public final class SourceObservationProgramCodec {
         }
         List<String> owned = new ArrayList<String>(); for (DocumentId id : program.ownedDocumentIds()) owned.add(id.value());
         root.put("owned", owned); root.put("before", states(program.sourcePredecessors(), e)); root.put("after", states(program.sourceResults(), e));
+        root.put("originalAttachmentSelections", originalSelections(program.originalAttachmentSelections().orElse(null)));
+        if (!program.interpretedSourceEvidence().isEmpty()) root.put("interpretedSourceEvidence", interpreted(program.interpretedSourceEvidence()));
         root.put("beforeTopology", topology(program.sourceBeforeBindings(), program.sourceBeforeComponents(), e));
         root.put("afterTopology", topology(program.sourceAfterBindings(), program.sourceAfterComponents(), e));
         root.put("borrowedPrograms", borrowed);
@@ -166,7 +168,55 @@ public final class SourceObservationProgramCodec {
                 bindings(root.get("beforeTopology")), bindings(root.get("afterTopology")),
                 components(root.get("beforeTopology"), d), components(root.get("afterTopology"), d),
                 borrowed, readPins(array(root, "readPins"), d), acceptedViews,
-                text(root, "managedReaction") == null ? null : ManagedReactionContextCodec.decode(text(root, "managedReaction"), d), acceptedInitializations, skippedWork);
+                text(root, "managedReaction") == null ? null : ManagedReactionContextCodec.decode(text(root, "managedReaction"), d), acceptedInitializations, skippedWork,
+                originalSelections(root.get("originalAttachmentSelections")), interpreted(root.get("interpretedSourceEvidence")));
+    }
+
+    static List<Object> interpreted(List<SameOriginGroupEvidence.SourceEvidence> evidence) {
+        List<Object> values = new ArrayList<>();
+        for (SameOriginGroupEvidence.SourceEvidence value : evidence) {
+            Map<String, Object> row = new TreeMap<>(); row.put("kind", value.kind().name()); row.put("identity", value.identity()); values.add(row);
+        }
+        return values;
+    }
+
+    static List<SameOriginGroupEvidence.SourceEvidence> interpreted(JsonNode values) {
+        if (values == null) return Collections.emptyList();
+        if (!values.isArray() || values.size() == 0) throw invalid("Expected nonempty interpreted source evidence array");
+        List<SameOriginGroupEvidence.SourceEvidence> result = new ArrayList<>();
+        for (JsonNode row : values) {
+            if (!row.isObject() || row.size() != 2 || !row.has("kind") || !row.has("identity")) throw invalid("Invalid interpreted source evidence row");
+            SameOriginGroupEvidence.SourceEvidence value = new SameOriginGroupEvidence.SourceEvidence(
+                    SameOriginGroupEvidence.SourceEvidence.Kind.valueOf(text(row, "kind")), text(row, "identity"));
+            if (!result.isEmpty() && result.get(result.size() - 1).compareTo(value) >= 0) throw invalid("Noncanonical interpreted source evidence order");
+            result.add(value);
+        }
+        return result;
+    }
+
+    static Object originalSelections(Map<DocumentId, List<String>> selections) {
+        if (selections == null) return null;
+        Map<String, Object> result = new TreeMap<>();
+        selections.forEach((owner, values) -> result.put(owner.value(), values));
+        return result;
+    }
+
+    static Map<DocumentId, List<String>> originalSelections(JsonNode value) {
+        if (value == null || value.isNull()) return null;
+        if (!value.isObject()) throw invalid("Original attachment selections must be an owner map");
+        Map<DocumentId, List<String>> result = new TreeMap<>();
+        Iterator<Map.Entry<String, JsonNode>> fields = value.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> field = fields.next();
+            if (!field.getValue().isArray()) throw invalid("Original owner selections must be an explicit array");
+            List<String> identities = new ArrayList<>();
+            for (JsonNode identity : field.getValue()) {
+                if (!identity.isTextual()) throw invalid("Original selection identity must be text");
+                identities.add(identity.textValue());
+            }
+            result.put(new DocumentId(field.getKey()), identities);
+        }
+        return result;
     }
 
     private static Object readPins(List<ManagedReadPin> pins, Encoder e) {

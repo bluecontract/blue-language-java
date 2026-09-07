@@ -18,6 +18,7 @@ public final class SameOriginOperationResult {
     private final ClosureInvocationInput origin;
     private final String operationIdentity;
     private final Map<DocumentId, String> originalSeeds, consumedSources;
+    private final Map<DocumentId, List<String>> originalAttachmentSelections;
     private final List<ObservedSource> observedSources;
     private final List<Admission> admissions;
     private final ProcessorStatus status;
@@ -35,16 +36,21 @@ public final class SameOriginOperationResult {
     private final SourceObservationProgram sourceProgram;
     private final Failure failure;
     private final SameOriginGroupEvidence groupEvidence;
+    private final List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence;
 
     SameOriginOperationResult(ClosureInvocationInput origin, String operationIdentity, Map<DocumentId, String> originalSeeds,
             List<Admission> admissions, Map<DocumentId, String> consumedSources, List<ObservedSource> observedSources, ProcessorStatus status,
             List<ManagedDocumentSnapshot> predecessors, List<ResultingDocument> documents,
             List<ComponentSnapshot> components, List<ManagedOccurrenceBinding> bindings,
             List<GraphChange> graphChanges, List<SubscriptionDelta> subscriptions, List<CheckpointWrite> checkpoints,
-            List<Event> events, List<GasTraceEntry> gasTrace, SourceObservationProgram sourceProgram, Failure failure) {
+            List<Event> events, List<GasTraceEntry> gasTrace, SourceObservationProgram sourceProgram, Failure failure,
+            Map<DocumentId, List<String>> originalAttachmentSelections, List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence) {
+        this.interpretedSourceEvidence = SameOriginGroupEvidence.canonicalSourceEvidence(interpretedSourceEvidence);
         this.origin = Objects.requireNonNull(origin, "origin");
         this.operationIdentity = ClosureValueSupport.requireSha256Identity(operationIdentity, "operationIdentity");
         this.originalSeeds = immutableMap(originalSeeds); this.consumedSources = immutableMap(consumedSources);
+        this.originalAttachmentSelections = SameOriginAttachmentPolicy.freezeOriginalSelections(
+                Objects.requireNonNull(originalAttachmentSelections), originalSeeds.keySet());
         ArrayList<ObservedSource> observed = new ArrayList<>(Objects.requireNonNull(observedSources, "observedSources"));
         observed.sort(Comparator.comparing(ObservedSource::consumerDocumentId).thenComparing(ObservedSource::documentId));
         ObservedSource previous = null;
@@ -66,7 +72,8 @@ public final class SameOriginOperationResult {
         this.gasTraceIdentity = ClosureResultAssemblySupport.sequenceIdentity(ClosureIdentityService.Constructor.GAS_TRACE, gasTrace);
         this.sourceProgram = sourceProgram; this.failure = failure;
         if (status == ProcessorStatus.SUCCESS) {
-            if (sourceProgram == null || failure != null || !operationIdentity.equals(sourceProgram.invocationIdentity()))
+            if (sourceProgram == null || failure != null || !operationIdentity.equals(sourceProgram.invocationIdentity())
+                    || !this.interpretedSourceEvidence.equals(sourceProgram.interpretedSourceEvidence()))
                 throw new IllegalArgumentException("Successful group requires its exact source program and no failure");
         } else if ((status != ProcessorStatus.GAS_LIMIT_EXCEEDED && status != ProcessorStatus.RUNTIME_FATAL)
                 || failure == null || sourceProgram != null || !events.isEmpty() || !graphChanges.isEmpty()
@@ -90,6 +97,7 @@ public final class SameOriginOperationResult {
     public Map<DocumentId, String> originalSeedByMember() { return originalSeeds; }
     public List<Admission> admissions() { return admissions; }
     public Map<DocumentId, String> consumedSourceOperations() { return consumedSources; }
+    public List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence() { return interpretedSourceEvidence; }
     /** Successful observation pins before this attempt, from producing evidence/gaps, never ambient host heads. */
     public List<ObservedSource> observedSources() { return observedSources; }
     public Optional<ObservedSource> observedSource(DocumentId consumer, DocumentId source) {
@@ -109,6 +117,7 @@ public final class SameOriginOperationResult {
     public long totalGas() { return totalGas; }
     public Optional<SourceObservationProgram> sourceProgram() { return Optional.ofNullable(sourceProgram); }
     public Optional<Failure> failure() { return Optional.ofNullable(failure); }
+    Map<DocumentId, List<String>> originalAttachmentSelections() { return originalAttachmentSelections; }
 
     /** A bodyless exact observed boundary; only the owning result assembler may mint it. */
     public static final class ObservedSource {

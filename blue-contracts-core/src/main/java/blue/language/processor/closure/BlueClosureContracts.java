@@ -148,9 +148,24 @@ public final class BlueClosureContracts
             final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
             final List<SourceInitialization> sourceInitializations, final List<SourceFrontierView> frontierViews,
             final java.util.Map<DocumentId, String> expectedSourceBases) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations,
+                frontierViews, expectedSourceBases, null);
+    }
+
+    /**
+     * Strict fresh-input admission. Only the named original owners may begin fresh execution or
+     * join an owned operation. Missing owners are requested at their actual admission site, without
+     * a partial result. Retained source capabilities keep their separately authenticated policies.
+     * A null set is the compatibility form whose caller has admitted the complete invocation.
+     */
+    public synchronized SameOriginProcessAttempt processSameOrigin(final ClosureInvocationInput input,
+            final SameOriginAttachmentPolicy attachmentPolicy, final List<SourceObservationProgram> sourcePrograms,
+            final java.util.Map<DocumentId, List<SourceObservationGap>> gaps, final List<SourceOperationFailure> sourceFailures,
+            final List<SourceInitialization> sourceInitializations, final List<SourceFrontierView> frontierViews,
+            final java.util.Map<DocumentId, String> expectedSourceBases, final Set<DocumentId> admittedFreshSources) {
         ensureOpen();
         return owner.withCapturedConfiguration(() -> processor.processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures,
-                sourceInitializations, frontierViews, expectedSourceBases));
+                sourceInitializations, frontierViews, expectedSourceBases, admittedFreshSources));
     }
 
     /**
@@ -322,16 +337,56 @@ public final class BlueClosureContracts
         return admitExternalScope(input, ownedDocuments, Collections.<SourceInitialization>emptyList());
     }
 
-    /** Installs authenticated canonical child initialization through the ordinary admission lane. */
+    /** Fixed-policy compatibility: every imported initialization must use this invocation's policy. */
     public synchronized ClosureAttemptResult admitExternalScope(final ClosureInvocationInput input,
             final java.util.Set<DocumentId> ownedDocuments, final List<SourceInitialization> sourceInitializations) {
+        java.util.Set<DocumentId> sources = new java.util.HashSet<DocumentId>();
+        java.util.ArrayDeque<SourceObservationProgram> pending = new java.util.ArrayDeque<SourceObservationProgram>();
+        for (SourceInitialization initialization : sourceInitializations) pending.add(initialization.program());
+        java.util.Set<String> seen = new java.util.HashSet<String>();
+        while (!pending.isEmpty()) {
+            SourceObservationProgram program = pending.removeFirst();
+            if (!seen.add(program.invocationIdentity())) continue;
+            sources.addAll(program.ownedDocumentIds()); pending.addAll(program.borrowedPrograms());
+        }
+        return admitExternalScope(input, ownedDocuments, sourceInitializations,
+                SourceExecutionBasis.fixedPolicyBases(sources, input.environment(), input.executionPolicy()), false);
+    }
+
+    /**
+     * Installs independent canonical initialization using trusted producer bases for every borrowed owner.
+     * Each imported owner's canonical initialization operation must also be bound by the input's
+     * semantic predecessors; producer authority alone cannot identify the consumer's chosen preparation.
+     */
+    public synchronized ClosureAttemptResult admitExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments, final List<SourceInitialization> sourceInitializations,
+            final java.util.Map<DocumentId, String> expectedSourceBases) {
+        return admitExternalScope(input, ownedDocuments, sourceInitializations, expectedSourceBases, true);
+    }
+
+    private ClosureAttemptResult admitExternalScope(final ClosureInvocationInput input,
+            final java.util.Set<DocumentId> ownedDocuments, final List<SourceInitialization> sourceInitializations,
+            final java.util.Map<DocumentId, String> expectedSourceBases, boolean requireBoundPredecessors) {
         ensureOpen();
         Objects.requireNonNull(ownedDocuments, "ownedDocuments");
         final List<SourceInitialization> initializations = Collections.unmodifiableList(
                 new java.util.ArrayList<SourceInitialization>(Objects.requireNonNull(sourceInitializations, "sourceInitializations")));
+        if (requireBoundPredecessors) {
+            java.util.Set<String> checked = new java.util.HashSet<String>();
+            java.util.ArrayDeque<SourceObservationProgram> pending = new java.util.ArrayDeque<SourceObservationProgram>();
+            for (SourceInitialization initialization : initializations) pending.add(initialization.program());
+            while (!pending.isEmpty()) {
+                SourceObservationProgram program = pending.removeFirst();
+                if (!checked.add(program.invocationIdentity())) continue;
+                for (DocumentId source : program.ownedDocumentIds())
+                    if (!program.invocationIdentity().equals(input.semanticPredecessors().get(source)))
+                        throw new IllegalArgumentException("Independent initialization must be bound by its exact semantic predecessor: " + source.value());
+                pending.addAll(program.borrowedPrograms());
+            }
+        }
         java.util.Set<DocumentId> initializedSources = new java.util.HashSet<DocumentId>();
         for (SourceInitialization initialization : initializations) {
-            initialization.verifyInstallationBasis(input.snapshot(), ownedDocuments, input.environment(), input.executionPolicy());
+            initialization.verifyInstallationBasis(input.snapshot(), ownedDocuments, input.environment(), expectedSourceBases);
             for (DocumentId source : initialization.ownedDocumentIds()) {
                 if (!initializedSources.add(source)) throw new IllegalArgumentException("Two initialization programs own the same source");
             }
@@ -344,7 +399,7 @@ public final class BlueClosureContracts
         }
         return owner.withCapturedConfiguration(new Supplier<ClosureAttemptResult>() {
             @Override public ClosureAttemptResult get() {
-                return processor.admitExternalScope(input, ownedDocuments, initializations);
+                return processor.admitExternalScope(input, ownedDocuments, initializations, expectedSourceBases);
             }
         });
     }

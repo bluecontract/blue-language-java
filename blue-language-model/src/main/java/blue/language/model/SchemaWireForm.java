@@ -28,7 +28,7 @@ public final class SchemaWireForm {
      * @throws NullPointerException if {@code schema} is {@code null}, or if a
      *                              required conversion is attempted with a
      *                              {@code null} {@code nodeConverter}
-     * @throws IllegalArgumentException if a schema BlueId reference has
+     * @throws InvalidNodeStructureException if a schema BlueId reference has
      *                                  sibling constraint keywords
      */
     public static Map<String, Object> get(
@@ -36,7 +36,7 @@ public final class SchemaWireForm {
         Map<String, Object> result = new LinkedHashMap<>();
         if (schema.getBlueId() != null) {
             if (!schema.isReferenceOnly()) {
-                throw new IllegalArgumentException(
+                throw new InvalidNodeStructureException(
                         "schema.blueId must be a pure reference without sibling keywords.");
             }
             result.put(BlueLanguageConstants.OBJECT_BLUE_ID,

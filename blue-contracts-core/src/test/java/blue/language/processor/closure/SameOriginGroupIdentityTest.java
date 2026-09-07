@@ -24,6 +24,20 @@ class SameOriginGroupIdentityTest {
         assertThrows(IllegalArgumentException.class, () -> SameOriginGroupIdentity.of(seeds(A, SA), Collections.emptyList(), seeds(A, SA)));
     }
 
+    @Test void interpretedPreparationIsCanonicalAndDoesNotBecomeAConsumedBusinessOperation() {
+        SameOriginGroupEvidence.SourceEvidence init = new SameOriginGroupEvidence.SourceEvidence(SameOriginGroupEvidence.SourceEvidence.Kind.INITIALIZATION, S1);
+        SameOriginGroupEvidence.SourceEvidence frontier = new SameOriginGroupEvidence.SourceEvidence(SameOriginGroupEvidence.SourceEvidence.Kind.FRONTIER, S2);
+        String identity = SameOriginGroupIdentity.of(seeds(A, SA), Collections.emptyList(), Collections.emptyMap(), Arrays.asList(init, frontier, init)).identity();
+        assertNotEquals(SA, identity);
+        assertEquals(identity, SameOriginGroupIdentity.of(seeds(A, SA), Collections.emptyList(), Collections.emptyMap(), Arrays.asList(frontier, init)).identity());
+        assertNotEquals(identity, SameOriginGroupIdentity.of(seeds(A, SA), Collections.emptyList(), Collections.emptyMap(), Collections.singletonList(init)).identity());
+        SameOriginGroupEvidence restored = SameOriginGroupEvidence.fromExactEvidence(identity, seeds(A, SA), Collections.emptyList(), Collections.emptyMap(), Arrays.asList(frontier, init));
+        assertTrue(restored.consumedSourceOperations().isEmpty());
+        assertEquals(seeds(A, SA), restored.originalSeedByMember());
+        assertThrows(IllegalArgumentException.class, () -> SameOriginGroupEvidence.fromExactEvidence(identity, seeds(A, SA), Collections.emptyList(), Collections.emptyMap()));
+        assertEquals(SA, SameOriginGroupIdentity.of(seeds(A, SA), Collections.emptyList(), Collections.emptyMap(), Collections.emptyList()).identity());
+    }
+
     @Test void inputMapAndMemberIterationOrderCannotReanchorSettlement() {
         String first = group(seeds(A, SA, B, SB, C, SC), join(S1, A, B), join(S2, A, B, C));
         String reordered = group(seeds(C, SC, B, SB, A, SA), join(S1, B, A), join(S2, C, B, A));

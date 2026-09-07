@@ -15,9 +15,14 @@ final class SameOriginGroupIdentity {
     /** Final directed dependencies, resolved after quiescence; never the worker's current receipt inventory. */
     static SameOriginGroupIdentity of(Map<DocumentId, String> originalSeedByMember, List<Admission> admissions,
             Map<DocumentId, String> consumedSourceOperations) {
-        Map<String, Object> value = preimage(originalSeedByMember, admissions, consumedSourceOperations);
+        return of(originalSeedByMember, admissions, consumedSourceOperations, Collections.emptyList());
+    }
+
+    static SameOriginGroupIdentity of(Map<DocumentId, String> originalSeedByMember, List<Admission> admissions,
+            Map<DocumentId, String> consumedSourceOperations, List<SameOriginGroupEvidence.SourceEvidence> interpreted) {
+        Map<String, Object> value = preimage(originalSeedByMember, admissions, consumedSourceOperations, interpreted);
         Set<String> seeds = new HashSet<>(originalSeedByMember.values());
-        if (seeds.size() == 1 && consumedSourceOperations.isEmpty()) return new SameOriginGroupIdentity(seeds.iterator().next());
+        if (seeds.size() == 1 && consumedSourceOperations.isEmpty() && interpreted.isEmpty()) return new SameOriginGroupIdentity(seeds.iterator().next());
         return new SameOriginGroupIdentity(ClosureIdentityService.INSTANCE.identity(
                 ClosureIdentityService.Constructor.SAME_ORIGIN_GROUP, value));
     }
@@ -41,7 +46,7 @@ final class SameOriginGroupIdentity {
     }
 
     private static Map<String, Object> preimage(Map<DocumentId, String> supplied, List<Admission> admissions,
-            Map<DocumentId, String> consumedSourceOperations) {
+            Map<DocumentId, String> consumedSourceOperations, List<SameOriginGroupEvidence.SourceEvidence> interpreted) {
         TreeMap<DocumentId, String> byMember = new TreeMap<>(Objects.requireNonNull(supplied, "originalSeedByMember"));
         if (byMember.isEmpty()) throw invalid("Settlement group requires original seeds");
         TreeMap<String, SortedSet<DocumentId>> seedMembers = new TreeMap<>();
@@ -89,12 +94,25 @@ final class SameOriginGroupIdentity {
             consumed.add(map("documentId", entry.getKey().value(), "operationIdentity",
                     ClosureValueSupport.requireSha256Identity(entry.getValue(), "consumed source operation")));
         }
-        return map("originalSeeds", seedRows, "acceptedAdmissions", accepted, "consumedSourceOperations", consumed);
+        Map<String, Object> value = map("originalSeeds", seedRows, "acceptedAdmissions", accepted, "consumedSourceOperations", consumed);
+        if (!interpreted.isEmpty()) {
+            List<Object> evidence = new ArrayList<>();
+            for (SameOriginGroupEvidence.SourceEvidence item : SameOriginGroupEvidence.canonicalSourceEvidence(interpreted))
+                evidence.add(map("kind", item.kind().name(), "identity", item.identity()));
+            value.put("interpretedSourceEvidence", evidence);
+        }
+        return value;
     }
 
     /** Reconstructing the preimage rejects noncanonical order and invented participant partitions. */
     static void validateConstructor(Map<String, Object> value) {
-        fields(value, "originalSeeds", "acceptedAdmissions", "consumedSourceOperations");
+        if (value.containsKey("interpretedSourceEvidence")) fields(value, "originalSeeds", "acceptedAdmissions", "consumedSourceOperations", "interpretedSourceEvidence");
+        else fields(value, "originalSeeds", "acceptedAdmissions", "consumedSourceOperations");
+        List<SameOriginGroupEvidence.SourceEvidence> interpreted = new ArrayList<>();
+        if (value.containsKey("interpretedSourceEvidence")) for (Object item : list(value.get("interpretedSourceEvidence"))) {
+            Map<String, Object> row = object(item); fields(row, "kind", "identity");
+            interpreted.add(new SameOriginGroupEvidence.SourceEvidence(SameOriginGroupEvidence.SourceEvidence.Kind.valueOf(text(row.get("kind"))), text(row.get("identity"))));
+        }
         Map<DocumentId, String> seeds = new TreeMap<>(); Set<String> seedIds = new HashSet<>();
         for (Object item : list(value.get("originalSeeds"))) {
             Map<String, Object> row = object(item); fields(row, "seedIdentity", "members");
@@ -111,7 +129,7 @@ final class SameOriginGroupIdentity {
             if (consumed.put(new DocumentId(text(row.get("documentId"))), text(row.get("operationIdentity"))) != null)
                 throw invalid("Repeated independent source disposition");
         }
-        if (seedIds.size() == 1 && consumed.isEmpty()) throw invalid("Independent singleton uses its original seed identity");
+        if (seedIds.size() == 1 && consumed.isEmpty() && interpreted.isEmpty()) throw invalid("Independent singleton uses its original seed identity");
         List<Admission> admissions = new ArrayList<>();
         for (Object item : list(value.get("acceptedAdmissions"))) {
             Map<String, Object> row = object(item); fields(row, "canonicalSite", "members", "participatingSeedGroups");
@@ -119,7 +137,7 @@ final class SameOriginGroupIdentity {
             for (Object member : list(row.get("members"))) members.add(new DocumentId(text(member)));
             admissions.add(new Admission(text(row.get("canonicalSite")), members));
         }
-        if (!preimage(seeds, admissions, consumed).equals(value)) throw invalid("Noncanonical settlement group evidence");
+        if (!preimage(seeds, admissions, consumed, interpreted).equals(value)) throw invalid("Noncanonical settlement group evidence");
     }
 
     private static final class Group {

@@ -110,6 +110,15 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
             List<SourceOperationFailure> sourceFailures, List<SourceInitialization> sourceInitializations,
             List<SourceFrontierView> frontierViews, java.util.Map<DocumentId, String> expectedSourceBases) {
+        return processSameOrigin(input, attachmentPolicy, sourcePrograms, gaps, sourceFailures, sourceInitializations,
+                frontierViews, expectedSourceBases, null);
+    }
+
+    SameOriginProcessAttempt processSameOrigin(ClosureInvocationInput input, SameOriginAttachmentPolicy attachmentPolicy,
+            List<SourceObservationProgram> sourcePrograms, java.util.Map<DocumentId, List<SourceObservationGap>> gaps,
+            List<SourceOperationFailure> sourceFailures, List<SourceInitialization> sourceInitializations,
+            List<SourceFrontierView> frontierViews, java.util.Map<DocumentId, String> expectedSourceBases,
+            java.util.Set<DocumentId> admittedFreshSources) {
         ClosureInvocationVerifier.Verification verification = ClosureInvocationVerifier.verify(Objects.requireNonNull(input, "input"));
         verifyRuntimeBinding(input, verification);
         ClosureExecutionRecorder recorder = new ClosureExecutionRecorder(verification.invocationIdentity());
@@ -118,6 +127,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                 ClosureExecutionSession.ExecutionMode.PROCESSING)) {
             session.useSameOriginGroups(owner, attachmentPolicy);
             session.expectedSourceBases(expectedSourceBases);
+            session.admittedFreshSources(admittedFreshSources);
             for (SourceInitialization initialization : sourceInitializations) session.offerInitialization(initialization);
             for (SourceFrontierView frontier : frontierViews) session.offerFrontierView(frontier);
             session.failedObservationGaps(gaps);
@@ -127,6 +137,8 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             List<SameOriginOperationResult> operations = session.sameOriginOperations();
             observer.onExecutionEvidence(recorder.snapshot(null));
             return SameOriginProcessAttempt.complete(operations);
+        } catch (SameOriginProcessAttempt.SourceAdmissionNeed suspension) {
+            return SameOriginProcessAttempt.needsSourceAdmissions(suspension.sources());
         } catch (ClosureResourceDemandException suspension) {
             return SameOriginProcessAttempt.needs(ClosureAttemptResult.needsResources(suspension.demands()));
         } catch (ExecutionEvidenceUnavailableException unavailable) {
@@ -579,6 +591,11 @@ final class DefaultClosureProcessor implements ClosureProcessor {
 
     ClosureAttemptResult admitExternalScope(ClosureInvocationInput input, java.util.Set<DocumentId> ownedDocuments,
             List<SourceInitialization> sourceInitializations) {
+        return admitExternalScope(input, ownedDocuments, sourceInitializations, Collections.<DocumentId, String>emptyMap());
+    }
+
+    ClosureAttemptResult admitExternalScope(ClosureInvocationInput input, java.util.Set<DocumentId> ownedDocuments,
+            List<SourceInitialization> sourceInitializations, java.util.Map<DocumentId, String> expectedSourceBases) {
         ClosureInvocationInput admitted = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
@@ -613,6 +630,8 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                     recorder,
                     ClosureExecutionSession.ExecutionMode.ADMISSION);
             if (ownedDocuments != null) session.ownDocuments(ownedDocuments);
+            session.expectedSourceBases(expectedSourceBases);
+            session.requireExplicitSourceBases();
             for (SourceInitialization initialization : sourceInitializations) session.substituteInitialization(initialization);
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;

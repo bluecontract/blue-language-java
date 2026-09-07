@@ -49,6 +49,32 @@ public final class SameOriginAttachmentPolicy {
         return selected.isEmpty() ? empty() : new SameOriginAttachmentPolicy(selected);
     }
 
+    Map<DocumentId, List<String>> originalSelectionIdentities(Collection<DocumentId> owners) {
+        Map<DocumentId, List<String>> selected = new TreeMap<>();
+        for (DocumentId owner : owners) {
+            List<String> identities = new ArrayList<>();
+            for (Selection selection : byCreator.getOrDefault(owner, Collections.emptyList())) identities.add(selection.identity());
+            selected.put(owner, identities);
+        }
+        return freezeOriginalSelections(selected, new HashSet<>(owners));
+    }
+
+    static Map<DocumentId, List<String>> freezeOriginalSelections(Map<DocumentId, List<String>> selections, Set<DocumentId> owners) {
+        if (selections == null) return null;
+        if (!selections.keySet().equals(owners)) throw new IllegalArgumentException("Original selection binding must cover every owned source");
+        Map<DocumentId, List<String>> result = new TreeMap<>();
+        for (Map.Entry<DocumentId, List<String>> entry : selections.entrySet()) {
+            List<String> identities = new ArrayList<>(); Set<String> unique = new HashSet<>();
+            for (String id : entry.getValue()) {
+                ClosureValueSupport.requireSha256Identity(id, "original selection identity");
+                if (!unique.add(id)) throw new IllegalArgumentException("Duplicate original selection identity");
+                identities.add(id);
+            }
+            result.put(entry.getKey(), Collections.unmodifiableList(identities));
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
     /**
      * Verifies the original prospective occurrence and the supplied reference's exact
      * lineage basis. A current cell or retained exact read pin establishes the reference;
@@ -113,7 +139,8 @@ public final class SameOriginAttachmentPolicy {
         public DocumentId targetLineage() { return targetLineage; }
         public String suppliedExactRefBlueId() { return suppliedExactRefBlueId; }
         public Optional<ExternalOrderKey> frontier() { return Optional.ofNullable(frontier); }
-        String identity() { return identity; }
+        /** Closed identity of this original creator choice, including its exact frontier. */
+        public String identity() { return identity; }
         Map<String, Object> identityValue() {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("mode", mode.name()); value.put("creatorLineage", creatorLineage.value());

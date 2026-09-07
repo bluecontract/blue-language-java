@@ -37,14 +37,17 @@ public final class SourceOperationFailureCodec {
                 "document", state.documentId().value(), BlueLanguageConstants.OBJECT_BLUE_ID, state.blueId(), "epoch", state.epoch(),
                 ProcessorContractConstants.KEY_INITIALIZED, state.initialized(), "body", encoder.node(state.frozenDocument())));
         ProcessorDiagnostic diagnostic = failure.diagnostic();
-        return encoder.blob(bytes(map("format", FORMAT, "invocation", failure.invocationIdentity(), "causeKind", failure.causeKind().name(),
+        Map<String, Object> root = map("format", FORMAT, "invocation", failure.invocationIdentity(), "causeKind", failure.causeKind().name(),
                 "cause", failure.causeIdentity(), "external", external, "status", failure.status().name(), "owned", owners, "before", states,
                 "environment", SourceObservationProgramCodec.environment(failure.environment()),
                 "policy", SourceObservationProgramCodec.policy(failure.executionPolicy()), "totalGas", failure.totalGas(),
                 "gasTrace", failure.gasTraceIdentity(), "rejectedCharge", failure.rejectedChargeIdentity(),
                 "managedReaction", failure.managedReaction().map(context -> ManagedReactionContextCodec.encode(context, encoder)).orElse(null),
+                "originalAttachmentSelections", SourceObservationProgramCodec.originalSelections(failure.originalAttachmentSelections().orElse(null)),
                 "diagnostic", diagnostic == null ? null : map("category", diagnostic.category().name(),
-                        "message", diagnostic.message(), "details", diagnostic.details()))));
+                        "message", diagnostic.message(), "details", diagnostic.details()));
+        if (!failure.interpretedSourceEvidence().isEmpty()) root.put("interpretedSourceEvidence", SourceObservationProgramCodec.interpreted(failure.interpretedSourceEvidence()));
+        return encoder.blob(bytes(root));
     }
 
     /** Expected digest must be authenticated by committed source failure authority, not self-asserted. */
@@ -85,7 +88,9 @@ public final class SourceOperationFailureCodec {
                 text(root, "cause"), external, SourceObservationProgramCodec.environment(root.get("environment")),
                 SourceObservationProgramCodec.policy(root.get("policy")), ProcessorStatus.valueOf(text(root, "status")),
                 owned, states, integer(root, "totalGas"), text(root, "gasTrace"), text(root, "rejectedCharge"), diagnostic,
-                text(root, "managedReaction") == null ? null : ManagedReactionContextCodec.decode(text(root, "managedReaction"), decoder));
+                text(root, "managedReaction") == null ? null : ManagedReactionContextCodec.decode(text(root, "managedReaction"), decoder),
+                SourceObservationProgramCodec.originalSelections(root.get("originalAttachmentSelections")),
+                SourceObservationProgramCodec.interpreted(root.get("interpretedSourceEvidence")));
     }
 
     private static Map<String, Object> map(Object... pairs) {

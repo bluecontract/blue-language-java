@@ -108,7 +108,14 @@ public final class SourceInitialization {
      */
     public void verifyInstallationBasis(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
                                         ClosureEnvironment environment, ExecutionPolicy policy) {
-        verifySourceBasis(snapshot, consumerOwned, environment, policy);
+        verifyInstallationBasis(snapshot, consumerOwned, environment,
+                fixedPolicyBases(environment, policy));
+    }
+
+    /** Independent producer authority; the importing consumer's execution policy is not a source basis. */
+    public void verifyInstallationBasis(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
+                                        ClosureEnvironment environment, Map<DocumentId, String> expectedSourceBases) {
+        verifySourceBasis(snapshot, consumerOwned, environment, expectedSourceBases);
         boolean installation = false;
         for (ManagedOccurrenceBinding binding : snapshot.occurrences()) {
             if (!consumerOwned.contains(binding.sourceDocumentId()) || !origins.containsKey(binding.targetDocumentId())) continue;
@@ -127,15 +134,18 @@ public final class SourceInitialization {
      */
     public void verifySourceBasis(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
                                   ClosureEnvironment environment, ExecutionPolicy policy) {
+        verifySourceBasis(snapshot, consumerOwned, environment,
+                fixedPolicyBases(environment, policy));
+    }
+
+    /** Checks this original producer group; the interpreter checks each executable borrowed group separately. */
+    public void verifySourceBasis(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
+                                  ClosureEnvironment environment, Map<DocumentId, String> expectedSourceBases) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(consumerOwned, "consumerOwned");
         if (consumerOwned.isEmpty()) throw new IllegalArgumentException("Initialization observation requires a consumer owner");
-        if (!SourceObservationProgramCodec.environment(program.environment()).equals(
-                SourceObservationProgramCodec.environment(Objects.requireNonNull(environment, "environment")))
-                || !SourceObservationProgramCodec.policy(program.executionPolicy()).equals(
-                SourceObservationProgramCodec.policy(Objects.requireNonNull(policy, "policy")))) {
-            throw new IllegalArgumentException("Source initialization belongs to another complete environment or execution policy");
-        }
+        SourceExecutionBasis.requireProducerBases(ownedDocumentIds(), environment, program.environment(),
+                program.executionPolicy(), expectedSourceBases);
         for (DocumentId consumer : consumerOwned) {
             if (snapshot.managedDocument(consumer) == null || origins.containsKey(consumer)) {
                 throw new IllegalArgumentException("Source initialization has missing or overlapping consumer ownership");
@@ -170,7 +180,14 @@ public final class SourceInitialization {
      */
     public void verifyInstallationOccurrence(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
                                              String occurrenceIdentity, ClosureEnvironment environment, ExecutionPolicy policy) {
-        verifySourceBasis(snapshot, consumerOwned, environment, policy);
+        verifyInstallationOccurrence(snapshot, consumerOwned, occurrenceIdentity, environment,
+                fixedPolicyBases(environment, policy));
+    }
+
+    /** Rechecks producer authority at the actual accepted placement, without changing source ownership. */
+    public void verifyInstallationOccurrence(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,
+                                             String occurrenceIdentity, ClosureEnvironment environment, Map<DocumentId, String> expectedSourceBases) {
+        verifySourceBasis(snapshot, consumerOwned, environment, expectedSourceBases);
         String selected = ClosureValueSupport.requireSha256Identity(occurrenceIdentity, "occurrenceIdentity");
         for (ManagedOccurrenceBinding binding : snapshot.occurrences()) {
             if (!selected.equals(binding.occurrenceIdentity())) continue;
@@ -181,6 +198,10 @@ public final class SourceInitialization {
             return;
         }
         throw new IllegalArgumentException("Selected initialization occurrence is absent");
+    }
+
+    Map<DocumentId, String> fixedPolicyBases(ClosureEnvironment environment, ExecutionPolicy policy) {
+        return SourceExecutionBasis.fixedPolicyBases(ownedDocumentIds(), environment, policy);
     }
 
     private void verifyAuthoredOccurrence(AffectedClosureSnapshot snapshot, ManagedOccurrenceBinding binding,

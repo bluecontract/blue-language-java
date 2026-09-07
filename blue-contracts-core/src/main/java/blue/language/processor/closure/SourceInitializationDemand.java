@@ -36,5 +36,6 @@ public final class SourceInitializationDemand extends ClosureResourceDemand {
     public String creatorSeedIdentity() { return creatorSeedIdentity; }
     public String creatorPatchSite() { return creatorPatchSite; }
     public ClosureEnvironment environment() { return environment; }
+    /** Creator retry context only; source reconstruction requires independently admitted producer authority. */
     public ExecutionPolicy executionPolicy() { return policy; }
 }

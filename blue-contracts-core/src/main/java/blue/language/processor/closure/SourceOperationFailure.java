@@ -18,6 +18,8 @@ public final class SourceOperationFailure {
     private final long totalGas;
     private final ProcessorDiagnostic diagnostic;
     private final ManagedReactionContext managedReaction;
+    private final Map<DocumentId, List<String>> originalAttachmentSelections;
+    private final List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence;
 
     private SourceOperationFailure(ClosureInvocationInput input, ClosureProcessResult result, Set<DocumentId> owned) {
         this(input.invocationIdentity(), input.cause().kind(), input.cause().causeIdentity(),
@@ -67,7 +69,8 @@ public final class SourceOperationFailure {
         String rejected = failure.rejectedCharge().isPresent() ? SameOriginRejectedChargeEvidence.fromOperation(group).identity() : null;
         return new SourceOperationFailure(group.operationIdentity(), origin.cause().kind(), origin.cause().causeIdentity(),
                 (ExternalEventCause) origin.cause(), origin.environment(), origin.executionPolicy(), group.status(), group.ownedDocumentIds(),
-                states, group.totalGas(), group.gasTraceIdentity(), rejected, failure.diagnostic(), origin.managedReaction().orElse(null));
+                states, group.totalGas(), group.gasTraceIdentity(), rejected, failure.diagnostic(), origin.managedReaction().orElse(null),
+                group.originalAttachmentSelections(), group.interpretedSourceEvidence());
     }
 
     /** Codec hook: callers must already possess the authenticated committed manifest identity. */
@@ -83,6 +86,28 @@ public final class SourceOperationFailure {
             ExternalEventCause externalCause, ClosureEnvironment environment, ExecutionPolicy executionPolicy,
             ProcessorStatus status, Set<DocumentId> owned, List<SourceObservationProgram.SourceState> predecessors,
             long totalGas, String gasTraceIdentity, String rejectedChargeIdentity, ProcessorDiagnostic diagnostic, ManagedReactionContext managedReaction) {
+        this(invocationIdentity, causeKind, causeIdentity, externalCause, environment, executionPolicy, status, owned,
+                predecessors, totalGas, gasTraceIdentity, rejectedChargeIdentity, diagnostic, managedReaction, null);
+    }
+
+    SourceOperationFailure(String invocationIdentity, ProcessingCause.Kind causeKind, String causeIdentity,
+            ExternalEventCause externalCause, ClosureEnvironment environment, ExecutionPolicy executionPolicy,
+            ProcessorStatus status, Set<DocumentId> owned, List<SourceObservationProgram.SourceState> predecessors,
+            long totalGas, String gasTraceIdentity, String rejectedChargeIdentity, ProcessorDiagnostic diagnostic,
+            ManagedReactionContext managedReaction, Map<DocumentId, List<String>> originalAttachmentSelections) {
+        this(invocationIdentity, causeKind, causeIdentity, externalCause, environment, executionPolicy, status, owned,
+                predecessors, totalGas, gasTraceIdentity, rejectedChargeIdentity, diagnostic, managedReaction,
+                originalAttachmentSelections, Collections.emptyList());
+    }
+
+    SourceOperationFailure(String invocationIdentity, ProcessingCause.Kind causeKind, String causeIdentity,
+            ExternalEventCause externalCause, ClosureEnvironment environment, ExecutionPolicy executionPolicy,
+            ProcessorStatus status, Set<DocumentId> owned, List<SourceObservationProgram.SourceState> predecessors,
+            long totalGas, String gasTraceIdentity, String rejectedChargeIdentity, ProcessorDiagnostic diagnostic,
+            ManagedReactionContext managedReaction, Map<DocumentId, List<String>> originalAttachmentSelections,
+            List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence) {
+        this.interpretedSourceEvidence = SameOriginGroupEvidence.canonicalSourceEvidence(interpretedSourceEvidence);
+        this.originalAttachmentSelections = SameOriginAttachmentPolicy.freezeOriginalSelections(originalAttachmentSelections, owned);
         this.invocationIdentity = ClosureValueSupport.requireSha256Identity(invocationIdentity, "failedInvocation");
         this.causeIdentity = ClosureValueSupport.requireSha256Identity(causeIdentity, "failedCause");
         this.causeKind = Objects.requireNonNull(causeKind, "causeKind"); this.externalCause = externalCause;
@@ -122,6 +147,9 @@ public final class SourceOperationFailure {
     public String rejectedChargeIdentity() { return rejectedChargeIdentity; }
     public ProcessorDiagnostic diagnostic() { return diagnostic; }
     public Optional<ManagedReactionContext> managedReaction() { return Optional.ofNullable(managedReaction); }
+    /** Original seed choices, including unused choices and explicit empty; present for same-origin producers. */
+    public Optional<Map<DocumentId, List<String>>> originalAttachmentSelections() { return Optional.ofNullable(originalAttachmentSelections); }
+    public List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence() { return interpretedSourceEvidence; }
 
     /** Checks a consumer's exact successful pins without creating or metering an invocation. */
     public void verifyObservationBasis(AffectedClosureSnapshot snapshot, Set<DocumentId> consumerOwned,

@@ -10,6 +10,7 @@ import java.util.function.Function;
 final class SameOriginOperationResultAssembler {
     private final ClosureInvocationInput input;
     private final ClosureExecutionState state;
+    private final SameOriginAttachmentPolicy attachmentPolicy;
     private final AffectedClosureSnapshot before, after;
     private final Map<DocumentId, ManagedDocumentSnapshot> beforeDocuments, afterDocuments;
     private final Map<DocumentId, ComponentSnapshot> beforeComponents, afterComponents;
@@ -44,6 +45,13 @@ final class SameOriginOperationResultAssembler {
     SameOriginOperationResultAssembler(ClosureInvocationInput input, ClosureExecutionState state,
             Collection<SourceOperationFailure> retainedFailures, Map<DocumentId, List<SourceObservationGap>> observationGaps,
             Collection<SourceObservationProgram> retainedSourcePrograms) {
+        this(input, state, retainedFailures, observationGaps, retainedSourcePrograms, SameOriginAttachmentPolicy.empty());
+    }
+
+    SameOriginOperationResultAssembler(ClosureInvocationInput input, ClosureExecutionState state,
+            Collection<SourceOperationFailure> retainedFailures, Map<DocumentId, List<SourceObservationGap>> observationGaps,
+            Collection<SourceObservationProgram> retainedSourcePrograms, SameOriginAttachmentPolicy attachmentPolicy) {
+        this.attachmentPolicy = Objects.requireNonNull(attachmentPolicy);
         this.input = Objects.requireNonNull(input); this.state = Objects.requireNonNull(state);
         this.observationGaps = new HashMap<>();
         for (Map.Entry<DocumentId, List<SourceObservationGap>> entry : Objects.requireNonNull(observationGaps).entrySet())
@@ -83,6 +91,15 @@ final class SameOriginOperationResultAssembler {
             List<blue.language.processor.GasTraceEntry> canonicalGasTrace,
             SameOriginAttemptCoordinator.Failure failure, SourceObservationRecorder.Captured capture,
             Map<DocumentId, Set<DocumentId>> observedByConsumer) {
+        return assemble(owned, originalSeedByMember, admissions, consumedSourceOperations, canonicalGasTrace, failure,
+                capture, observedByConsumer, Collections.emptyList());
+    }
+
+    SameOriginOperationResult assemble(Set<DocumentId> owned, Map<DocumentId, String> originalSeedByMember,
+            List<SameOriginGroupIdentity.Admission> admissions, Map<DocumentId, String> consumedSourceOperations,
+            List<blue.language.processor.GasTraceEntry> canonicalGasTrace,
+            SameOriginAttemptCoordinator.Failure failure, SourceObservationRecorder.Captured capture,
+            Map<DocumentId, Set<DocumentId>> observedByConsumer, List<SameOriginGroupEvidence.SourceEvidence> interpretedSourceEvidence) {
         SortedSet<DocumentId> owners = new TreeSet<>(Objects.requireNonNull(owned));
         if (owners.isEmpty() || !owners.equals(originalSeedByMember.keySet()))
             throw new IllegalArgumentException("Final group seed ownership is incomplete");
@@ -95,7 +112,7 @@ final class SameOriginOperationResultAssembler {
             throw new IllegalStateException("A failed group cannot settle before all child-ledger reservations are discharged");
         List<ComponentSnapshot> originalComponents = selectComponents(beforeComponents, owners);
         List<ComponentSnapshot> resultingComponents = selectComponents(success ? afterComponents : beforeComponents, owners);
-        String operation = SameOriginGroupIdentity.of(originalSeedByMember, admissions, consumedSourceOperations).identity();
+        String operation = SameOriginGroupIdentity.of(originalSeedByMember, admissions, consumedSourceOperations, interpretedSourceEvidence).identity();
         List<SameOriginOperationResult.Admission> accepted = new ArrayList<>();
         for (SameOriginGroupIdentity.Admission admission : admissions)
             accepted.add(new SameOriginOperationResult.Admission(admission.canonicalSite(), admission.members()));
@@ -189,7 +206,8 @@ final class SameOriginOperationResultAssembler {
                     (ExternalEventCause) input.cause(), input.environment(), input.executionPolicy(), sourceBefore, sourceAfter,
                     owners, capture.steps(), capture.projections(), ownedBeforeBindings, ownedAfterBindings,
                     originalComponents, resultingComponents, capture.borrowedPrograms(), new ArrayList<>(selectedPins.values()),
-                    capture.acceptedViews(), input.managedReaction().orElse(null), capture.acceptedInitializations(), capture.skippedWork());
+                    capture.acceptedViews(), input.managedReaction().orElse(null), capture.acceptedInitializations(), capture.skippedWork(),
+                    attachmentPolicy.originalSelectionIdentities(owners), interpretedSourceEvidence);
         }
         Map<DocumentId, Set<DocumentId>> consumersBySource = new HashMap<>();
         for (Map.Entry<DocumentId, Set<DocumentId>> consumer : Objects.requireNonNull(observedByConsumer).entrySet()) {
@@ -213,7 +231,7 @@ final class SameOriginOperationResultAssembler {
         SameOriginOperationResult completed = new SameOriginOperationResult(input, operation, originalSeedByMember, accepted, consumedSourceOperations, observedSources,
                 success ? ProcessorStatus.SUCCESS : failure.status, predecessors, results, resultingComponents,
                 ownedAfterBindings, ownedChanges, ownedSubscriptions, ownedCheckpoints, ownedEvents, gas, program,
-                success ? null : failure(failure));
+                success ? null : failure(failure), attachmentPolicy.originalSelectionIdentities(owners), interpretedSourceEvidence);
         for (SourceObservationProgram.SourceState settled : sourceAfter) if (owners.contains(settled.documentId())) {
             settledSourceStates.put(settled.documentId(), settled);
             settledSourceOperations.put(settled.documentId(), operation);
