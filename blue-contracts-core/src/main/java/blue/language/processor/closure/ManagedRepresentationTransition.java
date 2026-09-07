@@ -117,7 +117,10 @@ public final class ManagedRepresentationTransition {
                 if (!next.documentId().equals(source.documentId())) continue;
                 Node oldValue = NodePathEditor.getOrNull(source.document(), row.sourcePath());
                 Node newValue = NodePathEditor.getOrNull(next.document(), row.sourcePath());
-                if (!Objects.equals(oldValue, newValue)) return true;
+                // Snapshot accessors return detached nodes, so compare their exact values.
+                String oldBlueId = oldValue == null ? null : exact(oldValue);
+                String newBlueId = newValue == null ? null : exact(newValue);
+                if (!Objects.equals(oldBlueId, newBlueId)) return true;
                 for (ManagedOccurrenceBinding current : result.occurrenceBindings()) {
                     if (current.occurrenceIdentity().equals(row.occurrenceIdentity()) && current.active()) return true;
                 }

@@ -436,6 +436,63 @@ final class ManagedCheckpointSettlementOwnershipTest {
         }
     }
 
+    @Test
+    void shouldRejectUnrelatedSameEpochRebindWhenPendingReferenceIsUnchanged() {
+        // given: a real numbered B revision and an inactive consumer of its exact head
+        try (Fixture fixture = new Fixture()) {
+            Node a = fixture.root("a", "noop", false)
+                    .properties("peer", new Node().blueId("this#1"));
+            a.getContracts().properties("embedded", embedded("/peer"));
+            Node b = fixture.root("b", "change", false)
+                    .properties("parent", new Node().blueId("this#0"));
+            b.getContracts().properties("embedded", embedded("/parent"));
+            CyclicSetFinalization cycle = new CircularSetIdentityCalculator()
+                    .finalizeCyclicSet(Arrays.asList(a, b));
+            String aId = cycle.membersInInputOrder().get(0).finalBlueId();
+            String bId = cycle.membersInInputOrder().get(1).finalBlueId();
+            a = cycle.membersInInputOrder().get(0).canonicalMemberBody();
+            b = cycle.membersInInputOrder().get(1).canonicalMemberBody();
+            NodePathEditor.put(a, "/peer", new Node().blueId(bId));
+            NodePathEditor.put(b, "/parent", new Node().blueId(aId));
+            AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b), Arrays.asList(
+                    fixture.binding(A, "/peer", B, bId),
+                    fixture.binding(B, "/parent", A, aId)));
+            Run numbered = fixture.external(snapshot, B, event("numbered-b"), 1L, null);
+            assertSuccess(numbered);
+            ManagedDocumentTransitionReceipt anchor = receipt(numbered, B);
+            assertEquals(snapshot.managedDocument(B).epoch() + 1L, result(numbered, B).epoch());
+            snapshot = fixture.after(numbered.result);
+            DocumentId consumerId = new DocumentId("pending-consumer");
+            Node consumer = fixture.root("consumer", "noop", false)
+                    .properties("peer", new Node().blueId(snapshot.managedDocument(B).blueId()));
+            consumer.getContracts().properties("embedded", embedded("/peer"));
+            snapshot = fixture.withPendingConsumer(snapshot, consumerId, consumer,
+                    B, snapshot.managedDocument(B).epoch());
+            ManagedDocumentSnapshot beforeB = snapshot.managedDocument(B);
+            Node pendingBefore = NodePathEditor.getOrNull(snapshot.managedDocument(consumerId).document(), "/peer");
+
+            // when: unrelated A checkpoint settlement re-encodes B, leaving the pending consumer alone
+            Run unrelated = fixture.run(snapshot);
+
+            // then: an unchanged cloned pending value is not evidence of reconciliation
+            assertSuccess(unrelated);
+            assertOnlyAWork(unrelated);
+            assertEquals(beforeB.epoch(), result(unrelated, B).epoch());
+            assertNotEquals(beforeB.blueId(), result(unrelated, B).afterBlueId());
+            Node pendingAfter = NodePathEditor.getOrNull(result(unrelated, consumerId).document(), "/peer");
+            assertNotNull(pendingBefore);
+            assertNotNull(pendingAfter);
+            assertNodeEquals(pendingBefore, pendingAfter);
+            ManagedOccurrenceBinding pending = unrelated.result.occurrenceBindings().stream()
+                    .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+            assertFalse(pending.active());
+            assertEquals(beforeB.blueId(), pending.expectedTargetBlueId());
+            assertThrows(IllegalArgumentException.class, () -> new ManagedRepresentationTransition(
+                    B, beforeB.epoch(), anchor.transitionReceiptIdentity(), anchor.transitionReceiptIdentity(),
+                    unrelated.input, unrelated.result, receipt(unrelated, B).transitionReceiptIdentity()));
+        }
+    }
+
     private static final class Fixture implements AutoCloseable {
         private final Map<String, Node> exact = new LinkedHashMap<>();
         private final ProbeProcessor probe = new ProbeProcessor();
