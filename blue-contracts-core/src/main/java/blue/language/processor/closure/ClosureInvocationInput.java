@@ -344,6 +344,10 @@ public final class ClosureInvocationInput {
         }
         ManagedRepresentationCursor cursor = target.pendingRepresentationCursor();
         if (revision instanceof ManagedRepresentationCause) {
+            // A completed intermediate chain stays inactive only for its numbered successor.
+            if (cursor != null && cursor.positionIdentity().equals(cursor.targetPositionIdentity())) {
+                throw new IllegalArgumentException("Representation chain already reached its frozen target");
+            }
             ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
             ManagedRepresentationTransition bridge = representation.transition();
             String predecessor = cursor == null ? bridge.anchorReceiptIdentity() : cursor.positionIdentity();

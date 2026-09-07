@@ -167,6 +167,113 @@ final class ManagedCheckpointSettlementOwnershipTest {
         }
     }
 
+    @Test
+    void shouldRejectRepresentationPastFrozenTargetAndApplyNextNumberedRevision() {
+        // given: retained processing creates three genuine same-epoch positions
+        try (Fixture fixture = new Fixture()) {
+            Node b = fixture.root("b", "attach", false);
+            b.getContracts().properties("embedded", embedded("/peer"));
+            Node a = fixture.root("a", "assign", false);
+            a.properties("peer", new Node().blueId(blueId(b)));
+            a.getContracts().properties("embedded", embedded("/peer"));
+            AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b),
+                    Collections.singletonList(fixture.binding(A, "/peer", B, blueId(b))));
+            List<Run> sourceHistory = new ArrayList<>();
+            for (int value : new int[]{0, 1, 0, 2, 3}) {
+                Run run = fixture.external(snapshot, A,
+                        event("assign-" + value).properties("business", new Node().value(value)),
+                        sourceHistory.size() + 1L, null);
+                assertSuccess(run);
+                sourceHistory.add(run);
+                snapshot = fixture.after(run.result);
+            }
+            ResultingDocument saved = result(sourceHistory.get(0), A);
+            Run attached = fixture.external(snapshot, B,
+                    event("attach-saved").properties("target", new Node().blueId(saved.afterBlueId())),
+                    6L, saved.epoch());
+            assertSuccess(attached);
+            snapshot = fixture.after(attached.result);
+            long epoch = snapshot.managedDocument(A).epoch();
+            ManagedDocumentTransitionReceipt anchor = receipt(attached, A);
+            String predecessor = anchor.transitionReceiptIdentity();
+            List<ManagedRepresentationTransition> positions = new ArrayList<>();
+            AffectedClosureSnapshot frozenSource = null;
+            for (int index = 1; index <= 3; index++) {
+                ManagedOccurrenceBinding pending = snapshot.occurrences().stream()
+                        .filter(row -> row.sourceDocumentId().equals(B)).findFirst().get();
+                Run historical = sourceHistory.get(index);
+                ResultingDocument historicalA = result(historical, A);
+                Run applied = fixture.process(snapshot, ClosureEvidenceFactory.managedRevisionCause(
+                        pending.occurrenceIdentity(), historicalA.epoch() - 1L, historicalA.epoch(),
+                        historicalA.document(), receipt(historical, A), null));
+                assertSuccess(applied);
+                ManagedRepresentationTransition position = new ManagedRepresentationTransition(A, epoch,
+                        anchor.transitionReceiptIdentity(), predecessor, applied.input, applied.result,
+                        receipt(applied, A).transitionReceiptIdentity());
+                positions.add(position);
+                predecessor = position.positionIdentity();
+                snapshot = fixture.after(applied.result);
+                if (index == 2) {
+                    frozenSource = snapshot;
+                }
+            }
+            // The captured history continues with a numbered revision after position two.
+            Run next = fixture.external(frozenSource, A,
+                    event("next-numbered").properties("business", new Node().value(4)), 7L, null);
+            assertSuccess(next);
+            ManagedDocumentTransitionReceipt nextReceipt = receipt(next, A);
+            String targetPosition = positions.get(1).positionIdentity();
+            assertEquals(positions.get(2).predecessorPositionIdentity(), targetPosition);
+            assertEquals(positions.get(1).transitionReceipt().afterBlueId(), nextReceipt.beforeBlueId());
+            DocumentId consumerId = new DocumentId("historical-consumer");
+            String initialBlueId = anchor.afterBlueId();
+            Node consumer = fixture.root("consumer", "noop", false)
+                    .properties("peer", new Node().blueId(initialBlueId))
+                    .properties("observed", new Node().value(0));
+            consumer.getContracts().properties("embedded", embedded("/peer"))
+                    .properties("updates", typed(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL)
+                            .properties("path", new Node().value("/peer")))
+                    .properties("observe", handler("updates"));
+            snapshot = fixture.withPendingConsumer(fixture.after(next.result), consumerId,
+                    consumer, A, epoch, initialBlueId);
+            ManagedOccurrenceBinding occurrence = snapshot.occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+
+            // when: both valid representation steps reach the frozen target
+            for (int index = 0; index < 2; index++) {
+                ManagedRepresentationCause cause = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
+                        positions.get(index), targetPosition, nextReceipt.transitionReceiptIdentity(), null);
+                Run traversed = fixture.process(snapshot, cause);
+                assertSuccess(traversed);
+                assertEquals(java.math.BigInteger.valueOf(index + 1L),
+                        result(traversed, consumerId).document().get("/observed"));
+                snapshot = fixture.after(traversed.result);
+                occurrence = snapshot.occurrences().stream()
+                        .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+                assertFalse(occurrence.active(), "The numbered successor is still pending");
+            }
+
+            // then: an extra bridge is rejected, preserving the exact numbered predecessor
+            assertEquals(targetPosition, occurrence.pendingRepresentationCursor().positionIdentity());
+            ManagedRepresentationCause extra = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
+                    positions.get(2), targetPosition, nextReceipt.transitionReceiptIdentity(), null);
+            final AffectedClosureSnapshot completedChain = snapshot;
+            assertThrows(IllegalArgumentException.class,
+                    () -> assertSuccess(fixture.process(completedChain, extra)));
+            Run numbered = fixture.process(snapshot, ClosureEvidenceFactory.managedRevisionCause(
+                    occurrence.occurrenceIdentity(), epoch, result(next, A).epoch(),
+                    result(next, A).document(), nextReceipt, null));
+            assertSuccess(numbered);
+            ManagedOccurrenceBinding activated = numbered.result.occurrenceBindings().stream()
+                    .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+            assertTrue(activated.active());
+            assertNull(activated.pendingRepresentationCursor());
+            assertEquals(nextReceipt.afterBlueId(), activated.expectedTargetBlueId());
+            assertEquals(java.math.BigInteger.valueOf(3L),
+                    result(numbered, consumerId).document().get("/observed"));
+        }
+    }
+
     private static ManagedDocumentTransitionReceipt receipt(Run run, DocumentId id) {
         return run.result.managedTransitionReceipts().stream()
                 .filter(value -> value.documentId().equals(id)).findFirst().get();
@@ -524,6 +631,12 @@ final class ManagedCheckpointSettlementOwnershipTest {
 
         private AffectedClosureSnapshot withPendingConsumer(AffectedClosureSnapshot source,
                 DocumentId consumerId, Node consumer, DocumentId target, long epoch) {
+            return withPendingConsumer(source, consumerId, consumer, target, epoch,
+                    source.managedDocument(target).blueId());
+        }
+
+        private AffectedClosureSnapshot withPendingConsumer(AffectedClosureSnapshot source,
+                DocumentId consumerId, Node consumer, DocumentId target, long epoch, String expectedBlueId) {
             Map<DocumentId, Node> bodies = new LinkedHashMap<>();
             Map<DocumentId, Long> generations = new LinkedHashMap<>();
             source.managedDocuments().forEach(value -> {
@@ -534,7 +647,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
             generations.put(consumerId, 1L);
             List<ManagedOccurrenceBinding> rows = new ArrayList<>(source.occurrences());
             rows.add(ManagedOccurrenceBinding.derived(environment.managedBindingPolicyIdentity(), consumerId,
-                    ScopeAddress.embedded("/peer", 1L), target, source.managedDocument(target).blueId(), false, epoch));
+                    ScopeAddress.embedded("/peer", 1L), target, expectedBlueId, false, epoch));
             ComponentFinalizationResult finalized = new ComponentFinalizationKernel().finalizeComponents(
                     new ComponentFinalizationInput(ManagedDocumentGraph.fromBindings(bodies.keySet(), rows),
                             generations, bodies, rows));
