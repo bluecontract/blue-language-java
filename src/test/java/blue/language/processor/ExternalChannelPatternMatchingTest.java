@@ -7,8 +7,11 @@ import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.matching.FrozenTypeMatcher;
 import org.junit.jupiter.api.Test;
@@ -279,12 +282,18 @@ final class ExternalChannelPatternMatchingTest {
                 "an exact canonical child definition should follow its "
                         + "exact parent reference");
         assertEquals(2, childCalls);
-        assertEquals(2, parentCalls);
         assertEquals(
                 0,
+                parentCalls,
+                "the manager materializes the requested child once per pass; "
+                        + "the Language resolver follows its parent inside the "
+                        + "same evidence-producing invocation");
+        assertEquals(
+                2,
                 baseCalls,
-                "the exact parent reference identity is sufficient once "
-                        + "the intermediate definition is materialized");
+                "each isolated matching pass materializes the referenced "
+                        + "base definition so its declared constraints are "
+                        + "evaluated from exact canonical evidence");
         assertTrue(lineageCandidate.getType()
                 .isReferenceOnly());
         assertEquals(
@@ -471,6 +480,49 @@ final class ExternalChannelPatternMatchingTest {
         assertTrue(failure.getMessage().contains(
                 "available only during event evaluation"));
         assertEquals(0, exactCalls);
+    }
+
+    @Test
+    void shouldPreserveFunctionFailureWhenMatcherCleanupAlsoFails() {
+        // given
+        RuntimeException cleanupFailure =
+                new IllegalArgumentException("matcher cleanup failed");
+        AtomicInteger closes = new AtomicInteger();
+        IllegalStateException failure;
+        RuntimeWorkSession phase = new RuntimeWorkSession(
+                new GasMeter(), RuntimeWorkSession.Mode.ADMISSION);
+        try (Blue blue = runtime(
+                null,
+                new PatternLeafProcessor(true),
+                new PatternAggregateProcessor())) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            ContractBundle bundle = bundle(
+                    processor,
+                    root(leaf("leaf", kindPattern())));
+
+            // when
+            failure = captureFailure(
+                    () -> ExternalChannelFunctionEvaluation.evaluate(
+                            processor.registry(),
+                            processor.contractConverter(),
+                            () -> new ThrowingCloseMatcherSession(
+                                    cleanupFailure, closes),
+                            bundle,
+                            bundle.effectiveContractSnapshot("leaf"),
+                            event(extendedCandidate()),
+                            null,
+                            phase));
+        } finally {
+            phase.close();
+        }
+
+        // then
+        assertTrue(failure.getMessage().contains(
+                "available only during event evaluation"));
+        assertFalse(phase.isOpen());
+        assertEquals(1, closes.get());
+        assertEquals(1, failure.getSuppressed().length);
+        assertSame(cleanupFailure, failure.getSuppressed()[0]);
     }
 
     @Test
@@ -1018,7 +1070,9 @@ final class ExternalChannelPatternMatchingTest {
                     root(leaf("leaf", kindPattern())));
             ProcessingSnapshotManager manager =
                     exactMaterializer != null
-                            ? materializer(exactMaterializer)
+                            ? materializer(
+                                    processor.snapshotManager(),
+                                    exactMaterializer)
                             : processor.snapshotManager();
             Node referenceEvent =
                     event(reference(candidateBlueId));
@@ -1055,7 +1109,15 @@ final class ExternalChannelPatternMatchingTest {
                         .verifiedMatcherSessions(manager),
                 bundle,
                 bundle.effectiveContractSnapshot(key),
-                event);
+                event,
+                null,
+                ProcessorTestSupport
+                        .admissionRuntimeWorkSession(
+                                processor,
+                                manager != null
+                                        ? manager
+                                        : processor.snapshotManager(),
+                                event));
     }
 
     private static final class CandidateMatchObservation {
@@ -1104,6 +1166,49 @@ final class ExternalChannelPatternMatchingTest {
             this.eventIdentityAfterEvaluation =
                     eventIdentityAfterEvaluation;
             this.retainedDetail = retainedDetail;
+        }
+    }
+
+    private static final class ThrowingCloseMatcherSession
+            implements ExternalChannelFunctionEvaluation.MatcherSession {
+        private final RuntimeException closeFailure;
+        private final AtomicInteger closes;
+
+        private ThrowingCloseMatcherSession(
+                RuntimeException closeFailure,
+                AtomicInteger closes) {
+            this.closeFailure = closeFailure;
+            this.closes = closes;
+        }
+
+        @Override
+        public void requireActive() {
+        }
+
+        @Override
+        public boolean matches(
+                FrozenNode candidate,
+                FrozenNode pattern) {
+            return false;
+        }
+
+        @Override
+        public boolean isAssignableToType(
+                String candidateTypeBlueId,
+                String baseTypeBlueId) {
+            return false;
+        }
+
+        @Override
+        public FrozenNode materializeExactReference(
+                FrozenNode reference) {
+            throw new AssertionError("unexpected materialization");
+        }
+
+        @Override
+        public void close() {
+            closes.incrementAndGet();
+            throw closeFailure;
         }
     }
 
@@ -1207,11 +1312,20 @@ final class ExternalChannelPatternMatchingTest {
 
     private static ProcessingSnapshotManager materializer(
             Function<FrozenNode, FrozenNode> materializer) {
+        return materializer(null, materializer);
+    }
+
+    private static ProcessingSnapshotManager materializer(
+            ProcessingSnapshotManager delegate,
+            Function<FrozenNode, FrozenNode> materializer) {
         return new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(
                     Node document) {
-                throw new UnsupportedOperationException();
+                if (delegate == null) {
+                    throw new UnsupportedOperationException();
+                }
+                return delegate.fromDocument(document);
             }
 
             @Override
@@ -1221,10 +1335,43 @@ final class ExternalChannelPatternMatchingTest {
             }
 
             @Override
+            public TypeEvidenceResolution
+            materializeVerifiedTypeReference(
+                    FrozenNode reference) {
+                FrozenNode exact = materializer.apply(reference);
+                if (exact == null) {
+                    throw new IllegalArgumentException(
+                            "Verified reference materializer returned no content for "
+                                    + reference.getReferenceBlueId());
+                }
+                if (exact.isReferenceOnly()) {
+                    throw new IllegalArgumentException(
+                            "Verified reference materializer retained a pure reference for "
+                                    + reference.getReferenceBlueId());
+                }
+                String actual = DirectBlueIdCalculator.calculateBlueId(
+                        exact.toNode());
+                if (!reference.getReferenceBlueId().equals(actual)) {
+                    throw new IllegalArgumentException(
+                            "Verified reference materializer returned mismatched content for "
+                                    + reference.getReferenceBlueId());
+                }
+                if (delegate == null) {
+                    return ProcessingSnapshotManager.super
+                            .materializeVerifiedTypeReference(reference);
+                }
+                return delegate.materializeVerifiedTypeReference(
+                        reference);
+            }
+
+            @Override
             public ResolvedSnapshot applyPatch(
                     ResolvedSnapshot snapshot,
                     JsonPatch patch) {
-                throw new UnsupportedOperationException();
+                if (delegate == null) {
+                    throw new UnsupportedOperationException();
+                }
+                return delegate.applyPatch(snapshot, patch);
             }
         };
     }
@@ -1561,6 +1708,35 @@ final class ExternalChannelPatternMatchingTest {
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            return delegate.fromDocumentTransientForCanonicalIdentity(
+                    document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            return delegate.fromDocumentTransientForCanonicalIdentity(
+                    document, exactResolutionOverlay);
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration) {
+            return delegate.resolveTypeDeclarationIdentity(declaration);
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            return delegate.resolveTypeDeclarationIdentity(
+                    declaration, exactResolutionOverlay);
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
@@ -1614,6 +1790,19 @@ final class ExternalChannelPatternMatchingTest {
             return delegate
                     .materializeVerifiedExactReference(
                             reference);
+        }
+
+        @Override
+        public TypeEvidenceResolution materializeVerifiedTypeReference(
+                FrozenNode reference) {
+            String blueId = reference.getReferenceBlueId();
+            AtomicInteger count = exactCalls.get(blueId);
+            if (count == null) {
+                count = new AtomicInteger();
+                exactCalls.put(blueId, count);
+            }
+            count.incrementAndGet();
+            return delegate.materializeVerifiedTypeReference(reference);
         }
 
         @Override

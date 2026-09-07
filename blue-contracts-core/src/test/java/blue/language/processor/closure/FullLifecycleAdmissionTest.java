@@ -7,7 +7,11 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.NodeProvider;
+import blue.language.registry.BlueCoreTypeRegistry;
+import blue.language.runtime.BlueLanguage;
+import blue.language.processor.BlueContracts;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.ChannelProcessor;
@@ -15,6 +19,7 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.ExternalOrderKey;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.HandlerProcessor;
@@ -62,7 +67,10 @@ final class FullLifecycleAdmissionTest {
     private static final String HANDLER_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
     private static final Node EXACT_DOCUMENT_TYPE =
-            new Node().name("Full lifecycle exact-node type");
+            new Node()
+                    .name("Full lifecycle exact-node type")
+                    .type(new Node().blueId(
+                            BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
     private static final String EXACT_DOCUMENT_TYPE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(EXACT_DOCUMENT_TYPE);
     private static final Node RETAINED_SOURCE_CHANNEL_TYPE =
@@ -88,17 +96,17 @@ final class FullLifecycleAdmissionTest {
     private static final long GENEROUS_GAS = 100_000L;
     private static final long LOOP_GAS = 20_000L;
     private static final String DUPLICATE_EVENT_IDENTITY_ORACLE =
-            "sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97"
+            "sha256:ce40b086e35d158583ea85606ae807cdd3eb6a1ec6912f557daf2f943f065ccc"
                     + "|31JtLEZds6saFSDKKWh4XZrWf63BQywpRUB4wDt766Jo"
-                    + "|sha256:53365d2d325dca5499055a7780b3848ad597697ca244e3ab86f7f112c8663095"
-                    + "|sha256:7dde48d6e83e259960c1bd6edf6d1f6d54bd8798d91fd1d4c7a3cd9056eec9a8";
+                    + "|sha256:6ed473999a105e8baca12eb6e7c8a441ff7ad2497d729b52595fe9876458594e"
+                    + "|sha256:e84572de20fce5cce2dc08f8ded11eabd430ebd2f40825e404d9b05c04f905bb";
     private static final String GAS_FAILURE_ORACLE =
-            "sha256:f866ec935ec5e02c380033741a667dcd182ca3835a7dc33a5ec2fda94d6ac7e7"
-                    + "|19987|2065"
-                    + "|sha256:5e29b1a069aca3391d6beceb3857f41a8fa095823ded3e29c9d647d4707dacb3"
+            "sha256:1296fc8f2b7be431b7cc1c5d2a1fd0acb499a186c883b7141ef7db2cd01ac84e"
+                    + "|20000|2123"
+                    + "|sha256:4647823cc749a1fb9d0fdea12b54909a78f6848eff0e895b78bac9c01a09052c"
                     + "|GasLimitExceeded"
-                    + "|Gas limit exceeded before processor.handlerCall"
-                    + "|{namespace=processor, counter=handlerCall, quantity=1, weight=50, admittedGas=19987, gasLimit=20000, effectiveBudget=20000}"
+                    + "|Gas limit exceeded before processor.embeddedEventDelivered"
+                    + "|{namespace=processor, counter=embeddedEventDelivered, quantity=1, weight=10, admittedGas=20000, gasLimit=20000, effectiveBudget=20000}"
                     + "|g0:0:PROCESSOR:processInvocation:1:50:50:null:null:null:admission.process"
                     + "|g1:1:PROCESSOR:closureInvocation:1:100:100:null:null:null:admission.closure"
                     + "|g2:2:PROCESSOR:managedDocumentOpened:1:10:10:a:null:null:admission.document.a"
@@ -107,9 +115,9 @@ final class FullLifecycleAdmissionTest {
                     + "|g5:5:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:b:null:null:admission.edge.sha256:42c26caa522b69df9e1485ab05a3f7e0085b75e15d48c6a0d70d048ecd6e514a"
                     + "|g6:6:PROCESSOR:managedOccurrenceBindingVerified:1:5:5:a:null:null:admission.binding.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
                     + "|g7:7:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:a:null:null:admission.edge.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
-                    + "|rejected:[sha256:0b6692350dd4bd63777025596c7c17fcc5c5a61550e46c1bc28606ea6289fe25, PROCESSOR, handlerCall, 1, 50, 50, SHARED, null, 13, WORK, sha256:59cd643c6ece37761491232efb7aa772336e675d401239fd3ca65ba35ceafd0e, null, null, null]"
-                    + "|works:141:0|INITIALIZATION|a|sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c"
-                    + ":140|EMBEDDED_EVENT|a|sha256:59cd643c6ece37761491232efb7aa772336e675d401239fd3ca65ba35ceafd0e";
+                    + "|rejected:[sha256:d6ce799cff80e33387de1ab42b137edd74dfbc60756af376b68ba367f10a277f, PROCESSOR, embeddedEventDelivered, 1, 10, 10, SHARED, null, 0, WORK, sha256:654a5b7d1dfe5573902e0728138590e49b7d4f930a7302526e8a522ed573492e, null, null, null]"
+                    + "|works:136:0|INITIALIZATION|a|sha256:ef927d94521de04c29419bc1ab4090438cafbe74f6377a06511cd553c4c49394"
+                    + ":135|EMBEDDED_EVENT|b|sha256:654a5b7d1dfe5573902e0728138590e49b7d4f930a7302526e8a522ed573492e";
 
     @Test
     void requirement01RootInitializationPatchCommitsExactMarkerState() {
@@ -318,6 +326,77 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void nestedEmitterReachesTransitiveContainingOccurrenceByComposedPath() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            ClosureEnvironment environment = environment(owner);
+            Node leaf = new Node()
+                    .name("Nested private event source")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("childEmit", handler("lifecycle")));
+            String leafBlueId = blueId(leaf);
+            Node member = new Node()
+                    .name("Collection member")
+                    .properties("payment", new Node().blueId(leafBlueId))
+                    .contracts(new Node().properties(
+                            "embedded", processEmbedded("/payment")));
+            String memberBlueId = blueId(member);
+            Node root = new Node()
+                    .name("Collection owner")
+                    .properties("orders", new Node().properties(
+                            "o1", new Node().blueId(memberBlueId)))
+                    .properties("observed", new Node().value(Boolean.FALSE))
+                    .contracts(new Node()
+                            .properties(
+                                    "embedded",
+                                    processEmbedded("/orders/o1"))
+                            .properties(
+                                    "fromNestedPayment",
+                                    embeddedChannel(
+                                            "/orders/o1/payment"))
+                            .properties(
+                                    "containReact",
+                                    handler("fromNestedPayment")));
+            ManagedOccurrenceBinding rootToMember =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/orders/o1", 1L),
+                            B,
+                            memberBlueId,
+                            true,
+                            null);
+            ManagedOccurrenceBinding memberToLeaf =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            B,
+                            ScopeAddress.embedded("/payment", 1L),
+                            C,
+                            leafBlueId,
+                            true,
+                            null);
+            AffectedClosureSnapshot snapshot = finalizedSnapshot(
+                    bodies(A, root, B, member, C, leaf),
+                    Arrays.asList(memberToLeaf, rootToMember),
+                    Collections.singletonList(A));
+
+            ClosureProcessResult result = full(
+                    owner,
+                    admission(snapshot, environment, GENEROUS_GAS),
+                    null).processResult();
+
+            assertSuccess(result);
+            assertEquals(
+                    Boolean.TRUE,
+                    document(result, A).document().get("/observed"));
+            assertEquals(
+                    Collections.singletonList("child"),
+                    probe.observedEventKinds);
+        }
+    }
+
+    @Test
     void requirement05PublicRootInitializationEventIsProjectedOnce() {
         ProbeProcessor probe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(probe)) {
@@ -425,8 +504,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             true);
             ManagedRootEventOccurrence duplicateSourceEvent =
                     new ManagedRootEventOccurrence(
@@ -438,8 +516,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             1L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             true);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -604,8 +681,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -761,7 +837,9 @@ final class FullLifecycleAdmissionTest {
                             malformedB3, sourceReceipt);
                     IllegalArgumentException mismatch = assertThrows(
                             IllegalArgumentException.class,
-                            () -> ClosureInvocationVerifier.verify(malformed));
+                            () -> ClosureInvocationVerifier.verify(
+                                    malformed,
+                                    owner.administration()::runtimeAccess));
                     assertTrue(mismatch.getMessage().contains("afterBlueId"));
                     assertEquals(retainedBefore, retainedNestedValues(exactNodes));
                 }
@@ -870,7 +948,14 @@ final class FullLifecycleAdmissionTest {
                         .properties("subscriptionKey", new Node().value("retained-catalog"));
                 exactNodes.put(blueId(sourceEvent), sourceEvent.clone());
                 ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(
-                        b, "ownerChannel", sourceEvent, context).candidate();
+                        b,
+                        "ownerChannel",
+                        ExactEventIdentityEvidence.verify(
+                                null,
+                                sourceEvent,
+                                blueId(sourceEvent),
+                                null),
+                        context).candidate();
                 assertNotNull(candidate);
                 frozenDomain = candidate.domain().blueId();
                 exactNodes.put(frozenDomain, candidate.domain().exactValue());
@@ -1304,8 +1389,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             eventBlueId),
-                            eventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, eventBlueId),
                             false);
             ManagedRootEventOccurrence duplicateSourceEvent =
                     new ManagedRootEventOccurrence(
@@ -1317,8 +1401,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             1L,
                                             eventBlueId),
-                            eventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, eventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -1650,8 +1733,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -1941,6 +2023,89 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void processingTerminationRunsLifecycleAndRollsBackWhenGasCannotCommit() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        exactNodes.put(HANDLER_BLUE_ID, HANDLER_TYPE.clone());
+        exactNodes.put(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE.clone());
+        NodeProvider provider = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone())
+                : Collections.<Node>emptyList();
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(HANDLER_BLUE_ID, HANDLER_TYPE, probe)
+                .register(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE,
+                        new RetainedSourceChannelProcessor()).build();
+        try (DocumentProcessor owner = DocumentProcessor.builder().runtimeRegistry(registry)
+                .nodeProvider(new TestNodeProvider(provider)).build()) {
+            ClosureEnvironment environment = environment(owner);
+            Node body = new Node().name("External termination lifecycle")
+                    .contracts(new Node()
+                            .properties("ownerChannel", typed(RETAINED_SOURCE_CHANNEL_BLUE_ID))
+                            .properties("nestedTerminate", handler("ownerChannel"))
+                            .properties("lifecycle", typed(RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))
+                            .properties("nestedEmitOne", handler("lifecycle")));
+            String authored = blueId(body);
+            exactNodes.put(authored, body.clone());
+            installInitializedMarker(body, authored);
+            exactNodes.put(blueId(body), body.clone());
+            Node event = new Node().name("Finish external source")
+                    .properties("subscriptionKey", new Node().value("retained-source"));
+            exactNodes.put(blueId(event), event.clone());
+            AffectedClosureSnapshot snapshot = initializedSnapshot(finalizedSnapshot(
+                    Collections.singletonMap(A, body), Collections.<ManagedOccurrenceBinding>emptyList(),
+                    Collections.singletonList(A)), 4L, 1L);
+            ExternalEventCause cause = ClosureEvidenceFactory.externalCause(event, blueId(event),
+                    ExternalOrderKey.of(Arrays.<Object>asList(Long.valueOf(1L), "finish-a")),
+                    environment.externalOrderPolicyIdentity());
+            List<DirectLogicalDelivery> deliveries = Collections.singletonList(
+                    new DirectLogicalDelivery(ManagedScopeKey.root(A),
+                            "ownerChannel", "ownerChannel", 0L));
+            ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                    deliveries, ClosureEvidenceFactory.executionPolicy(GENEROUS_GAS,
+                            Collections.<DocumentId, Long>emptyMap(),
+                            "external-termination-fixture-v1"), environment);
+            Capture capture = new Capture();
+            ClosureProcessResult result;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                result = contracts.processClosure(input).processResult();
+            }
+            assertSuccess(result);
+            ResultingDocument terminated = document(result, A);
+            assertTrue(terminated.initialized());
+            assertTrue(terminated.terminated());
+            assertEquals(5L, terminated.epoch());
+            assertNotNull(NodePathEditor.getOrNull(terminated.document(), "/contracts/terminated"));
+            assertEquals(1L, countKind(capture.evidence, WorkKind.LIFECYCLE));
+            assertEquals(0L, countKind(capture.evidence, WorkKind.INITIALIZATION));
+            assertEquals(1, result.publicEvents().size());
+            assertTrue(result.checkpointWrites().isEmpty());
+            assertNull(NodePathEditor.getOrNull(terminated.document(), "/contracts/checkpoint"));
+            assertEquals(2, probe.executionCount);
+            assertNodeEquals(body, input.snapshot().managedDocument(A).document());
+
+            ClosureInvocationInput limited = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                    deliveries, ClosureEvidenceFactory.executionPolicy(result.totalGas() - 1L,
+                            Collections.<DocumentId, Long>emptyMap(),
+                            "external-termination-fixture-v1"), environment);
+            ClosureProcessResult rejected;
+            ClosureProcessResult retry;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                rejected = contracts.processClosure(limited).processResult();
+                retry = contracts.processClosure(limited).processResult();
+            }
+            assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, rejected.status());
+            assertLiteralRollback(limited, rejected);
+            assertLiteralRollback(limited, retry);
+            assertEquals(rejected.totalGas(), retry.totalGas());
+            assertEquals(rejected.gasTraceIdentity(), retry.gasTraceIdentity());
+            assertEquals(rejectedChargeProjection(rejected.rejectedCharge()),
+                    rejectedChargeProjection(retry.rejectedCharge()));
+            assertTrue(rejected.publicEvents().isEmpty());
+            assertTrue(rejected.checkpointWrites().isEmpty());
+        }
+    }
+
+    @Test
     void requirement08CanonicalInitializationIgnoresInputMapOrder() {
         ProbeProcessor forwardProbe = new ProbeProcessor();
         ProbeProcessor reverseProbe = new ProbeProcessor();
@@ -2191,7 +2356,26 @@ final class FullLifecycleAdmissionTest {
     void requirement13ColdAndWarmExactNodeRunsHaveExactParity() {
         ProbeProcessor probe = new ProbeProcessor();
         CountingNodeProvider provider = new CountingNodeProvider();
-        try (DocumentProcessor owner = owner(probe, provider)) {
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                HANDLER_BLUE_ID,
+                                HANDLER_TYPE,
+                                probe)
+                        .build();
+        try (BlueLanguage language = BlueLanguage.builder()
+                     .nodeProvider(new TestNodeProvider(provider))
+                     .build();
+             BlueContracts backingContracts = BlueContracts.builder(
+                             language.processing())
+                     .runtimeRegistry(registry)
+                     .build();
+             DocumentProcessor owner = DocumentProcessor.builder()
+                     .runtimeRegistry(registry)
+                     .runtimeRegistryIdentity(
+                             registry.generationIdentity())
+                     .runtimeAccess(backingContracts.runtimeAccess())
+                     .build()) {
             ClosureEnvironment environment = environment(owner);
             CyclicFixture fixture = twoMemberCycle(
                     environment,
@@ -2207,8 +2391,15 @@ final class FullLifecycleAdmissionTest {
 
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, captures)) {
-                cold = contracts.admitClosureWithLifecycleQueue(input)
-                        .processResult();
+                ClosureAttemptResult coldAttempt =
+                        contracts.admitClosureWithLifecycleQueue(input);
+                assertTrue(coldAttempt.isComplete(),
+                        "Cold exact-node run suspended: "
+                                + coldAttempt.requiredExactBlueIds()
+                                + "; exactType=" + EXACT_DOCUMENT_TYPE_BLUE_ID
+                                + "; dictionary="
+                                + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID);
+                cold = coldAttempt.processResult();
                 int coldFetches = provider.exactFetches;
                 assertTrue(coldFetches > 0,
                         "The first admission must establish the exact type");
@@ -2217,20 +2408,24 @@ final class FullLifecycleAdmissionTest {
                 assertTrue(warmedCacheEntries > 0,
                         "The first admission must warm processor-owned caches");
                 provider.exactFetches = 0;
-                warm = contracts.admitClosureWithLifecycleQueue(input)
-                        .processResult();
-                assertEquals(2, provider.exactFetches,
-                        "The warm run revalidates one exact type per member");
+                ClosureAttemptResult warmAttempt =
+                        contracts.admitClosureWithLifecycleQueue(input);
+                assertTrue(warmAttempt.isComplete(),
+                        "Warm exact-node run suspended: "
+                                + warmAttempt.requiredExactBlueIds());
+                warm = warmAttempt.processResult();
                 assertTrue(provider.exactFetches < coldFetches,
-                        "The warm run must perform fewer exact provider lookups");
+                        "The warm run must perform fewer exact provider "
+                                + "lookups: cold=" + coldFetches
+                                + ", warm=" + provider.exactFetches);
                 assertEquals(warmedCacheEntries, owner.administration()
                                 .cacheEntryCount(),
                         "The warm admission must reuse the populated caches");
             }
 
-            assertEquals(2, captures.values.size());
             assertSuccess(cold);
             assertSuccess(warm);
+            assertEquals(2, captures.values.size());
             assertExactParity(cold, warm);
             assertEquals(workIdentities(captures.values.get(0)),
                     workIdentities(captures.values.get(1)));
@@ -2494,6 +2689,67 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void activatedDormantProspectiveTargetInitializesExactlyOnceBeforeCommit() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            ClosureEnvironment environment = environment(owner);
+            Node source = new Node()
+                    .name("Dormant activation source")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("activateDormant",
+                                    handler(
+                                            "lifecycle",
+                                            initiatedPattern())));
+            Node target = new Node()
+                    .name("Dormant activation target")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("recordDormantInit",
+                                    handler(
+                                            "lifecycle",
+                                            initiatedPattern())));
+            String targetBlueId = blueId(target);
+            ManagedOccurrenceBinding prospective =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/reserved", 1L),
+                            B,
+                            targetBlueId,
+                            false,
+                            null);
+            AffectedClosureSnapshot snapshot = finalizedSnapshot(
+                    bodies(A, source, B, target),
+                    Collections.singletonList(prospective),
+                    Collections.singletonList(A));
+            probe.dormantActivationTargetBlueId = snapshot
+                    .managedDocument(B).blueId();
+            ClosureInvocationInput input = admission(
+                    snapshot, environment, GENEROUS_GAS);
+            Capture capture = new Capture();
+
+            ClosureProcessResult result = full(owner, input, capture)
+                    .processResult();
+
+            assertSuccess(result);
+            assertTrue(document(result, A).initialized());
+            assertTrue(document(result, B).initialized());
+            assertEquals(1, probe.dormantTargetInitializationCount);
+            assertEquals(1L, capture.evidence.workTrace().stream()
+                    .filter(work -> work.kind() == WorkKind.INITIALIZATION)
+                    .filter(work -> B.equals(work.targetDocumentId()))
+                    .count());
+            assertTrue(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> A.equals(
+                                    binding.sourceDocumentId())
+                            && "/reserved".equals(binding.sourcePath())
+                            && binding.active()
+                            && binding.pendingHistoricalEpoch() == null));
+        }
+    }
+
+    @Test
     void requirement19NestedUpdateEventWaitsForParentNextPatch() {
         ProbeProcessor probe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(probe)) {
@@ -2618,7 +2874,14 @@ final class FullLifecycleAdmissionTest {
                     "/", Long.valueOf(0L), Long.valueOf(1L), "ownerChannel",
                     null, null, "fixture.retained-checkpoint");
             ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(
-                    source, "ownerChannel", event, context).candidate();
+                    source,
+                    "ownerChannel",
+                    ExactEventIdentityEvidence.verify(
+                            null,
+                            event,
+                            blueId(event),
+                            null),
+                    context).candidate();
             assertNotNull(candidate);
             exactNodes.put(candidate.domain().blueId(), candidate.domain().exactValue());
             source = runtime.settleCheckpoints(source,
@@ -2640,7 +2903,7 @@ final class FullLifecycleAdmissionTest {
                 events.add(new ManagedRootEventOccurrence(ordinal, ordinal, source,
                         ClosureIdentityService.INSTANCE.eventOccurrenceIdentity(
                                 invocation, ordinal, blueId(EVENT_CHILD)),
-                        blueId(EVENT_CHILD), EVENT_CHILD, true));
+                        exactEvent(EVENT_CHILD, blueId(EVENT_CHILD)), true));
             }
         }
         return ManagedDocumentTransitionReceipt.identified(invocation, 0L, source,
@@ -3021,8 +3284,7 @@ final class FullLifecycleAdmissionTest {
                                         sourceInvocationIdentity,
                                         0L,
                                         eventBlueId),
-                        eventBlueId,
-                        EVENT_CHILD,
+                        exactEvent(EVENT_CHILD, eventBlueId),
                         false);
         ManagedDocumentTransitionReceipt sourceReceipt =
                 ManagedDocumentTransitionReceipt.identified(
@@ -3528,6 +3790,13 @@ final class FullLifecycleAdmissionTest {
         return DirectBlueIdCalculator.calculateBlueId(value);
     }
 
+    private static ExactEventIdentityEvidence exactEvent(
+            Node event,
+            String eventBlueId) {
+        return ExactEventIdentityEvidence.verify(
+                null, event, eventBlueId, null);
+    }
+
     private static void installInitializedMarker(
             Node body,
             String beforeBlueId) {
@@ -3975,7 +4244,9 @@ final class FullLifecycleAdmissionTest {
         private final List<String> observedEventKinds =
                 new ArrayList<String>();
         private String reactivationTargetBlueId;
+        private String dormantActivationTargetBlueId;
         private int reactivationInitializationCount;
+        private int dormantTargetInitializationCount;
         private int executionCount;
 
         @Override
@@ -4132,6 +4403,20 @@ final class FullLifecycleAdmissionTest {
                             new Node().blueId(
                                     reactivationTargetBlueId)));
                 }
+            } else if ("activateDormant".equals(key)) {
+                if (initiated(context)) {
+                    context.applyPatch(JsonPatch.add(
+                            "/reserved",
+                            new Node().blueId(
+                                    dormantActivationTargetBlueId)));
+                    context.applyPatch(JsonPatch.add(
+                            "/contracts/embedded",
+                            processEmbedded("/reserved")));
+                }
+            } else if ("recordDormantInit".equals(key)) {
+                if (initiated(context)) {
+                    dormantTargetInitializationCount++;
+                }
             } else if ("parentPatchThenFinish".equals(key)) {
                 if (initiated(context)) {
                     context.applyPatch(JsonPatch.replace(
@@ -4200,7 +4485,10 @@ final class FullLifecycleAdmissionTest {
                     context.applyPatch(JsonPatch.add(
                             "/child",
                             new Node().name(
-                                    "Unknown child created during initialization")));
+                                    "Unknown child created during initialization")
+                                    .properties(
+                                            "payload",
+                                            new Node().value(Boolean.TRUE))));
                 }
             }
         }
@@ -4268,6 +4556,8 @@ final class FullLifecycleAdmissionTest {
 
     private static final class TestNodeProvider implements NodeProvider {
         private final NodeProvider delegate;
+        private final NodeProvider core =
+                BlueCoreTypeRegistry.INSTANCE.verifiedProvider();
         private final NodeProvider runtime =
                 BlueRuntimeTypeRegistry.getDefault().asProvider();
 
@@ -4285,6 +4575,10 @@ final class FullLifecycleAdmissionTest {
                 if (resolved != null && !resolved.isEmpty()) {
                     return resolved;
                 }
+            }
+            List<Node> coreResolved = core.fetchByBlueId(blueId);
+            if (coreResolved != null && !coreResolved.isEmpty()) {
+                return coreResolved;
             }
             return runtime.fetchByBlueId(blueId);
         }

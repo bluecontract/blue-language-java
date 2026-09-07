@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
@@ -18,9 +20,18 @@ final class StagedRepositoryManifestTest {
 
     private static final String ARTIFACT = "blue-contracts-fixture";
     private static final String GROUP = "blue.language";
-    private static final String VERSION = "1.2.3";
     private static final String COMMIT =
             "0123456789abcdef0123456789abcdef01234567";
+    private static final String TREE =
+            "89abcdef0123456789abcdef0123456789abcdef";
+    private static final String VERSION = "3.1.0-dev." + COMMIT;
+    private static final List<String> DEVELOPMENT_ARTIFACTS = Arrays.asList(
+            "blue-language-model",
+            "blue-language-core",
+            "blue-language-mapping",
+            "blue-language-ipfs",
+            "blue-contracts-core",
+            "blue-language-java");
     private static final String FIXTURES = "sha256:"
             + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private static final String RELEASE = "sha256:"
@@ -63,12 +74,46 @@ final class StagedRepositoryManifestTest {
         String manifest = Files.readString(
                 fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
         assertFalse(manifest.contains("artifactManifestIdentity"));
+        assertTrue(manifest.contains(
+                "\"schema\":\"blue-development-maven-repository/1.0\""));
+        assertTrue(manifest.contains("\"stagePurpose\":\"DEVELOPMENT\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains("\"builtWithJava\":17"));
+        assertTrue(manifest.contains("\"sourceTree\":\"" + TREE + "\""));
+        assertTrue(manifest.contains("\"sourceDirty\":false"));
+        assertFalse(manifest.contains("\"kind\":\"sources\""));
+        assertFalse(manifest.contains("\"kind\":\"javadoc\""));
         assertTrue(manifest.contains(COMMIT));
         assertTrue(manifest.contains(FIXTURES));
         assertTrue(manifest.contains(RELEASE));
         try (Stream<Path> paths = Files.walk(fixture.target)) {
-            assertEquals(10L, paths.filter(Files::isRegularFile).count());
+            assertEquals(6L, paths.filter(Files::isRegularFile).count());
         }
+    }
+
+    @Test
+    void shouldExportLocalRcWithCompletePublicationsAndRejectReplacement() throws Exception {
+        String version = "3.1.0-rc.24";
+        Fixture fixture = fixture(Collections.singletonList(ARTIFACT), version);
+        StagedRepositoryManifest.assemble(fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings);
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+        String manifest = Files.readString(fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
+        assertTrue(manifest.contains("\"schema\":\"blue-local-rc-maven-repository/1.0\""));
+        assertTrue(manifest.contains("\"stagePurpose\":\"LOCAL_RC\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains("\"kind\":\"sources\""));
+        assertTrue(manifest.contains("\"kind\":\"javadoc\""));
+        assertTrue(manifest.contains(COMMIT));
+        Path sourceJar = fixture.source.resolve("blue/language/" + ARTIFACT + "/" + version
+                + "/" + ARTIFACT + "-" + version + ".jar");
+        Files.writeString(sourceJar, "new bytes under the same RC coordinate");
+        assertThrows(GradleException.class, () -> StagedRepositoryManifest.assemble(
+                fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings));
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
     }
 
     @Test
@@ -101,6 +146,35 @@ final class StagedRepositoryManifestTest {
                 .anyMatch(value -> value.contains("checksum mismatch")));
         assertTrue(verification.getViolations().stream()
                 .anyMatch(value -> value.contains("manifest does not match")));
+    }
+
+    @Test
+    void shouldSealExactSixModuleRuntimeAndPomClosure() throws Exception {
+        // given
+        Fixture fixture = fixture(DEVELOPMENT_ARTIFACTS);
+
+        // when
+        StagedRepositoryManifest.assemble(
+                fixture.source,
+                fixture.target,
+                GROUP,
+                VERSION,
+                DEVELOPMENT_ARTIFACTS,
+                fixture.bindings);
+
+        // then
+        String manifest = Files.readString(
+                fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
+        for (String artifact : DEVELOPMENT_ARTIFACTS) {
+            assertTrue(manifest.contains("blue.language:" + artifact + ":" + VERSION));
+        }
+        assertEquals(12, occurrences(manifest, "\"coordinate\":"));
+        assertEquals(6, occurrences(manifest, "\"kind\":\"pom\""));
+        assertEquals(6, occurrences(manifest, "\"kind\":\"runtime\""));
+        assertFalse(manifest.contains("blue-conformance"));
+        try (Stream<Path> paths = Files.walk(fixture.target)) {
+            assertEquals(26L, paths.filter(Files::isRegularFile).count());
+        }
     }
 
     @Test
@@ -259,10 +333,36 @@ final class StagedRepositoryManifestTest {
         GradleException failure = assertThrows(
                 GradleException.class,
                 () -> StagedRepositoryManifest.bindings(
-                        fixture.specification, fixture.releaseManifest, COMMIT));
+                        fixture.specification,
+                        fixture.releaseManifest,
+                        COMMIT,
+                        TREE,
+                        false,
+                        StagedRepositoryManifest.REQUIRED_BUILD_JAVA));
 
         // then
         assertTrue(failure.getMessage().contains("specification bytes"));
+    }
+
+    @Test
+    void shouldRejectBuildJdkOtherThan17() throws Exception {
+        // given
+        Fixture fixture = fixture();
+
+        // when
+        GradleException failure = assertThrows(
+                GradleException.class,
+                () -> StagedRepositoryManifest.bindings(
+                        fixture.specification,
+                        fixture.releaseManifest,
+                        COMMIT,
+                        TREE,
+                        false,
+                        21));
+
+        // then
+        assertTrue(failure.getMessage().contains("must be built with Java 17"));
+        assertTrue(failure.getMessage().contains("received Java 21"));
     }
 
     @Test
@@ -285,15 +385,25 @@ final class StagedRepositoryManifestTest {
     }
 
     private Fixture fixture() throws Exception {
+        return fixture(Collections.singletonList(ARTIFACT));
+    }
+
+    private Fixture fixture(List<String> artifacts) throws Exception {
+        return fixture(artifacts, VERSION);
+    }
+
+    private Fixture fixture(List<String> artifacts, String version) throws Exception {
         Path source = Files.createDirectories(temporaryDirectory.resolve("mutable"));
         Path target = temporaryDirectory.resolve("immutable");
-        Path coordinate = Files.createDirectories(source.resolve(
-                "blue/language/" + ARTIFACT + "/" + VERSION));
-        String base = ARTIFACT + "-" + VERSION;
-        Files.writeString(coordinate.resolve(base + ".pom"), "pom\n");
-        Files.writeString(coordinate.resolve(base + ".jar"), "runtime\n");
-        Files.writeString(coordinate.resolve(base + "-sources.jar"), "sources\n");
-        Files.writeString(coordinate.resolve(base + "-javadoc.jar"), "javadoc\n");
+        for (String artifact : artifacts) {
+            Path coordinate = Files.createDirectories(source.resolve(
+                    "blue/language/" + artifact + "/" + version));
+            String base = artifact + "-" + version;
+            Files.writeString(coordinate.resolve(base + ".pom"), "pom\n");
+            Files.writeString(coordinate.resolve(base + ".jar"), "runtime\n");
+            Files.writeString(coordinate.resolve(base + "-sources.jar"), "sources\n");
+            Files.writeString(coordinate.resolve(base + "-javadoc.jar"), "javadoc\n");
+        }
         Path specification = Files.writeString(
                 temporaryDirectory.resolve("contracts.md"), "specification\n");
         String specificationIdentity = DeterministicHashing.sha256(specification)
@@ -306,8 +416,23 @@ final class StagedRepositoryManifestTest {
                         + "  packageIdentity: " + FIXTURES + "\n"
                         + "releaseIdentity: " + RELEASE + "\n");
         StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
-                specification, releaseManifest, COMMIT);
+                specification,
+                releaseManifest,
+                COMMIT,
+                TREE,
+                false,
+                StagedRepositoryManifest.REQUIRED_BUILD_JAVA);
         return new Fixture(source, target, specification, releaseManifest, bindings);
+    }
+
+    private static int occurrences(String value, String needle) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = value.indexOf(needle, offset)) >= 0) {
+            count++;
+            offset += needle.length();
+        }
+        return count;
     }
 
     private static void writeChecksum(Path input, Path output) throws Exception {

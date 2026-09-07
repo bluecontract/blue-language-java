@@ -12,7 +12,8 @@ source:
     audit:
       retentionDays: 30
 expectedCanonicalOverlay:
-  type: {}
+  type:
+    blueId: 3i6Y3G6Uv6bq8azgAFT2LqXMFQu3bKj6KNAk7nbxVbat
   contracts:
     audit:
       retentionDays: 30

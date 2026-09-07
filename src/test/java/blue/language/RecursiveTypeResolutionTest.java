@@ -347,7 +347,7 @@ class RecursiveTypeResolutionTest {
     private static void assertReference(Node node, String expectedBlueId) {
         assertNotNull(node);
         assertEquals(expectedBlueId, node.getBlueId());
-        assertTrue(node.isReferenceOnly());
+        assertTrue(node.isReferenceOnly(), node.toString());
     }
 
     private static final class CyclicFixture {

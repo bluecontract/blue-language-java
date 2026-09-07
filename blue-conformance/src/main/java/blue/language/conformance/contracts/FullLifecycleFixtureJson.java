@@ -95,6 +95,17 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.requ
 /** Exact executable fixture projection; no identity or semantics live here. */
 final class FullLifecycleFixtureJson {
 
+    static ObjectNode sortedFields(JsonNode source) {
+        ObjectNode sorted = JSON.objectNode();
+        List<String> keys = new ArrayList<String>();
+        source.fieldNames().forEachRemaining(keys::add);
+        Collections.sort(keys);
+        for (String key : keys) {
+            sorted.set(key, source.get(key));
+        }
+        return sorted;
+    }
+
     static ObjectNode input(
             ClosureInvocationInput invocation,
             List<String> inputOrder) {

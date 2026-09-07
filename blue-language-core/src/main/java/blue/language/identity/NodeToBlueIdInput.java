@@ -18,10 +18,15 @@ import blue.language.model.Schema;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
@@ -92,19 +97,36 @@ public final class NodeToBlueIdInput {
     }
 
     /**
-     * Returns strict identity input after excluding non-reference BlueId
-     * metadata from a defensive clone.
+     * Projects a resolved node for model-SPI identity calculation.
      *
-     * @param node root node to clone and project
-     * @return canonical identity input without expanded-content BlueId metadata
+     * <p>Resolved graphs may retain expanded type declarations as runtime
+     * evidence. Identity is nevertheless defined by the exact identity of
+     * each effective type position, so expanded type bodies are reduced to
+     * pure BlueId references before the enclosing value is hashed.</p>
      */
-    public static Object getWithResolvedBlueIdMetadata(Node node) {
-        return get(
-                stripResolvedBlueIdMetadata(node.clone()),
-                JsonPointer.ROOT,
-                Context.ROOT,
-                -1,
-                false);
+    static Object getResolvedForm(Node node) {
+        Node identityNode = node == null
+                ? null
+                : stripResolvedBlueIdMetadata(node.clone());
+        return get(identityNode, JsonPointer.ROOT, Context.ROOT, -1, false,
+                true);
+    }
+
+    /** Projects an ordered resolved-node sequence for model-SPI identity. */
+    static List<Object> getResolvedFormElements(List<Node> nodes) {
+        if (nodes == null) {
+            throw new IllegalArgumentException(
+                    "Node identity input list must not be null.");
+        }
+        List<Object> result = new ArrayList<>(nodes.size());
+        for (int i = 0; i < nodes.size(); i++) {
+            Node identityNode = nodes.get(i) == null
+                    ? null
+                    : stripResolvedBlueIdMetadata(nodes.get(i).clone());
+            result.add(get(identityNode, JsonPointer.ROOT + i,
+                    Context.LIST_ELEMENT, i, false, true));
+        }
+        return result;
     }
 
     /**
@@ -120,44 +142,76 @@ public final class NodeToBlueIdInput {
         if (node == null) {
             return null;
         }
-        if (node.getBlueId() != null && !node.isReferenceOnly()) {
-            node.blueId(null);
+        Deque<Node> pending = new ArrayDeque<>();
+        Set<Node> visited = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        Set<Schema> visitedSchemas = Collections.newSetFromMap(
+                new IdentityHashMap<Schema, Boolean>());
+        pending.push(node);
+        while (!pending.isEmpty()) {
+            Node current = pending.pop();
+            if (!visited.add(current) || current.isReferenceOnly()) {
+                continue;
+            }
+            if (current.getBlueId() != null) {
+                current.blueId(null);
+            }
+            push(pending, current.getType());
+            push(pending, current.getItemType());
+            push(pending, current.getKeyType());
+            push(pending, current.getValueType());
+            push(pending, current.getBlue());
+            push(pending, current.getContracts());
+            if (current.getItems() != null) {
+                for (Node item : current.getItems()) {
+                    push(pending, item);
+                }
+            }
+            if (current.getProperties() != null) {
+                for (Node property : current.getProperties().values()) {
+                    push(pending, property);
+                }
+            }
+            Schema schema = current.getSchema();
+            if (schema == null
+                    || !visitedSchemas.add(schema)
+                    || schema.isReferenceOnly()) {
+                continue;
+            }
+            if (schema.getBlueId() != null) {
+                schema.blueId(null);
+            }
+            pushSchemaNodes(pending, schema);
         }
-        stripResolvedBlueIdMetadata(node.getType());
-        stripResolvedBlueIdMetadata(node.getItemType());
-        stripResolvedBlueIdMetadata(node.getKeyType());
-        stripResolvedBlueIdMetadata(node.getValueType());
-        stripResolvedBlueIdMetadata(node.getBlue());
-        stripResolvedBlueIdMetadata(node.getContracts());
-        if (node.getItems() != null) {
-            node.getItems().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
-        }
-        if (node.getProperties() != null) {
-            node.getProperties().values().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
-        }
-        stripResolvedBlueIdMetadata(node.getSchema());
         return node;
     }
 
-    private static void stripResolvedBlueIdMetadata(Schema schema) {
-        if (schema == null) {
-            return;
-        }
-        stripResolvedBlueIdMetadata(schema.getRequired());
-        stripResolvedBlueIdMetadata(schema.getMinLength());
-        stripResolvedBlueIdMetadata(schema.getMaxLength());
-        stripResolvedBlueIdMetadata(schema.getMinimum());
-        stripResolvedBlueIdMetadata(schema.getMaximum());
-        stripResolvedBlueIdMetadata(schema.getExclusiveMinimum());
-        stripResolvedBlueIdMetadata(schema.getExclusiveMaximum());
-        stripResolvedBlueIdMetadata(schema.getMultipleOf());
-        stripResolvedBlueIdMetadata(schema.getMinItems());
-        stripResolvedBlueIdMetadata(schema.getMaxItems());
-        stripResolvedBlueIdMetadata(schema.getUniqueItems());
-        stripResolvedBlueIdMetadata(schema.getMinFields());
-        stripResolvedBlueIdMetadata(schema.getMaxFields());
+    private static void pushSchemaNodes(
+            Deque<Node> pending,
+            Schema schema) {
+        push(pending, schema.getRequired());
+        push(pending, schema.getMinLength());
+        push(pending, schema.getMaxLength());
+        push(pending, schema.getMinimum());
+        push(pending, schema.getMaximum());
+        push(pending, schema.getExclusiveMinimum());
+        push(pending, schema.getExclusiveMaximum());
+        push(pending, schema.getMultipleOf());
+        push(pending, schema.getMinItems());
+        push(pending, schema.getMaxItems());
+        push(pending, schema.getUniqueItems());
+        push(pending, schema.getMinFields());
+        push(pending, schema.getMaxFields());
         if (schema.getEnum() != null) {
-            schema.getEnum().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
+            for (Node enumValue : schema.getEnum()) {
+                push(pending, enumValue);
+            }
+        }
+    }
+
+    private static void push(Deque<Node> pending, Node child) {
+        if (child != null) {
+            pending.push(child);
         }
     }
 
@@ -168,7 +222,31 @@ public final class NodeToBlueIdInput {
         METADATA
     }
 
-    private static Object get(Node node, String path, Context context, int listIndex, boolean allowCyclicPlaceholders) {
+    private static Object get(Node node, String path, Context context,
+                              int listIndex,
+                              boolean allowCyclicPlaceholders) {
+        return get(node, path, context, listIndex, allowCyclicPlaceholders,
+                false);
+    }
+
+    private static Object get(Node node, String path, Context context,
+                              int listIndex,
+                              boolean allowCyclicPlaceholders,
+                              boolean resolveTypeBodies) {
+        if (resolveTypeBodies
+                && node != null
+                && context == Context.METADATA
+                && isTypePosition(path)
+                && !node.isReferenceOnly()) {
+            Object typeInput = get(node, path, Context.ROOT, -1,
+                    allowCyclicPlaceholders, true);
+            Map<String, Object> reference = new LinkedHashMap<>();
+            reference.put(OBJECT_BLUE_ID,
+                    DirectBlueIdCalculator.INSTANCE
+                            .directBlueIdFromCanonicalInput(typeInput));
+            return reference;
+        }
+
         validateBlueIdInput(node, path, context, listIndex);
 
         if (context == Context.LIST_ELEMENT && Nodes.isEmptyPlaceholder(node)) {
@@ -200,7 +278,7 @@ public final class NodeToBlueIdInput {
         if (node.getItems() != null) {
             items = new ArrayList<>(node.getItems().size());
             for (int i = 0; i < node.getItems().size(); i++) {
-                items.add(get(node.getItems().get(i), appendPath(path, OBJECT_ITEMS, i), Context.LIST_ELEMENT, i, allowCyclicPlaceholders));
+                items.add(get(node.getItems().get(i), appendPath(path, OBJECT_ITEMS, i), Context.LIST_ELEMENT, i, allowCyclicPlaceholders, resolveTypeBodies));
             }
         }
 
@@ -224,16 +302,25 @@ public final class NodeToBlueIdInput {
                 result.put(OBJECT_TYPE, map);
             }
         } else if (node.getType() != null) {
-            valueTypeBlueId = node.getType().getBlueId();
-            result.put(OBJECT_TYPE, get(node.getType(), appendPath(path, OBJECT_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            Object typeInput = get(node.getType(),
+                    appendPath(path, OBJECT_TYPE), Context.METADATA, -1,
+                    allowCyclicPlaceholders, resolveTypeBodies);
+            result.put(OBJECT_TYPE, typeInput);
+            if (typeInput instanceof Map) {
+                Object projectedBlueId = ((Map<?, ?>) typeInput).get(
+                        OBJECT_BLUE_ID);
+                if (projectedBlueId instanceof String) {
+                    valueTypeBlueId = (String) projectedBlueId;
+                }
+            }
         }
 
         if (node.getItemType() != null)
-            result.put(OBJECT_ITEM_TYPE, get(node.getItemType(), appendPath(path, OBJECT_ITEM_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_ITEM_TYPE, get(node.getItemType(), appendPath(path, OBJECT_ITEM_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getKeyType() != null)
-            result.put(OBJECT_KEY_TYPE, get(node.getKeyType(), appendPath(path, OBJECT_KEY_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_KEY_TYPE, get(node.getKeyType(), appendPath(path, OBJECT_KEY_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getValueType() != null)
-            result.put(OBJECT_VALUE_TYPE, get(node.getValueType(), appendPath(path, OBJECT_VALUE_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_VALUE_TYPE, get(node.getValueType(), appendPath(path, OBJECT_VALUE_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getMergePolicy() != null)
             result.put(OBJECT_MERGE_POLICY, node.getMergePolicy());
         if (value != null)
@@ -250,13 +337,19 @@ public final class NodeToBlueIdInput {
             }
             result.put(OBJECT_SCHEMA, SchemaWireForm.get(
                     identitySchema,
-                    child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders)));
+                    child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies)));
         }
         if (node.getContracts() != null) {
-            result.put(OBJECT_CONTRACTS, get(node.getContracts(), appendPath(path, OBJECT_CONTRACTS), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_CONTRACTS, get(node.getContracts(), appendPath(path, OBJECT_CONTRACTS), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         }
         if (node.getProperties() != null) {
             node.getProperties().forEach((key, propertyValue) -> {
+                if (propertyValue == null) {
+                    // Host-null object members represent omission. Source
+                    // preprocessing normally removes them before this point;
+                    // direct identity must never turn them into Blue values.
+                    return;
+                }
                 if (isTransformationConfigurationValue(
                         node, key)) {
                     result.put(key,
@@ -268,7 +361,8 @@ public final class NodeToBlueIdInput {
                             appendPath(path, key),
                             Context.OBJECT_FIELD,
                             -1,
-                            allowCyclicPlaceholders));
+                            allowCyclicPlaceholders,
+                            resolveTypeBodies));
                 }
             });
         }
@@ -325,8 +419,20 @@ public final class NodeToBlueIdInput {
         if (node == null) {
             throw new IllegalArgumentException("BlueId input must not contain null nodes. Path: " + path);
         }
-        if (context == Context.METADATA && isTypePosition(path) && node.isInlineValue()) {
-            throw new IllegalArgumentException("Direct BlueId input must not contain unresolved type aliases. Path: " + path);
+        if (Nodes.isSourceNullLiteral(node)) {
+            throw new IllegalArgumentException(
+                    "Source null is not valid direct BlueId input. Path: "
+                            + path);
+        }
+        if (Nodes.isBareFieldlessBuilder(node)) {
+            throw bareFieldlessBuilder(path);
+        }
+        if (context == Context.METADATA
+                && isTypePosition(path)
+                && !node.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Direct BlueId input type positions must contain pure "
+                            + "references. Path: " + path);
         }
         if (node.getBlue() != null) {
             throw new IllegalArgumentException(
@@ -336,13 +442,11 @@ public final class NodeToBlueIdInput {
         if (node.getPosition() != null) {
             throw new IllegalArgumentException("\"$pos\" overlays are not valid direct BlueId input. Path: " + path);
         }
-        if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
+        if (context == Context.LIST_ELEMENT && node.getProperties() != null
+                && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
             throw new IllegalArgumentException("\"$replace\" overlays are not valid direct BlueId input. Path: " + path);
         }
         if (context == Context.LIST_ELEMENT) {
-            if (Nodes.isEmptyNode(node)) {
-                throw new IllegalArgumentException("Direct BlueId input must use { \"$empty\": true } for empty list placeholders. Path: " + path);
-            }
             if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_EMPTY)) {
                 Nodes.validateEmptyPlaceholder(node, path);
             }
@@ -355,11 +459,19 @@ public final class NodeToBlueIdInput {
         validatePayloadKind(node, path);
     }
 
+    private static IllegalArgumentException bareFieldlessBuilder(
+            String path) {
+        return new IllegalArgumentException(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path);
+    }
+
     private static void validatePayloadKind(Node node, String path) {
         int payloadKinds = 0;
         if (node.getValue() != null) payloadKinds++;
         if (node.getItems() != null) payloadKinds++;
-        if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
+        if (hasRetainedDirectObjectPayload(node)) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
         }
@@ -392,6 +504,21 @@ public final class NodeToBlueIdInput {
                 && node.getBlueId() == null) {
             throw new IllegalArgumentException("\"$pos\" items must contain an overlay. Path: " + path);
         }
+    }
+
+    private static boolean hasRetainedDirectObjectPayload(Node node) {
+        if (node.getProperties() == null) {
+            return false;
+        }
+        if (node.getProperties().isEmpty()) {
+            return true;
+        }
+        for (Node child : node.getProperties().values()) {
+            if (child != null && !Nodes.isSourceNullLiteral(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void validateSchemaNodes(Schema schema, String path) {

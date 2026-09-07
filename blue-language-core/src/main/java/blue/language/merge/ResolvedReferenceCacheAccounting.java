@@ -200,11 +200,6 @@ final class ResolvedReferenceCacheAccounting {
                 verifiedHighWaterWeight,
                 verifiedEvictions,
                 verifiedOversizedRejections,
-                0,
-                0L,
-                0L,
-                0L,
-                0L,
                 structuralEntries,
                 structuralCurrentWeight,
                 structuralHighWaterWeight,
@@ -261,9 +256,12 @@ final class ResolvedReferenceCacheAccounting {
         return saturatedAdd(
                 VERIFIED_ENTRY_OVERHEAD_BYTES
                         + BLUE_ID_CHARACTER_BYTES * (long) blueId.length(),
-                FrozenNode.approximateRetainedWeightBytesOf(
-                        entry.canonicalContent,
-                        entry.fullyResolvedContent));
+                saturatedAdd(
+                        FrozenNode.approximateRetainedWeightBytesOf(
+                                entry.canonicalContent,
+                                entry.fullyResolvedContent),
+                        entry.canonicalTypeIdentityEvidence
+                                .approximateRetainedWeightBytes()));
     }
 
     private static long structuralWeight(FrozenNode node) {

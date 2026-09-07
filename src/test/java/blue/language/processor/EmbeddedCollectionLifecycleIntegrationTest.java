@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.ChannelEventCheckpoint;
@@ -78,7 +79,8 @@ final class EmbeddedCollectionLifecycleIntegrationTest {
         DocumentProcessor processor = new DocumentProcessor();
         ContractBundle oldBundle = processor.contractLoader().load(
                 FrozenNode.fromResolvedNode(oldMember),
-                SELECTED_MEMBER_PATH);
+                SELECTED_MEMBER_PATH,
+                CanonicalTypeIdentityLookup.incomplete());
         CheckpointManager.CheckpointRecord oldCheckpoint =
                 new CheckpointManager(
                         new DocumentProcessingRuntime(root.clone()))
@@ -104,7 +106,8 @@ final class EmbeddedCollectionLifecycleIntegrationTest {
         Node freshRoot = readded.result().resolvedRoot().toNode();
         ContractBundle freshBundle = processor.contractLoader().load(
                 freshOccurrence,
-                SELECTED_MEMBER_PATH);
+                SELECTED_MEMBER_PATH,
+                CanonicalTypeIdentityLookup.incomplete());
         DocumentProcessingRuntime freshRuntime =
                 new DocumentProcessingRuntime(freshRoot);
         CheckpointManager freshManager =
@@ -341,9 +344,10 @@ final class EmbeddedCollectionLifecycleIntegrationTest {
                 .embeddedScopePlan(
                         resolved.at(ROOT_SCOPE),
                         ROOT_SCOPE,
-                        null);
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete());
         PatchPlanningContext planning =
-                DocumentProcessingRuntime.workingPlanningContext(
+                PatchPlanningContextFactory.create(
                         canonical,
                         resolved,
                         false,
@@ -404,6 +408,9 @@ final class EmbeddedCollectionLifecycleIntegrationTest {
                 Collections.<String>emptyList(),
                 Collections.singletonList(COLLECTION_PATH),
                 members,
+                Collections.singletonMap(
+                        COLLECTION_PATH,
+                        EmbeddedCollectionState.PRESENT_COLLECTION),
                 concrete);
     }
 

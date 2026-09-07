@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
@@ -82,6 +83,55 @@ final class SemanticOutputBoundaryTest {
             assertTrue(
                     invocation.counter(
                             "listFoldStepRecomputed") > 0L);
+        }
+    }
+
+    @Test
+    void shouldRetainConstructedContentAfterCarryingAnOpaqueInputEdge() {
+        // given
+        Blue blue = new Blue();
+        Node output = new Node().properties(
+                "kind", text("PendingNested/Changed"));
+        FrozenNode exact = FrozenNode.fromNode(
+                blue.canonicalize(output.clone()));
+        FrozenNode input = FrozenNode.fromNode(new Node().properties(
+                "event", new Node().blueId(exact.blueId())));
+        long freshConstructionGas;
+        try (Invocation fresh = new Invocation(new Blue())) {
+            long before = fresh.totalGas();
+            fresh.boundary().admit(output.clone());
+            freshConstructionGas = fresh.totalGas() - before;
+        }
+        try (Invocation invocation = new Invocation(blue)) {
+            SemanticOutputBoundary boundary = invocation.boundary();
+            boundary.carryExactInput(input, input.blueId());
+            ExactBlueValue opaque = boundary.admit(
+                    new Node().blueId(exact.blueId()));
+            long before = invocation.totalGas();
+
+            // when
+            ExactBlueValue constructed = boundary.admit(output.clone());
+            long afterConstruction = invocation.totalGas();
+            ExactBlueValue repeated = boundary.admit(output.clone());
+            ExactBlueValue referenced = boundary.admit(
+                    new Node().blueId(exact.blueId()));
+
+            // then
+            assertTrue(opaque.frozenValue().isReferenceOnly(),
+                    "an already-issued input handle remains an immutable edge");
+            assertEquals(exact.blueId(), opaque.blueId());
+            assertEquals(exact.blueId(), constructed.blueId());
+            assertFalse(constructed.frozenValue().isReferenceOnly(),
+                    "complete verified output must keep its semantic content");
+            assertEquals(exact.resolvedStructuralKey(),
+                    constructed.frozenValue().resolvedStructuralKey());
+            assertEquals(freshConstructionGas, afterConstruction - before,
+                    "the input edge does not prepay content construction");
+            assertTrue(freshConstructionGas > 0L);
+            assertSame(constructed, repeated);
+            assertSame(constructed, referenced);
+            assertEquals(afterConstruction, invocation.totalGas(),
+                    "reusing complete evidence must not repeat construction");
         }
     }
 
@@ -1255,63 +1305,20 @@ final class SemanticOutputBoundaryTest {
     }
 
     @Test
-    void shouldRejectHostedCursorPairedWithDifferentIdentity() {
+    void shouldNotExposeExactValueLookupByBlueId() {
         // given
-        Throwable failure;
+        Class<SemanticOutputBoundary> boundaryType =
+                SemanticOutputBoundary.class;
 
         // when
-        try (Invocation invocation = new Invocation(new Blue())) {
-            String expected = DirectBlueIdCalculator.calculateBlueId(
-                    new Node().properties("value", text("expected")));
-            FrozenNode tampered = FrozenNode.fromNode(
-                    new Node().properties("value", text("tampered")));
-
-            failure = captureFailure(
-                    () -> invocation.boundary()
-                            .carryExactValue(expected, tampered));
-        }
+        Throwable failure = captureFailure(
+                () -> boundaryType.getMethod(
+                        "carryExactValue",
+                        String.class,
+                        FrozenNode.class));
 
         // then
-        assertInstanceOf(
-                InvalidExecutionEvidenceException.class,
-                failure);
-    }
-
-    @Test
-    void shouldCarryOnlyOpaqueReferencesProvenByAuthenticatedExactInput() {
-        // given
-        Node target = new Node().properties("value", text("target"));
-        String targetBlueId = DirectBlueIdCalculator.calculateBlueId(target);
-        String cyclicMemberBlueId = targetBlueId + "#0";
-        FrozenNode authenticatedInput = FrozenNode.fromNode(
-                new Node().properties(
-                        "ordinary", new Node().blueId(targetBlueId),
-                        "cyclic", new Node().blueId(cyclicMemberBlueId)));
-        FrozenNode mismatchedReadCursor = FrozenNode.fromNode(
-                new Node().properties("value", text("schema-shaped")));
-        ExactBlueValue ordinary;
-        ExactBlueValue cyclic;
-
-        // when
-        try (Invocation invocation = new Invocation(new Blue())) {
-            invocation.boundary().carryExactInput(
-                    authenticatedInput, authenticatedInput.blueId());
-
-            ordinary = invocation.boundary().carryExactValue(
-                    targetBlueId, mismatchedReadCursor);
-            cyclic = invocation.boundary().carryExactValue(
-                    cyclicMemberBlueId, mismatchedReadCursor);
-        }
-
-        // then
-        assertEquals(targetBlueId, ordinary.blueId());
-        assertTrue(ordinary.frozenValue().isReferenceOnly());
-        assertEquals(targetBlueId,
-                ordinary.frozenValue().getReferenceBlueId());
-        assertEquals(cyclicMemberBlueId, cyclic.blueId());
-        assertTrue(cyclic.frozenValue().isReferenceOnly());
-        assertEquals(cyclicMemberBlueId,
-                cyclic.frozenValue().getReferenceBlueId());
+        assertInstanceOf(NoSuchMethodException.class, failure);
     }
 
     @Test
@@ -1321,7 +1328,7 @@ final class SemanticOutputBoundaryTest {
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
                         blue.getDocumentProcessor(),
-                        new Node());
+                        Nodes.emptyObject());
         execution.preflightScope("/");
         Node output =
                 new Node().properties(
@@ -1338,7 +1345,7 @@ final class SemanticOutputBoundaryTest {
                          execution.createContext(
                                  "/",
                                  execution.bundleForScope("/"),
-                                 new Node(),
+                                 Nodes.emptyObject(),
                                  false)) {
                 first = phase.semanticOutputBoundary()
                         .admit(output);
@@ -1477,13 +1484,13 @@ final class SemanticOutputBoundaryTest {
                     blue.getDocumentProcessor();
             this.execution =
                     new ProcessorInvocationState(
-                            owner, new Node());
+                            owner, Nodes.emptyObject());
             execution.preflightScope("/");
             this.context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             false);
         }
 

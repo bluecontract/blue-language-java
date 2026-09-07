@@ -137,6 +137,68 @@ final class ProcessEmbeddedSurfaceReconcilerTest {
     }
 
     @Test
+    void shouldRetainProspectiveDirectMemberWhileCollectionIsAbsentAndActivateItWithTheSubtree() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot target = document(B, "order-one");
+        ManagedOccurrenceBinding reservation =
+                binding(A, "/orders/order-1", 1L, target, false);
+
+        ProcessEmbeddedSurfaceReconciler.Reconciliation absent =
+                reconciler.reconcileProjected(
+                        A,
+                        source.document(),
+                        Collections.<ManagedProcessEmbeddedPath>emptyList(),
+                        Collections.singletonList(reservation),
+                        Arrays.asList(source, target),
+                        noFences());
+
+        ManagedOccurrenceBinding retained = only(
+                absent.bindings(), A, "/orders/order-1");
+        assertEquals(reservation.occurrenceIdentity(),
+                retained.occurrenceIdentity());
+        assertEquals(reservation.bindingIdentity(),
+                retained.bindingIdentity());
+        assertFalse(retained.active());
+        assertTrue(absent.transitions().isEmpty());
+        assertTrue(absent.activatedOccurrenceIdentities().isEmpty());
+        assertFalse(ManagedDocumentGraph.fromBindings(
+                Arrays.asList(A, B), absent.bindings()).hasEdge(A, B));
+
+        Node withCompleteSubtree = source.document()
+                .properties("orders", new Node().properties(
+                        "order-1", target.document()));
+        ProcessEmbeddedSurfaceReconciler.Reconciliation introduced =
+                reconciler.reconcileProjected(
+                        A,
+                        withCompleteSubtree,
+                        Collections.singletonList(
+                                path("/orders/order-1")),
+                        absent.bindings(),
+                        Arrays.asList(source, target),
+                        noFences());
+
+        ManagedOccurrenceBinding activated = only(
+                introduced.bindings(), A, "/orders/order-1");
+        assertTrue(activated.active());
+        assertEquals(retained.activationGeneration(),
+                activated.activationGeneration());
+        assertEquals(retained.occurrenceIdentity(),
+                activated.occurrenceIdentity());
+        assertEquals(retained.bindingIdentity(),
+                activated.bindingIdentity());
+        assertEquals(Collections.singleton(
+                        activated.occurrenceIdentity()),
+                introduced.activatedOccurrenceIdentities());
+        assertEquals(1, introduced.transitions().size());
+        assertEquals(
+                ProcessEmbeddedSurfaceReconciler
+                        .OccurrenceTransition.Kind.ADD,
+                introduced.transitions().get(0).kind());
+        assertTrue(ManagedDocumentGraph.fromBindings(
+                Arrays.asList(A, B), introduced.bindings()).hasEdge(A, B));
+    }
+
+    @Test
     void shouldRetireRemovedDeclarationAndWholeContractToPassiveContent() {
         // given
         ManagedDocumentSnapshot source = document(A, "source-a");

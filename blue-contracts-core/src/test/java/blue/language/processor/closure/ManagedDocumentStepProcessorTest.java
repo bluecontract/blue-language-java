@@ -1,7 +1,10 @@
 package blue.language.processor.closure;
 
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.BlueContracts;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessorRegistry;
@@ -9,8 +12,12 @@ import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentStepRuntimeGapException;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.FrozenJsonPatch;
+import blue.language.processor.GasChargeContext;
+import blue.language.processor.GasSchedule;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ManagedDocumentStepRoute;
@@ -18,10 +25,12 @@ import blue.language.processor.ManagedDocumentStepRuntime;
 import blue.language.processor.ManagedDocumentWorkKind;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.CyclicSetProof;
 import blue.language.provider.NodeProvider;
@@ -58,6 +67,17 @@ final class ManagedDocumentStepProcessorTest {
             new Node().name("Managed Document Step External Channel");
     private static final String EXTERNAL_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(EXTERNAL_TYPE);
+    private static final Node COLLECTION_CHANNEL_TYPE =
+            BlueRuntimeTypeRegistry.getDefault().node(
+                    RuntimeTypeKey.EMBEDDED_COLLECTION_EVENT_CHANNEL);
+    private static final String COLLECTION_CHANNEL_BLUE_ID =
+            RuntimeBlueIds.EMBEDDED_COLLECTION_EVENT_CHANNEL;
+    private static final Node FILTERED_COLLECTION_EVENT =
+            new Node().properties(
+                    "kind", new Node().value("filtered"));
+    private static final String FILTERED_COLLECTION_EVENT_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    FILTERED_COLLECTION_EVENT);
 
     @Test
     void executesContainingAndContainedDocumentsAsIndependentRootsWithSharedGas() {
@@ -157,6 +177,7 @@ final class ManagedDocumentStepProcessorTest {
                 work,
                 tentativeState.managedDocument(A),
                 payload,
+                DirectBlueIdCalculator.calculateBlueId(payload),
                 resolutionContext);
 
         try (Fixture fixture = new Fixture(Action.READ_MANAGED)) {
@@ -197,6 +218,98 @@ final class ManagedDocumentStepProcessorTest {
             assertEquals(
                     acyclicInput.getClass(),
                     cyclicInput.getClass());
+        }
+    }
+
+    @Test
+    void carriesAdmissionProvedCyclicMemberIdentityIntoHandlerContext() {
+        // given
+        AffectedClosureSnapshot state = acyclicContainingState();
+        Node payload = new Node().properties(
+                "kind", new Node().value("cyclic-member"));
+        String directPayloadBlueId =
+                DirectBlueIdCalculator.calculateBlueId(payload);
+        String admittedPayloadBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("payload-cycle")) + "#0";
+        ClosureWorkOccurrence work = new ClosureWorkOccurrence(
+                0L,
+                WorkKind.TRIGGERED_EVENT,
+                A,
+                "trigger",
+                admittedPayloadBlueId,
+                Long.valueOf(0L),
+                hash('7'),
+                hash('8'),
+                hash('9'));
+        DocumentStepInput input = new DocumentStepInput(
+                0L,
+                work,
+                state.managedDocument(A),
+                payload,
+                admittedPayloadBlueId,
+                TentativeResolutionContext.from(
+                        invocation(state), state, A));
+
+        try (Fixture fixture = new Fixture(Action.CAPTURE_EXACT_EVENT_ID)) {
+            // when
+            fixture.stepper.process(input);
+
+            // then
+            assertFalse(directPayloadBlueId.equals(admittedPayloadBlueId));
+            assertEquals(
+                    Collections.singletonList(admittedPayloadBlueId),
+                    fixture.probe.exactEventBlueIds);
+        }
+    }
+
+    @Test
+    void keepsEmbeddedWrapperAndCyclicOccurrenceIdentitiesDistinct() {
+        // given
+        AffectedClosureSnapshot state = acyclicContainingState();
+        Node occurrenceEvent = new Node().properties(
+                "kind", new Node().value("embedded-cyclic-member"));
+        String occurrenceEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("embedded-event-cycle")) + "#0";
+        Node wrapper = embeddedWrapper(
+                "/child", occurrenceEventBlueId);
+        String wrapperBlueId =
+                DirectBlueIdCalculator.calculateBlueId(wrapper);
+        ClosureWorkOccurrence work = new ClosureWorkOccurrence(
+                0L,
+                WorkKind.EMBEDDED_EVENT,
+                A,
+                "embeddedEvent",
+                occurrenceEventBlueId,
+                Long.valueOf(0L),
+                hash('7'),
+                hash('8'),
+                hash('9'));
+        DocumentStepInput input = new DocumentStepInput(
+                0L,
+                work,
+                state.managedDocument(A),
+                wrapper,
+                occurrenceEventBlueId,
+                occurrenceEvent,
+                null,
+                TentativeResolutionContext.from(
+                        invocation(state), state, A));
+
+        try (Fixture fixture = new Fixture(
+                Action.CAPTURE_EVENT_AND_OCCURRENCE_IDS)) {
+            // when
+            fixture.stepper.process(input);
+
+            // then
+            assertFalse(wrapperBlueId.equals(occurrenceEventBlueId));
+            assertEquals(
+                    Collections.singletonList(wrapperBlueId),
+                    fixture.probe.exactEventBlueIds);
+            assertEquals(
+                    Collections.singletonList(occurrenceEventBlueId),
+                    fixture.probe.exactOccurrenceEventBlueIds);
         }
     }
 
@@ -349,7 +462,7 @@ final class ManagedDocumentStepProcessorTest {
     }
 
     @Test
-    void classifiesCanonicalTriggeredEmbeddedAndUpdateRoutesWithoutCharging() {
+    void classifiesCanonicalRoutesAndChargesEmbeddedChannelCandidates() {
         AffectedClosureSnapshot state = acyclicContainingState();
         try (Fixture fixture = new Fixture(Action.PATCH);
              ManagedDocumentStepRuntime classifier =
@@ -359,17 +472,33 @@ final class ManagedDocumentStepProcessorTest {
                     "kind", new Node().value("route"));
             String eventBlueId =
                     DirectBlueIdCalculator.calculateBlueId(event);
+            ExactEventIdentityEvidence exactEvent =
+                    ExactEventIdentityEvidence.verify(
+                            null,
+                            event,
+                            eventBlueId,
+                            null);
             long before = classifier.totalGas();
 
             List<ManagedDocumentStepRoute> triggered =
                     classifier.classifyTriggeredEventRoutes(
-                            state.managedDocument(B).document(), event);
+                            state.managedDocument(B).document(),
+                            exactEvent);
             List<ManagedDocumentStepRoute> embedded =
                     classifier.classifyEmbeddedEventRoutes(
                             state.managedDocument(B).document(),
                             "/child",
-                            event,
-                            eventBlueId);
+                            exactEvent,
+                            GasChargeContext.closure(
+                                    B.value(),
+                                    "/",
+                                    Long.valueOf(0L),
+                                    Long.valueOf(state.managedDocument(B)
+                                            .componentGeneration()),
+                                    null,
+                                    null,
+                                    null,
+                                    "test.embedded-classification"));
             LocalDocumentStepResult patched = fixture.stepper.process(input(
                     state, B, WorkKind.TRIGGERED_EVENT,
                     "trigger", "patch"));
@@ -393,7 +522,68 @@ final class ManagedDocumentStepProcessorTest {
                     routeKeys(updates));
             assertEquals(ManagedDocumentWorkKind.DOCUMENT_UPDATE,
                     updates.get(0).workKind());
-            assertEquals(before, classifier.totalGas());
+            assertEquals(
+                    before + GasSchedule.contracts10().weight(
+                            GasScheduleConstants.Namespace.PROCESSOR,
+                            GasScheduleConstants.ProcessorCounter
+                                    .CHANNEL_CANDIDATE_TESTED),
+                    classifier.totalGas());
+        }
+    }
+
+    @Test
+    void classifiesInjectedCollectionChannelStructurallyAndMetersItsWork() {
+        Node event = new Node().properties(
+                "kind", new Node().value("route"));
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
+        ExactEventIdentityEvidence exactEvent =
+                ExactEventIdentityEvidence.verify(
+                        null, event, eventBlueId, null);
+        Node document = collectionChannelDocument();
+
+        try (Fixture fixture = new Fixture(Action.OBSERVE);
+             ManagedDocumentStepRuntime classifier =
+                     new ManagedDocumentStepRuntime(
+                             fixture.owner, fixture.hook)) {
+            List<ManagedDocumentStepRoute> direct =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders/order-1",
+                            exactEvent,
+                            routeClassificationContext("direct"));
+            List<ManagedDocumentStepRoute> nested =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders/order-1/payment",
+                            exactEvent,
+                            routeClassificationContext("nested"));
+            List<ManagedDocumentStepRoute> other =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders-old/order-1",
+                            exactEvent,
+                            routeClassificationContext("other"));
+
+            assertEquals(Arrays.asList(
+                            "collectionDirect", "collectionTree"),
+                    routeKeys(direct));
+            assertEquals(Collections.singletonList("collectionTree"),
+                    routeKeys(nested));
+            assertTrue(other.isEmpty());
+            assertEquals(ManagedDocumentWorkKind.EMBEDDED_EVENT,
+                    direct.get(0).workKind());
+            assertEquals(9L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .CHANNEL_CANDIDATE_TESTED));
+            assertEquals(9L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .EMBEDDED_PATH_ENTRY_READ));
+            assertEquals(7L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .EMBEDDED_PATH_SEGMENT_VALIDATED));
         }
     }
 
@@ -451,6 +641,73 @@ final class ManagedDocumentStepProcessorTest {
         return keys;
     }
 
+    private static Node collectionChannelDocument() {
+        return new Node()
+                .name("Collection channel receiver")
+                .properties("orders", Nodes.emptyObject())
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "collectionPaths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/orders"))))
+                        .properties(
+                                "collectionDirect",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders")))
+                        .properties(
+                                "collectionTree",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders"))
+                                        .properties(
+                                                "includeDescendants",
+                                                new Node().value(
+                                                        Boolean.TRUE)))
+                        .properties(
+                                "collectionFiltered",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders"))
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        FILTERED_COLLECTION_EVENT_BLUE_ID))));
+    }
+
+    private static GasChargeContext routeClassificationContext(
+            String reason) {
+        return GasChargeContext.closure(
+                B.value(),
+                "/",
+                Long.valueOf(0L),
+                Long.valueOf(1L),
+                null,
+                null,
+                null,
+                "test.collection-route." + reason);
+    }
+
+    private static long traceQuantity(
+            ManagedDocumentStepRuntime runtime,
+            String counter) {
+        long result = 0L;
+        for (blue.language.processor.GasTraceEntry entry
+                : runtime.gasTrace()) {
+            if (counter.equals(entry.counter())) {
+                result += entry.quantity();
+            }
+        }
+        return result;
+    }
+
     private static Node embeddedWrapper(
             String sourcePath,
             String eventBlueId) {
@@ -487,6 +744,10 @@ final class ManagedDocumentStepProcessorTest {
                 work,
                 state.managedDocument(target),
                 payload,
+                kind == WorkKind.INITIALIZATION
+                        || kind == WorkKind.CONTAINING_REFERENCE_UPDATE
+                        ? null
+                        : DirectBlueIdCalculator.calculateBlueId(payload),
                 TentativeResolutionContext.from(
                         invocation, state, target));
     }
@@ -518,6 +779,13 @@ final class ManagedDocumentStepProcessorTest {
                 work,
                 state.managedDocument(target),
                 payload,
+                kind == WorkKind.CONTAINING_REFERENCE_UPDATE
+                        || kind == WorkKind.INITIALIZATION
+                        ? null
+                        : DirectBlueIdCalculator.calculateBlueId(
+                                occurrenceEvent != null
+                                        ? occurrenceEvent
+                                        : payload),
                 occurrenceEvent,
                 processorPatch,
                 TentativeResolutionContext.from(
@@ -629,28 +897,39 @@ final class ManagedDocumentStepProcessorTest {
     private static AffectedClosureSnapshot cyclicState() {
         Node documentA = initializedDocument("A");
         Node documentB = initializedDocument("B");
+        List<Node> declaredMembers = Arrays.asList(
+                new Node().name("a-proof").properties(
+                        "peer", new Node().blueId("this#1")),
+                new Node().name("b-proof").properties(
+                        "peer", new Node().blueId("this#0")));
+        CyclicSetFinalization finalization =
+                CircularSetIdentityCalculator
+                        .calculateCircularSetFinalization(
+                                declaredMembers);
+        List<String> memberBlueIds =
+                finalization.memberBlueIdsInInputOrder();
         ManagedDocumentSnapshot managedA = new ManagedDocumentSnapshot(
-                A, "master#0", documentA, true, false, true, 0L, 2L);
+                A, memberBlueIds.get(0), documentA,
+                true, false, true, 0L, 2L);
         ManagedDocumentSnapshot managedB = new ManagedDocumentSnapshot(
-                B, "master#1", documentB, true, false, false, 0L, 2L);
+                B, memberBlueIds.get(1), documentB,
+                true, false, false, 0L, 2L);
         List<ManagedOccurrenceBinding> occurrences = Arrays.asList(
                 new ManagedOccurrenceBinding(
                         hash('1'), hash('2'), hash('3'),
                         A, ScopeAddress.embedded("/b", 1L),
-                        B, "master#1", true, null),
+                        B, memberBlueIds.get(1), true, null),
                 new ManagedOccurrenceBinding(
                         hash('4'), hash('5'), hash('6'),
                         B, ScopeAddress.embedded("/a", 1L),
-                        A, "master#0", true, null));
+                        A, memberBlueIds.get(0), true, null));
         CyclicSetProof proof = CyclicSetProof.fromDeclaredPlaceholderSet(
-                Arrays.asList(
-                        new Node().name("a-proof"),
-                        new Node().name("b-proof")));
+                declaredMembers);
         ComponentSnapshot component = new ComponentSnapshot(
                 hash('3'), hash('4'), 2L, ComponentKind.CYCLIC,
                 Arrays.asList(A, B),
-                Arrays.asList("master#0", "master#1"),
-                "master", proof, hash('5'));
+                memberBlueIds,
+                finalization.masterBlueId(), proof, hash('5'));
         return new AffectedClosureSnapshot(
                 hash('6'),
                 2L,
@@ -827,6 +1106,8 @@ final class ManagedDocumentStepProcessorTest {
 
     enum Action {
         OBSERVE,
+        CAPTURE_EXACT_EVENT_ID,
+        CAPTURE_EVENT_AND_OCCURRENCE_IDS,
         READ_MANAGED,
         PATCH,
         PATCH_THROUGH_CONTINUATION,
@@ -849,6 +1130,10 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<Node>();
         private final List<Node> occurrenceEvents =
                 new ArrayList<Node>();
+        private final List<String> exactEventBlueIds =
+                new ArrayList<String>();
+        private final List<String> exactOccurrenceEventBlueIds =
+                new ArrayList<String>();
         private final List<String> managedChildLabels =
                 new ArrayList<String>();
 
@@ -875,7 +1160,17 @@ final class ManagedDocumentStepProcessorTest {
                     context.documentAt("/managedChild") != null,
                     context.documentAt("/ambientParent") != null,
                     context.hasProcessEvent()));
-            if (action == Action.READ_MANAGED) {
+            if (action == Action.CAPTURE_EXACT_EVENT_ID
+                    || action == Action.CAPTURE_EVENT_AND_OCCURRENCE_IDS) {
+                exactEventBlueIds.add(
+                        context.exactEventIdentityEvidence()
+                                .eventBlueId());
+                if (action == Action.CAPTURE_EVENT_AND_OCCURRENCE_IDS) {
+                    exactOccurrenceEventBlueIds.add(
+                            context.exactOccurrenceEventIdentityEvidence()
+                                    .eventBlueId());
+                }
+            } else if (action == Action.READ_MANAGED) {
                 Node managedLabel = context.documentAt(
                         "/managedChild/label");
                 managedChildLabels.add(managedLabel == null
@@ -1035,13 +1330,12 @@ final class ManagedDocumentStepProcessorTest {
         public void onApplicationEvent(
                 String scopePath,
                 String originContractKey,
-                Node event,
-                String eventBlueId) {
+                ExactEventIdentityEvidence exactEvent) {
             events.add(new EventCapture(
                     scopePath,
                     originContractKey,
-                    event.clone(),
-                    eventBlueId));
+                    exactEvent.event(),
+                    exactEvent.eventBlueId()));
         }
 
         @Override
@@ -1089,6 +1383,10 @@ final class ManagedDocumentStepProcessorTest {
             this.probe = new ProbeProcessor(action);
             ContractProcessorRegistry registry =
                     ContractProcessorRegistryBuilder.create()
+                            .register(
+                                    COLLECTION_CHANNEL_BLUE_ID,
+                                    COLLECTION_CHANNEL_TYPE,
+                                    new TestCollectionChannelProcessor())
                             .register(
                                     EXTERNAL_BLUE_ID,
                                     EXTERNAL_TYPE,
@@ -1152,6 +1450,15 @@ final class ManagedDocumentStepProcessorTest {
         @Override
         public Class<TestExternalChannel> contractType() {
             return TestExternalChannel.class;
+        }
+    }
+
+    private static final class TestCollectionChannelProcessor
+            implements ChannelProcessor<EmbeddedCollectionEventChannel> {
+
+        @Override
+        public Class<EmbeddedCollectionEventChannel> contractType() {
+            return EmbeddedCollectionEventChannel.class;
         }
     }
 }

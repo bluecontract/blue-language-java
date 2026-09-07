@@ -36,7 +36,7 @@ final class Cclo23HistoricalEpochMatrixTest {
     private static final DocumentId A = new DocumentId("history-a");
     private static final DocumentId B = new DocumentId("history-b");
     private static final String FINAL_MASTER =
-            "B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE";
+            "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5";
 
     private static final List<Row> MATRIX = Arrays.asList(
             new Row("c-clo-23-00-attach-a5-retry", null, null,
@@ -128,9 +128,9 @@ final class Cclo23HistoricalEpochMatrixTest {
                 assertEquals(FINAL_MASTER,
                         result.resultingComponents().get(0).masterBlueId(),
                         row.fixtureId);
-                assertEquals(FINAL_MASTER + "#1", afterA.afterBlueId(),
+                assertEquals(FINAL_MASTER + "#0", afterA.afterBlueId(),
                         row.fixtureId);
-                assertEquals(FINAL_MASTER + "#0", afterB.afterBlueId(),
+                assertEquals(FINAL_MASTER + "#1", afterB.afterBlueId(),
                         row.fixtureId);
             } else {
                 assertEquals(2, result.resultingComponents().size(),

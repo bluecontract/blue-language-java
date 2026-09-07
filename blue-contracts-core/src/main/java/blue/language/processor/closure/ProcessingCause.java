@@ -9,6 +9,8 @@ public abstract class ProcessingCause {
         EXTERNAL("external"),
         /** One contiguous managed-document revision. */
         MANAGED_REVISION("managed-revision"),
+        /** One authenticated historical same-epoch representation step. */
+        MANAGED_REPRESENTATION("managed-representation"),
         /** Closure admission cause. */
         ADMISSION("admission");
 

@@ -186,14 +186,16 @@ public final class MockExternalChannelProcessor implements ChannelProcessor<Mock
         public Node checkpointSubject(
                 MockExternalChannel immutableContractSnapshot,
                 Node exactEvent,
-                Node exactPayload) {
+                Node exactPayload,
+                ExternalChannelFunctionContext context) {
             return checkpointSubjectOverride != null
                     ? checkpointSubjectOverride.clone()
                     : ExternalChannelSubscriptionFunctions.super
                     .checkpointSubject(
                             immutableContractSnapshot,
                             exactEvent,
-                            exactPayload);
+                            exactPayload,
+                            context);
         }
 
         @Override

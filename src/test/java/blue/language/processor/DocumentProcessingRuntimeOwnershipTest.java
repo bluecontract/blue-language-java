@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
@@ -21,9 +22,9 @@ final class DocumentProcessingRuntimeOwnershipTest {
     void shouldKeepOperationalCountersOwnedByOneInvocation() {
         // given
         DocumentProcessingRuntime first =
-                new DocumentProcessingRuntime(new Node());
+                new DocumentProcessingRuntime(Nodes.emptyObject());
         DocumentProcessingRuntime second =
-                new DocumentProcessingRuntime(new Node());
+                new DocumentProcessingRuntime(Nodes.emptyObject());
 
         // when
         first.applyPatch(
@@ -42,11 +43,12 @@ final class DocumentProcessingRuntimeOwnershipTest {
         // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node(), null, manager);
+                new DocumentProcessingRuntime(
+                        Nodes.emptyObject(), null, manager);
         PreparedPatchTransaction transaction = runtime.preparePatchSequence(
                 "/",
                 Collections.singletonList(
-                        JsonPatch.add("/value", new Node().value(1))),
+                        JsonPatch.add("/state", new Node().value(1))),
                 null);
 
         // when

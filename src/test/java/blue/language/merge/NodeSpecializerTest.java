@@ -3,6 +3,7 @@ package blue.language.merge;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -27,9 +28,21 @@ final class NodeSpecializerTest {
         Node type = new Node().blueId(TEXT_TYPE_BLUE_ID);
         Node overlay = new Node().value("hello");
         AtomicReference<Node> validated = new AtomicReference<>();
-        NodeResolver resolver = (candidate, limits) -> {
-            validated.set(candidate);
-            return candidate;
+        NodeResolver resolver = new NodeResolver() {
+            @Override
+            public Node resolve(Node candidate, ResolutionLimits limits) {
+                validated.set(candidate);
+                return candidate;
+            }
+
+            @Override
+            public TypeEvidenceResolution resolveTypeEvidence(
+                    Node candidate,
+                    ResolutionLimits limits) {
+                throw new AssertionError(
+                        "specialization must not request type evidence");
+            }
+
         };
         NodeSpecializer specializer = new NodeSpecializer(resolver);
 
@@ -52,8 +65,21 @@ final class NodeSpecializerTest {
         Node overlay = new Node()
                 .type(new Node().blueId(INTEGER_TYPE_BLUE_ID))
                 .value("ambiguous");
-        NodeResolver resolver = (candidate, limits) -> {
-            throw new AssertionError("invalid overlay must not be resolved");
+        NodeResolver resolver = new NodeResolver() {
+            @Override
+            public Node resolve(Node candidate, ResolutionLimits limits) {
+                throw new AssertionError(
+                        "invalid overlay must not be resolved");
+            }
+
+            @Override
+            public TypeEvidenceResolution resolveTypeEvidence(
+                    Node candidate,
+                    ResolutionLimits limits) {
+                throw new AssertionError(
+                        "invalid overlay must not request type evidence");
+            }
+
         };
         NodeSpecializer specializer = new NodeSpecializer(resolver);
 

@@ -1,0 +1,75 @@
+schema: blue-contracts-fixture/1.0
+id: c-evt-collection-05
+vectors:
+- C-EVT-COLLECTION-05
+- C-EVT-COLLECTION-07
+category: evt
+description: Decoded segment matching rejects the raw-prefix lookalike orders-old for a channel bound to orders.
+operation: process
+input:
+  root:
+    orders: {}
+    orders-old:
+      order-1:
+        contracts:
+          in:
+            type:
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            order: 0
+            subscriptionKey: old-order
+            eventKey: old-order
+            accept: true
+            checkpointDomain: old-order-v1
+          emit:
+            type:
+              blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+            channel: in
+            order: 0
+            result:
+              events:
+              - id: A
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths: [/orders, /orders-old]
+      orderTrees:
+        type:
+          blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
+        collectionPath: /orders
+        includeDescendants: true
+        order: 0
+      mustNotRun:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: orderTrees
+        order: 0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: old-order
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, old-order, 1]
+    deliverySnapshot:
+    - scopePath: /orders-old/order-1
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 1
+  - actual: result.events
+    op: sequenceEquals
+    expected: []

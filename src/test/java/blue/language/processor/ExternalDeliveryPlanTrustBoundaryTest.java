@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
@@ -13,6 +14,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -51,8 +53,31 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             new Node().name("Required Application Operation");
     private static final String REQUIRED_OPERATION_TYPE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(REQUIRED_OPERATION_TYPE);
+    private static final String UNEXPECTED_RESOURCE_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    new Node().name("Unexpected exact resource"));
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
+    private static final Blue EXACT_RUNTIME = new Blue(blueId -> {
+        if (CHANNEL_TYPE_BLUE_ID.equals(blueId)) {
+            return Collections.singletonList(CHANNEL_TYPE.clone());
+        }
+        if (TRACE_HANDLER_TYPE_BLUE_ID.equals(blueId)) {
+            return Collections.singletonList(TRACE_HANDLER_TYPE.clone());
+        }
+        if (REMOVE_HANDLER_TYPE_BLUE_ID.equals(blueId)) {
+            return Collections.singletonList(REMOVE_HANDLER_TYPE.clone());
+        }
+        if (REQUIRED_OPERATION_TYPE_BLUE_ID.equals(blueId)) {
+            return Collections.singletonList(REQUIRED_OPERATION_TYPE.clone());
+        }
+        return null;
+    });
+
+    @AfterAll
+    static void closeExactRuntime() {
+        EXACT_RUNTIME.close();
+    }
 
     @Test
     void shouldBuildStrictVerifierForSuccessorPlanDeriver() {
@@ -70,7 +95,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         event));
         AtomicInteger derivations = new AtomicInteger();
         DocumentProcessor processor =
-                processor(null, null, null);
+                processor(null, EXACT_RUNTIME, null);
         ExternalDeliveryPlanDeriver originalDeriver =
                 processor.externalDeliveryPlanDeriver();
 
@@ -139,7 +164,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 evidence(root, event, 7L,
                         new ExternalDeliverySnapshot[]{
                                 alpha, beta
-                        }, "unexpected-resource"));
+                        }, UNEXPECTED_RESOURCE_BLUE_ID));
 
         // when
         List<DocumentProcessingResult> results =
@@ -484,7 +509,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         // when
         DocumentProcessingResult directEmpty =
                 processor.processDocument(
-                        new Node(), event("topic"));
+                        Nodes.emptyObject(), event("topic"));
 
         // then
         assertEquals(
@@ -688,7 +713,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     @Test
     void shouldVerifyTypedFeederAcquisitionSuspendsAttemptButNeverBecomesProcessStatus() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         Node event = event("topic");
         String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Feeder snapshot evidence"));
@@ -1012,7 +1037,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     @Test
     void shouldVerifyCheckpointDomainDoesNotConfuseEffectiveNodeWithSourceContribution() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         Node event = event("topic");
         ExternalDeliverySnapshot delivery =
                 ExternalDeliverySnapshot.builder("/", "incoming")
@@ -1154,7 +1179,10 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         new ExternalDeliverySnapshot[]{forged},
                         null);
         DocumentProcessor processor =
-                DocumentProcessor.builder()
+                withRuntime(
+                        DocumentProcessor.builder(),
+                        EXACT_RUNTIME,
+                        null)
                         .registerContractProcessor(
                                 CHANNEL_TYPE_BLUE_ID,
                                 CHANNEL_TYPE,
@@ -1288,11 +1316,15 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 CHANNEL_TYPE_BLUE_ID,
                                 CHANNEL_TYPE,
                                 new PlanChannelProcessor());
-        if (language != null) {
-            builder.matchingService(
-                    new ContractMatchingService(language));
-        }
-        if (snapshotManager != null) {
+        Blue configuredLanguage = language != null
+                ? language
+                : plan != null ? EXACT_RUNTIME : null;
+        if (configuredLanguage != null) {
+            builder = withRuntime(
+                    builder,
+                    configuredLanguage,
+                    snapshotManager);
+        } else if (snapshotManager != null) {
             builder.snapshotStore(snapshotManager);
         }
         if (plan != null) {
@@ -1304,7 +1336,10 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
 
     private static DocumentProcessor traceProcessor(
             ExternalDeliveryPlan plan) {
-        return DocumentProcessor.builder()
+        return withRuntime(
+                DocumentProcessor.builder(),
+                EXACT_RUNTIME,
+                null)
                 .registerContractProcessor(
                         CHANNEL_TYPE_BLUE_ID,
                         CHANNEL_TYPE,
@@ -1316,6 +1351,19 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 .deliveryPlanDeriver(
                         (root, event) -> plan)
                 .build();
+    }
+
+    private static DocumentProcessor.Builder withRuntime(
+            DocumentProcessor.Builder builder,
+            Blue language,
+            ProcessingSnapshotManager snapshotManager) {
+        return builder
+                .matchingService(new ContractMatchingService(language))
+                .conformanceEngine(language.conformanceEngine())
+                .snapshotStore(snapshotManager != null
+                        ? snapshotManager
+                        : language.getDocumentProcessor()
+                                .snapshotManager());
     }
 
     private static ExternalDeliveryPlan plan(
@@ -1970,7 +2018,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         new Node().contracts(
                                 new Node().properties(
                                         "checkpoint",
-                                        new Node()))));
+                                        Nodes.emptyObject()))));
             }
         }
     }
@@ -2029,7 +2077,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                     public Node checkpointSubject(
                             PlanChannel immutableContractSnapshot,
                             Node exactEvent,
-                            Node exactPayload) {
+                            Node exactPayload,
+                            ExternalChannelFunctionContext context) {
                         if (Boolean.TRUE.equals(
                                 immutableContractSnapshot
                                         .getNondeterministicSubject())) {
@@ -2046,7 +2095,8 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                     .super.checkpointSubject(
                                             immutableContractSnapshot,
                                             exactEvent,
-                                            exactPayload);
+                                            exactPayload,
+                                            context);
                         }
                         Node subject = exactPayload.getProperties() != null
                                 ? exactPayload.getProperties().get(field)

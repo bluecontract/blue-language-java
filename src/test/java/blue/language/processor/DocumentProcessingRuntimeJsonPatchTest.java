@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldRejectMissingIntermediateParentsWithoutMutation() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -32,13 +33,72 @@ class DocumentProcessingRuntimeJsonPatchTest {
         assertEquals(
                 "Final parent does not exist for patch path: /foo/bar/baz",
                 failure.getMessage());
-        assertNull(document.getProperties());
+        assertTrue(Nodes.isExactEmptyObject(document));
+    }
+
+    @Test
+    void shouldPreserveCollectionParentRuleAcrossOrderedPatches() {
+        // given
+        Node document = Nodes.emptyObject();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+
+        // when
+        IllegalStateException missingParent = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.add(
+                                "/orders/order-1",
+                                new Node().properties(
+                                        "state", new Node().value("new")))));
+        Node afterMissingParent = document.clone();
+
+        runtime.applyPatch(
+                "/", JsonPatch.add("/orders", Nodes.emptyObject()));
+        runtime.applyPatch(
+                "/",
+                JsonPatch.add(
+                        "/orders/order-1",
+                        new Node().properties(
+                                "state", new Node().value("new"))));
+
+        // then
+        assertEquals(
+                "Final parent does not exist for patch path: "
+                        + "/orders/order-1",
+                missingParent.getMessage());
+        assertTrue(Nodes.isExactEmptyObject(afterMissingParent));
+        assertEquals(
+                "new",
+                property(property(document, "orders"), "order-1")
+                        .getAsText("/state"));
+    }
+
+    @Test
+    void shouldAllowAddingCompleteCollectionSubtreeAtExistingParent() {
+        // given
+        Node document = Nodes.emptyObject();
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+        Node orders = new Node().properties(
+                "order-1",
+                new Node().properties(
+                        "state", new Node().value("new")));
+
+        // when
+        runtime.applyPatch("/", JsonPatch.add("/orders", orders));
+
+        // then
+        assertEquals(
+                "new",
+                property(property(document, "orders"), "order-1")
+                        .getAsText("/state"));
     }
 
     @Test
     void shouldUpsertObjectPropertyOnReplace() {
         // given
-        Node document = new Node().properties("alpha", new Node());
+        Node document = new Node().properties("alpha", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         JsonPatch replace = JsonPatch.replace("/alpha/beta", new Node().value("v1"));
@@ -91,7 +151,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldRemoveObjectProperty() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         document.properties("key", new Node().value("value"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
@@ -107,7 +167,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldFailWithoutMutationWhenRemovingMissingObjectProperty() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -117,7 +177,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         // then
         assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("missing"));
-        assertNull(document.getProperties());
+        assertTrue(Nodes.isExactEmptyObject(document));
     }
 
     @Test
@@ -256,7 +316,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldFailAndRollBackWhenUsingAppendTokenOnObject() {
         // given
-        Node document = new Node().properties("foo", new Node());
+        Node document = new Node().properties("foo", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -267,7 +327,8 @@ class DocumentProcessingRuntimeJsonPatchTest {
         assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("Append token"));
         assertNotNull(document.getProperties());
-        assertNull(document.getProperties().get("foo").getProperties());
+        assertTrue(Nodes.isExactEmptyObject(
+                document.getProperties().get("foo")));
     }
 
     @Test
@@ -277,7 +338,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 "foo",
                 new Node().properties(
                         "",
-                        new Node().properties("bar", new Node())));
+                        new Node().properties("bar", Nodes.emptyObject())));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -296,7 +357,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         // given
         Node document = new Node().properties(
                 "foo",
-                new Node().properties("", new Node()));
+                new Node().properties("", Nodes.emptyObject()));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -313,7 +374,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldAddressLiteralSlashAndTildeKeysUsingJsonPointerEscapes() {
         // given
-        Node document = new Node().properties("tilde", new Node());
+        Node document = new Node().properties("tilde", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when

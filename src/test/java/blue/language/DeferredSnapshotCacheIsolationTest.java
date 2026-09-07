@@ -25,6 +25,7 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,6 +72,9 @@ class DeferredSnapshotCacheIsolationTest {
         // when
         ResolvedSnapshot warm =
                 fixture.manager.fromDocument(fixture.document);
+        ResolvedSnapshot retainedBeforeDeferred = fixture.blue
+                .cachedResolvedSnapshot(warm.blueId())
+                .orElseThrow(AssertionError::new);
         ResolvedSnapshot deferred =
                 fixture.manager.fromDocumentTransientPreservingPaths(
                         fixture.document,
@@ -79,6 +83,9 @@ class DeferredSnapshotCacheIsolationTest {
                 fixture.manager.cacheSnapshot(deferred);
         ResolvedSnapshot completeAgain =
                 fixture.manager.fromDocument(fixture.document);
+        ResolvedSnapshot retainedAfterDeferred = fixture.blue
+                .cachedResolvedSnapshot(warm.blueId())
+                .orElseThrow(AssertionError::new);
         int derivedSnapshotEntries =
                 fixture.derivedSnapshotEntries();
 
@@ -86,7 +93,15 @@ class DeferredSnapshotCacheIsolationTest {
         assertComplete(warm);
         assertDeferred(deferred);
         assertSame(deferred, cachedDeferred);
-        assertSame(warm, completeAgain);
+        assertTrue(warm.isSourceBacked());
+        assertTrue(completeAgain.isSourceBacked());
+        assertFalse(retainedBeforeDeferred.isSourceBacked());
+        assertSame(retainedBeforeDeferred, retainedAfterDeferred);
+        assertNotSame(warm, completeAgain);
+        assertTrue(warm.frozenCanonicalRoot().sameResolvedStructure(
+                completeAgain.frozenCanonicalRoot()));
+        assertTrue(warm.frozenResolvedRoot().sameResolvedStructure(
+                completeAgain.frozenResolvedRoot()));
         assertComplete(completeAgain);
         assertEquals(1, derivedSnapshotEntries);
     }

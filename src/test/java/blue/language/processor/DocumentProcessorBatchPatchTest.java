@@ -4,6 +4,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
 import blue.language.processor.contracts.RecordDocumentUpdateContractProcessor;
 import blue.language.processor.model.JsonPatch;
@@ -55,7 +56,7 @@ class DocumentProcessorBatchPatchTest {
     @Test
     void shouldRollBackWholeInvocationWhenSecondPatchViolatesBoundary() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
 
@@ -84,7 +85,7 @@ class DocumentProcessorBatchPatchTest {
                 result.status());
         assertFalse(result.commits());
         assertTrue(result.events().isEmpty());
-        assertNull(result.document().getProperties());
+        assertTrue(Nodes.isExactEmptyObject(result.document()));
         assertTrue(execution.runtime().isRunTerminated());
         assertFalse(execution.runtime()
                 .isScopeTerminated("/foo"));
@@ -93,7 +94,7 @@ class DocumentProcessorBatchPatchTest {
     @Test
     void shouldRollBackWholeInvocationWhenSecondPatchWritesReservedKey() {
         // given
-        Node document = new Node().properties("foo", new Node());
+        Node document = new Node().properties("foo", Nodes.emptyObject());
         String exactInput = document.toString();
         ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();
@@ -131,7 +132,7 @@ class DocumentProcessorBatchPatchTest {
     @Test
     void shouldRollBackAllTentativePatchesWhenSecondPatchIsInvalid() {
         // given
-        Node document = new Node().properties("foo", new Node());
+        Node document = new Node().properties("foo", Nodes.emptyObject());
         String exactInput = document.toString();
         ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
         ContractBundle bundle = ContractBundle.builder().build();

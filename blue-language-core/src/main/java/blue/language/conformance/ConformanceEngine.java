@@ -9,8 +9,10 @@ import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.resolve.ResolutionLimits;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -199,7 +201,11 @@ public final class ConformanceEngine implements AutoCloseable {
 
     /**
      * Resolves a defensive clone and captures a conformance failure as data.
-     * A null node is conformant.
+     * A null node is conformant. The input must already be preprocessed.
+     * Pure references can be accepted without fetching their targets; this
+     * result does not certify undemanded content. Failures include unavailable
+     * evidence: this legacy boolean result cannot distinguish it from invalid
+     * content. Use the runtime's limited resolution for structured outcomes.
      *
      * @param node node to check, or {@code null}
      * @return conformance result
@@ -246,66 +252,89 @@ public final class ConformanceEngine implements AutoCloseable {
     }
 
     /**
-     * Plans generalization for one changed resolved path.
-     *
-     * @param resolvedRoot resolved root
-     * @param changedPath changed RFC 6901 path
-     * @return immutable conformance plan
-     */
-    public ConformancePlan planGeneralization(FrozenNode resolvedRoot, String changedPath) {
-        return planGeneralization(null, resolvedRoot, changedPath);
-    }
-
-    /**
-     * Plans generalization for canonical and resolved roots.
+     * Plans generalization with canonical type identities captured by the
+     * resolver invocation that produced {@code resolvedRoot}.
      *
      * @param canonicalRoot canonical root
-     * @param resolvedRoot resolved root
+     * @param resolvedRoot resolved root from the same invocation as the lookup
      * @param changedPath changed RFC 6901 path
+     * @param typeIdentities exact resolver-issued type identity evidence
      * @return immutable conformance plan
+     * @throws NullPointerException if {@code resolvedRoot},
+     *         {@code changedPath}, or {@code typeIdentities} is null
+     * @throws IllegalArgumentException if {@code changedPath} is not a valid
+     *         RFC 6901 pointer
+     * @throws IllegalStateException if the engine is closed or required
+     *         canonical type evidence is unavailable
      */
-    public ConformancePlan planGeneralization(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
+    public ConformancePlan planGeneralization(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            String changedPath,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
         return call(() -> new FrozenConformancePlanner(
                 nodeProvider,
                 mergingProcessor,
-                resolvedReferenceCache).plan(
+                resolvedReferenceCache,
+                typeIdentities).plan(
                 canonicalRoot, resolvedRoot, changedPath));
     }
 
     /**
-     * Plans ordered generalization for several changed paths.
+     * Plans ordered generalization with exact resolver-issued type evidence.
      *
-     * @param canonicalRoot canonical root
-     * @param resolvedRoot resolved root
-     * @param changedPaths changed RFC 6901 paths
-     * @return immutable conformance plan
+     * @param canonicalRoot canonical root, or {@code null} for a deferred lane
+     * @param resolvedRoot resolved root from the evidence-producing invocation
+     * @param changedPaths ordered RFC 6901 paths; null or empty means unchanged
+     * @param typeIdentities exact resolver-issued type identity evidence
+     * @return immutable aggregate conformance plan
+     * @throws NullPointerException if {@code resolvedRoot}, an element of
+     *         {@code changedPaths}, or {@code typeIdentities} is null
+     * @throws IllegalArgumentException if a changed path is not a valid RFC
+     *         6901 pointer
+     * @throws IllegalStateException if the engine is closed or required
+     *         canonical type evidence is unavailable
      */
-    public ConformancePlan planGeneralization(FrozenNode canonicalRoot,
-                                              FrozenNode resolvedRoot,
-                                              List<String> changedPaths) {
+    public ConformancePlan planGeneralization(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            List<String> changedPaths,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
         return planGeneralizationPreservingPaths(
                 canonicalRoot,
                 resolvedRoot,
                 changedPaths,
+                typeIdentities,
                 Collections.emptySet());
     }
 
     /**
-     * Plans generalization while leaving selected pure-reference subtrees
-     * collapsed. Callers remain responsible for materializing any selected
-     * executable subtree before it is used.
+     * Plans ordered generalization while preserving selected references and
+     * using exact resolver-issued type identity evidence.
      *
-     * @param canonicalRoot canonical root
-     * @param resolvedRoot resolved root
-     * @param changedPaths changed RFC 6901 paths
-     * @param preservedReferencePaths paths that must remain collapsed
-     * @return immutable conformance plan
+     * @param canonicalRoot canonical root, or {@code null} for a deferred lane
+     * @param resolvedRoot resolved root from the evidence-producing invocation
+     * @param changedPaths ordered RFC 6901 paths; null or empty means unchanged
+     * @param typeIdentities exact resolver-issued type identity evidence
+     * @param preservedReferencePaths RFC 6901 paths whose references remain
+     *        deferred; null is treated as empty
+     * @return immutable aggregate conformance plan
+     * @throws NullPointerException if {@code resolvedRoot}, an element of
+     *         either path collection, or {@code typeIdentities} is null
+     * @throws IllegalArgumentException if a supplied path is not a valid RFC
+     *         6901 pointer
+     * @throws IllegalStateException if the engine is closed or required
+     *         canonical type evidence is unavailable
      */
     public ConformancePlan planGeneralizationPreservingPaths(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             List<String> changedPaths,
+            CanonicalTypeIdentityLookup typeIdentities,
             Collection<String> preservedReferencePaths) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
         return call(() -> {
             if (changedPaths == null || changedPaths.isEmpty()) {
                 return ConformancePlan.unchanged(
@@ -322,6 +351,7 @@ public final class ConformanceEngine implements AutoCloseable {
                             nodeProvider,
                             mergingProcessor,
                             resolvedReferenceCache,
+                            typeIdentities,
                             preservedReferencePaths);
             for (String changedPath : changedPaths) {
                 ConformancePlan plan = planner.plan(
@@ -405,7 +435,33 @@ public final class ConformanceEngine implements AutoCloseable {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
-        Node type = candidates.get(0).getType();
-        return type != null ? type.getBlueId() : null;
+        if (candidates.size() != 1) {
+            throw new IllegalStateException(
+                    "Expected one exact type definition for " + blueId
+                            + " but found " + candidates.size());
+        }
+        Node candidate = candidates.get(0);
+        Node authoredParent = candidate.getType();
+        if (authoredParent == null) {
+            return null;
+        }
+        if (authoredParent.isReferenceOnly()) {
+            return authoredParent.getBlueId();
+        }
+
+        TypeEvidenceResolution resolution = new Merger(
+                mergingProcessor,
+                nodeProvider,
+                resolvedReferenceCache).resolveTypeDeclarationEvidence(
+                candidate.clone(),
+                ResolutionLimits.NO_LIMITS);
+        FrozenNode resolvedParent = resolution.resolvedRoot().getType();
+        if (resolvedParent == null) {
+            throw new IllegalStateException(
+                    "Completed type definition lost its declared parent for "
+                            + blueId);
+        }
+        return resolution.canonicalTypeIdentities()
+                .requireCanonicalTypeBlueId(resolvedParent.toNode());
     }
 }

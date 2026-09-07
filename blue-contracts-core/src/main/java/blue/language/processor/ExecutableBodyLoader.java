@@ -1,11 +1,17 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.model.BlueId;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.snapshot.FrozenNode;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -34,7 +40,7 @@ final class ExecutableBodyLoader {
 
     ContractBundle.HandlerBinding materializeSelected(
             ContractBundle.HandlerBinding binding,
-            Function<FrozenNode, FrozenNode> materializer) {
+            Function<FrozenNode, ResolvedSnapshot> materializer) {
         Objects.requireNonNull(binding, "binding");
         Objects.requireNonNull(materializer, "materializer");
         FrozenNode frozen = binding.node();
@@ -42,25 +48,46 @@ final class ExecutableBodyLoader {
             return binding;
         }
         Node executable = frozen.toNode();
+        List<CanonicalTypeIdentityLookup> identityEvidence =
+                new ArrayList<>();
+        Map<String, ResolvedSnapshot> materializedBodies =
+                new LinkedHashMap<>();
+        identityEvidence.add(binding.typeIdentities());
         for (String field : binding.executableBodyFields()) {
-            materializeField(executable, frozen, field, materializer);
+            materializeField(
+                    executable,
+                    frozen,
+                    field,
+                    materializer,
+                    identityEvidence,
+                    materializedBodies);
         }
         if (binding.executableBodyFields().isEmpty()) {
             return binding;
         }
+        CanonicalTypeIdentityLookup recombinedTypeIdentities =
+                CanonicalTypeIdentityEvidenceUnion
+                        .establishForResolvedGraph(
+                                executable,
+                                identityEvidence);
         Node exactEventMatcher = binding.contract().getEvent();
+        List<String> omittedFields = new ArrayList<>(
+                materializedBodies.keySet());
+        omittedFields.add(EVENT_MATCHER_FIELD);
         Contract converted = converter.convertWithType(
                 headerNode(
                         executable,
-                        Collections.singletonList(EVENT_MATCHER_FIELD)),
+                        omittedFields),
                 Contract.class,
-                false);
+                false,
+                recombinedTypeIdentities);
         if (!(converted instanceof HandlerContract)) {
             throw new MustUnderstandFailureException(
                     "Selected executable body no longer belongs to a Handler",
                     ProcessorErrorCategory.InvalidContractBinding);
         }
         HandlerContract handler = (HandlerContract) converted;
+        restoreMaterializedBodies(handler, materializedBodies);
         restoreEventMatcher(handler, exactEventMatcher);
         handler.setKey(binding.key());
         handler.setTypeBlueId(binding.contract().getTypeBlueId());
@@ -69,7 +96,8 @@ final class ExecutableBodyLoader {
                 binding.key(),
                 handler,
                 FrozenNode.fromResolvedNode(executable),
-                binding.executableBodyFields());
+                binding.executableBodyFields(),
+                recombinedTypeIdentities);
     }
 
     List<String> deferredHandlerFields(List<String> executableBodyFields) {
@@ -128,13 +156,78 @@ final class ExecutableBodyLoader {
             Node executable,
             FrozenNode frozen,
             String field,
-            Function<FrozenNode, FrozenNode> materializer) {
+            Function<FrozenNode, ResolvedSnapshot> materializer,
+            List<CanonicalTypeIdentityLookup> identityEvidence,
+            Map<String, ResolvedSnapshot> materializedBodies) {
         FrozenNode body = property(frozen, field);
         if (body == null || !body.isReferenceOnly()) {
             return;
         }
-        FrozenNode materialized = materializer.apply(body);
-        executable.properties(field, materialized.toNode());
+        ResolvedSnapshot materialized = Objects.requireNonNull(
+                materializer.apply(body),
+                "materializedExecutableBodySnapshot");
+        executable.properties(
+                field,
+                materialized.frozenResolvedRoot().toNode());
+        identityEvidence.add(materialized.canonicalTypeIdentities());
+        materializedBodies.put(field, materialized);
+    }
+
+    private void restoreMaterializedBodies(
+            HandlerContract handler,
+            Map<String, ResolvedSnapshot> materializedBodies) {
+        for (Map.Entry<String, ResolvedSnapshot> entry
+                : materializedBodies.entrySet()) {
+            Field field = findField(handler.getClass(), entry.getKey());
+            if (field == null) {
+                throw new IllegalStateException(
+                        "No Handler field maps executable body property '"
+                                + entry.getKey() + "'");
+            }
+            Object convertedBody = field.isAnnotationPresent(BlueId.class)
+                    ? entry.getValue().blueId()
+                    : converter.convertWithType(
+                            entry.getValue(),
+                            "/",
+                            field.getGenericType(),
+                            true);
+            try {
+                field.setAccessible(true);
+                field.set(handler, convertedBody);
+            } catch (RuntimeException | IllegalAccessException failure) {
+                throw new IllegalStateException(
+                        "Cannot restore materialized executable body property '"
+                                + entry.getKey() + "' on "
+                                + handler.getClass().getName(),
+                        failure);
+            }
+        }
+    }
+
+    private Field findField(Class<?> type, String propertyName) {
+        Class<?> current = type;
+        while (current != null && current != Object.class) {
+            for (Field field : current.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())
+                        || field.isSynthetic()) {
+                    continue;
+                }
+                JsonProperty property = field.getAnnotation(
+                        JsonProperty.class);
+                String mappedName = property != null
+                        && property.value() != null
+                        && !property.value().isEmpty()
+                        && !JsonProperty.USE_DEFAULT_NAME.equals(
+                        property.value())
+                        ? property.value()
+                        : field.getName();
+                if (propertyName.equals(mappedName)) {
+                    return field;
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
     }
 
     private FrozenNode property(FrozenNode node, String key) {

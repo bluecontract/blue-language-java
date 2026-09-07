@@ -11,9 +11,21 @@ package blue.language.merge;
  */
 final class ResolutionSession {
 
+    private final CanonicalTypeIdentityIndex canonicalTypeIdentityIndex =
+            new CanonicalTypeIdentityIndex();
     private volatile Thread owner;
     private volatile boolean completed;
     private ResolutionEngine.ResolutionState state;
+    private CanonicalTypeIdentityIndex.EvidenceSnapshot completedEvidence =
+            CanonicalTypeIdentityIndex.EvidenceSnapshot.incompleteEmpty();
+
+    CanonicalTypeIdentityIndex canonicalTypeIdentityIndex() {
+        return canonicalTypeIdentityIndex;
+    }
+
+    CanonicalTypeIdentityIndex.EvidenceSnapshot completedTypeIdentityEvidence() {
+        return completedEvidence;
+    }
 
     /** Returns whether the current thread may enter or continue this session. */
     boolean acceptsCurrentThread() {
@@ -32,6 +44,11 @@ final class ResolutionSession {
         if (completed || owner != null || state != null) {
             throw new IllegalStateException("Resolution session has already been admitted.");
         }
+        if (initialState.canonicalTypeIdentityIndex
+                != canonicalTypeIdentityIndex) {
+            throw new IllegalStateException(
+                    "Resolution state belongs to a different session.");
+        }
         state = initialState;
         owner = Thread.currentThread();
     }
@@ -41,6 +58,7 @@ final class ResolutionSession {
         if (owner != Thread.currentThread() || state != expectedState) {
             throw new IllegalStateException("Resolution session ownership is unbalanced.");
         }
+        completedEvidence = expectedState.canonicalTypeIdentityIndex.snapshot();
         state = null;
         completed = true;
         owner = null;

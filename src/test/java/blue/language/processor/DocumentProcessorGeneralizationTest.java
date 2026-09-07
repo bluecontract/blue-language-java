@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.conformance.ConformancePlan;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
@@ -12,8 +13,6 @@ import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
@@ -93,7 +92,7 @@ class DocumentProcessorGeneralizationTest {
     void shouldVerifyUntypedRootOrdinaryPatchesAreNotConformanceEnforced() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = runtime(blue, document);
 
         // when
@@ -568,7 +567,7 @@ class DocumentProcessorGeneralizationTest {
                                         new Node().value("second"))),
                         "duplicate paths"),
                 new BatchComparisonCase(
-                        new Node(),
+                        Nodes.emptyObject(),
                         null,
                         Arrays.asList(
                                 JsonPatch.add(
@@ -915,6 +914,31 @@ class DocumentProcessorGeneralizationTest {
                 .getContracts().getProperties().get("workflow") == null);
         assertTrue(runtime.snapshot().resolvedRoot()
                 .getContracts().getProperties().get("workflow") == null);
+    }
+
+    @Test
+    void shouldRejectOrdinaryValueGeneralizationWhenPolicyIsAbsent() {
+        // given
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR", Node.class));
+        document.contracts(null);
+        Node before = document.clone();
+
+        // when
+        ProcessorFailureException failure = captureFailure(() -> runtime(blue, document)
+                .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD"))));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure, failure.errorCategory());
+        assertEquivalentDocuments(before, document,
+                "ordinary data changes need policy permission and roll back atomically");
     }
 
     @Test
@@ -1304,6 +1328,14 @@ class DocumentProcessorGeneralizationTest {
             }
 
             @Override
+            public ResolvedSnapshot fromCanonicalTransient(
+                    FrozenNode canonicalRoot,
+                    java.util.Collection<String> preservedPaths) {
+                return blue.getDocumentProcessor().snapshotManager()
+                        .fromCanonicalTransient(canonicalRoot, preservedPaths);
+            }
+
+            @Override
             public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
                 return blue.applyCanonicalPatch(snapshot, patch);
             }
@@ -1425,7 +1457,7 @@ class DocumentProcessorGeneralizationTest {
     }
 
     private String runtimeDocumentBlueId(Node node) {
-        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+        return FrozenNode.fromResolvedNode(node).blueId();
     }
 
     private List<String> updatePaths(List<DocumentUpdateData> updates) {

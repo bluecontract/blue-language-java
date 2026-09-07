@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.matching.FrozenTypeMatcher;
@@ -101,6 +102,40 @@ class FrozenNodeStructuralInternerTest {
         // then
         assertSame(first, second);
         assertNotSame(first, different);
+    }
+
+    @Test
+    void shouldShareExactEmptyLeavesWithoutRemovingTheirParentEdges() {
+        // given
+        Node source = new Node().properties(
+                "left",
+                Nodes.emptyObject(),
+                "right",
+                Nodes.emptyObject());
+        FrozenNode uninterned =
+                FrozenNode.fromResolvedNode(source.clone());
+
+        // when
+        FrozenNode interned =
+                new ResolvedReferenceCache().freezeResolved(source);
+
+        // then
+        assertNotSame(uninterned.property("left"),
+                uninterned.property("right"));
+        assertEquals(2, interned.getProperties().size());
+        assertTrue(interned.getProperties().containsKey("left"));
+        assertTrue(interned.getProperties().containsKey("right"));
+        assertSame(interned.property("left"),
+                interned.property("right"),
+                "equal exact-empty leaves may share one immutable instance");
+        assertTrue(Nodes.isExactEmptyObject(
+                interned.property("left").toNode()));
+        assertTrue(Nodes.isExactEmptyObject(
+                interned.property("right").toNode()));
+        assertTrue(uninterned.sameResolvedStructure(interned));
+        assertTrue(interned.sameResolvedStructure(uninterned));
+        assertEquals(uninterned.blueId(), interned.blueId(),
+                "interning is a storage optimization and cannot change exact identity");
     }
 
     @Test

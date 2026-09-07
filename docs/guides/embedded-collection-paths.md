@@ -52,6 +52,12 @@ Contracts 1.0 intentionally keeps collection selection finite and stable:
 Stable object keys avoid renumbering scope paths, subscriptions, checkpoints,
 and audit references when another member is inserted or removed.
 
+Collections at disjoint declaration paths may have the same BlueId, whether
+inline or represented by verified pure references. `/left/member` and
+`/right/member` remain distinct occurrence paths even when the collections have
+equal exact content. Verified `DocumentId` evidence determines whether their
+members denote one continuing managed document or independent lineages.
+
 ## Exact local Channel bindings
 
 Each child is self-contained. A Lesson may define local semantic roles such as
@@ -206,7 +212,7 @@ semantic law:
 | `InvalidEmbeddedCollectionPath` | The declaration is malformed, enters a reserved field, or cannot name a collection target. |
 | `EmbeddedPathSelectorUnsupported` | The declaration attempts wildcard, glob, selector, or query syntax. |
 | `CyclicSetEmbeddedBoundaryUnsupported` | A cyclic-set member would have to be traversed as an embedded scope. |
-| `OverlappingEmbeddedDeclaration` | Exact and collection declarations overlap, are ancestor-related, graph-equivalent, or generate one concrete path twice. |
+| `OverlappingEmbeddedDeclaration` | Exact and collection declarations overlap, are ancestor-related, or generate one concrete path twice. |
 
 Two independent portable limits are both 4,096 per owning scope:
 

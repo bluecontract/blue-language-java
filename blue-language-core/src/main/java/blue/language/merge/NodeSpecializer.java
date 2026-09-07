@@ -19,7 +19,7 @@ public final class NodeSpecializer {
     private final NodeResolver resolver;
 
     /**
-     * Creates a specializer whose completed resolution validates compatibility.
+     * Creates a specializer whose definition resolution validates compatibility.
      *
      * @param resolver resolver used to validate the resulting specialization
      */
@@ -29,6 +29,7 @@ public final class NodeSpecializer {
 
     /**
      * Creates and validates a specialization without mutating either input.
+     * Checks definition compatibility, not completed-instance presence.
      *
      * @param type non-null type node or pure type reference
      * @param overlay non-null compatible authored overlay without a type
@@ -45,7 +46,12 @@ public final class NodeSpecializer {
         }
 
         Node specialization = overlay.clone().type(type.clone());
-        resolver.resolve(specialization.clone());
+        // Authoring may create another definition. The metadata position
+        // preserves fixed-value checks while deferring absent instance payload.
+        resolver.resolve(new Node()
+                .type(new Node().blueId(BlueLanguageConstants.LIST_TYPE_BLUE_ID))
+                .itemType(specialization.clone()),
+                blue.language.resolve.ResolutionLimits.NO_LIMITS);
         return specialization;
     }
 }

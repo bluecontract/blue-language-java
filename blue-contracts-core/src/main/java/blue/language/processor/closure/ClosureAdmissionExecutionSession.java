@@ -4,8 +4,10 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.Nodes;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.ManagedCheckpointSettlementBatch;
@@ -33,8 +35,6 @@ final class ClosureAdmissionExecutionSession
 
     private static final ClosureIdentityService IDENTITIES =
             ClosureIdentityService.INSTANCE;
-    private static final String PROVISIONAL_IDENTITY =
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
     private final ClosureInvocationInput input;
     private final ClosureExecutionRecorder recorder;
@@ -60,6 +60,8 @@ final class ClosureAdmissionExecutionSession
             new LinkedHashMap<DocumentId, Set<String>>();
     private final Map<DocumentId, FrozenInitialization> frozen =
             new LinkedHashMap<DocumentId, FrozenInitialization>();
+    private final Set<DocumentId> dormantProspectiveTargets =
+            new LinkedHashSet<DocumentId>();
     private final Set<DocumentId> initialized =
             new LinkedHashSet<DocumentId>();
     private final Set<String> existingBlueIds;
@@ -111,6 +113,12 @@ final class ClosureAdmissionExecutionSession
                     document.documentId(), document.blueId());
             if (document.initialized()) {
                 initialized.add(document.documentId());
+            } else if (ManagedDocumentInitializationEligibility
+                    .isDormantProspectiveOnlyTarget(
+                            document,
+                            currentBindings,
+                            input.directDeliveries())) {
+                dormantProspectiveTargets.add(document.documentId());
             } else {
                 frozen.put(document.documentId(), new FrozenInitialization(
                         document.blueId(), document.document()));
@@ -161,6 +169,7 @@ final class ClosureAdmissionExecutionSession
         if (!frozen.isEmpty()) {
             installMarkerBatch(plan);
         }
+        requireNoActivatedDormantTarget();
         captureSurfaces(resultingChannelSurfaces);
         return state();
     }
@@ -341,6 +350,9 @@ final class ClosureAdmissionExecutionSession
                 work,
                 target,
                 planned.payload,
+                planned.selectedRoute != null
+                        ? planned.selectedRoute.matchingEventBlueId()
+                        : null,
                 TentativeResolutionContext.from(
                         input, currentSnapshot, work.targetDocumentId()));
         recorder.step(step);
@@ -412,8 +424,7 @@ final class ClosureAdmissionExecutionSession
     public void onApplicationEvent(
             String scopePath,
             String originContractKey,
-            Node event,
-            String eventBlueId) {
+            ExactEventIdentityEvidence exactEvent) {
         requireRoot(scopePath);
         throw new ClosureCapabilityGapException(
                 "INITIALIZATION_EVENT_QUEUE_REQUIRED",
@@ -442,7 +453,7 @@ final class ClosureAdmissionExecutionSession
             Node body = latestBodies.get(documentId).clone();
             Node contracts = body.getContracts();
             if (contracts == null) {
-                contracts = new Node();
+                contracts = Nodes.emptyObject();
                 body.contracts(contracts);
             }
             if (contracts.getProperties() != null
@@ -592,11 +603,42 @@ final class ClosureAdmissionExecutionSession
             latestBodies.put(document.documentId(), document.document());
         }
         currentFinalization = finalized;
-        currentSnapshot = snapshot(finalized);
+        currentSnapshot = ClosureResultAssemblySupport.admissionSnapshot(
+                input.snapshot(), finalized, initialized, currentBindings,
+                graphGeneration);
+        requireNoActivatedDormantTarget();
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);
         if (activeWork != null) {
             finalizationsInActiveStep++;
+        }
+    }
+
+    /**
+     * The compatibility admission lane freezes its work plan before the first
+     * document step.  It therefore cannot safely add lifecycle work when a
+     * dormant prospective target becomes processable during that plan.  Fail
+     * the tentative attempt instead of publishing an active, uninitialized
+     * target; callers that need dynamic activation use the lifecycle-queue
+     * entry point.
+     */
+    private void requireNoActivatedDormantTarget() {
+        for (DocumentId documentId : dormantProspectiveTargets) {
+            ManagedDocumentSnapshot current = currentSnapshot.managedDocument(
+                    documentId);
+            if (current == null || current.initialized()
+                    || ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    current,
+                                    currentBindings,
+                                    input.directDeliveries())) {
+                continue;
+            }
+            throw new ClosureCapabilityGapException(
+                    "LEGACY_DYNAMIC_INITIALIZATION_REQUIRED",
+                    "Legacy admission activated a dormant prospective "
+                            + "target and cannot schedule its initialization "
+                            + "within the frozen work plan");
         }
     }
 
@@ -928,50 +970,6 @@ final class ClosureAdmissionExecutionSession
             }
         }
         return Collections.unmodifiableSet(result);
-    }
-
-    private AffectedClosureSnapshot snapshot(
-            ComponentFinalizationResult finalized) {
-        ArrayList<ManagedDocumentSnapshot> documents =
-                new ArrayList<ManagedDocumentSnapshot>();
-        for (ManagedDocumentSnapshot original
-                : input.snapshot().managedDocuments()) {
-            FinalizedDocumentEvidence exact = finalized.document(
-                    original.documentId());
-            documents.add(new ManagedDocumentSnapshot(
-                    original.documentId(),
-                    exact.blueId(),
-                    exact.document(),
-                    initialized.contains(original.documentId()),
-                    original.terminated(),
-                    original.publicRoot(),
-                    original.epoch(),
-                    exact.componentGeneration()));
-        }
-        ArrayList<ComponentSnapshot> components =
-                new ArrayList<ComponentSnapshot>();
-        for (FinalizedComponentEvidence component
-                : finalized.components()) {
-            components.add(component.component());
-        }
-        String bindingIdentity = IDENTITIES.occurrenceBindingSetIdentity(
-                currentBindings);
-        AffectedClosureSnapshot provisional = new AffectedClosureSnapshot(
-                PROVISIONAL_IDENTITY,
-                graphGeneration,
-                documents,
-                currentBindings,
-                bindingIdentity,
-                components,
-                input.snapshot().publicRootDocumentIds());
-        return new AffectedClosureSnapshot(
-                IDENTITIES.affectedClosureIdentity(provisional),
-                graphGeneration,
-                documents,
-                currentBindings,
-                bindingIdentity,
-                components,
-                input.snapshot().publicRootDocumentIds());
     }
 
     ClosureExecutionState state() {

@@ -6,8 +6,8 @@ additionalProperties: false
 required: [schema, id, scenario, description, operation, events, documents, occurrences, runtime, gas, expect]
 properties:
   schema: {const: blue-contracts-full-lifecycle-source/1.0}
-  id: {type: string, pattern: '^(?:fl-adm|c-evo)-[0-9]{2}(?:-[a-z0-9-]+)?$'}
-  scenario: {type: string, pattern: '^(?:FL-ADM|C-EVO)-[0-9]{2}$'}
+  id: {type: string, pattern: '^(?:(?:fl-adm|c-evo)-[0-9]{2}|c-emb-empty-[0-9]{2}|c-evt-collection-[0-9]{2})(?:-[a-z0-9-]+)?$'}
+  scenario: {type: string, pattern: '^(?:(?:FL-ADM|C-EVO)-[0-9]{2}|C-EMB-EMPTY-[0-9]{2}|C-EVT-COLLECTION-[0-9]{2})$'}
   description: {type: string, minLength: 1}
   operation: {const: admit-closure}
   events:
@@ -39,6 +39,9 @@ $defs:
     required: [publicRoot, document]
     properties:
       publicRoot: {type: boolean}
+      initialized:
+        description: Whether the exact input snapshot already carries a valid initialized marker.
+        type: boolean
       document: {$ref: '#/$defs/blueValue'}
   authoredOccurrence:
     type: object
@@ -129,6 +132,20 @@ $defs:
           documentId: {type: string, minLength: 1}
           path: {type: string, minLength: 1}
           form: {enum: [pure-reference, inline]}
+      exactForms:
+        description: Exact Channel/declaration or other contract values whose inline/reference wire form varies without changing semantic identity.
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {$ref: '#/$defs/exactForm'}
+      providerMode:
+        description: Harness-only physical provider preparation for case-declared pure-reference exact forms; excluded from authored closure identity.
+        type: object
+        additionalProperties: false
+        required: [cache, batching]
+        properties:
+          cache: {enum: [warm, cold]}
+          batching: {enum: [batched, unbatched]}
       repeatOf: {type: string, minLength: 1}
       occurrences:
         type: array
@@ -143,6 +160,15 @@ $defs:
     dependentRequired:
       parityWith: [parityProjections]
       parityProjections: [parityWith]
+      providerMode: [exactForms]
+  exactForm:
+    type: object
+    additionalProperties: false
+    required: [documentId, path, form]
+    properties:
+      documentId: {type: string, minLength: 1}
+      path: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      form: {enum: [pure-reference, inline]}
   pointerExpectation:
     type: object
     additionalProperties: false
@@ -173,6 +199,15 @@ $defs:
     properties:
       kind: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
       count: {type: integer, minimum: 0}
+  occurrenceActivationExpectation:
+    type: object
+    additionalProperties: false
+    required: [sourceDocumentId, sourcePath, activationGeneration, targetDocumentId]
+    properties:
+      sourceDocumentId: {type: string, minLength: 1}
+      sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      activationGeneration: {type: integer, minimum: 1}
+      targetDocumentId: {type: string, minLength: 1}
   completeExpect:
     type: object
     additionalProperties: false
@@ -206,6 +241,10 @@ $defs:
       workKindsExact:
         type: array
         items: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
+      activatedOccurrences:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/occurrenceActivationExpectation'}
       publicEvents:
         type: array
         items: {$ref: '#/$defs/publicEventExpectation'}

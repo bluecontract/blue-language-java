@@ -22,7 +22,7 @@ public class NodeToObjectConverterNullHandlingTest {
     }
 
     @Test
-    public void shouldPreserveExplicitNullValues() throws Exception {
+    public void shouldOmitSourceNullMembersAndPreserveResultingEmptyObjects() throws Exception {
         // given
         String yaml = "type:\n" +
                       "  blueId: Y-BlueId\n" +
@@ -49,9 +49,15 @@ public class NodeToObjectConverterNullHandlingTest {
         // then
         assertNotNull(y);
 
-        assertNull(y.xField);
-        assertNull(y.x1Field);
-        assertNull(y.x2Field);
+        assertNotNull(y.xField);
+        assertEquals(0, y.xField.intField);
+        assertNull(y.xField.stringField);
+        assertNotNull(y.x1Field);
+        assertNull(y.x1Field.intArrayField);
+        assertNull(y.x1Field.stringListField);
+        assertNull(y.x1Field.integerSetField);
+        assertNotNull(y.x2Field);
+        assertNull(y.x2Field.stringIntMapField);
 
         // Check other fields
         assertNull(y.xListField);
@@ -147,9 +153,11 @@ public class NodeToObjectConverterNullHandlingTest {
         // Check other fields
         assertNotNull(y.xListField);
         assertTrue(y.xListField.isEmpty());
-        assertNull(y.xMapField);
+        assertNotNull(y.xMapField);
+        assertTrue(y.xMapField.isEmpty());
         assertNotNull(y.x1SetField);
         assertTrue(y.x1SetField.isEmpty());
-        assertNull(y.x2MapField);
+        assertNotNull(y.x2MapField);
+        assertTrue(y.x2MapField.isEmpty());
     }
 }

@@ -8,10 +8,10 @@ public final class BuildLogicConstants {
     public static final String ROOT_CLEAN_TASK_PATH = ":clean";
 
     /** Exact fixture inventory bound by the final Language 1.0 package. */
-    public static final int EXPECTED_LANGUAGE_FIXTURE_COUNT = 153;
+    public static final int EXPECTED_LANGUAGE_FIXTURE_COUNT = 185;
 
     /** Exact fixture inventory bound by the final Contracts 1.0 package. */
-    public static final int EXPECTED_CONTRACTS_FIXTURE_COUNT = 276;
+    public static final int EXPECTED_CONTRACTS_FIXTURE_COUNT = 295;
 
     /** Combined release-conformance fixture inventory. */
     public static final int EXPECTED_RELEASE_FIXTURE_COUNT =

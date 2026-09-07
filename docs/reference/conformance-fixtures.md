@@ -6,44 +6,44 @@ Schema: `blue-language-java-generated-documentation/1.0`.
 
 Release package: `blue-language-contracts-embedded-modules-collection-paths`
 
-Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6`
+Package identity: `sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa`
 
 | Suite | Fixture count |
 | --- | ---: |
-| `contracts` | 276 |
-| `language` | 153 |
+| `contracts` | 295 |
+| `language` | 185 |
 
 ## Package identities
 
 | Input | Identity |
 | --- | --- |
-| `languageRegistry` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` |
-| `languageFixtures` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` |
-| `contractsRegistry` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` |
+| `languageRegistry` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` |
+| `languageFixtures` | `sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695` |
+| `contractsRegistry` | `sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
-| `contractsFixtures` | `sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c` |
-| `contractsRelease` | `sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3` |
+| `contractsFixtures` | `sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c` |
+| `contractsRelease` | `sha256:0de1d6ff58cd8895eddbb8c891ca09ff0a5294458d40b0ec4b79ba2b4fec4056` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
-| `languageSha256` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` |
-| `contractsSha256` | `0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc` |
+| `languageSha256` | `77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144` |
+| `contractsSha256` | `0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7` |
 
 ## Category coverage
 
 | Suite and category | Fixtures |
 | --- | ---: |
-| `contracts:admission` | 32 |
+| `contracts:admission` | 37 |
 | `contracts:atomicity` | 2 |
 | `contracts:chk` | 7 |
 | `contracts:cycle` | 6 |
 | `contracts:disc` | 8 |
 | `contracts:dynamic-graph` | 6 |
 | `contracts:e2e` | 3 |
-| `contracts:emb` | 25 |
-| `contracts:evt` | 5 |
+| `contracts:emb` | 30 |
+| `contracts:evt` | 12 |
 | `contracts:fail` | 6 |
 | `contracts:feed` | 19 |
 | `contracts:gas` | 75 |
@@ -60,19 +60,19 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 | `contracts:public-events` | 3 |
 | `contracts:rep` | 7 |
 | `contracts:snd` | 10 |
-| `contracts:upd` | 4 |
-| `language:BlueId` | 32 |
-| `language:Canonicalization` | 12 |
+| `contracts:upd` | 6 |
+| `language:BlueId` | 36 |
+| `language:Canonicalization` | 25 |
 | `language:Circular` | 5 |
 | `language:CircularReferences` | 1 |
 | `language:DocumentationLint` | 1 |
-| `language:LimitedExpansion` | 4 |
-| `language:LimitedResolution` | 7 |
+| `language:LimitedExpansion` | 7 |
+| `language:LimitedResolution` | 8 |
 | `language:Matching` | 1 |
 | `language:MetaConformance` | 1 |
-| `language:Minimization` | 3 |
+| `language:Minimization` | 4 |
 | `language:Provider` | 18 |
 | `language:Registry` | 7 |
-| `language:Resolution` | 47 |
-| `language:Schema` | 13 |
+| `language:Resolution` | 53 |
+| `language:Schema` | 17 |
 | `language:Specialization` | 1 |

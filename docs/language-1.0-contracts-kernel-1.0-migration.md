@@ -211,7 +211,7 @@ checked-in baseline mechanics.
 | `MergeReverser` and bare `reverse(...)` | Use `CanonicalIdentityInputBuilder` or `MinimizedOverlayBuilder`; the two operations no longer share an ambiguous name. |
 | Candidate conformance identity/source constants | Use `FIXTURE_PACKAGE_IDENTITY`, `BLUE_SPEC_SOURCE`, and `CONTRACTS_FIXTURE_PACKAGE_IDENTITY`. |
 | `Schema.get*Value()` numeric conveniences | Use the corresponding exact `BigInteger` getters, such as `getMinItemsExact()`. |
-| Two-argument `SourceProviderEnvironment` construction | Supply the complete Language release, preprocessing, registry, and evidence identities. |
+| Two-argument `SourceProviderEnvironment` construction | Supply the complete Language source-preprocessing baseline, preprocessing environment, registry, and evidence identities. |
 | Legacy trusted behavior behind `NodeProviderWrapper.unverified(...)` | The released descriptor remains for binary linkage, but now delegates to `wrap(...)` and verifies every provider leaf. `isExplicitlyHostTrusted(...)` remains linkable and always returns `false`; there is no trust bypass. |
 | `ChannelDelivery`, `ChannelEvaluation.matchDeliveries(...)`, and `deliveries()` | Derive occurrences through `ExternalDeliveryPlan`/`VerifiedExecutionEvidence`; a channel evaluation is one `match(...)` or `noMatch()`. |
 | Deprecated `ProcessorErrorCategory` aliases | Use the exact Contracts 1.0 diagnostic categories. |

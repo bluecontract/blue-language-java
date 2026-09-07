@@ -1,0 +1,2 @@
+1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf  blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
+1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf  blue-conformance/src/main/resources/language/1.0/spec.md

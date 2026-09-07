@@ -7,5 +7,6 @@ source:
     inherited: stable
   local: stable
 expectedCanonicalOverlay:
-  type: {}
+  type:
+    blueId: GEsDxtX2xzYmNeAJCjq9ZjqapNpiPNxhQsjRs4ygE1GD
   local: stable

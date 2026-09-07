@@ -2,6 +2,7 @@ package blue.language.identity;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
@@ -10,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Canonicalizes schema enum values for Source Document identity.
@@ -27,16 +30,51 @@ public final class SchemaEnumCanonicalizer {
     /**
      * Returns normalized enum values in canonical identity order.
      *
-     * @param values authored enum values
+     * <p>This evidence-free form accepts untyped scalars, scalars whose type
+     * is a pure reference, and pure value references. Inline scalar types
+     * must use {@link #canonicalizeResolved(List,
+     * CanonicalTypeIdentityLookup)} after resolver completion.</p>
+     *
+     * @param values evidence-free enum values
      * @return independent normalized values, sorted and deduplicated
      */
     public static List<Node> canonicalize(List<Node> values) {
+        return canonicalize(values, SchemaEnumCanonicalizer::normalized);
+    }
+
+    /**
+     * Returns completed enum values in canonical identity order.
+     *
+     * <p>Expanded effective types are reduced through resolver-issued
+     * identities. This method never hashes a completed type body.</p>
+     *
+     * @param values completed enum values
+     * @param typeIdentities resolver-issued effective type identities
+     * @return independent normalized values, sorted and deduplicated
+     * @throws NullPointerException if {@code typeIdentities} is null
+     * @throws IllegalArgumentException if {@code values} is null or contains
+     *         an entry that is not valid scalar identity input
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable
+     */
+    public static List<Node> canonicalizeResolved(
+            List<Node> values,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
+        return canonicalize(
+                values,
+                value -> normalizedResolved(value, typeIdentities));
+    }
+
+    private static List<Node> canonicalize(
+            List<Node> values,
+            Function<Node, Node> normalizer) {
         if (values == null) {
             throw new IllegalArgumentException("Schema enum values must not be null.");
         }
         List<CanonicalValue> canonical = new ArrayList<>(values.size());
         for (Node value : values) {
-            Node normalized = normalized(value);
+            Node normalized = normalizer.apply(value);
             canonical.add(new CanonicalValue(canonicalBytes(normalized), normalized));
         }
         canonical.sort(Comparator.comparing(
@@ -55,11 +93,15 @@ public final class SchemaEnumCanonicalizer {
     }
 
     /**
-     * Returns the collision-free canonical identity key used for enum set
-     * membership.
+     * Returns the collision-free canonical identity key used to normalize
+     * enum declarations. Constraint membership is evaluated separately by
+     * schema constraint membership; subtype overlap does not erase an
+     * explicitly declared custom type from source identity.
      *
      * <p>This string is for equality only. Ordering always compares the
-     * underlying unsigned UTF-8 bytes.</p>
+     * underlying unsigned UTF-8 bytes. Inline scalar types require
+     * {@link #canonicalKeyResolved(Node,
+     * CanonicalTypeIdentityLookup)}.</p>
      *
      * @param value enum scalar
      * @return RFC 8785 canonical JSON for the typed scalar identity
@@ -67,6 +109,24 @@ public final class SchemaEnumCanonicalizer {
     public static String canonicalKey(Node value) {
         return new String(
                 canonicalBytes(normalized(value)),
+                StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Returns the collision-free canonical identity key for a completed enum
+     * scalar.
+     *
+     * @param value completed enum scalar
+     * @param typeIdentities resolver-issued effective type identities
+     * @return RFC 8785 canonical JSON for the typed scalar identity
+     */
+    static String canonicalKeyResolved(
+            Node value,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
+        return new String(
+                canonicalBytes(
+                        normalizedResolved(value, typeIdentities)),
                 StandardCharsets.UTF_8);
     }
 
@@ -78,26 +138,19 @@ public final class SchemaEnumCanonicalizer {
         return ScalarNodeIdentity.normalized(value);
     }
 
-    private static void requireScalarIdentityShape(Node value) {
-        if (value != null && value.isReferenceOnly()) {
-            return;
+    private static Node normalizedResolved(
+            Node value,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        requireScalarIdentityShape(value);
+        if (value.isReferenceOnly()) {
+            return new Node().blueId(value.getBlueId());
         }
-        if (value == null
-                || value.getValue() == null
-                || value.getName() != null
-                || value.getDescription() != null
-                || value.getItemType() != null
-                || value.getKeyType() != null
-                || value.getValueType() != null
-                || value.getItems() != null
-                || value.getProperties() != null
-                || value.getContracts() != null
-                || value.getBlueId() != null
-                || value.getSchema() != null
-                || value.getMergePolicy() != null
-                || value.getPreviousBlueId() != null
-                || value.getPosition() != null
-                || value.getBlue() != null) {
+        return ScalarNodeIdentity.normalizedResolved(
+                value, typeIdentities);
+    }
+
+    private static void requireScalarIdentityShape(Node value) {
+        if (!Nodes.isSchemaEnumValue(value)) {
             throw new IllegalArgumentException(
                     "Schema enum entries must be scalar values, explicit "
                             + "type/value scalar nodes, or pure references.");

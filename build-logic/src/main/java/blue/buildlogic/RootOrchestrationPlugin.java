@@ -1,5 +1,7 @@
 package blue.buildlogic;
 
+import blue.buildlogic.support.CommitBoundDevelopmentCandidate;
+import blue.buildlogic.support.RepositorySourceFiles;
 import blue.buildlogic.tasks.AssembleImmutableStagedRepositoryTask;
 import blue.buildlogic.tasks.CompareArchiveReplicasTask;
 import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
@@ -12,7 +14,6 @@ import blue.buildlogic.tasks.VerifyBuildScriptShapeTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyPublishedRepositoryTask;
 import blue.buildlogic.tasks.VerifySourceReleaseArchiveTask;
-import blue.buildlogic.support.RepositorySourceFiles;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.Exec;
 import org.gradle.api.tasks.GradleBuild;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -66,6 +68,14 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "blue-contracts-core",
             "blue-conformance",
             AGGREGATE_MODULE));
+    private static final List<String> DEVELOPMENT_HANDOFF_MODULES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue-language-model",
+                    "blue-language-core",
+                    "blue-language-mapping",
+                    "blue-language-ipfs",
+                    "blue-contracts-core",
+                    AGGREGATE_MODULE));
     private static final List<String> API_BASELINE_MODULES = Collections.unmodifiableList(Arrays.asList(
             "blue-language-model",
             "blue-language-core",
@@ -194,6 +204,19 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     spec.setWorkingDir(project.getRootDir());
                     spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
                 }).getStandardOutput().getAsText().map(String::trim));
+        Provider<String> repositoryHead = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
+        }).getStandardOutput().getAsText().map(String::trim);
+        Provider<String> sourceTree = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine("git", "rev-parse", "--verify", "HEAD^{tree}");
+        }).getStandardOutput().getAsText().map(String::trim);
+        Provider<String> workingTreeStatus = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine(
+                    "git", "status", "--porcelain", "--untracked-files=all");
+        }).getStandardOutput().getAsText();
         Provider<Directory> immutableRepository = project.getLayout().dir(
                 project.getProviders().gradleProperty("stagedDependencyRepository")
                         .map(path -> project.file(path)))
@@ -213,8 +236,13 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getOutputRepository().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getExpectedArtifacts().set(project.provider(() ->
+                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                            ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getSourceCommit().set(sourceCommit);
+                            task.getSourceTree().set(sourceTree);
+                            task.getRepositoryHead().set(repositoryHead);
+                            task.getWorkingTreeStatus().set(workingTreeStatus);
                             task.getContractsSpecification().set(project.getLayout()
                                     .getProjectDirectory().file(
                                             "blue-contracts-core/src/main/resources/"
@@ -238,9 +266,12 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getRepositoryDirectory().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getExpectedArtifacts().set(project.provider(() ->
+                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                            ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
                             task.getSourceCommit().set(sourceCommit);
+                            task.getSourceTree().set(sourceTree);
                             task.getContractsSpecification().set(
                                     assembleRepository.flatMap(
                                             AssembleImmutableStagedRepositoryTask::
@@ -305,6 +336,21 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         PUBLISHED_MODULES,
                         apiUnion,
                         moduleStructure);
+        TaskProvider<Exec> verifyEmptySentinelAudit = generatedPythonCheck(
+                project,
+                "verifyEmptySentinelAudit",
+                "Verifies the exhaustive production empty-sentinel classification inventory.",
+                "blue-conformance/src/main/tools/generate_empty_sentinel_audit.py");
+        TaskProvider<Exec> verifyIdentityImpactInventory = generatedPythonCheck(
+                project,
+                "verifyIdentityImpactInventory",
+                "Verifies the exact old-to-new Language/Contracts identity migration inventory.",
+                "blue-conformance/src/main/tools/generate_identity_impact_inventory.py");
+        TaskProvider<Exec> verifyAggregateReleaseManifest = generatedPythonCheck(
+                project,
+                "verifyAggregateReleaseManifest",
+                "Verifies that the aggregate release manifest binds authoritative package inputs.",
+                "blue-conformance/src/main/tools/regenerate_aggregate_release_manifest.py");
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,
@@ -345,6 +391,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 sourceRelease.verification,
                 semanticEvidence.releaseEvidenceVerification,
                 semanticEvidence.semanticBaselineVerification,
+                verifyEmptySentinelAudit,
+                verifyIdentityImpactInventory,
+                verifyAggregateReleaseManifest,
                 verifyReceipt));
         FinalQualityOrchestration.register(
                 project,
@@ -356,6 +405,23 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 documentation);
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
+        DevelopmentVerificationOrchestration.register(project);
+    }
+
+    private static TaskProvider<Exec> generatedPythonCheck(
+            Project project,
+            String name,
+            String description,
+            String script) {
+        return project.getTasks().register(name, Exec.class, task -> {
+            task.setGroup(GROUP);
+            task.setDescription(description);
+            task.setWorkingDir(project.getRootDir());
+            task.commandLine(
+                    project.getProviders().gradleProperty("bluePythonExecutable")
+                            .orElse("python3").get(),
+                    script, "--repository-root", ".", "--check");
+        });
     }
 
     private static void configureRootJava(Project project) {

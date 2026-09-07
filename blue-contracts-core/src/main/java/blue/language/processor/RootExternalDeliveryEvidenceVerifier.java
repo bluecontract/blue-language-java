@@ -4,6 +4,7 @@ import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Objects;
 import java.util.Set;
@@ -30,17 +31,27 @@ public final class RootExternalDeliveryEvidenceVerifier
                     null,
                     null,
                     null,
+                    null,
+                    GasSchedule.contracts10(),
+                    GasSchedule.contracts10().maxProcessGas(),
                     ExternalDeliveryPlanDeriver.unavailable());
 
     private final ExternalDeliveryPlanDeriver planDeriver;
     private final ExternalPreselectionVerifier preselectionVerifier;
     private final ExternalDeliveryPlanVerifier planVerifier;
+    private final ProcessingSnapshotManager snapshotManager;
+    private final LanguageRuntimeAccess languageRuntimeAccess;
+    private final GasSchedule gasSchedule;
+    private final long gasLimit;
 
     private RootExternalDeliveryEvidenceVerifier(
             ContractLoader contractLoader,
             ProcessingSnapshotManager snapshotManager,
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter,
+            LanguageRuntimeAccess languageRuntimeAccess,
+            GasSchedule gasSchedule,
+            long gasLimit,
             ExternalDeliveryPlanDeriver planDeriver) {
         this.planDeriver = Objects.requireNonNull(
                 planDeriver, "planDeriver");
@@ -48,6 +59,16 @@ public final class RootExternalDeliveryEvidenceVerifier
                 contractLoader, snapshotManager, registry, converter);
         this.planVerifier = new ExternalDeliveryPlanVerifier(
                 preselectionVerifier);
+        this.snapshotManager = snapshotManager;
+        this.languageRuntimeAccess = languageRuntimeAccess;
+        this.gasSchedule = Objects.requireNonNull(
+                gasSchedule, "gasSchedule");
+        if (gasLimit < 0L
+                || gasLimit > gasSchedule.maxProcessGas()) {
+            throw new IllegalArgumentException(
+                    "gasLimit must be within the configured schedule");
+        }
+        this.gasLimit = gasLimit;
     }
 
     static RootExternalDeliveryEvidenceVerifier configured(
@@ -55,25 +76,38 @@ public final class RootExternalDeliveryEvidenceVerifier
             ProcessingSnapshotManager snapshotManager,
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter,
+            LanguageRuntimeAccess languageRuntimeAccess,
+            GasSchedule gasSchedule,
+            long gasLimit,
             ExternalDeliveryPlanDeriver planDeriver) {
         return new RootExternalDeliveryEvidenceVerifier(
                 Objects.requireNonNull(contractLoader, "contractLoader"),
                 snapshotManager,
                 Objects.requireNonNull(registry, "registry"),
                 Objects.requireNonNull(converter, "converter"),
+                languageRuntimeAccess,
+                Objects.requireNonNull(gasSchedule, "gasSchedule"),
+                gasLimit,
                 Objects.requireNonNull(planDeriver, "planDeriver"));
     }
 
     VerifiedExecutionEvidence deriveAndVerify(
             Node root,
             Node event,
+            String rootBlueId,
+            String eventBlueId,
             String runtimeRegistryIdentity) {
         ExternalDeliveryPlan plan = derivePlan(root, event);
         VerifiedExecutionEvidence evidence =
-                plan.bind(root, event, runtimeRegistryIdentity);
+                plan.bind(
+                        rootBlueId,
+                        eventBlueId,
+                        runtimeRegistryIdentity);
         evidence.revalidateDerived(
                 root,
                 event,
+                rootBlueId,
+                eventBlueId,
                 runtimeRegistryIdentity,
                 this,
                 plan);
@@ -85,7 +119,12 @@ public final class RootExternalDeliveryEvidenceVerifier
             Node root,
             Node event,
             VerifiedExecutionEvidence evidence) {
-        planVerifier.verify(root, event, evidence, derivePlan(root, event));
+        planVerifier.verify(
+                root,
+                event,
+                evidence,
+                derivePlan(root, event),
+                runtimeWorkSessions(event, evidence));
     }
 
     @Override
@@ -94,7 +133,12 @@ public final class RootExternalDeliveryEvidenceVerifier
             Node event,
             VerifiedExecutionEvidence evidence,
             ExternalDeliveryPlan derivedPlan) {
-        planVerifier.verify(root, event, evidence, derivedPlan);
+        planVerifier.verify(
+                root,
+                event,
+                evidence,
+                derivedPlan,
+                runtimeWorkSessions(event, evidence));
     }
 
     /** Replays a supplied plan through one exact invocation environment. */
@@ -111,6 +155,22 @@ public final class RootExternalDeliveryEvidenceVerifier
                 evidence,
                 derivedPlan,
                 runtimeWorkSessions);
+    }
+
+    private ExternalPreselectionVerifier.RuntimeWorkSessionFactory
+    runtimeWorkSessions(
+            Node exactEvent,
+            VerifiedExecutionEvidence evidence) {
+        return ProcessorInvocationServices
+                .externalPlanVerificationSessions(
+                        exactEvent,
+                        Objects.requireNonNull(
+                                evidence,
+                                "evidence").eventBlueId(),
+                        languageRuntimeAccess,
+                        snapshotManager,
+                        gasSchedule,
+                        gasLimit);
     }
 
     ExternalDeliveryPlan derivePlan(Node root, Node event) {
@@ -163,13 +223,12 @@ public final class RootExternalDeliveryEvidenceVerifier
             Set<String> requestedChannelKeys,
             boolean includeProcessEmbedded,
             Set<String> visited) {
-        return ExternalSubscriptionProjectionBuilder
-                .typeContributesToSubscriptionSurface(
-                        snapshotManager,
-                        declaredType,
-                        requestedChannelKeys,
-                        includeProcessEmbedded,
-                        visited);
+        return SubscriptionSurfaceTypeInspector.contributes(
+                snapshotManager,
+                declaredType,
+                requestedChannelKeys,
+                includeProcessEmbedded,
+                visited);
     }
 
     static boolean typeContributesToSubscriptionSurface(
@@ -180,8 +239,7 @@ public final class RootExternalDeliveryEvidenceVerifier
             boolean includeProcessEmbedded,
             Set<String> visited) {
         return contractLoader != null
-                ? ExternalSubscriptionProjectionBuilder
-                .typeContributesToSubscriptionSurface(
+                ? SubscriptionSurfaceTypeInspector.contributes(
                         contractLoader::materializeVerifiedReference,
                         declaredType,
                         requestedChannelKeys,

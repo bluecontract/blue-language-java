@@ -71,7 +71,9 @@ final class DocumentProcessorComponents {
                 converter,
                 typeResolver,
                 cachePolicy,
-                nodeProvider);
+                nodeProvider,
+                false,
+                configuration.snapshotManager);
         conformanceEngine = configuration.conformanceEngine;
         conformancePlannerOverride =
                 configuration.conformancePlannerOverride;
@@ -100,6 +102,9 @@ final class DocumentProcessorComponents {
                         snapshotManager,
                         registry,
                         converter,
+                        languageRuntimeAccess,
+                        gasSchedule,
+                        gasLimit,
                         deliveryPlanDeriver);
         configuredSurfaceValidator =
                 configuration.subscriptionSurfaceValidator;

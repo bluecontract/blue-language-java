@@ -233,8 +233,6 @@ public enum ProcessingMetricId {
     INCREMENTAL_SNAPSHOT_RESOLUTIONS("incrementalSnapshotResolutions", ObservationKind.COUNTER_DELTA),
     /** Counts canonical materializations used for initialization document IDs. */
     INITIALIZATION_DOCUMENT_ID_CANONICAL_MATERIALIZATIONS("initializationDocumentIdCanonicalMaterializations", ObservationKind.COUNTER_DELTA),
-    /** Counts content Blue ID calculations for initialization document IDs. */
-    INITIALIZATION_DOCUMENT_ID_CONTENT_BLUE_ID_CALCULATIONS("initializationDocumentIdContentBlueIdCalculations", ObservationKind.COUNTER_DELTA),
     /** Counts unchecked frozen calculations for initialization document IDs. */
     INITIALIZATION_DOCUMENT_ID_FROZEN_UNCHECKED_CALCULATIONS("initializationDocumentIdFrozenUncheckedCalculations", ObservationKind.COUNTER_DELTA),
     /** Counts node materializations used for initialization document IDs. */

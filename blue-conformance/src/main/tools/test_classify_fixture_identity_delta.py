@@ -5,6 +5,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from copy import deepcopy
+import hashlib
+import json
+import shutil
+import subprocess
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -12,6 +17,12 @@ from unittest.mock import patch
 import yaml
 
 import classify_fixture_identity_delta as classifier
+from implementation_baseline import (
+    CYCLIC_FINALIZER,
+    CYCLIC_PROOF_VERIFIER,
+    IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+    source_paths_for_role,
+)
 
 
 RESOURCE_ROOT = (
@@ -19,6 +30,7 @@ RESOURCE_ROOT = (
     / "resources"
     / "blue-contracts-closure-1.0"
 )
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 
 
 def write_yaml(root: Path, relative: str, value: object) -> None:
@@ -31,6 +43,105 @@ def write_yaml(root: Path, relative: str, value: object) -> None:
 
 
 class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.legacy_temporary = tempfile.TemporaryDirectory(prefix="classifier-legacy-")
+        cls.addClassCleanup(cls.legacy_temporary.cleanup)
+        cls.legacy_root = Path(cls.legacy_temporary.name).resolve()
+        archive = Path(__file__).parent / "migration/classify-legacy-e1aeeb9-inputs.tar.gz"
+        if hashlib.sha256(archive.read_bytes()).hexdigest() != "a03fd9eaf74880708e043658fd715f29c325a02afd9968fc991aba714df33edc":
+            raise AssertionError("historical e1aeeb9 source/fixture inputs changed")
+        with tarfile.open(archive) as source:
+            for member in source.getmembers():
+                if member.isfile():
+                    path = cls.legacy_root / member.name
+                    if not path.resolve().is_relative_to(cls.legacy_root):
+                        raise AssertionError("historical input escaped its root")
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(source.extractfile(member).read())
+        cls.legacy_resources = (cls.legacy_root
+            / "blue-conformance/src/main/resources/blue-contracts-closure-1.0")
+        cls.legacy_release = yaml.safe_load(
+            (cls.legacy_resources / "release-manifest.yaml").read_text())
+        cls.legacy_paths = tuple(entry["path"] for entry in
+            cls.legacy_release["languageDependency"]["inputImplementationBaseline"])
+
+    def test_reviewed_implementation_baseline_input_is_exact(self) -> None:
+        data = classifier.IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+        document = classifier.parse_implementation_baseline_input(data)
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SCHEMA,
+            document["schema"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SOURCE,
+            document["sourcePath"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_PROVENANCE,
+            document["provenanceCommit"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SHA256,
+            hashlib.sha256(data).hexdigest(),
+        )
+        self.assertEqual(
+            classifier.APPROVED_IMPLEMENTATION_BASELINE_BEFORE,
+            tuple(
+                (entry["path"], entry["sha256"])
+                for entry in document["files"]
+            ),
+        )
+
+    def test_reviewed_implementation_baseline_input_fails_closed(self) -> None:
+        data = classifier.IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+        valid = json.loads(data)
+
+        extra = deepcopy(valid)
+        extra["extra"] = True
+        with self.assertRaisesRegex(ValueError, "exact reviewed shape"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(extra).encode("utf-8")
+            )
+
+        missing = deepcopy(valid)
+        missing["files"].pop()
+        with self.assertRaisesRegex(ValueError, "exactly 16 files"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(missing).encode("utf-8")
+            )
+
+        duplicate_path = deepcopy(valid)
+        duplicate_path["files"][1]["path"] = duplicate_path["files"][0][
+            "path"
+        ]
+        with self.assertRaisesRegex(ValueError, "unique and non-empty"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(duplicate_path).encode("utf-8")
+            )
+
+        malformed_digest = deepcopy(valid)
+        malformed_digest["files"][0]["sha256"] = "not-a-digest"
+        with self.assertRaisesRegex(ValueError, "lowercase 64-hex"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(malformed_digest).encode("utf-8")
+            )
+
+        reordered = deepcopy(valid)
+        reordered["files"].reverse()
+        with self.assertRaisesRegex(ValueError, "reviewed input"):
+            classifier.parse_implementation_baseline_input(
+                (json.dumps(reordered, indent=2) + "\n").encode("utf-8")
+            )
+
+        duplicate_key = data.replace(
+            b'  "schema": ',
+            b'  "schema": "duplicate",\n  "schema": ',
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate key"):
+            classifier.parse_implementation_baseline_input(duplicate_key)
 
     def classify_pair(
         self, relative: str, before_value: object, after_value: object
@@ -320,7 +431,7 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
     def test_exact_cevo_fixtures_are_allowed_and_semantic_mutations_fail(self) -> None:
         samples = tuple(sorted(classifier.APPROVED_CEVO_FIXTURE_IDENTITIES))
         for relative in samples:
-            source = RESOURCE_ROOT / relative
+            source = self.legacy_resources / relative
             with self.subTest(relative=relative, mutation="none"):
                 row = classifier.classify_added_file(relative, source)
                 self.assertFalse(row["unexpected"])
@@ -560,17 +671,30 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
     def test_release_manifest_accepts_only_the_reviewed_specification_rebind(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:
+        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name, patch.object(
+            classifier, "IMPLEMENTATION_BASELINE_SOURCE_PATHS", self.legacy_paths
+        ):
             package_root = Path(name)
             constructors = package_root / "identity-constructors.yaml"
             constructors.write_text("constructors: reviewed\n", encoding="utf-8")
             old_baseline = [
-                {"path": f"source-{index}", "sha256": "unchanged"}
-                for index in range(13)
+                {"path": path, "sha256": digest}
+                for path, digest in (
+                    classifier.APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+                )
             ]
+            current_baseline = deepcopy(
+                self.legacy_release["languageDependency"]["inputImplementationBaseline"]
+            )
             before = {
                 "specificationDocument": {"sha256": "old-specification"},
                 "languageDependency": {
+                    **{
+                        field: transition[0]
+                        for field, transition in (
+                            classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()
+                        )
+                    },
                     "inputImplementationBaseline": old_baseline,
                 },
                 "contractsRegistry": {"packageIdentity": "sha256:registry"},
@@ -581,9 +705,13 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
                     "vectorCount": 1,
                     "fixtureCount": 1,
                 },
+                "sourceArchiveBaseline": deepcopy(
+                    classifier.APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE
+                ),
                 "releaseIdentity": "sha256:old-release",
             }
             after = deepcopy(before)
+            after.pop("sourceArchiveBaseline")
             fixture_manifest = {
                 "packageIdentity": "sha256:new-fixtures",
                 "vectorCount": 2,
@@ -599,9 +727,13 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
             after["identityConstructors"]["sha256"] = classifier.sha256(
                 constructors
             )
-            after["languageDependency"]["inputImplementationBaseline"][12][
-                "sha256"
-            ] = "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"
+            after["languageDependency"]["inputImplementationBaseline"] = (
+                current_baseline
+            )
+            for field, transition in (
+                classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()
+            ):
+                after["languageDependency"][field] = transition[1]
             after["specificationDocument"]["sha256"] = (
                 classifier.APPROVED_CONTRACTS_SPECIFICATION_SHA256
             )
@@ -620,21 +752,173 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
                 )
             )
 
-            tampered = deepcopy(after)
-            tampered["specificationDocument"]["sha256"] = "tampered"
-            tampered["releaseIdentity"] = None
-            tampered["releaseIdentity"] = classifier.package_identity(
-                tampered, "releaseIdentity"
-            )
-            self.assertFalse(
-                classifier.approved_release_manifest_transition(
-                    package_root,
-                    before,
-                    tampered,
-                    fixture_manifest,
-                    registry_manifest,
+            def assert_rejected(
+                candidate_before: dict[str, object],
+                candidate_after: dict[str, object],
+            ) -> None:
+                candidate_after["releaseIdentity"] = None
+                candidate_after["releaseIdentity"] = classifier.package_identity(
+                    candidate_after, "releaseIdentity"
                 )
+                self.assertFalse(
+                    classifier.approved_release_manifest_transition(
+                        package_root,
+                        candidate_before,
+                        candidate_after,
+                        fixture_manifest,
+                        registry_manifest,
+                    )
+                )
+
+            tampered_cases = {
+                "contracts specification": lambda prior, candidate: candidate[
+                    "specificationDocument"
+                ].update({"sha256": "0" * 64}),  # type: ignore[union-attr]
+                "language specification": lambda prior, candidate: candidate[
+                    "languageDependency"
+                ].update({"specificationSha256": "0" * 64}),  # type: ignore[union-attr]
+                "current digest": lambda prior, candidate: candidate[
+                    "languageDependency"
+                ]["inputImplementationBaseline"][0].update(  # type: ignore[index,union-attr]
+                    {"sha256": "0" * 64}
+                ),
+                "current order": lambda prior, candidate: candidate[
+                    "languageDependency"
+                ]["inputImplementationBaseline"].reverse(),  # type: ignore[index,union-attr]
+                "current extra path": lambda prior, candidate: candidate[
+                    "languageDependency"
+                ]["inputImplementationBaseline"].append(  # type: ignore[index,union-attr]
+                    {"path": "unreviewed/Owner.java", "sha256": "0" * 64}
+                ),
+                "prior digest": lambda prior, candidate: prior[
+                    "languageDependency"
+                ]["inputImplementationBaseline"][0].update(  # type: ignore[index,union-attr]
+                    {"sha256": "0" * 64}
+                ),
+                "prior order": lambda prior, candidate: prior[
+                    "languageDependency"
+                ]["inputImplementationBaseline"].reverse(),  # type: ignore[index,union-attr]
+                "retained source provenance": lambda prior, candidate: candidate.update(
+                    {
+                        "sourceArchiveBaseline": deepcopy(
+                            classifier.APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE
+                        )
+                    }
+                ),
+            }
+            for mutation, mutate in tampered_cases.items():
+                with self.subTest(mutation=mutation):
+                    candidate_before = deepcopy(before)
+                    candidate_after = deepcopy(after)
+                    mutate(candidate_before, candidate_after)
+                    assert_rejected(candidate_before, candidate_after)
+
+    def test_approved_release_source_pins_match_current_sources(
+        self,
+    ) -> None:
+        self.assert_release_source_pins(
+            self.legacy_root,
+            classifier.APPROVED_CONTRACTS_SPECIFICATION_SHA256,
+            {field: transition[1] for field, transition in
+             classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()},
+            classifier.APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY,
+            self.legacy_paths,
+        )
+        current = yaml.safe_load((RESOURCE_ROOT / "release-manifest.yaml").read_text())
+        self.assert_release_source_pins(
+            REPOSITORY_ROOT, current["specificationDocument"]["sha256"],
+            current["languageDependency"],
+            classifier.implementation_baseline_aggregate_identity(
+                IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+                {entry["path"]: entry["sha256"] for entry in
+                 current["languageDependency"]["inputImplementationBaseline"]},
+            ),
+            IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+        )
+
+    def assert_release_source_pins(
+        self, source_root: Path, contracts_digest: str,
+        dependency: dict[str, object], aggregate_identity: str,
+        source_paths: tuple[str, ...],
+    ) -> None:
+        contracts_specification = (
+            source_root
+            / "blue-contracts-core/src/main/resources/specifications/"
+            "blue-contracts-and-processor-specification-1.0.md"
+        )
+        self.assertEqual(
+            contracts_digest,
+            classifier.sha256(contracts_specification),
+        )
+        language_specification = (
+            source_root
+            / "blue-language-core/src/main/resources/specifications/"
+            "blue-language-specification-1.0.md"
+        )
+        language_digest = classifier.sha256(language_specification)
+        self.assertEqual(
+            dependency["specificationSha256"],
+            language_digest,
+        )
+        baseline_by_path = {
+            path: {
+                "path": path,
+                "sha256": classifier.sha256(source_root / path),
+            }
+            for path in source_paths
+        }
+        aggregate_input = {
+            "domain": classifier.IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN,
+            "files": [
+                baseline_by_path[path]
+                for path in source_paths
+            ],
+        }
+        independently_calculated_aggregate = "sha256:" + hashlib.sha256(
+            classifier.jcs_dumps(aggregate_input)
+        ).hexdigest()
+        self.assertEqual(
+            aggregate_identity,
+            independently_calculated_aggregate,
+        )
+        self.assertEqual(
+            independently_calculated_aggregate,
+            classifier.implementation_baseline_aggregate_identity(
+                source_paths,
+                {path: entry["sha256"] for path, entry in baseline_by_path.items()},
+            ),
+        )
+        identity_expectations = (
+            (
+                "cyclicSetFinalizerBaselineIdentity",
+                "blue-language-cyclic-set-finalizer-baseline/1.0",
+                tuple(p for p in source_paths if p.split("/")[0] in {"blue-language-core", "blue-language-model"}),
+            ),
+            (
+                "cyclicSetProofVerifierBaselineIdentity",
+                "blue-language-cyclic-set-proof-verifier-baseline/1.0",
+                tuple(p for p in source_paths if p.split("/")[0] in {"blue-language-core", "blue-language-model"}),
+            ),
+        )
+        for field, domain, paths in identity_expectations:
+            identity_input = {
+                "domain": domain,
+                "value": {
+                    "languageSpecificationSha256": language_digest,
+                    "files": [baseline_by_path[path] for path in paths],
+                },
+            }
+            actual_identity = "sha256:" + hashlib.sha256(
+                classifier.jcs_dumps(identity_input)
+            ).hexdigest()
+            self.assertEqual(
+                dependency[field],
+                actual_identity,
             )
+        self.assertEqual(
+            source_paths,
+            tuple(baseline_by_path),
+        )
 
     def test_structurally_equal_yaml_is_formatting_only(self) -> None:
         with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:

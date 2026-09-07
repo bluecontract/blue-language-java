@@ -1,0 +1,16 @@
+name: Operation patterns
+contracts:
+  operation:
+    request:
+      type: Dictionary
+      schema:
+        required: true
+      text:
+        type: Text
+        schema:
+          required: true
+          minLength: 2
+    event:
+      type: Text
+      schema:
+        enum: [done]

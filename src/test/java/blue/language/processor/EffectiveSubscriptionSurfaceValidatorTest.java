@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -150,8 +151,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                 Arrays.asList(10, "timeline", 2));
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -161,6 +163,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         GasSchedule.contracts10())
                                 .committingInterval(order, 4L)
                                 .build());
+        }
 
         // then
         assertEquals(1, delta.removed().size());
@@ -194,8 +197,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         originalStart);
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -208,6 +212,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                 retained))
                                 .committingInterval(current, 7L)
                                 .build());
+        }
         SubscriptionDelta.Entry retired =
                 delta.removed().get(0);
         SubscriptionDelta.Entry activated =
@@ -235,7 +240,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Node channel = scriptedChannel("topic");
         Node before = new Node().contracts(
                 new Node().properties("incoming", channel));
-        Node after = new Node().contracts(new Node());
+        Node after = new Node().contracts(Nodes.emptyObject());
         ExternalOrderKey originalStart =
                 ExternalOrderKey.of(
                         Arrays.asList(1, "timeline", 0));
@@ -339,7 +344,6 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                         0)),
                                         2L)
                                 .build());
-
         // then
         assertTrue(delta.added().isEmpty());
         assertEquals(1, delta.removed().size());
@@ -368,8 +372,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         Arrays.asList(1, "timeline", 0));
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -393,6 +398,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                         0)),
                                         2L)
                                 .build());
+        }
 
         // then
         assertFalse(delta.isEmpty());
@@ -403,7 +409,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         // given
         Node child = new Node()
                 .blueId("same-exact-scope")
-                .contracts(new Node());
+                .contracts(Nodes.emptyObject());
         Node root = new Node()
                 .blueId("same-exact-scope")
                 .properties("child", child)
@@ -447,6 +453,14 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         blue.registerContractProcessor(processor);
         return blue;
+    }
+
+    private SubscriptionSurfaceValidator directValidator(Blue blue) {
+        return DirectSubscriptionSurfaceValidator.configured(
+                null,
+                blue.getDocumentProcessor().snapshotManager(),
+                null,
+                null);
     }
 
     private EffectiveTypes effectiveTypes(

@@ -12,6 +12,7 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderEvidenceVerifier;
@@ -188,7 +189,8 @@ class TrustedProviderResolutionTest {
         // given
         Blue blue = new Blue();
         Node source = new Node()
-                .blue(new Node().properties("imports", new Node()))
+                .blue(new Node().properties(
+                        "imports", Nodes.emptyObject()))
                 .properties("payload", new Node().value("source document"));
         String requestedBlueId = blue.calculateSourceDocumentBlueId(source);
         SourceProviderEnvironment exact = new SourceProviderEnvironment(

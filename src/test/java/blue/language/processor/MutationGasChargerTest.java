@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ final class MutationGasChargerTest {
             FrozenNode resulting;
             try (Blue blue = new Blue()) {
                 prior = FrozenNode.fromNode(
-                        blue.canonicalize(new Node()));
+                        blue.canonicalize(Nodes.emptyObject()));
                 resulting = FrozenNode.fromNode(
                         blue.canonicalize(
                                 new Node().properties(

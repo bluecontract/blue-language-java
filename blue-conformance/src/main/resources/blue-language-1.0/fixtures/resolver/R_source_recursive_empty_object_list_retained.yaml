@@ -1,0 +1,15 @@
+id: R_source_recursive_empty_object_list_retained
+category: Resolution
+operation: preprocess
+description: a Source list object whose null members are omitted remains an exact empty object rather than becoming a placeholder
+source:
+  items:
+  - A
+  - x: null
+  - B
+expectedPreprocessed:
+  items:
+  - value: A
+  - {}
+  - value: B
+expectedIdempotent: true

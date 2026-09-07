@@ -1,11 +1,12 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
-import blue.language.identity.NodeToBlueIdInput;
+import blue.language.model.Schema;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -55,7 +56,8 @@ final class ProtectedStateGuard {
                 wholeEmbeddedChildPatches,
                 null,
                 false,
-                null);
+                null,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     static void verifyUnchanged(FrozenNode beforeCanonical,
@@ -72,7 +74,8 @@ final class ProtectedStateGuard {
                 wholeEmbeddedChildPatches,
                 evidenceManager,
                 true,
-                null);
+                null,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /**
@@ -95,8 +98,28 @@ final class ProtectedStateGuard {
                 afterResolved,
                 wholeEmbeddedChildPatches,
                 evidenceManager,
+                participatingScopePaths,
+                CanonicalTypeIdentityLookup.incomplete());
+    }
+
+    static void verifyUnchanged(FrozenNode beforeCanonical,
+                                FrozenNode beforeResolved,
+                                FrozenNode afterCanonical,
+                                FrozenNode afterResolved,
+                                Set<String> wholeEmbeddedChildPatches,
+                                ProcessingSnapshotManager evidenceManager,
+                                Set<String> participatingScopePaths,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+        verifyUnchanged(
+                beforeCanonical,
+                beforeResolved,
+                afterCanonical,
+                afterResolved,
+                wholeEmbeddedChildPatches,
+                evidenceManager,
                 true,
-                participatingScopePaths);
+                participatingScopePaths,
+                typeIdentities);
     }
 
     private static void verifyUnchanged(FrozenNode beforeCanonical,
@@ -106,31 +129,36 @@ final class ProtectedStateGuard {
                                         Set<String> wholeEmbeddedChildPatches,
                                         ProcessingSnapshotManager evidenceManager,
                                         boolean requireExactEvidence,
-                                        Set<String> fixedParticipatingScopes) {
+                                        Set<String> fixedParticipatingScopes,
+                                        CanonicalTypeIdentityLookup typeIdentities) {
         Set<String> participatingScopes = fixedParticipatingScopes != null
                 ? normalizedScopes(fixedParticipatingScopes)
                 : participatingScopes(
                         beforeResolved,
                         evidenceManager,
-                        requireExactEvidence);
+                        requireExactEvidence,
+                        typeIdentities);
         if (fixedParticipatingScopes == null) {
             participatingScopes.addAll(participatingScopes(
                     afterResolved,
                     evidenceManager,
-                    requireExactEvidence));
+                    requireExactEvidence,
+                    typeIdentities));
         }
         Map<String, String> before = snapshot(
                 beforeCanonical,
                 beforeResolved,
                 participatingScopes,
                 evidenceManager,
-                requireExactEvidence);
+                requireExactEvidence,
+                typeIdentities);
         Map<String, String> after = snapshot(
                 afterCanonical,
                 afterResolved,
                 participatingScopes,
                 evidenceManager,
-                requireExactEvidence);
+                requireExactEvidence,
+                typeIdentities);
         verifyEqual(before, after, wholeEmbeddedChildPatches);
     }
 
@@ -150,13 +178,27 @@ final class ProtectedStateGuard {
     static void verifyEffectiveUnchanged(FrozenNode beforeResolved,
                                          FrozenNode afterResolved) {
         Set<String> participatingScopes = participatingScopes(
-                beforeResolved, null, false);
+                beforeResolved,
+                null,
+                false,
+                CanonicalTypeIdentityLookup.incomplete());
         participatingScopes.addAll(participatingScopes(
-                afterResolved, null, false));
+                afterResolved,
+                null,
+                false,
+                CanonicalTypeIdentityLookup.incomplete()));
         Map<String, String> before = effectiveSnapshot(
-                beforeResolved, participatingScopes, null, false);
+                beforeResolved,
+                participatingScopes,
+                null,
+                false,
+                CanonicalTypeIdentityLookup.incomplete());
         Map<String, String> after = effectiveSnapshot(
-                afterResolved, participatingScopes, null, false);
+                afterResolved,
+                participatingScopes,
+                null,
+                false,
+                CanonicalTypeIdentityLookup.incomplete());
         verifyEqual(before, after);
     }
 
@@ -234,7 +276,8 @@ final class ProtectedStateGuard {
             FrozenNode resolved,
             Set<String> scopes,
             ProcessingSnapshotManager evidenceManager,
-            boolean requireExactEvidence) {
+            boolean requireExactEvidence,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Map<String, String> result = new LinkedHashMap<>();
         for (String scope : scopes) {
             FrozenNode resolvedScope = resolved != null
@@ -247,7 +290,8 @@ final class ProtectedStateGuard {
                             evidenceManager,
                             requireExactEvidence),
                     scope,
-                    result);
+                    result,
+                    typeIdentities);
         }
         return result;
     }
@@ -256,7 +300,8 @@ final class ProtectedStateGuard {
                                                 FrozenNode resolved,
                                                 Set<String> scopes,
                                                 ProcessingSnapshotManager evidenceManager,
-                                                boolean requireExactEvidence) {
+                                                boolean requireExactEvidence,
+                                                CanonicalTypeIdentityLookup typeIdentities) {
         Map<String, String> result = new LinkedHashMap<>();
         for (String scope : scopes) {
             FrozenNode canonicalScope = canonical != null
@@ -278,7 +323,8 @@ final class ProtectedStateGuard {
                             evidenceManager,
                             requireExactEvidence),
                     scope,
-                    result);
+                    result,
+                    typeIdentities);
         }
         return result;
     }
@@ -292,7 +338,8 @@ final class ProtectedStateGuard {
     private static Set<String> participatingScopes(
             FrozenNode resolvedRoot,
             ProcessingSnapshotManager evidenceManager,
-            boolean requireExactEvidence) {
+            boolean requireExactEvidence,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Set<String> result = new LinkedHashSet<>();
         result.add("/");
         if (resolvedRoot == null) {
@@ -309,10 +356,15 @@ final class ProtectedStateGuard {
                     requireExactEvidence);
             EmbeddedScopePlan plan = requireExactEvidence
                     ? ProcessingSnapshotBootstrap.embeddedScopePlan(
-                            scopeNode, scope, evidenceManager)
+                            scopeNode,
+                            scope,
+                            evidenceManager,
+                            typeIdentities)
                     : ProcessingSnapshotBootstrap
                             .embeddedScopePlanIfAvailable(
-                                    scopeNode, scope);
+                                    scopeNode,
+                                    scope,
+                                    typeIdentities);
             if (plan == null) {
                 continue;
             }
@@ -395,7 +447,8 @@ final class ProtectedStateGuard {
 
     private static void collectEffective(FrozenNode node,
                                          String path,
-                                         Map<String, String> result) {
+                                         Map<String, String> result,
+                                         CanonicalTypeIdentityLookup typeIdentities) {
         if (node == null) {
             return;
         }
@@ -406,7 +459,8 @@ final class ProtectedStateGuard {
                             path,
                             ProcessorContractConstants.KEY_GENERALIZATION),
                     contracts.property(
-                            ProcessorContractConstants.KEY_GENERALIZATION));
+                            ProcessorContractConstants.KEY_GENERALIZATION),
+                    typeIdentities);
         }
     }
 
@@ -420,12 +474,93 @@ final class ProtectedStateGuard {
 
     private static void putEffectiveIdentity(Map<String, String> result,
                                              String path,
-                                             FrozenNode node) {
+                                             FrozenNode node,
+                                             CanonicalTypeIdentityLookup typeIdentities) {
         if (node != null) {
             Node normalized = node.toNode();
-            NodeToBlueIdInput.stripResolvedBlueIdMetadata(normalized);
+            canonicalizeIdentityInput(normalized, typeIdentities);
             result.put(path,
                     FrozenNode.fromResolvedNode(normalized).blueId());
+        }
+    }
+
+    private static void canonicalizeIdentityInput(
+            Node root,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Deque<Node> pending = new ArrayDeque<>();
+        Set<Node> visited = Collections.newSetFromMap(
+                new java.util.IdentityHashMap<Node, Boolean>());
+        pending.push(root);
+        while (!pending.isEmpty()) {
+            Node node = pending.pop();
+            if (node == null || !visited.add(node)) {
+                continue;
+            }
+            if (node.getBlueId() != null && !node.isReferenceOnly()) {
+                node.blueId(null);
+            }
+            node.type(canonicalTypeReference(
+                    node.getType(), typeIdentities));
+            node.itemType(canonicalTypeReference(
+                    node.getItemType(), typeIdentities));
+            node.keyType(canonicalTypeReference(
+                    node.getKeyType(), typeIdentities));
+            node.valueType(canonicalTypeReference(
+                    node.getValueType(), typeIdentities));
+            push(pending, node.getBlue());
+            push(pending, node.getContracts());
+            if (node.getItems() != null) {
+                for (Node item : node.getItems()) {
+                    push(pending, item);
+                }
+            }
+            if (node.getProperties() != null) {
+                for (Node property : node.getProperties().values()) {
+                    push(pending, property);
+                }
+            }
+            pushSchema(pending, node.getSchema());
+        }
+    }
+
+    private static Node canonicalTypeReference(
+            Node type,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return type == null
+                ? null
+                : new Node().blueId(
+                        typeIdentities.requireCanonicalTypeBlueId(type));
+    }
+
+    private static void push(Deque<Node> pending, Node node) {
+        if (node != null) {
+            pending.push(node);
+        }
+    }
+
+    private static void pushSchema(
+            Deque<Node> pending,
+            Schema schema) {
+        if (schema == null) {
+            return;
+        }
+        push(pending, schema.getRequired());
+        push(pending, schema.getMinLength());
+        push(pending, schema.getMaxLength());
+        push(pending, schema.getMinimum());
+        push(pending, schema.getMaximum());
+        push(pending, schema.getExclusiveMinimum());
+        push(pending, schema.getExclusiveMaximum());
+        push(pending, schema.getMultipleOf());
+        push(pending, schema.getMinItems());
+        push(pending, schema.getMaxItems());
+        push(pending, schema.getUniqueItems());
+        push(pending, schema.getMinFields());
+        push(pending, schema.getMaxFields());
+        if (schema.getEnum() != null) {
+            for (Node value : schema.getEnum()) {
+                push(pending, value);
+            }
         }
     }
 

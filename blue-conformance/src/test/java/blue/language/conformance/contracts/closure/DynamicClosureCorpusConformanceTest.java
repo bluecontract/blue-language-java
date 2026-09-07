@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 final class DynamicClosureCorpusConformanceTest {
 
-    private static final int FIXTURE_COUNT = 93;
+    private static final int FIXTURE_COUNT = 98;
     private static final int LIMIT_MICRO_COUNT = 18;
     private static final String REPORT_PATH_PROPERTY =
             "blue.contracts.closureDiscrepancyReport";
@@ -48,15 +48,22 @@ final class DynamicClosureCorpusConformanceTest {
     private final Map<String, DiscrepancyRow> rows =
             new ConcurrentHashMap<String, DiscrepancyRow>();
     private ClosureFixtureCorpusSource source;
+    private List<ClosureFixtureInventory.Entry> selected;
 
     @TestFactory
     List<DynamicTest> executesEveryFixtureAsAnIndependentCase() {
-        source = ClosureFixtureCorpusSource.open();
         rows.clear();
+        if (System.getProperty("blue.closure.cases") != null
+                && System.getProperty(REPORT_PATH_PROPERTY) == null) {
+            throw new IllegalArgumentException("Selected closure execution requires an isolated discrepancy report path");
+        }
         deletePriorReport();
+        source = ClosureFixtureCorpusSource.open();
+        selected = ClosureFixtureSelection.select(source, System.getProperty("blue.closure.cases"));
         List<DynamicTest> tests = new ArrayList<DynamicTest>();
         int unsupported = 0;
-        for (ClosureFixtureInventory.Entry entry : source.entries()) {
+        for (ClosureFixtureInventory.Entry entry : selected) {
+            System.out.println("SELECTED CLOSURE " + entry.id());
             boolean limitMicro = "limit-micro".equals(entry.operation());
             if (limitMicro) {
                 unsupported++;
@@ -66,12 +73,13 @@ final class DynamicClosureCorpusConformanceTest {
                     : entry.operation();
             tests.add(dynamicTest(
                     entry.id() + " [" + disposition + "]",
-                    () -> record(executeFixture(source, entry))));
+                    () -> {
+                        record(executeFixture(source, entry));
+                        System.out.println("EXECUTED CLOSURE " + entry.id() + " PASS");
+                    }));
         }
 
-        assertEquals(FIXTURE_COUNT, tests.size(), "closure fixture cases");
-        assertEquals(LIMIT_MICRO_COUNT, unsupported,
-                "unsupported limit-micro cases");
+        assertEquals(selected.size(), tests.size(), "selected closure fixture cases");
         return tests;
     }
 
@@ -81,12 +89,13 @@ final class DynamicClosureCorpusConformanceTest {
         assertNotNull(source, "closure fixture source");
         assertEquals(FIXTURE_COUNT, source.entries().size(),
                 "closure fixture inventory");
-        assertEquals(FIXTURE_COUNT, rows.size(),
+        assertNotNull(selected, "valid selection");
+        assertEquals(selected.size(), rows.size(),
                 "completed discrepancy rows");
 
         ArrayNode output = JsonNodeFactory.instance.arrayNode();
         int limitMicros = 0;
-        for (ClosureFixtureInventory.Entry entry : source.entries()) {
+        for (ClosureFixtureInventory.Entry entry : selected) {
             DiscrepancyRow row = rows.get(entry.id());
             assertNotNull(row, entry.id() + " discrepancy row");
             assertEquals(entry.id(), row.fixtureId, "fixtureId");
@@ -115,8 +124,8 @@ final class DynamicClosureCorpusConformanceTest {
             assertEquals(8, encoded.size(), entry.id() + " report fields");
             output.add(encoded);
         }
-        assertEquals(FIXTURE_COUNT, output.size(), "discrepancy report rows");
-        assertEquals(LIMIT_MICRO_COUNT, limitMicros,
+        assertEquals(selected.size(), output.size(), "discrepancy report rows");
+        assertEquals(selected.stream().filter(entry -> "limit-micro".equals(entry.operation())).count(), (long) limitMicros,
                 "limit-micro discrepancy rows");
 
         Path report = reportPath();

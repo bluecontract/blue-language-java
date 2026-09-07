@@ -11,16 +11,21 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +38,47 @@ class DocumentProcessorResolvedSnapshotParityTest {
             DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(1, "snapshot-parity"));
+
+    @Test
+    void shouldReturnSourceInputWhenSourceOnlySnapshotEvidenceIsInvalid() {
+        // given
+        Node source = root();
+        Node event = event();
+        ResolvedSnapshot sourceOnly = ResolvedSnapshot.withDeferredSource(
+                FrozenNode.fromResolvedNode(source),
+                FrozenNode.fromResolvedNode(source),
+                CanonicalTypeIdentityLookup.incomplete());
+        DocumentProcessor processor = processor(
+                plan(source, event), FailureMode.SUCCESS, null);
+        VerifiedExecutionEvidence forged =
+                VerifiedExecutionEvidence.builder(
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        new Node().properties(
+                                                "different",
+                                                new Node().value(true))),
+                                DirectBlueIdCalculator.calculateBlueId(event))
+                        .revisions(0L, 0L)
+                        .runtimeRegistryIdentity(
+                                RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)
+                        .eventOrderKey(EVENT_ORDER)
+                        .build();
+
+        // when
+        ProcessingDebugResult result = processor.processDocumentWithTrace(
+                sourceOnly,
+                event,
+                forged);
+
+        // then
+        assertFalse(sourceOnly.hasCanonicalIdentity());
+        assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.processResult().status());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(source),
+                DirectBlueIdCalculator.calculateBlueId(
+                        result.processResult().document()));
+        assertSame(sourceOnly, result.resultingSnapshot());
+    }
 
     @Test
     void shouldVerifySnapshotAndNodeTraceEntriesAreEquivalentForSuccessAndRuntimeFailures() {
@@ -60,7 +106,13 @@ class DocumentProcessorResolvedSnapshotParityTest {
             assertEquals(
                     mode.expectedStatus,
                     snapshotResult.processResult().status(),
-                    "mode=" + mode);
+                    "mode=" + mode
+                            + ", category="
+                            + diagnosticCategory(
+                                    snapshotResult.processResult())
+                            + ", diagnostic="
+                            + diagnosticMessage(
+                                    snapshotResult.processResult()));
             assertEquals(
                     mode.expectedCategory,
                     diagnosticCategory(snapshotResult.processResult()),
@@ -638,9 +690,59 @@ class DocumentProcessorResolvedSnapshotParityTest {
             implements ProcessingSnapshotManager {
         INSTANCE;
 
+        private static final CanonicalTypeIdentityLookup
+                COMPLETE_PURE_REFERENCE_EVIDENCE =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType) {
+                        return CanonicalTypeIdentityLookup.incomplete()
+                                .findCanonicalTypeIdentityEvidence(
+                                        completedType);
+                    }
+                };
+
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
-            return snapshot(document);
+            FrozenNode canonical = FrozenNode.fromNode(document);
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    canonical,
+                    FrozenNode.fromResolvedNode(document),
+                    COMPLETE_PURE_REFERENCE_EVIDENCE);
+        }
+
+        @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            // The identity-only fixture preserves all nodes without resolver interpretation.
+            return preserving(canonicalRoot.toNode());
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            return fromDocument(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return preserving(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return preserving(document);
         }
 
         @Override
@@ -650,11 +752,20 @@ class DocumentProcessorResolvedSnapshotParityTest {
             CanonicalPatchResult patched =
                     new CanonicalOverlayPatchEngine(
                             snapshot.frozenCanonicalRoot()).apply(patch);
-            return new ResolvedSnapshot(
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
                     patched.root(),
                     FrozenNode.fromResolvedNode(
                             patched.root().toNode()),
-                    patched.blueId());
+                    COMPLETE_PURE_REFERENCE_EVIDENCE);
+        }
+
+        private ResolvedSnapshot preserving(Node document) {
+            FrozenNode source = FrozenNode.fromNode(document);
+            return ResolvedSnapshot.withSource(
+                    source,
+                    FrozenNode.fromResolvedNode(document),
+                    COMPLETE_PURE_REFERENCE_EVIDENCE,
+                    false);
         }
     }
 }

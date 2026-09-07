@@ -9,6 +9,10 @@ input:
   root:
     value: 0
     contracts:
+      generalization:
+        type:
+          blueId: EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP
+        defaultMode: nearest-valid-ancestor
       in:
         type:
           blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
@@ -19,7 +23,7 @@ input:
         checkpointDomain: domain-v1
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
         result:

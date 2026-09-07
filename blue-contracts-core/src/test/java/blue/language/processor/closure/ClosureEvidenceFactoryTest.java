@@ -23,11 +23,11 @@ final class ClosureEvidenceFactoryTest {
     private static final String SHA_B =
             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private static final String REGISTRY =
-            "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1";
+            "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4";
     private static final String BLUE_A =
-            "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
+            "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ";
     private static final String BLUE_B =
-            "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
+            "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
 
     @Test
     void shouldDeriveACompleteHostInvocationWithoutCallerHashing() {
@@ -98,7 +98,8 @@ final class ClosureEvidenceFactoryTest {
                             environment);
 
             ClosureInvocationVerifier.Verification verified =
-                    ClosureInvocationVerifier.verify(invocation);
+                    ClosureInvocationVerifier.verify(
+                            invocation, null);
             assertEquals(invocation.invocationIdentity(),
                     verified.invocationIdentity());
             assertEquals(snapshot.closureIdentity(),

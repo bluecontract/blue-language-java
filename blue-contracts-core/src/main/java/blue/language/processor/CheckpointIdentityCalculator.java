@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.codec.jackson.UncheckedObjectMapper;
@@ -11,10 +12,13 @@ import org.erdtman.jcs.JsonCanonicalizer;
 /**
  * Establishes the deterministic identity used for checkpoint newness.
  *
- * <p>Exact BlueId input is preferred. When a
+ * <p>Exact BlueId input is preferred when the supplied Source contains no
+ * materialized reserved type position. When a
  * {@link LanguageRuntimeAccess} context is
- * available, authored values may fall back to semantic canonicalization and
- * finally to the processor's canonical signature. Each path is timed
+ * available, authored values with inline types are semantically canonicalized
+ * before direct hashing so inline and reference spellings have one checkpoint
+ * identity. Other authored values may fall back to semantic canonicalization
+ * and finally to the processor's canonical signature. Each path is timed
  * independently for production diagnostics.</p>
  */
 final class CheckpointIdentityCalculator {
@@ -43,16 +47,41 @@ final class CheckpointIdentityCalculator {
             return null;
         }
         /*
-         * Processor events may be captured from a resolved snapshot, where a
-         * nominal type carries both its requested BlueId and materialized
-         * definition. Project that trusted view back to valid Source form so
-         * checkpoint identity never depends on resolved representation.
+         * Event admission owns Source. Resolver-completed effects must have
+         * been projected back to Source before reaching this boundary. A raw
+         * BlueId beside authored content is metadata, not proof that the body
+         * came from that reference, so retain the body and remove the
+         * non-reference annotation.
          */
-        Node sourceProjection = event.clone();
-        MaterializationProvenance.clear(sourceProjection);
+        Node sourceProjection = NodeToBlueIdInput
+                .stripResolvedBlueIdMetadata(event.clone());
         ProcessingObserver observer = metrics != null
                 ? metrics
                 : NoOpProcessingObserver.INSTANCE;
+        if (CanonicalIdentityEvidence.requiresEffectiveTypeIdentity(
+                sourceProjection)) {
+            if (languageRuntime == null) {
+                throw new IllegalStateException(
+                        "Checkpoint event identity for Source containing "
+                                + "inline types requires a Blue "
+                                + "canonicalization context");
+            }
+            long contentStart = System.nanoTime();
+            try {
+                return languageRuntime.calculateSourceDocumentBlueId(
+                        sourceProjection.clone());
+            } catch (RuntimeException semanticFailure) {
+                throw new IllegalStateException(
+                        "Checkpoint event identity requires successful Blue "
+                                + "canonicalization for Source containing "
+                                + "inline types",
+                        semanticFailure);
+            } finally {
+                ProcessingObservations.record(observer,
+                        ProcessingMetricId.CHECKPOINT_CONTENT_BLUE_ID_NANOS,
+                        System.nanoTime() - contentStart);
+            }
+        }
         long directStart = System.nanoTime();
         try {
             String identity = DirectBlueIdCalculator.calculateBlueId(

@@ -4,13 +4,23 @@ import java.util.Objects;
 
 /**
  * Exact preprocessing environment bound to Source-document provider evidence.
+ *
+ * <p>The retained field name {@code languageReleaseIdentity} denotes the
+ * semantic Language source-preprocessing baseline. It is deliberately
+ * independent of any aggregate Language/Contracts distribution package.</p>
  */
 public final class SourceProviderEnvironment {
 
-    /** Release identity required for Blue Language 1.0 source ingestion. */
+    /**
+     * Source-preprocessing baseline required for Language 1.0 ingestion.
+     *
+     * <p>This is the canonical identity of
+     * {@code provider/blue-language-source-preprocessing-environment-1.0.yaml},
+     * not an aggregate distribution identity.</p>
+     */
     public static final String LANGUAGE_1_0_RELEASE_IDENTITY =
-            "blue-language-contracts-embedded-modules-collection-paths@"
-                    + "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
+            "blue-language-source-preprocessing-environment-1.0@"
+                    + "sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e";
     /** Domain used by the released explicit verifier overload. */
     public static final String EXPLICIT_VERIFIER_DOMAIN_IDENTITY =
             "blue-language-1.0:explicit-provider-evidence-verifier";
@@ -30,7 +40,8 @@ public final class SourceProviderEnvironment {
      * Creates a fully specified environment; every field must be nonblank.
      *
      * @param languageVersion declared Blue language version
-     * @param languageReleaseIdentity exact language release identity
+     * @param languageReleaseIdentity exact Language source-preprocessing
+     *                                baseline identity
      * @param preprocessingEnvironmentId exact preprocessing configuration
      *                                   identity
      * @param canonicalRegistryIdentity exact canonical registry identity
@@ -57,7 +68,8 @@ public final class SourceProviderEnvironment {
      * Creates a fully specified immutable source-provider environment.
      *
      * @param languageVersion declared Blue language version
-     * @param languageReleaseIdentity exact language release identity
+     * @param languageReleaseIdentity exact Language source-preprocessing
+     *                                baseline identity
      * @param preprocessingEnvironmentId exact preprocessing configuration
      *                                   identity
      * @param canonicalRegistryIdentity exact canonical registry identity
@@ -91,7 +103,8 @@ public final class SourceProviderEnvironment {
      * including the exact semantic Content BlueId strategy.
      *
      * @param languageVersion declared Blue language version
-     * @param languageReleaseIdentity exact language release identity
+     * @param languageReleaseIdentity exact Language source-preprocessing
+     *                                baseline identity
      * @param preprocessingEnvironmentId exact preprocessing configuration
      *                                   identity
      * @param canonicalRegistryIdentity exact canonical registry identity
@@ -151,9 +164,12 @@ public final class SourceProviderEnvironment {
     }
 
     /**
-     * Returns the exact language release identity.
+     * Returns the exact Language source-preprocessing baseline identity.
      *
-     * @return language release identity
+     * <p>The accessor name is retained for the current RC API shape; the value
+     * is not an aggregate distribution package identity.</p>
+     *
+     * @return Language source-preprocessing baseline identity
      */
     public String languageReleaseIdentity() {
         return languageReleaseIdentity;

@@ -8,10 +8,12 @@ import static blue.language.conformance.contracts.ContractsFixtureScriptedEnviro
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
@@ -27,9 +29,11 @@ import blue.language.processor.ExternalDeliveryPlan;
 import blue.language.processor.ExternalDeliverySnapshot;
 import blue.language.processor.ExternalChannelDependencySnapshot;
 import blue.language.processor.ExternalOrderKey;
+import blue.language.processor.ExecutionEvidenceUnavailableException;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.GasTraceEntry;
+import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ProcessAttemptResult;
 import blue.language.processor.ProcessingConformanceTrace;
 import blue.language.processor.ProcessingDebugResult;
@@ -48,9 +52,10 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.model.NodeWireForm;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -402,34 +407,60 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
         final Map<String, Node> providerNodes =
                 new LinkedHashMap<>(registry.nodesByBlueId);
         providerNodes.putAll(input.providerNodes);
-        FixturePhysicalProvider provider =
-                new FixturePhysicalProvider(
+        ContractsFixturePhysicalProvider provider =
+                new ContractsFixturePhysicalProvider(
                         providerNodes,
                         input.cacheMode,
                         input.batchingMode);
         BlueLanguageRuntime fixtureLanguage = languageRuntime(provider);
         ConformanceEngine conformanceEngine =
                 fixtureLanguage.newConformanceEngine();
-        ProcessingSnapshotManager snapshots = new ProcessingSnapshotManager() {
+        ProcessingSnapshotManager snapshots =
+                new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(Node document) {
-                return fixtureLanguage.snapshots().resolve(document);
+                Set<String> opaquePaths =
+                        opaqueUnknownContractPaths(document);
+                return opaquePaths.isEmpty()
+                        ? fixtureLanguage.snapshots().resolve(document)
+                        : fixtureLanguage.snapshots().resolvePreservingPaths(
+                                document, opaquePaths);
             }
 
             @Override
             public ResolvedSnapshot fromDocumentPreservingPaths(
                     Node document,
                     Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(document));
                 return fixtureLanguage.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
+                        document, allPreservedPaths);
             }
 
             @Override
             public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                     Node document,
                     Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(document));
                 return fixtureLanguage.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
+                        document, allPreservedPaths);
+            }
+
+            @Override
+            public ResolvedSnapshot fromCanonicalTransient(
+                    FrozenNode canonicalRoot,
+                    Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(canonicalRoot.toNode()));
+                return fixtureLanguage.resolveCanonicalSnapshotPreservingPaths(
+                        canonicalRoot, allPreservedPaths);
             }
 
             @Override
@@ -438,9 +469,74 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                 if (!reference.isReferenceOnly()) {
                     return reference;
                 }
-                return fixtureLanguage.snapshots().load(
-                        reference.getReferenceBlueId())
-                        .frozenCanonicalRoot();
+                String blueId = reference.getReferenceBlueId();
+                NodeProviderResult lookup = fixtureLanguage
+                        .nodeProvider()
+                        .fetchResultByBlueId(blueId);
+                if (lookup.outcome() == NodeProviderOutcome.NOT_FOUND) {
+                    return null;
+                }
+                if (lookup.outcome() == NodeProviderOutcome.UNAVAILABLE) {
+                    throw new ExecutionEvidenceUnavailableException(
+                            lookup.diagnostic().orElse(
+                                    "Exact fixture evidence is unavailable for "
+                                            + blueId),
+                            Collections.singleton(blueId));
+                }
+                if (lookup.outcome()
+                        == NodeProviderOutcome.INVALID_EVIDENCE) {
+                    throw new InvalidExecutionEvidenceException(
+                            lookup.diagnostic().orElse(
+                                    "Invalid exact fixture evidence for "
+                                            + blueId));
+                }
+                List<Node> candidates = lookup.nodes();
+                List<Node> canonical = new ArrayList<>(candidates.size());
+                for (Node candidate : candidates) {
+                    Node exact = candidate.clone();
+                    if (exact.getBlueId() != null
+                            && !exact.isReferenceOnly()) {
+                        exact.blueId(null);
+                    }
+                    canonical.add(exact);
+                }
+                Node exact = canonical.size() == 1
+                        ? canonical.get(0)
+                        : new Node().items(canonical);
+                FrozenNode frozen = FrozenNode.fromNode(exact);
+                if (!BlueIds.hasCyclicMemberSeparator(blueId)) {
+                    String calculated = frozen.blueId();
+                    if (!blueId.equals(calculated)) {
+                        throw new InvalidExecutionEvidenceException(
+                                "Fixture provider content BlueId mismatch: "
+                                        + "expected " + blueId
+                                        + " but calculated " + calculated);
+                    }
+                }
+                return frozen;
+            }
+
+            @Override
+            public blue.language.merge.TypeEvidenceResolution
+            materializeVerifiedTypeReference(FrozenNode reference) {
+                return fixtureLanguage
+                        .materializeTypeReferenceForMatching(reference);
+            }
+
+            @Override
+            public CanonicalTypeIdentityEvidence
+            resolveTypeDeclarationIdentity(Node declaration) {
+                return fixtureLanguage.resolveTypeDeclarationIdentity(
+                        declaration);
+            }
+
+            @Override
+            public CanonicalTypeIdentityEvidence
+            resolveTypeDeclarationIdentity(
+                    Node declaration,
+                    ExactResolutionOverlay exactResolutionOverlay) {
+                return fixtureLanguage.resolveTypeDeclarationIdentity(
+                        declaration, exactResolutionOverlay);
             }
 
             @Override
@@ -486,8 +582,20 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                         : null;
         if (input.deliveryPlan != null) {
             builder.deliveryPlanDeriver((root, event) -> {
-                String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);
-                String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
+                String rootBlueId =
+                        FixtureSourceIdentityResolver.resolve(
+                                fixtureLanguage,
+                                root,
+                                registry.exactSourceFieldsByType(),
+                                registry.executableBodyFieldsByType(),
+                                true).blueId();
+                String eventBlueId =
+                        FixtureSourceIdentityResolver.resolve(
+                                fixtureLanguage,
+                                event,
+                                registry.exactSourceFieldsByType(),
+                                registry.executableBodyFieldsByType(),
+                                false).blueId();
                 if (!input.evidence.rootBlueId().equals(rootBlueId)
                         || !input.evidence.eventBlueId().equals(eventBlueId)) {
                     throw new IllegalArgumentException(

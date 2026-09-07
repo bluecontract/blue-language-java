@@ -21,6 +21,7 @@ public final class ManagedOccurrenceBinding
     private final String expectedTargetBlueId;
     private final boolean active;
     private final Long pendingHistoricalEpoch;
+    private final ManagedRepresentationCursor pendingRepresentationCursor;
 
     /**
      * Creates one closed occurrence-binding row.
@@ -46,6 +47,21 @@ public final class ManagedOccurrenceBinding
             String expectedTargetBlueId,
             boolean active,
             Long pendingHistoricalEpoch) {
+        this(occurrenceIdentity, bindingIdentity, bindingPolicyIdentity,
+                sourceDocumentId, sourceAddress, targetDocumentId,
+                expectedTargetBlueId, active, pendingHistoricalEpoch, null);
+    }
+
+    private ManagedOccurrenceBinding(String occurrenceIdentity, String bindingIdentity,
+            String bindingPolicyIdentity, DocumentId sourceDocumentId,
+            ScopeAddress sourceAddress, DocumentId targetDocumentId,
+            String expectedTargetBlueId, boolean active, Long pendingHistoricalEpoch,
+            ManagedRepresentationCursor pendingRepresentationCursor) {
+        this.pendingRepresentationCursor = pendingRepresentationCursor;
+        if (pendingRepresentationCursor != null && (active || pendingHistoricalEpoch == null
+                || pendingHistoricalEpoch.longValue() < 0L)) {
+            throw new IllegalArgumentException("Representation progress requires an inactive numbered historical cursor");
+        }
         this.occurrenceIdentity = ClosureValueSupport.requireSha256Identity(
                 occurrenceIdentity, "occurrenceIdentity");
         this.bindingIdentity = ClosureValueSupport.requireSha256Identity(
@@ -281,6 +297,24 @@ public final class ManagedOccurrenceBinding
      */
     public Long pendingHistoricalEpoch() {
         return pendingHistoricalEpoch;
+    }
+
+    /**
+     * Returns the pending exact representation position, or null outside such traversal.
+     *
+     * @return the pending exact representation position, or null outside such traversal
+     */
+    public ManagedRepresentationCursor pendingRepresentationCursor() { return pendingRepresentationCursor; }
+
+    /**
+     * Copies this binding with the specified historical representation cursor.
+     * @param cursor new position, or null to clear representation traversal
+     * @return a new binding retaining every other field
+     */
+    public ManagedOccurrenceBinding withRepresentationCursor(ManagedRepresentationCursor cursor) {
+        return new ManagedOccurrenceBinding(occurrenceIdentity, bindingIdentity, bindingPolicyIdentity,
+                sourceDocumentId, sourceAddress, targetDocumentId, expectedTargetBlueId,
+                active, pendingHistoricalEpoch, cursor);
     }
 
     /**

@@ -16,6 +16,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -159,7 +160,7 @@ final class BlueIdentityAndSpecializationTest {
 
         // then
         assertEquals(exactBlueId,
-                DirectBlueIdCalculator.calculateBlueId(expanded));
+                FrozenNode.fromResolvedNode(expanded).blueId());
         assertEquals("exact content", expanded.getValue());
     }
 

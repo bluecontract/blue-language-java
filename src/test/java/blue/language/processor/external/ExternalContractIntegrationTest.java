@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -50,6 +51,17 @@ class ExternalContractIntegrationTest {
     private static final String DERIVED_HANDLER_BLUE_ID = "BHmAMaH5P9PiHKs2d8b73oLaZTVPgBNALHyJnVJBLeFs";
     private static final String CAPTURE_HANDLER_BLUE_ID = "12VvzAWHUMyDtQFGibr2Kbry7eieMmY8uzqHPRjrzzpt";
     private static final String UNKNOWN_BLUE_ID = "9Y8k2srt1DgxP51iCCQJhrib2tJdjuf7D28MmS5B1udZ";
+    private static final String TEST_RUNTIME_REGISTRY_IDENTITY =
+            DirectBlueIdCalculator.calculateBlueId(
+                    new Node().value(
+                            "ExternalContractIntegrationTest runtime registry"));
+    private static final Blue EXACT_RUNTIME = new Blue(
+            ExternalContractIntegrationTest::runtimeType);
+
+    @AfterAll
+    static void closeExactRuntime() {
+        EXACT_RUNTIME.close();
+    }
 
     @Test
     void shouldVerifyBuilderRegistersExternalContractsByExplicitBlueIdAndExecutesThem() {
@@ -61,6 +73,8 @@ class ExternalContractIntegrationTest {
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(HANDLER_BLUE_ID,
                         externalTypeNode(ExternalAddAmount.class), new ExternalAddAmountProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
 
         Blue blue = new Blue();
@@ -162,6 +176,8 @@ class ExternalContractIntegrationTest {
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(MATCHING_HANDLER_BLUE_ID,
                         externalTypeNode(MatchingAddAmount.class), new MatchingAddAmountProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -224,6 +240,8 @@ class ExternalContractIntegrationTest {
                 .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID,
                         externalTypeNode(CaptureEventFlag.class),
                         new CaptureEventFlagProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -258,6 +276,8 @@ class ExternalContractIntegrationTest {
                 .registerContractProcessor(HANDLER_BLUE_ID,
                         externalTypeNode(ExternalAddAmount.class),
                         new ExternalAddAmountProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(SEQUENCE_CHANNEL_BLUE_ID, HANDLER_BLUE_ID));
@@ -296,6 +316,8 @@ class ExternalContractIntegrationTest {
                         externalTypeNode(ExternalOperation.class), new ExternalOperationProcessor())
                 .registerContractProcessor(DERIVED_HANDLER_BLUE_ID,
                         externalTypeNode(DerivingAddAmount.class), new DerivingAddAmountProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -339,6 +361,8 @@ class ExternalContractIntegrationTest {
                         externalTypeNode(DelegatingChannel.class), new DelegatingChannelProcessor())
                 .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID,
                         externalTypeNode(CaptureEventFlag.class), new CaptureEventFlagProcessor())
+                .runtimeRegistryIdentity(
+                        TEST_RUNTIME_REGISTRY_IDENTITY)
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -451,12 +475,50 @@ class ExternalContractIntegrationTest {
             String channelKey,
             String channelTypeBlueId) {
         return DocumentProcessor.builder()
+                .runtimeAccess(EXACT_RUNTIME.getDocumentProcessor()
+                        .administration()
+                        .runtimeAccess())
                 .deliveryPlanDeriver((root, event) ->
                         exactDeliveryPlan(
                                 root,
                                 event,
                                 channelKey,
                                 channelTypeBlueId));
+    }
+
+    private static List<Node> runtimeType(String blueId) {
+        if (CHANNEL_BLUE_ID.equals(blueId)) {
+            return typeNode(ExternalAlwaysChannel.class);
+        }
+        if (MUTATING_CHANNEL_BLUE_ID.equals(blueId)) {
+            return typeNode(MutatingOnlyChannel.class);
+        }
+        if (SEQUENCE_CHANNEL_BLUE_ID.equals(blueId)) {
+            return typeNode(SequenceChannel.class);
+        }
+        if (DELEGATING_CHANNEL_BLUE_ID.equals(blueId)) {
+            return typeNode(DelegatingChannel.class);
+        }
+        if (OPERATION_BLUE_ID.equals(blueId)) {
+            return typeNode(ExternalOperation.class);
+        }
+        if (HANDLER_BLUE_ID.equals(blueId)) {
+            return typeNode(ExternalAddAmount.class);
+        }
+        if (MATCHING_HANDLER_BLUE_ID.equals(blueId)) {
+            return typeNode(MatchingAddAmount.class);
+        }
+        if (DERIVED_HANDLER_BLUE_ID.equals(blueId)) {
+            return typeNode(DerivingAddAmount.class);
+        }
+        if (CAPTURE_HANDLER_BLUE_ID.equals(blueId)) {
+            return typeNode(CaptureEventFlag.class);
+        }
+        return null;
+    }
+
+    private static List<Node> typeNode(Class<?> type) {
+        return Collections.singletonList(externalTypeNode(type));
     }
 
     private static ExternalDeliveryPlan exactDeliveryPlan(

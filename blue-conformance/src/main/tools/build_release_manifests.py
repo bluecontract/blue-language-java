@@ -11,6 +11,12 @@ from typing import Any
 import yaml
 
 from jcs import dumps as jcs_dumps
+from implementation_baseline import (
+    CYCLIC_FINALIZER,
+    CYCLIC_PROOF_VERIFIER,
+    require_implementation_baseline_files,
+    source_paths_for_role,
+)
 from package_hygiene import release_inventory_files
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -217,54 +223,27 @@ def build_oracle_manifest() -> dict[str, Any]:
     return manifest
 
 
-def baseline_source_hashes(language_root: Path | None) -> list[dict[str, str]]:
-    if language_root is None:
-        return []
-    relative = [
-        "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-        "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
-        "blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java",
+def baseline_source_hashes(language_root: Path) -> list[dict[str, str]]:
+    """Hash the complete authoritative baseline or fail on any missing input."""
+    return [
+        {"path": relative, "sha256": sha256_file(path)}
+        for relative, path in require_implementation_baseline_files(
+            language_root
+        )
     ]
-    result: list[dict[str, str]] = []
-    for rel in relative:
-        path = language_root / rel
-        if path.exists():
-            result.append({"path": rel, "sha256": sha256_file(path)})
-    return result
 
 
-def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: dict[str, Any], language_root: Path | None) -> dict[str, Any]:
+def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: dict[str, Any], language_root: Path) -> dict[str, Any]:
     registry_manifest = yaml_file(REG / "manifest.yaml")
     gas_manifest = yaml_file(GAS)
     baseline = baseline_source_hashes(language_root)
     by_path = {entry["path"]: entry for entry in baseline}
-    finalizer_paths = [
-        "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
+    finalizer_baseline = [
+        by_path[path] for path in source_paths_for_role(CYCLIC_FINALIZER)
     ]
-    verifier_paths = [
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
+    verifier_baseline = [
+        by_path[path] for path in source_paths_for_role(CYCLIC_PROOF_VERIFIER)
     ]
-    finalizer_baseline = [by_path[path] for path in finalizer_paths if path in by_path]
-    verifier_baseline = [by_path[path] for path in verifier_paths if path in by_path]
     release: dict[str, Any] = {
         "manifestType": "blue-contracts-release",
         "specification": "Blue Contracts and Processor Specification",
@@ -293,7 +272,7 @@ def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: di
         "contractsRegistry": {
             "path": "registry/manifest.yaml",
             "packageIdentity": registry_manifest["packageIdentity"],
-            "unchangedCoreTypeNodes": True,
+            "unchangedCoreTypeNodes": False,
         },
         "gasManifest": {
             "path": "gas-manifest.yaml",
@@ -337,10 +316,6 @@ def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: di
             "PACKAGE_VALID": "Schemas, manifests, exact identities and static fixture laws pass.",
             "SEMANTIC_REFERENCE_VALID": "Independent cyclic identity, finite, loop, history, identity-constructor and limit checks pass.",
             "IMPLEMENTATION_CONFORMANT": "The implementation executes every required fixture under this exact release.",
-        },
-        "sourceArchiveBaseline": {
-            "expectedSha256": "7be5116d8e7a64bccf471c11a93127d4924a36686e23bbbf634fc0713d6d33c9",
-            "filenameIsNonNormative": True,
         },
         "releaseIdentityAlgorithm": {
             "digest": "sha256",
@@ -392,7 +367,7 @@ def write_checksum_manifest(root: Path = ROOT) -> None:
 
 def main() -> None:
     parser = ArgumentParser()
-    parser.add_argument("--language-source-root", type=Path, default=None)
+    parser.add_argument("--language-source-root", type=Path, required=True)
     args = parser.parse_args()
     build_gas_manifest()
     ordinary, closure = fixture_paths()

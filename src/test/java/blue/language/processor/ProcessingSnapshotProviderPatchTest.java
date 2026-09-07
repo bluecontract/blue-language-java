@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
@@ -22,6 +23,59 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcessingSnapshotProviderPatchTest {
 
     @Test
+    void shouldRetainPatchTimeTypeEvidenceForReferencedBusinessValue() {
+        // given
+        BasicNodeProvider provider = referencedTypedValueProvider();
+        Blue blue = new Blue(provider);
+        DocumentProcessor processor = blue.getDocumentProcessor();
+        Node source = referencedTypedValueRoot(provider);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                source, processor.conformanceEngine(), null,
+                processor.snapshotManager(), null, new GasMeter(),
+                Collections.emptyMap(), true);
+        // when
+        runtime.applyPatch("/", JsonPatch.replace("/money/val", new Node().value(30)));
+        // then
+        assertEquals(30, runtime.document().getAsInteger("/money/val"));
+        assertNotNull(runtime.snapshot().canonicalTypeIdentities());
+    }
+
+    @Test
+    void shouldRejectWrongKindWithinReferencedBusinessValueAtomically() {
+        // given
+        BasicNodeProvider provider = referencedTypedValueProvider();
+        Blue blue = new Blue(provider);
+        DocumentProcessor processor = blue.getDocumentProcessor();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                referencedTypedValueRoot(provider), processor.conformanceEngine(), null,
+                processor.snapshotManager(), null, new GasMeter(),
+                Collections.emptyMap(), true);
+        String before = blue.nodeToJson(runtime.document());
+        // when
+        org.junit.jupiter.api.function.Executable invalidPatch = () -> runtime.applyPatch(
+                "/", JsonPatch.replace("/money/val", new Node().value("wrong")));
+        // then
+        org.junit.jupiter.api.Assertions.assertThrows(ProcessorFailureException.class, invalidPatch);
+        assertEquals(before, blue.nodeToJson(runtime.document()));
+    }
+
+    private static BasicNodeProvider referencedTypedValueProvider() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleNodes(new Node().name("Referenced Amount Type")
+                .properties("val", new Node().type(new Node().blueId(
+                        blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))));
+        provider.addSingleNodes(new Node().name("Referenced Amount")
+                .type(new Node().blueId(provider.getBlueIdByName("Referenced Amount Type")))
+                .properties("val", new Node().value(25)));
+        return provider;
+    }
+
+    private static Node referencedTypedValueRoot(BasicNodeProvider provider) {
+        return new Node().properties("money", new Node().blueId(
+                provider.getBlueIdByName("Referenced Amount")));
+    }
+
+    @Test
     void shouldVerifyRemovedTypedIntermediateStateDoesNotPolluteBlueCaches() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
@@ -33,7 +87,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/temporary", new Node()
                         .type(new Node().blueId(typeBlueId))
@@ -87,7 +141,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/retained", new Node().type(new Node().blueId(typeBlueId))),
                 JsonPatch.add("/first", new Node().value(1)),
@@ -130,7 +184,7 @@ class ProcessingSnapshotProviderPatchTest {
         Blue blue = new Blue(provider);
         blue.clearResolvedSnapshotCache();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(),
+                Nodes.emptyObject(),
                 blue.getDocumentProcessor().conformanceEngine(),
                 blue.getDocumentProcessor().snapshotManager());
         WorkingDocument working = runtime.workingDocument("/");
@@ -182,7 +236,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         WorkingDocument working = runtime.workingDocument("/");
 
         // when
@@ -215,7 +269,7 @@ class ProcessingSnapshotProviderPatchTest {
         });
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         WorkingDocument working = runtime.workingDocument("/");
 
         // when
@@ -248,7 +302,7 @@ class ProcessingSnapshotProviderPatchTest {
         });
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Collections.singletonList(JsonPatch.add("/typed",
                 new Node().type(new Node().blueId(requestedBlueId))));
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -281,7 +335,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(JsonPatch.add("/typed",
                 new Node().type(new Node().blueId(typeBlueId))));
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -314,7 +368,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/temporary", new Node().type(new Node().blueId(typeBlueId))),
                 JsonPatch.remove("/temporary"));
@@ -354,7 +408,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Collections.singletonList(JsonPatch.add("/typed",
                 new Node().type(new Node().blueId(typeBlueId))));
 
@@ -389,7 +443,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/first", new Node().type(new Node().blueId(typeBlueId))),
                 JsonPatch.add("/second", new Node().type(new Node().blueId(typeBlueId))));
@@ -442,7 +496,7 @@ class ProcessingSnapshotProviderPatchTest {
         });
         DocumentProcessor originalProcessor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), originalProcessor.conformanceEngine(), originalProcessor.snapshotManager());
+                Nodes.emptyObject(), originalProcessor.conformanceEngine(), originalProcessor.snapshotManager());
 
         // when
         blue.nodeProvider(blueId -> {
@@ -490,7 +544,7 @@ class ProcessingSnapshotProviderPatchTest {
             return Collections.singletonList(customType.clone());
         }, blue.getMergingProcessor());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), customEngine, processor.snapshotManager());
+                Nodes.emptyObject(), customEngine, processor.snapshotManager());
 
         // when
         try (PreparedPatchTransaction sequence =
@@ -520,7 +574,7 @@ class ProcessingSnapshotProviderPatchTest {
                         : null);
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/typed", new Node().type(new Node().blueId(requestedBlueId))),
                 JsonPatch.add("/suffix", new Node().value("not-applied")));
@@ -579,7 +633,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
 
         // when
         try (PreparedPatchTransaction sequence =
@@ -618,7 +672,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
 
         // when
         try (PreparedPatchTransaction sequence =
@@ -689,7 +743,7 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         DocumentProcessor processor = blue.getDocumentProcessor();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), processor.conformanceEngine(), processor.snapshotManager());
+                Nodes.emptyObject(), processor.conformanceEngine(), processor.snapshotManager());
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/retained", new Node().type(new Node().blueId(typeBlueId))),
                 JsonPatch.add("/tail", new Node().value("outer")));
@@ -728,7 +782,8 @@ class ProcessingSnapshotProviderPatchTest {
         blue.clearResolvedSnapshotCache();
         CountingSnapshotManager manager = new CountingSnapshotManager(
                 blue.getDocumentProcessor().snapshotManager());
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node(), null, manager);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject(), null, manager);
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/first", new Node().value(1)),
                 JsonPatch.add("/second", new Node().value(2)),

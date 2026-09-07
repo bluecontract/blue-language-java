@@ -1,22 +1,23 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 /** Builds exact sparse Root projections for subscription completeness proofs. */
 final class ExternalSubscriptionProjectionBuilder {
@@ -24,17 +25,17 @@ final class ExternalSubscriptionProjectionBuilder {
     private final ContractLoader contractLoader;
     private final ProcessingSnapshotManager snapshotManager;
     private final ExternalSubscriptionSelection selection;
-    private final Map<String, List<String>> executableBodyFieldsByType;
+    private final Map<String, List<String>> exactSourceFieldsByType;
 
     ExternalSubscriptionProjectionBuilder(
             ContractLoader contractLoader,
             ProcessingSnapshotManager snapshotManager,
             ExternalSubscriptionSelection selection,
-            Map<String, List<String>> executableBodyFieldsByType) {
+            Map<String, List<String>> exactSourceFieldsByType) {
         this.contractLoader = contractLoader;
         this.snapshotManager = snapshotManager;
         this.selection = selection;
-        this.executableBodyFieldsByType = executableBodyFieldsByType;
+        this.exactSourceFieldsByType = exactSourceFieldsByType;
     }
 
     ExternalDeliveryResolution resolution(Node root) {
@@ -47,10 +48,10 @@ final class ExternalSubscriptionProjectionBuilder {
                 ? ExecutableBodyPathCatalog
                         .resolveCanonicalTransientIncludingTypeContracts(
                         snapshotManager,
-                        FrozenNode.fromNode(exactRoot),
+                        FrozenNode.fromSourceNode(exactRoot),
                         ExecutableBodyPathCatalog.authoredNodePaths(
                                 exactRoot),
-                        executableBodyFieldsByType)
+                        exactSourceFieldsByType)
                 : null;
         return new ExternalDeliveryResolution(
                 contractLoader, this, exactRoot, snapshot);
@@ -121,7 +122,6 @@ final class ExternalSubscriptionProjectionBuilder {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Retained active subscription scope is absent");
         }
-        MaterializationProvenance.clear(projected);
         return new ExternalSubscriptionProjection(
                 projected,
                 subscriptionKeys,
@@ -177,10 +177,13 @@ final class ExternalSubscriptionProjectionBuilder {
     }
 
     /** Creates a planner bound to this projection's verified provider view. */
-    EmbeddedScopePlanner embeddedScopePlanner() {
+    EmbeddedScopePlanner embeddedScopePlanner(
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         return snapshotManager != null
                 ? new EmbeddedScopePlanner(
-                        this::materializeVerifiedExactReference)
+                        this::materializeVerifiedExactReference,
+                        snapshotManager,
+                        canonicalTypeIdentities)
                 : new EmbeddedScopePlanner();
     }
 
@@ -200,7 +203,9 @@ final class ExternalSubscriptionProjectionBuilder {
                 : contracts.getProperties().entrySet()) {
             result.put(
                     entry.getKey(),
-                    exactTypeBlueId(entry.getValue()));
+                    resolvedTypeBlueId(
+                            entry.getValue(),
+                            resolution.canonicalTypeIdentities()));
         }
         return result;
     }
@@ -209,7 +214,8 @@ final class ExternalSubscriptionProjectionBuilder {
             Node selectedScope,
             Node effectiveScope,
             Set<String> retainedChannelKeys,
-            boolean includeProcessEmbedded) {
+            boolean includeProcessEmbedded,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         Node projected = effectiveScope.clone();
         Node contracts = projected.getContracts();
         Node selectedContracts = selectedScope != null
@@ -230,10 +236,13 @@ final class ExternalSubscriptionProjectionBuilder {
                         isSubscriptionProcessorStateKey(entry.getKey())
                                 || (retainedChannelKeys != null
                                 ? retainedChannelKeys.contains(entry.getKey())
-                                : isSubscriptionContract(entry.getValue()))
+                                : isSubscriptionContract(
+                                        entry.getValue(),
+                                        canonicalTypeIdentities))
                                 || includeProcessEmbedded
-                                && isDirectProcessEmbeddedContract(
-                                entry.getValue());
+                                && isResolvedProcessEmbeddedContract(
+                                        entry.getValue(),
+                                        canonicalTypeIdentities);
                 if (retained) {
                     continue;
                 }
@@ -243,13 +252,13 @@ final class ExternalSubscriptionProjectionBuilder {
                     entries.remove();
                     continue;
                 }
-                entry.setValue(exactReference(selectedDirect));
+                entry.setValue(exactReference(
+                        selectedDirect, snapshotManager));
             }
             if (contracts.getProperties().isEmpty()) {
                 projected.contracts(null);
             }
         }
-        MaterializationProvenance.clear(projected);
         return FrozenNode.fromResolvedNode(projected);
     }
 
@@ -262,7 +271,6 @@ final class ExternalSubscriptionProjectionBuilder {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Enumeration-selector scope is absent");
         }
-        MaterializationProvenance.clear(projected);
         return projected;
     }
 
@@ -435,8 +443,9 @@ final class ExternalSubscriptionProjectionBuilder {
                     if (exactChild == null) {
                         continue;
                     }
-                    String identity = DirectBlueIdCalculator.calculateBlueId(
-                            exactChild);
+                    String identity = canonicalSourceBlueId(
+                            exactChild,
+                            "Enumeration-selector child contribution");
                     if (identities.add(identity)) {
                         next.add(exactChild);
                     }
@@ -453,9 +462,10 @@ final class ExternalSubscriptionProjectionBuilder {
     private List<Node> exactNodeAndTypeLineage(Node node) {
         List<Node> result = new ArrayList<>();
         collectExactTypeLineage(
-                exactHeaderNode(node),
+                node,
                 result,
                 new LinkedHashSet<String>(),
+                new IdentityHashMap<Node, Boolean>(),
                 0);
         return result;
     }
@@ -463,7 +473,8 @@ final class ExternalSubscriptionProjectionBuilder {
     private void collectExactTypeLineage(
             Node node,
             List<Node> result,
-            Set<String> active,
+            Set<String> activeReferences,
+            IdentityHashMap<Node, Boolean> activeInline,
             int depth) {
         if (node == null) {
             return;
@@ -479,16 +490,29 @@ final class ExternalSubscriptionProjectionBuilder {
         if (exact == null) {
             return;
         }
-        String identity = DirectBlueIdCalculator.calculateBlueId(exact);
-        if (!active.add(identity)) {
+        String referenceIdentity = node.isReferenceOnly()
+                ? node.getBlueId()
+                : null;
+        boolean entered = referenceIdentity != null
+                ? activeReferences.add(referenceIdentity)
+                : activeInline.put(node, Boolean.TRUE) == null;
+        if (!entered) {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Cyclic type hierarchy in enumeration-selector "
                             + "header catalog");
         }
         collectExactTypeLineage(
-                exact.getType(), result, active, depth + 1);
+                exact.getType(),
+                result,
+                activeReferences,
+                activeInline,
+                depth + 1);
         result.add(exact);
-        active.remove(identity);
+        if (referenceIdentity != null) {
+            activeReferences.remove(referenceIdentity);
+        } else {
+            activeInline.remove(node);
+        }
     }
 
     private Node exactHeaderNode(Node node) {
@@ -564,7 +588,7 @@ final class ExternalSubscriptionProjectionBuilder {
                 for (Map.Entry<String, Node> entry
                         : contracts.getProperties().entrySet()) {
                     Node contract = exactHeaderNode(entry.getValue());
-                    String typeBlueId = exactTypeBlueId(contract);
+                    String typeBlueId = exactSourceTypeBlueId(contract);
                     if (!result.containsKey(entry.getKey())
                             || typeBlueId != null) {
                         result.put(entry.getKey(), typeBlueId);
@@ -575,14 +599,27 @@ final class ExternalSubscriptionProjectionBuilder {
         return result;
     }
 
-    private String exactTypeBlueId(Node contract) {
+    private String exactSourceTypeBlueId(Node contract) {
         Node type = contract != null ? contract.getType() : null;
         if (type == null) {
             return null;
         }
-        return type.getBlueId() != null
-                ? type.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(type);
+        return canonicalSourceBlueId(
+                type,
+                "Enumeration-selector contract type");
+    }
+
+    private String resolvedTypeBlueId(
+            Node contract,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        Node type = contract != null ? contract.getType() : null;
+        if (type == null) {
+            return null;
+        }
+        return CanonicalIdentityEvidence.resolvedTypeBlueId(
+                type,
+                canonicalTypeIdentities,
+                "Effective external contract type");
     }
 
     private Node copySubscriptionSpine(
@@ -603,7 +640,7 @@ final class ExternalSubscriptionProjectionBuilder {
                         .requiresEmbeddedRouting(
                                 path, subscriptionKeys.keySet());
         Node projected = copyNodeHeader(source);
-        boolean retainType = typeContributesToSubscriptionSurface(
+        boolean retainType = SubscriptionSurfaceTypeInspector.contributes(
                 this::materializeVerifiedExactReference,
                 source.getType(),
                 requestedKeys,
@@ -638,115 +675,9 @@ final class ExternalSubscriptionProjectionBuilder {
                 }
             }
         }
-        return projected;
-    }
-
-    static boolean typeContributesToSubscriptionSurface(
-            ProcessingSnapshotManager snapshotManager,
-            Node declaredType,
-            Set<String> requestedChannelKeys,
-            boolean includeProcessEmbedded,
-            Set<String> visited) {
-        return typeContributesToSubscriptionSurface(
-                snapshotManager != null
-                        ? snapshotManager::materializeVerifiedExactReference
-                        : null,
-                declaredType,
-                requestedChannelKeys,
-                includeProcessEmbedded,
-                visited);
-    }
-
-    /**
-     * Inspects exact type contributions without resolving the type target as
-     * a standalone document. A type's instance schema is unrelated to this
-     * structural subscription-surface query and must not be applied to the
-     * type definition itself.
-     */
-    static boolean typeContributesToSubscriptionSurface(
-            Function<FrozenNode, FrozenNode> exactMaterializer,
-            Node declaredType,
-            Set<String> requestedChannelKeys,
-            boolean includeProcessEmbedded,
-            Set<String> visited) {
-        if (declaredType == null) {
-            return false;
-        }
-        if (requestedChannelKeys.isEmpty()
-                && !includeProcessEmbedded) {
-            return false;
-        }
-        if (exactMaterializer == null) {
-            return true;
-        }
-        FrozenNode declaredTypeReference = FrozenNode.fromNode(declaredType);
-        FrozenNode exactType = declaredType.isReferenceOnly()
-                ? requireMaterialized(
-                declaredTypeReference,
-                exactMaterializer.apply(declaredTypeReference),
-                "Subscription-surface scope type content was not found")
-                : FrozenNode.fromNode(declaredType.clone());
-        String identity = declaredType.getBlueId() != null
-                ? declaredType.getBlueId()
-                : exactType.blueId();
-        if (!visited.add(identity)) {
-            throw new InvalidExecutionEvidenceException(
-                    "Cyclic scope type hierarchy in subscription surface: "
-                            + identity);
-        }
-
-        FrozenNode contracts = exactType.getContracts();
-        if (contracts != null && contracts.isReferenceOnly()) {
-            FrozenNode contractsReference = contracts;
-            contracts = requireMaterialized(
-                    contractsReference,
-                    exactMaterializer.apply(contractsReference),
-                    "Subscription-surface type contracts content was not found");
-        }
-        if (contracts != null
-                && contracts.getProperties() != null) {
-            Map<String, FrozenNode> entries = contracts.getProperties();
-            for (String requestedChannelKey : requestedChannelKeys) {
-                if (entries.containsKey(requestedChannelKey)) {
-                    return true;
-                }
-            }
-            FrozenNode embedded = includeProcessEmbedded
-                    ? entries.get(ProcessorContractConstants.KEY_EMBEDDED)
-                    : null;
-            if (embedded != null
-                    && isExactProcessEmbeddedContract(
-                    exactMaterializer, embedded)) {
-                return true;
-            }
-        }
-        FrozenNode parent = exactType.getType();
-        return parent != null
-                && typeContributesToSubscriptionSurface(
-                        exactMaterializer,
-                        parent.toNode(),
-                        requestedChannelKeys,
-                        includeProcessEmbedded,
-                        visited);
-    }
-
-    private static boolean isExactProcessEmbeddedContract(
-            Function<FrozenNode, FrozenNode> exactMaterializer,
-            FrozenNode contract) {
-        FrozenNode exact = contract;
-        if (exact != null && exact.isReferenceOnly()) {
-            FrozenNode reference = exact;
-            exact = requireMaterialized(
-                    reference,
-                    exactMaterializer.apply(reference),
-                    "Process Embedded contract header content was not found");
-        }
-        FrozenNode type = exact != null ? exact.getType() : null;
-        return type != null
-                && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                type.getReferenceBlueId() != null
-                        ? type.getReferenceBlueId()
-                        : type.blueId());
+        return Nodes.isBareFieldlessBuilder(projected)
+                ? Nodes.emptyObject()
+                : projected;
     }
 
     private Node copySubscriptionContracts(
@@ -792,19 +723,25 @@ final class ExternalSubscriptionProjectionBuilder {
                      * fetching unrelated provider content.
                      */
                     projected.properties(
-                            entry.getKey(), exactReference(entry.getValue()));
+                            entry.getKey(), exactReference(
+                                    entry.getValue(), snapshotManager));
                 }
             }
         }
         return projected;
     }
 
-    static Node exactReference(Node source) {
+    static Node exactReference(
+            Node source,
+            ProcessingSnapshotManager snapshotManager) {
         if (source.isReferenceOnly()) {
             return source.clone();
         }
         return new Node().blueId(
-                DirectBlueIdCalculator.calculateBlueId(source));
+                CanonicalIdentityEvidence.sourceBlueId(
+                        source,
+                        snapshotManager,
+                        "Retained exact subscription contract"));
     }
 
     private Node copyNodeHeader(Node source) {
@@ -824,7 +761,15 @@ final class ExternalSubscriptionProjectionBuilder {
                 .position(source.getPosition())
                 .blue(cloneNullable(source.getBlue()))
                 .inlineValue(source.isInlineValue());
-        if (source.getBlueId() != null) {
+        if (source.getProperties() != null) {
+            /*
+             * Sparse projections may filter every child. Preserve the
+             * source object's payload-presence bit so an all-filtered object
+             * remains exact {} instead of becoming a bare builder.
+             */
+            copy.properties(new LinkedHashMap<>());
+        }
+        if (source.isReferenceOnly()) {
             copy.blueId(source.getBlueId());
         }
         return copy;
@@ -834,28 +779,63 @@ final class ExternalSubscriptionProjectionBuilder {
         return source != null ? source.clone() : null;
     }
 
-    private boolean isSubscriptionContract(Node contract) {
+    private boolean isSubscriptionContract(
+            Node contract,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         if (contract == null) {
             return false;
         }
-        if (isDirectProcessEmbeddedContract(contract)) {
+        if (isResolvedProcessEmbeddedContract(
+                contract, canonicalTypeIdentities)) {
             return true;
         }
         Node type = contract.getType();
         if (type == null) {
             return false;
         }
-        String typeBlueId = type.getBlueId() != null
-                ? type.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(type);
+        String typeBlueId = CanonicalIdentityEvidence.resolvedTypeBlueId(
+                type,
+                canonicalTypeIdentities,
+                "Effective subscription contract type");
         return selection.isChannelType(typeBlueId);
+    }
+
+    private String canonicalSourceBlueId(Node source, String purpose) {
+        Set<String> preserved = snapshotManager != null
+                ? ExecutableBodyPathCatalog
+                        .fromNodeIncludingTypeContractsForSourceIdentity(
+                        source,
+                        ExecutableBodyPathCatalog.authoredNodePaths(source),
+                        exactSourceFieldsByType,
+                        snapshotManager)
+                : Collections.<String>emptySet();
+        return CanonicalIdentityEvidence.sourceBlueId(
+                source,
+                snapshotManager,
+                purpose,
+                preserved);
+    }
+
+    private boolean isResolvedProcessEmbeddedContract(
+            Node contract,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        Node type = contract != null ? contract.getType() : null;
+        return type != null
+                && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
+                CanonicalIdentityEvidence.resolvedTypeBlueId(
+                        type,
+                        canonicalTypeIdentities,
+                        "Effective Process Embedded contract type"));
     }
 
     private boolean isDirectProcessEmbeddedContract(Node contract) {
         Node type = contract != null ? contract.getType() : null;
         return type != null
                 && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                type.getBlueId());
+                CanonicalIdentityEvidence.sourceTypeBlueId(
+                        type,
+                        snapshotManager,
+                        "Direct Process Embedded contract type"));
     }
 
     private boolean isSubscriptionProcessorStateKey(String key) {

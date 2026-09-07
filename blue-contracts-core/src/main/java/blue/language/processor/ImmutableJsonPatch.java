@@ -158,13 +158,13 @@ final class ImmutableJsonPatch {
                 canonicalReplacement, "canonical patch value");
         FrozenNode resolved = Objects.requireNonNull(
                 resolvedReplacement, "resolved patch value");
-        if (!canonical.isStrictCanonical()) {
+        if (!sameFreezeMode(canonicalValue, canonical)) {
             throw new IllegalArgumentException(
-                    "Canonical patch value must use canonical construction mode");
+                    "Selected patch value must preserve its construction mode");
         }
-        if (resolved.isStrictCanonical()) {
+        if (!sameFreezeMode(resolvedValue, resolved)) {
             throw new IllegalArgumentException(
-                    "Resolved patch value must use resolved construction mode");
+                    "Resolved patch value must preserve its construction mode");
         }
         return new ImmutableJsonPatch(
                 op,

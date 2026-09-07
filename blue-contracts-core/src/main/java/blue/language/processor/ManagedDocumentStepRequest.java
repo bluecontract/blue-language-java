@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 
 import java.util.Objects;
@@ -13,6 +14,7 @@ public final class ManagedDocumentStepRequest {
     private final ManagedDocumentWorkKind workKind;
     private final String channelKey;
     private final Node exactPayload;
+    private final String matchingEventBlueId;
     private final Node occurrenceEvent;
     private final FrozenJsonPatch processorPatch;
     private final GasChargeContext attribution;
@@ -41,6 +43,7 @@ public final class ManagedDocumentStepRequest {
                 workKind,
                 channelKey,
                 exactPayload,
+                null,
                 null,
                 null,
                 GasChargeContext.empty(),
@@ -74,6 +77,7 @@ public final class ManagedDocumentStepRequest {
                 exactPayload,
                 null,
                 null,
+                null,
                 attribution,
                 ManagedDocumentResolutionOverlay.empty());
     }
@@ -92,6 +96,8 @@ public final class ManagedDocumentStepRequest {
      * @param workKind closed work role
      * @param channelKey exact Root channel key, possibly empty
      * @param exactPayload exact work payload
+     * @param matchingEventBlueId admitted identity of the semantic value that
+     *        handlers match, or {@code null} for non-handler work
      * @param occurrenceEvent exact originating event for embedded delivery,
      *        otherwise {@code null}
      * @param processorPatch exact containing-reference patch, otherwise
@@ -105,6 +111,7 @@ public final class ManagedDocumentStepRequest {
             ManagedDocumentWorkKind workKind,
             String channelKey,
             Node exactPayload,
+            String matchingEventBlueId,
             Node occurrenceEvent,
             FrozenJsonPatch processorPatch,
             GasChargeContext attribution) {
@@ -114,6 +121,7 @@ public final class ManagedDocumentStepRequest {
                 workKind,
                 channelKey,
                 exactPayload,
+                matchingEventBlueId,
                 occurrenceEvent,
                 processorPatch,
                 attribution,
@@ -130,6 +138,8 @@ public final class ManagedDocumentStepRequest {
      * @param workKind closed work role
      * @param channelKey exact Root channel key, possibly empty
      * @param exactPayload exact work payload
+     * @param matchingEventBlueId admitted identity of the semantic value that
+     *        handlers match, or {@code null} for non-handler work
      * @param occurrenceEvent exact originating event for embedded delivery,
      *        otherwise {@code null}
      * @param processorPatch exact containing-reference patch, otherwise
@@ -144,6 +154,7 @@ public final class ManagedDocumentStepRequest {
             ManagedDocumentWorkKind workKind,
             String channelKey,
             Node exactPayload,
+            String matchingEventBlueId,
             Node occurrenceEvent,
             FrozenJsonPatch processorPatch,
             GasChargeContext attribution,
@@ -156,6 +167,11 @@ public final class ManagedDocumentStepRequest {
         this.channelKey = Objects.requireNonNull(channelKey, "channelKey");
         this.exactPayload = Objects.requireNonNull(
                 exactPayload, "exactPayload").clone();
+        this.matchingEventBlueId = matchingEventBlueId == null
+                ? null
+                : BlueIds.requireBlueIdOrCyclicMember(
+                        matchingEventBlueId,
+                        "matchingEventBlueId");
         this.occurrenceEvent = occurrenceEvent != null
                 ? occurrenceEvent.clone()
                 : null;
@@ -210,6 +226,14 @@ public final class ManagedDocumentStepRequest {
     public Node exactPayload() { return exactPayload.clone(); }
 
     /**
+     * Returns the admission-proved identity used for handler matching.
+     *
+     * @return exact identity, including a cyclic-member identity, or
+     *         {@code null} for work that invokes no handler
+     */
+    public String matchingEventBlueId() { return matchingEventBlueId; }
+
+    /**
      * Returns the exact semantic occurrence behind an embedded adapter.
      *
      * @return defensive event copy, or {@code null} for other work kinds
@@ -245,6 +269,12 @@ public final class ManagedDocumentStepRequest {
         boolean embedded = workKind == ManagedDocumentWorkKind.EMBEDDED_EVENT;
         boolean containing = workKind
                 == ManagedDocumentWorkKind.CONTAINING_REFERENCE_UPDATE;
+        boolean handlerDelivery = workKind
+                == ManagedDocumentWorkKind.EXTERNAL_DELIVERY
+                || workKind == ManagedDocumentWorkKind.DOCUMENT_UPDATE
+                || workKind == ManagedDocumentWorkKind.TRIGGERED_EVENT
+                || workKind == ManagedDocumentWorkKind.EMBEDDED_EVENT
+                || workKind == ManagedDocumentWorkKind.LIFECYCLE;
         if (embedded != (occurrenceEvent != null)) {
             throw new IllegalArgumentException(
                     "Only embedded-event work requires occurrenceEvent");
@@ -252,6 +282,11 @@ public final class ManagedDocumentStepRequest {
         if (containing != (processorPatch != null)) {
             throw new IllegalArgumentException(
                     "Only containing-reference work requires processorPatch");
+        }
+        if (handlerDelivery != (matchingEventBlueId != null)) {
+            throw new IllegalArgumentException(
+                    "Handler work requires matchingEventBlueId and "
+                            + "non-handler work forbids it");
         }
     }
 }

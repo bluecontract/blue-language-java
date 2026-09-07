@@ -1,0 +1,70 @@
+diff --git a/blue-conformance/src/main/resources/language/1.0/spec.md b/blue-conformance/src/main/resources/language/1.0/spec.md
+index 4c0401c1..bfa73cce 100644
+--- a/blue-conformance/src/main/resources/language/1.0/spec.md
++++ b/blue-conformance/src/main/resources/language/1.0/spec.md
+@@ -1179,7 +1179,7 @@ where `MASTER` is the plain BlueId of the ordered cyclic set list and `index` is
+ 
+ ## 8. Types, Overlays, and Subtyping
+ 
+-> **Task D proposal, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
++> **Task D/D2 development candidate, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
+ 
+ ### 8.1 Any node can be a type (normative)
+ 
+@@ -1501,6 +1501,12 @@ During completed-value certification the root exists, so root `required` is triv
+ 
+ An absent optional child and its required descendants remain inactive until the existing semantic-presence rules establish that child. An authored type-only child is not a supplied scalar. Exact empty objects, empty lists, supplied payloads, and fixed inherited subtrees preserve their existing presence behavior. Preparing a definition MUST NOT create dummy children or values to satisfy any obligation. Definition context applies to ordinary child and `contracts` declaration paths and to item/key/value type metadata; it does not authorize treating a completed runtime value as a declaration merely because it lacks `value`.
+ 
++Definition admission checks every applicable bound against any supplied or inherited fixed payload, including an empty object, empty list, or a nonempty prefix. A list/object prefix below its minimum is rejected even if a later specialization could extend it. A payload-free declaration instead retains that bound. This conservative admission rule applies at root, ordinary child, contract declaration, and item/key/value metadata positions and across inline, reference, and imported forms.
++
++Consistency checking is local, not a general satisfiability solver. All pairs of present numeric lower/upper bounds are compared exactly; equal endpoints are contradictory if either bound is exclusive. Declaration-only ordinary children do not alone supply fixed object payload for admission. Thus a required declaration-only field combined with `maxFields: 0` can be prepared, but cannot pass completed resolution when that required field is supplied. Successful preparation does not assert that any completing instance exists.
++
++A pure reference can establish its exact reference identity and pass reference-shape admission without establishing target conformance. Complete resolution and snapshots retain pure references unless type/schema demands require their content; completion describes the requested semantic closure. To certify an exact referenced target, first demand and verify that target content, then run completed resolution. Limited results MUST preserve missing/unavailable evidence and budget exhaustion as incomplete, and invalid provider evidence as invalid. A warm identity/representation cache MUST NOT replace the current invocation's validation obligations.
++
+ ### 9.3 Presence
+ 
+ ```yaml
+@@ -1586,6 +1592,8 @@ If multiple numeric constraints appear in the type chain, the value must satisfy
+ 
+ For `Double` `multipleOf`, both the tested value and the `multipleOf` constraint are interpreted as their exact IEEE 754 binary64 rational values after parsing. A Double value `v` satisfies `multipleOf: m` iff `m > 0` and the exact rational quotient `v / m` is an integer. Implementations MUST NOT use epsilon comparisons, decimal string rounding, host-language modulo on binary floating point, or implementation-specific approximation.
+ 
++For a merged `multipleOf` containing a Double constraint, implementations MUST compute the positive rational LCM exactly. Let its reduced form be `n / 2^t`. If that rational is representable as a finite binary64 value, the effective keyword is that Double. Otherwise the effective keyword is the Integer `n`. This latter normalization preserves all admitted Integer and finite Double members: no nonzero binary64 multiple of the unrepresentable reduced rational exists, while its Integer members are exactly the multiples of `n`. This rule concerns effective schema normalization; it does not change the identity or kind of an authored scalar. Both-Integer constraints retain the Integer LCM rule above.
++
+ For cross-type numeric comparisons, an `Integer` value is interpreted as an exact rational integer. A `Double` bound or value is interpreted as its exact IEEE 754 binary64 rational value. Comparison between Integer and Double uses exact rational comparison.
+ 
+ A numeric token that cannot be parsed to a finite IEEE 754 binary64 value under §2.4 is invalid before schema evaluation.
+diff --git a/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md b/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
+index 4c0401c1..bfa73cce 100644
+--- a/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
++++ b/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
+@@ -1179,7 +1179,7 @@ where `MASTER` is the plain BlueId of the ordered cyclic set list and `index` is
+ 
+ ## 8. Types, Overlays, and Subtyping
+ 
+-> **Task D proposal, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
++> **Task D/D2 development candidate, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
+ 
+ ### 8.1 Any node can be a type (normative)
+ 
+@@ -1501,6 +1501,12 @@ During completed-value certification the root exists, so root `required` is triv
+ 
+ An absent optional child and its required descendants remain inactive until the existing semantic-presence rules establish that child. An authored type-only child is not a supplied scalar. Exact empty objects, empty lists, supplied payloads, and fixed inherited subtrees preserve their existing presence behavior. Preparing a definition MUST NOT create dummy children or values to satisfy any obligation. Definition context applies to ordinary child and `contracts` declaration paths and to item/key/value type metadata; it does not authorize treating a completed runtime value as a declaration merely because it lacks `value`.
+ 
++Definition admission checks every applicable bound against any supplied or inherited fixed payload, including an empty object, empty list, or a nonempty prefix. A list/object prefix below its minimum is rejected even if a later specialization could extend it. A payload-free declaration instead retains that bound. This conservative admission rule applies at root, ordinary child, contract declaration, and item/key/value metadata positions and across inline, reference, and imported forms.
++
++Consistency checking is local, not a general satisfiability solver. All pairs of present numeric lower/upper bounds are compared exactly; equal endpoints are contradictory if either bound is exclusive. Declaration-only ordinary children do not alone supply fixed object payload for admission. Thus a required declaration-only field combined with `maxFields: 0` can be prepared, but cannot pass completed resolution when that required field is supplied. Successful preparation does not assert that any completing instance exists.
++
++A pure reference can establish its exact reference identity and pass reference-shape admission without establishing target conformance. Complete resolution and snapshots retain pure references unless type/schema demands require their content; completion describes the requested semantic closure. To certify an exact referenced target, first demand and verify that target content, then run completed resolution. Limited results MUST preserve missing/unavailable evidence and budget exhaustion as incomplete, and invalid provider evidence as invalid. A warm identity/representation cache MUST NOT replace the current invocation's validation obligations.
++
+ ### 9.3 Presence
+ 
+ ```yaml
+@@ -1586,6 +1592,8 @@ If multiple numeric constraints appear in the type chain, the value must satisfy
+ 
+ For `Double` `multipleOf`, both the tested value and the `multipleOf` constraint are interpreted as their exact IEEE 754 binary64 rational values after parsing. A Double value `v` satisfies `multipleOf: m` iff `m > 0` and the exact rational quotient `v / m` is an integer. Implementations MUST NOT use epsilon comparisons, decimal string rounding, host-language modulo on binary floating point, or implementation-specific approximation.
+ 
++For a merged `multipleOf` containing a Double constraint, implementations MUST compute the positive rational LCM exactly. Let its reduced form be `n / 2^t`. If that rational is representable as a finite binary64 value, the effective keyword is that Double. Otherwise the effective keyword is the Integer `n`. This latter normalization preserves all admitted Integer and finite Double members: no nonzero binary64 multiple of the unrepresentable reduced rational exists, while its Integer members are exactly the multiples of `n`. This rule concerns effective schema normalization; it does not change the identity or kind of an authored scalar. Both-Integer constraints retain the Integer LCM rule above.
++
+ For cross-type numeric comparisons, an `Integer` value is interpreted as an exact rational integer. A `Double` bound or value is interpreted as its exact IEEE 754 binary64 rational value. Comparison between Integer and Double uses exact rational comparison.
+ 
+ A numeric token that cannot be parsed to a finite IEEE 754 binary64 value under §2.4 is invalid before schema evaluation.

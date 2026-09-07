@@ -14,19 +14,23 @@ import java.util.Map;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProviderEvidenceVerifierTest {
 
-    private static final String CORRECTED_LANGUAGE_RELEASE_IDENTITY =
+    private static final String SOURCE_PREPROCESSING_BASELINE_IDENTITY =
+            "blue-language-source-preprocessing-environment-1.0@"
+                    + "sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e";
+    private static final String DEFECTIVE_AGGREGATE_RELEASE_IDENTITY =
             "blue-language-contracts-embedded-modules-collection-paths@"
-                    + "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
+                    + "sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c";
 
     @Test
-    void shouldBindSourceEvidenceToCorrectedReleasePackage() {
+    void shouldBindSourceEvidenceToAcyclicPreprocessingBaseline() {
         // given
-        String expected = CORRECTED_LANGUAGE_RELEASE_IDENTITY;
+        String expected = SOURCE_PREPROCESSING_BASELINE_IDENTITY;
 
         // when
         String actual =
@@ -34,6 +38,37 @@ class ProviderEvidenceVerifierTest {
 
         // then
         assertEquals(expected, actual);
+        assertNotEquals(DEFECTIVE_AGGREGATE_RELEASE_IDENTITY, actual);
+    }
+
+    @Test
+    void shouldBindRuntimeAliasesAndImportsAboveTheBaseline() {
+        // given
+        SourceContentVerificationRuntime baseline = runtime(
+                Collections.<String, String>emptyMap(),
+                Collections.<String, String>emptyMap());
+        SourceContentVerificationRuntime aliases = runtime(
+                Collections.singletonMap("person", "blue-id"),
+                Collections.<String, String>emptyMap());
+        SourceContentVerificationRuntime imports = runtime(
+                Collections.<String, String>emptyMap(),
+                Collections.singletonMap("tenant", "tenant-id"));
+
+        // when
+        String baselineIdentity =
+                ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(
+                        baseline);
+        String aliasIdentity =
+                ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(
+                        aliases);
+        String importIdentity =
+                ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(
+                        imports);
+
+        // then
+        assertNotEquals(baselineIdentity, aliasIdentity);
+        assertNotEquals(baselineIdentity, importIdentity);
+        assertNotEquals(aliasIdentity, importIdentity);
     }
 
     @Test
@@ -117,7 +152,7 @@ class ProviderEvidenceVerifierTest {
     }
 
     @Test
-    void shouldRequireExactReleaseRegistryEnvironmentAndSnapshotBindingsInSourceMode() {
+    void shouldRequireExactBaselineRegistryEnvironmentAndSnapshotBindingsInSourceMode() {
         // given
         Node source = UncheckedObjectMapper.YAML_MAPPER.readValue(
                 "blue:\n"
@@ -167,6 +202,15 @@ class ProviderEvidenceVerifierTest {
                                 preprocessing,
                                 registry,
                                 evidence)));
+        IllegalArgumentException oldAggregateFailure = captureFailure(
+                () -> ProviderEvidenceVerifier.verify(
+                        requested, source, ProviderMode.SOURCE_DOCUMENT, blue,
+                        new SourceProviderEnvironment(
+                                blue.languageVersion(),
+                                DEFECTIVE_AGGREGATE_RELEASE_IDENTITY,
+                                preprocessing,
+                                registry,
+                                evidence)));
 
         // then
         assertTrue(evidenceFailure instanceof IllegalArgumentException);
@@ -174,6 +218,7 @@ class ProviderEvidenceVerifierTest {
         assertTrue(registryFailure instanceof IllegalArgumentException);
         assertTrue(preprocessingFailure instanceof IllegalArgumentException);
         assertTrue(releaseFailure instanceof IllegalArgumentException);
+        assertTrue(oldAggregateFailure instanceof IllegalArgumentException);
     }
 
     private SourceProviderEnvironment environment(Blue blue,
@@ -232,6 +277,37 @@ class ProviderEvidenceVerifierTest {
             public String canonicalRegistryIdentity() {
                 throw new AssertionError(
                         "Direct verification consulted the canonical registry");
+            }
+        };
+    }
+
+    private SourceContentVerificationRuntime runtime(
+            Map<String, String> aliases,
+            Map<String, String> imports) {
+        return new SourceContentVerificationRuntime() {
+            @Override
+            public String languageVersion() {
+                return "1.0";
+            }
+
+            @Override
+            public Map<String, String> preprocessingAliases() {
+                return aliases;
+            }
+
+            @Override
+            public Map<String, String> environmentImports() {
+                return imports;
+            }
+
+            @Override
+            public Node canonicalizeSourceContent(Node source) {
+                return source.clone();
+            }
+
+            @Override
+            public String canonicalRegistryIdentity() {
+                return BlueCoreTypeRegistry.INSTANCE.packageIdentity();
             }
         };
     }

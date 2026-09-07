@@ -1,7 +1,12 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.ExactEventIdentityEvidence;
+import blue.language.provider.CyclicSetProof;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -106,14 +111,11 @@ final class ManagedTransitionReceiptTest {
                         1L);
 
         assertThrows(IllegalArgumentException.class,
-                () -> new ManagedRootEventOccurrence(
-                        0L,
-                        0L,
-                        SOURCE,
-                        exact.occurrenceIdentity(),
-                        eventBlueId,
+                () -> ExactEventIdentityEvidence.verify(
+                        null,
                         new Node().name("tampered"),
-                        true));
+                        eventBlueId,
+                        null));
 
         ManagedRootEventOccurrence wrongOccurrence =
                 new ManagedRootEventOccurrence(
@@ -121,8 +123,7 @@ final class ManagedTransitionReceiptTest {
                         0L,
                         SOURCE,
                         hash('c'),
-                        eventBlueId,
-                        event,
+                        exactEvent(event, eventBlueId),
                         true);
         assertThrows(IllegalArgumentException.class,
                 () -> ManagedDocumentTransitionReceipt.identified(
@@ -209,6 +210,56 @@ final class ManagedTransitionReceiptTest {
                         afterDocument, duplicate));
     }
 
+    @Test
+    void managedAndPublicOccurrencesPreserveVerifiedCyclicMemberIdentity() {
+        Node placeholder = new Node().properties(
+                "kind", new Node().value("cyclic-event"),
+                "self", new Node().blueId("this#0"));
+        CyclicSetFinalization finalized = CircularSetIdentityCalculator
+                .calculateCircularSetFinalization(
+                        Collections.singletonList(placeholder));
+        String eventBlueId = finalized.membersInInputOrder()
+                .get(0).finalBlueId();
+        Node resolved = placeholder.clone();
+        resolved.getProperties().get("self").blueId(eventBlueId);
+        ExactEventIdentityEvidence evidence =
+                ExactEventIdentityEvidence.verify(
+                        null,
+                        resolved,
+                        eventBlueId,
+                        CyclicSetProof.fromDeclaredPlaceholderSet(
+                                Collections.singletonList(placeholder)));
+        String occurrenceIdentity = IDENTITIES.eventOccurrenceIdentity(
+                INVOCATION, 0L, eventBlueId);
+
+        ManagedRootEventOccurrence managed =
+                new ManagedRootEventOccurrence(
+                        0L,
+                        0L,
+                        SOURCE,
+                        occurrenceIdentity,
+                        evidence,
+                        true);
+        PublicEventOccurrence publicEvent = new PublicEventOccurrence(
+                0L,
+                0L,
+                SOURCE,
+                occurrenceIdentity,
+                evidence);
+
+        assertEquals(eventBlueId, managed.eventBlueId());
+        assertEquals(eventBlueId, publicEvent.eventBlueId());
+        FrozenNode.ResolvedStructuralKey expected =
+                FrozenNode.fromResolvedNode(resolved)
+                        .resolvedStructuralKey();
+        assertEquals(expected,
+                FrozenNode.fromResolvedNode(managed.exactEvent())
+                        .resolvedStructuralKey());
+        assertEquals(expected,
+                FrozenNode.fromResolvedNode(publicEvent.event())
+                        .resolvedStructuralKey());
+    }
+
     private static ManagedRootEventOccurrence event(
             long ordinal,
             long occurrenceOrdinal,
@@ -221,9 +272,15 @@ final class ManagedTransitionReceiptTest {
                 SOURCE,
                 IDENTITIES.eventOccurrenceIdentity(
                         INVOCATION, occurrenceOrdinal, eventBlueId),
-                eventBlueId,
-                event,
+                exactEvent(event, eventBlueId),
                 publicAtSource);
+    }
+
+    private static ExactEventIdentityEvidence exactEvent(
+            Node event,
+            String eventBlueId) {
+        return ExactEventIdentityEvidence.verify(
+                null, event, eventBlueId, null);
     }
 
     private static String blueId(Node node) {

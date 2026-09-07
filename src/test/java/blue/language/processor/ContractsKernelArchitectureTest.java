@@ -34,14 +34,16 @@ final class ContractsKernelArchitectureTest {
      */
     private static final int MAX_EMBEDDED_SCOPE_PLANNER_LINES = 878;
     private static final int MAX_DOCUMENT_PROCESSING_RUNTIME_LINES = 822;
+    private static final int MAX_EXECUTABLE_BODY_PATH_CATALOG_LINES = 900;
     private static final int MAX_MANAGED_DOCUMENT_STEP_RUNTIME_LINES = 836;
     private static final int MAX_MANAGED_ROOT_SETTLEMENT_LINES = 1153;
     private static final int MAX_COMPOSITION_ROOT_LINES = 250;
     /*
-     * The exact-event accessor is the reviewed Contracts/BEX bridge. Keep the
-     * bound explicit so any further public surface still fails this gate.
+     * The exact-event and occurrence-event evidence accessors are the
+     * reviewed Contracts/BEX bridges. Keep the bound explicit so any further
+     * public surface still fails this gate.
      */
-    private static final int MAX_PUBLIC_SERVICE_METHODS = 31;
+    private static final int MAX_PUBLIC_SERVICE_METHODS = 33;
 
     @Test
     void shouldKeepContractsImplementationClassesWithinBudget()
@@ -73,6 +75,9 @@ final class ContractsKernelArchitectureTest {
         }
         if ("DocumentProcessingRuntime.java".equals(fileName)) {
             return MAX_DOCUMENT_PROCESSING_RUNTIME_LINES;
+        }
+        if ("ExecutableBodyPathCatalog.java".equals(fileName)) {
+            return MAX_EXECUTABLE_BODY_PATH_CATALOG_LINES;
         }
         if ("ManagedDocumentStepRuntime.java".equals(fileName)) {
             return MAX_MANAGED_DOCUMENT_STEP_RUNTIME_LINES;

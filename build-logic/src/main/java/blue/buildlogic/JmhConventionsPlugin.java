@@ -24,6 +24,7 @@ public final class JmhConventionsPlugin implements Plugin<Project> {
         project.getPluginManager().apply("me.champeau.jmh");
         JmhParameters parameters = (JmhParameters) project.getExtensions().getByName("jmh");
         parameters.getIncludeTests().set(true);
+        parameters.getFailOnError().set(true);
         parameters.getIncludes().set(project.getProviders()
                 .gradleProperty(INCLUDES_PROPERTY)
                 .map(JmhConventionsPlugin::parseIncludes)
@@ -41,7 +42,7 @@ public final class JmhConventionsPlugin implements Plugin<Project> {
 
     /** Parses, validates, and de-duplicates comma-separated JMH include regexes. */
     static List<String> parseIncludes(String rawValue) {
-        if (rawValue == null || rawValue.trim().isEmpty()) {
+        if (rawValue == null) {
             return Collections.emptyList();
         }
         Set<String> includes = new LinkedHashSet<>();

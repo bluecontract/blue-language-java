@@ -114,7 +114,7 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         }
     }
 
-    static void runCompareContentAndDirectResolvedBlueId(JsonNode spec) {
+    static void runVerifyResolvedFormNotDirectIdentityInput(JsonNode spec) {
         LanguageFixtureRuntime blue = new LanguageFixtureRuntime(
                 providerContext(spec, null).provider);
         Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
@@ -123,14 +123,17 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         String contentBlueId = blue.calculateSourceDocumentBlueId(source);
         String canonicalIdentityInputBlueId =
                 DirectBlueIdCalculator.calculateBlueId(canonical);
-        String directResolvedBlueId = DirectBlueIdCalculator.calculateBlueId(resolved);
         assertEquals(spec.path(
                         FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT)
                         .asBoolean(false),
                 contentBlueId.equals(canonicalIdentityInputBlueId));
-        assertEquals(spec.path(FixtureField.EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER)
-                        .asBoolean(false),
-                !directResolvedBlueId.equals(contentBlueId));
+        try {
+            DirectBlueIdCalculator.calculateBlueId(resolved);
+            throw new AssertionError(
+                    "Resolved Form must not be accepted as direct Canonical Identity Input.");
+        } catch (IllegalArgumentException expected) {
+            // The strict direct boundary rejects expanded type metadata.
+        }
     }
 
     static void runMinimizeAndResolve(JsonNode spec) {
@@ -234,10 +237,18 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
 
     static void runResolveVariants(JsonNode spec) {
         for (JsonNode variant : requireArray(spec, FixtureField.VARIANTS)) {
-            Node source = variant.has(FixtureField.SOURCE)
-                    ? readNode(variant.get(FixtureField.SOURCE))
-                    : readNode(requirePresent(variant, "overlay"));
-            attachBaselineType(source, spec);
+            boolean canonical = variant.has(FixtureField.CANONICAL_INPUT);
+            int inputs = (variant.has(FixtureField.SOURCE) ? 1 : 0)
+                    + (variant.has("overlay") ? 1 : 0) + (canonical ? 1 : 0);
+            if (inputs != 1) {
+                throw new IllegalArgumentException(
+                        "Resolve variant requires exactly one source, overlay or canonicalInput.");
+            }
+            Node source = canonical ? readNode(variant.get(FixtureField.CANONICAL_INPUT))
+                    : variant.has(FixtureField.SOURCE)
+                            ? readNode(variant.get(FixtureField.SOURCE))
+                            : readNode(variant.get("overlay"));
+            if (!canonical) attachBaselineType(source, spec);
             runExpectedVariant(spec, variant, source);
         }
     }
@@ -277,8 +288,11 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         ProviderContext provider = providerContext(fixture, null);
         LanguageFixtureRuntime blue =
                 new LanguageFixtureRuntime(provider.provider);
+        Node actual;
         try {
-            blue.resolve(blue.preprocess(source));
+            actual = variant.has(FixtureField.CANONICAL_INPUT)
+                    ? blue.resolveCanonicalInput(source)
+                    : blue.resolve(blue.preprocess(source));
         } catch (RuntimeException failure) {
             if (!variant.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                 throw failure;
@@ -292,6 +306,7 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         }
         assertTrue(variant.path(FixtureField.EXPECTED_VALID).asBoolean(false),
                 "Successful variant must declare expectedValid: true.");
+        assertResolutionExpectations(variant, actual, blue, source);
     }
 
     static void runMatch(JsonNode spec) {

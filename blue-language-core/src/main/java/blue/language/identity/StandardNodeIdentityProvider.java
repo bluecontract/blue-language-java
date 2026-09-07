@@ -2,7 +2,6 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.NodeIdentityProvider;
-import blue.language.identity.NodeToBlueIdInput;
 
 import java.util.List;
 
@@ -16,14 +15,13 @@ public final class StandardNodeIdentityProvider
 
     @Override
     public String calculate(Node node) {
-        return DirectBlueIdCalculator.INSTANCE
-                .directBlueIdFromCanonicalInput(
-                        NodeToBlueIdInput
-                                .getWithResolvedBlueIdMetadata(node));
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(
+                NodeToBlueIdInput.getResolvedForm(node));
     }
 
     @Override
     public String calculate(List<Node> nodes) {
-        return DirectBlueIdCalculator.calculateBlueId(nodes);
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(
+                NodeToBlueIdInput.getResolvedFormElements(nodes));
     }
 }

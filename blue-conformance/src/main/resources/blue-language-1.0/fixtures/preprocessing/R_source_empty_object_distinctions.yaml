@@ -1,0 +1,20 @@
+id: R_source_empty_object_distinctions
+category: Resolution
+operation: preprocess
+description: mandatory preprocessing omits Source null object members, converts list null to a placeholder, and retains empty objects and lists
+source:
+  removed: null
+  empty: {}
+  nested:
+    removed: null
+  values: [A, null, {}, [], B]
+expectedPreprocessed:
+  empty: {}
+  nested: {}
+  values:
+  - value: A
+  - $empty: true
+  - {}
+  - items: []
+  - value: B
+expectedIdempotent: true

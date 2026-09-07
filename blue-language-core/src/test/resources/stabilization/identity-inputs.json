@@ -1,0 +1,138 @@
+[
+  {
+    "name": "root-empty-object",
+    "source": "{}"
+  },
+  {
+    "name": "nested-empty-object",
+    "source": "child: {}"
+  },
+  {
+    "name": "root-empty-list",
+    "source": "[]"
+  },
+  {
+    "name": "containers-in-list",
+    "source": "[{}, []]"
+  },
+  {
+    "name": "null-placeholder",
+    "source": "[{}, [], null]"
+  },
+  {
+    "name": "absent-field",
+    "source": "name: Record"
+  },
+  {
+    "name": "present-empty-field",
+    "source": "name: Record\nchild: {}"
+  },
+  {
+    "name": "null-object-field",
+    "source": "name: Record\nchild: null"
+  },
+  {
+    "name": "only-null-field",
+    "source": "child: null"
+  },
+  {
+    "name": "reserved-null-field",
+    "source": "name: null"
+  },
+  {
+    "name": "required-definition",
+    "source": "name: Required Record\nfield:\n  type: Text\n  schema:\n    required: true"
+  },
+  {
+    "name": "gender-definition",
+    "source": "name: Gender\ntype: Text\nschema:\n  enum: [male, female, female]"
+  },
+  {
+    "name": "enum-order",
+    "source": "name: Gender\ntype: Text\nschema:\n  enum: [female, male]"
+  },
+  {
+    "name": "large-integer",
+    "source": "type: Integer\nvalue: \"9007199254740993\""
+  },
+  {
+    "name": "large-text",
+    "source": "type: Text\nvalue: \"9007199254740993\""
+  },
+  {
+    "name": "double",
+    "source": "type: Double\nvalue: 1.0"
+  },
+  {
+    "name": "integer",
+    "source": "type: Integer\nvalue: 1"
+  },
+  {
+    "name": "inline-gender",
+    "source": "type:\n  name: Gender\n  type: Text\n  schema:\n    enum: [female, male]\nvalue: female"
+  },
+  {
+    "name": "inline-required-definition",
+    "source": "type:\n  name: Required Record\n  field:\n    type: Text\n    schema:\n      required: true"
+  },
+  {
+    "name": "invalid-scalar-empty",
+    "source": "type: Text\nitems: []"
+  },
+  {
+    "name": "invalid-enum-value",
+    "source": "type: Text\nvalue: other\nschema:\n  enum: [female,male]"
+  },
+  {
+    "name": "merged-schema",
+    "source": "type:\n  name: Base\n  type: Text\n  schema:\n    minLength: 2\nschema:\n  maxLength: 5"
+  },
+  {
+    "name": "redundant-schema",
+    "source": "type:\n  name: Base\n  type: Text\n  schema:\n    minLength: 2\nschema:\n  minLength: 2"
+  },
+  {
+    "name": "inherited-equal-property",
+    "source": "type:\n  name: Base\n  field: 7\nfield: 7"
+  },
+  {
+    "name": "inherited-equal-value",
+    "source": "type:\n  name: Fixed\n  type: Text\n  value: x\nvalue: x"
+  },
+  {
+    "name": "inherited-custom-scalar",
+    "source": "type:\n  name: Record\n  field:\n    type:\n      name: Gender\n      type: Text\n      schema:\n        enum: [female, male]\nfield: female"
+  },
+  {
+    "name": "invalid-inherited-custom-scalar",
+    "source": "type:\n  name: Record\n  field:\n    type:\n      name: Gender\n      type: Text\n      schema:\n        enum: [female, male]\nfield: other"
+  },
+  {
+    "name": "invalid-known-schema-kind",
+    "source": "type: Integer\nschema:\n  minLength: 2"
+  },
+  {
+    "name": "positional-list-overlay",
+    "source": "type:\n  name: Letters\n  type: List\n  items: [A, B]\nitems:\n- $pos: 1\n  $replace: C"
+  },
+  {
+    "name": "inherited-custom-scalar-primitive-overlay",
+    "source": "type:\n  field:\n    type:\n      name: Label\n      type: Text\nfield: foo"
+  },
+  {
+    "name": "invalid-incompatible-enum-definition",
+    "source": "name: Bad\ntype: Text\nschema:\n  enum: [1]"
+  },
+  {
+    "name": "invalid-text-with-numeric-value",
+    "source": "type: Text\nvalue: 1"
+  },
+  {
+    "name": "invalid-integer-with-text-value",
+    "source": "type: Integer\nvalue: other"
+  },
+  {
+    "name": "exact-large-integer-schema-merge",
+    "source": "type:\n  type: Integer\n  schema:\n    minimum: {type: Integer, value: \"9007199254740992\"}\n    multipleOf: {type: Integer, value: \"9007199254740993\"}\nschema:\n  minimum: {type: Integer, value: \"9007199254740993\"}\n  multipleOf: 2"
+  }
+]

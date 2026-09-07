@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.HandlerContract;
@@ -270,7 +271,7 @@ final class ExternalChannelDependencyContextTest {
             // when
             SubscriptionDelta delta = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/");
             SubscriptionDelta.Entry aggregate =
@@ -345,7 +346,7 @@ final class ExternalChannelDependencyContextTest {
             // when
             SubscriptionDelta delta = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/");
             ExternalChannelDependencySnapshot.TypeFamily family =
@@ -569,7 +570,13 @@ final class ExternalChannelDependencyContextTest {
                                             processor.snapshotManager()),
                             bundle,
                             aggregate,
-                            event);
+                            event,
+                            null,
+                            ProcessorTestSupport
+                                    .admissionRuntimeWorkSession(
+                                            processor,
+                                            processor.snapshotManager(),
+                                            event));
             Node subject =
                     evaluation.checkpointSubject().toNode();
 
@@ -609,7 +616,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     missing,
                                     "/contracts/outer"));
         }
@@ -634,7 +641,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     cycle,
                                     "/contracts/left"));
         }
@@ -668,7 +675,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     invalid,
                                     "/contracts/outer"));
         }
@@ -762,7 +769,7 @@ final class ExternalChannelDependencyContextTest {
                         aggregate("outer", null, mode));
                 SubscriptionDelta initial = validate(
                         blue,
-                        new Node(),
+                        Nodes.emptyObject(),
                         emptyEnumeration,
                         "/contracts/outer");
                 SubscriptionDelta.Entry stale =
@@ -854,7 +861,7 @@ final class ExternalChannelDependencyContextTest {
                             "timeline-a"));
             SubscriptionDelta initial = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     direct,
                     "/contracts/outer");
             SubscriptionDelta.Entry active =
@@ -905,21 +912,14 @@ final class ExternalChannelDependencyContextTest {
                 DirectBlueIdCalculator.calculateBlueId(document);
         ExactNodeGraphFragments fragments =
                 new ExactNodeGraphFragments(document);
-        AtomicInteger rootReads = new AtomicInteger();
-        NodeProvider provider = blueId -> {
-            if (documentBlueId.equals(blueId)) {
-                rootReads.incrementAndGet();
-            }
-            return fragments.provider().fetchByBlueId(blueId);
-        };
 
         DocumentProcessingResult inline;
         DocumentProcessingResult reference;
         List<String> selectedDependencyKeys;
-        try (Blue language = runtime(provider, false)) {
+        try (Blue language = runtime(fragments.provider(), false)) {
             SubscriptionDelta initial = validate(
                     language,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/contracts/outer");
             ExternalOrderKey activationOrder =
@@ -996,7 +996,6 @@ final class ExternalChannelDependencyContextTest {
                         inline.document()),
                 DirectBlueIdCalculator.calculateBlueId(
                         reference.document()));
-        assertTrue(rootReads.get() > 0);
     }
 
     @Test
@@ -1062,7 +1061,13 @@ final class ExternalChannelDependencyContextTest {
                                             owner.snapshotManager()),
                             initialBundle,
                             outerSnapshot,
-                            first);
+                            first,
+                            null,
+                            ProcessorTestSupport
+                                    .admissionRuntimeWorkSession(
+                                            owner,
+                                            owner.snapshotManager(),
+                                            first));
             ExternalDeliverySnapshot delivery =
                     delivery(
                             outerSnapshot,

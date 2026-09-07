@@ -280,7 +280,7 @@ public final class ClosureInvocationInput {
             throw new IllegalArgumentException(
                     "Processing requires an external or managed-revision cause");
         }
-        if (cause.kind() == ProcessingCause.Kind.MANAGED_REVISION
+        if (cause instanceof ManagedHistoryStep
                 && !directDeliveries.isEmpty()) {
             throw new IllegalArgumentException(
                     "Managed-revision processing has no direct deliveries");
@@ -301,8 +301,8 @@ public final class ClosureInvocationInput {
                         "Local execution cap targets a document outside the closure");
             }
         }
-        if (cause instanceof ManagedRevisionCause) {
-            validateManagedRevision((ManagedRevisionCause) cause);
+        if (cause instanceof ManagedHistoryStep) {
+            validateManagedRevision((ManagedHistoryStep) cause);
         }
         if (cause instanceof ExternalEventCause
                 && !((ExternalEventCause) cause)
@@ -313,7 +313,7 @@ public final class ClosureInvocationInput {
         }
     }
 
-    private void validateManagedRevision(ManagedRevisionCause revision) {
+    private void validateManagedRevision(ManagedHistoryStep revision) {
         if (!snapshot.contains(revision.childDocumentId())) {
             throw new IllegalArgumentException(
                     "Managed-revision child is outside the affected closure");
@@ -341,6 +341,25 @@ public final class ClosureInvocationInput {
             throw new IllegalArgumentException(
                     "Managed-revision cause does not match the inactive "
                             + "occurrence history cursor");
+        }
+        ManagedRepresentationCursor cursor = target.pendingRepresentationCursor();
+        if (revision instanceof ManagedRepresentationCause) {
+            // A completed intermediate chain stays inactive only for its numbered successor.
+            if (cursor != null && cursor.positionIdentity().equals(cursor.targetPositionIdentity())) {
+                throw new IllegalArgumentException("Representation chain already reached its frozen target");
+            }
+            ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
+            ManagedRepresentationTransition bridge = representation.transition();
+            String predecessor = cursor == null ? bridge.anchorReceiptIdentity() : cursor.positionIdentity();
+            if (!predecessor.equals(bridge.predecessorPositionIdentity())
+                    || (cursor != null && (!cursor.anchorReceiptIdentity().equals(bridge.anchorReceiptIdentity())
+                    || !cursor.targetPositionIdentity().equals(representation.targetPositionIdentity())
+                    || !Objects.equals(cursor.nextRevisionReceiptIdentity(), representation.nextRevisionReceiptIdentity())))) {
+                throw new IllegalArgumentException("Representation cause changed its exact historical position or frozen target");
+            }
+        } else if (cursor != null && (!cursor.positionIdentity().equals(cursor.targetPositionIdentity())
+                || !revision.sourceRevisionReceiptIdentity().equals(cursor.nextRevisionReceiptIdentity()))) {
+            throw new IllegalArgumentException("Numbered revision lacks its completed exact representation predecessor");
         }
         ManagedDocumentSnapshot child = snapshot.managedDocument(
                 revision.childDocumentId());

@@ -47,7 +47,10 @@ class TestEventChannelTest {
                 "    propertyValue: 1\n";
         Node document = blue.yamlToNode(documentYaml);
         Node randomEvent = blue.yamlToNode(
-                "type:\n  blueId: " + RuntimeBlueIds.FIXTURE_EVENT + "\n");
+                "type:\n" +
+                "  blueId: " + RuntimeBlueIds.FIXTURE_EVENT + "\n" +
+                "id: random\n" +
+                "subscriptionKey: random\n");
         Node testEvent = blue.objectToNode(
                 new TestEvent().x(5).y(10));
 
@@ -67,6 +70,10 @@ class TestEventChannelTest {
         assertNull(afterRandom.getProperties() != null
                 ? afterRandom.getProperties().get("x")
                 : null);
+        assertEquals(
+                ProcessorStatus.NO_MATCH,
+                randomResult.status(),
+                diagnosticMessage(randomResult));
         assertEquals(ProcessorStatus.SUCCESS, testResult.status(), diagnosticMessage(testResult));
         assertEquals(new BigInteger("1"), xNode.getValue());
     }

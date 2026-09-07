@@ -8,11 +8,13 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.processor.ContractProcessor;
@@ -99,13 +101,23 @@ class BlueCacheLifecycleTest {
             blue.resolveToSnapshot(document(100 + index));
         }
         ResolvedSnapshot loaded = blue.loadSnapshot(authoritative.canonicalRoot());
+        ResolvedSnapshot pinned = blue.cachedResolvedSnapshot(
+                        authoritative.blueId())
+                .orElseThrow(AssertionError::new);
         int pinnedEntries =
                 blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
         int derivedEntries =
                 blue.cacheStats().region("derivedResolvedSnapshots").entries();
 
         // then
-        assertSame(authoritative, loaded);
+        assertTrue(authoritative.isSourceBacked());
+        assertFalse(pinned.isSourceBacked());
+        assertNotSame(authoritative, loaded);
+        assertSame(pinned, loaded);
+        assertSame(authoritative.frozenCanonicalRoot(),
+                loaded.frozenCanonicalRoot());
+        assertSame(authoritative.frozenResolvedRoot(),
+                loaded.frozenResolvedRoot());
         assertEquals(1, pinnedEntries);
         assertTrue(derivedEntries <= 1);
     }
@@ -141,7 +153,13 @@ class BlueCacheLifecycleTest {
                 blue.cacheStats().region("pinnedAuthoritativeSnapshots").entries();
 
         // then
-        assertSame(snapshot, cached);
+        assertTrue(snapshot.isSourceBacked());
+        assertFalse(cached.isSourceBacked());
+        assertNotSame(snapshot, cached);
+        assertSame(snapshot.frozenCanonicalRoot(),
+                cached.frozenCanonicalRoot());
+        assertSame(snapshot.frozenResolvedRoot(),
+                cached.frozenResolvedRoot());
         assertEquals(1, pinnedEntries);
     }
 
@@ -220,7 +238,8 @@ class BlueCacheLifecycleTest {
         // when
         blue.clearResolvedSnapshotCache();
         boolean processorClosed = processor.isClosed();
-        Node initializedDocument = blue.initializeDocument(new Node()).document();
+        Node initializedDocument = blue.initializeDocument(
+                Nodes.emptyObject()).document();
 
         // then
         assertFalse(processorClosed);
@@ -238,7 +257,8 @@ class BlueCacheLifecycleTest {
         first.close();
         boolean closedAfterFirstClose = shared.isClosed();
         DocumentProcessor secondProcessor = second.getDocumentProcessor();
-        DocumentProcessingResult initialized = second.initializeDocument(new Node());
+        DocumentProcessingResult initialized = second.initializeDocument(
+                Nodes.emptyObject());
         second.close();
         boolean closedAfterSecondClose = shared.isClosed();
 
@@ -254,7 +274,7 @@ class BlueCacheLifecycleTest {
         // given
         Blue blue = new Blue();
         DocumentProcessor owned = blue.getDocumentProcessor();
-        owned.administration().markersFor(new Node(), "/");
+        owned.administration().markersFor(Nodes.emptyObject(), "/");
         DocumentProcessor borrowed = new DocumentProcessor();
 
         // when
@@ -1101,9 +1121,10 @@ class BlueCacheLifecycleTest {
         boolean replacementAlive = replacement.isAlive();
         Throwable traversalFailure = failure.get();
         Boolean originalProviderResult = result.get();
-        boolean replacementProviderResult = blue.isNodeSubtypeOf(
-                new Node().blueId(candidateTypeBlueId),
-                new Node().blueId(superTypeBlueId));
+        Throwable replacementProviderFailure = captureFailure(() ->
+                blue.isNodeSubtypeOf(
+                        new Node().blueId(candidateTypeBlueId),
+                        new Node().blueId(superTypeBlueId)));
 
         // then
         assertTrue(candidateFetchEnteredObserved);
@@ -1112,7 +1133,9 @@ class BlueCacheLifecycleTest {
         assertFalse(replacementAlive);
         assertNull(traversalFailure);
         assertEquals(Boolean.TRUE, originalProviderResult);
-        assertFalse(replacementProviderResult);
+        assertTrue(replacementProviderFailure instanceof IllegalArgumentException);
+        assertTrue(replacementProviderFailure.getMessage()
+                .contains(candidateTypeBlueId));
     }
 
     @Test
@@ -1496,7 +1519,8 @@ class BlueCacheLifecycleTest {
         CountDownLatch replacementReturned = new CountDownLatch(1);
         Thread replacement = new Thread(() -> {
             try {
-                blue.mergingProcessor((target, source, provider, resolver) -> { });
+                blue.mergingProcessor((target, source, provider, resolver,
+                                       typeIdentities) -> { });
             } catch (Throwable throwable) {
                 failure.compareAndSet(null, throwable);
             } finally {
@@ -1757,7 +1781,8 @@ class BlueCacheLifecycleTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
             entered.countDown();
             try {
                 if (!release.await(5L, TimeUnit.SECONDS)) {
@@ -1767,6 +1792,7 @@ class BlueCacheLifecycleTest {
                 Thread.currentThread().interrupt();
                 throw new AssertionError(exception);
             }
+            target.replaceWith(source);
         }
     }
 
@@ -1781,9 +1807,11 @@ class BlueCacheLifecycleTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
             if (source.getProperties() != null
                     && source.getProperties().containsKey("typeMarker")) {
+                target.replaceWith(source);
                 target.properties(evidenceProperty, new Node().value(true));
             }
         }

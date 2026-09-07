@@ -1,5 +1,9 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
@@ -9,6 +13,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
@@ -41,6 +46,49 @@ class ImmutablePatchPlannerTest {
         assertEquals("/a/b", plan.path());
         assertEquals("/a", plan.originScope());
         assertEquals(Arrays.asList("/a", "/"), plan.cascadeScopes());
+    }
+
+    @Test
+    void shouldPatchExplicitSourceRootWithoutTreatingItAsCanonicalOrManufacturingTypeEvidence() {
+        // given
+        Node inlineType = new Node().name("Inline selected type");
+        String inlineTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(inlineType);
+        CanonicalTypeIdentityLookup identities =
+                completeInlineTypeEvidence(
+                        inlineType, inlineTypeBlueId);
+        Node source = new Node()
+                .type(inlineType)
+                .properties("counter", new Node().value(1));
+        ResolvedSnapshot snapshot = ResolvedSnapshot.withSource(
+                FrozenNode.fromResolvedNode(source),
+                FrozenNode.fromResolvedNode(source),
+                identities,
+                true);
+        ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(
+                snapshot.frozenSourceRoot());
+
+        // when
+        ImmutablePatchPlanner.PatchPlan plan = planner.plan(
+                "/",
+                JsonPatch.replace("/counter", new Node().value(2)));
+        Node patchedType = plan.rootNode().getType();
+
+        // then
+        assertTrue(snapshot.isSourceBacked());
+        assertTrue(snapshot.canonicalRoot().getType().isReferenceOnly());
+        assertEquals("Inline selected type", patchedType.getName());
+        assertNull(patchedType.getBlueId());
+        assertEquals(BigInteger.valueOf(2),
+                plan.rootNode().getProperties().get("counter").getValue());
+        assertThrows(
+                IllegalStateException.class,
+                () -> CanonicalTypeIdentityLookup.incomplete()
+                        .requireCanonicalTypeBlueId(patchedType));
+        assertEquals(
+                inlineTypeBlueId,
+                snapshot.canonicalTypeIdentities()
+                        .requireCanonicalTypeBlueId(patchedType));
     }
 
     @Test
@@ -163,7 +211,7 @@ class ImmutablePatchPlannerTest {
     @Test
     void shouldVerifyIntroducingPureCyclicSetMemberReferenceBlocksOnlyLaterDescendantMutation() {
         // given
-        FrozenNode initial = FrozenNode.fromNode(new Node());
+        FrozenNode initial = FrozenNode.empty();
         ImmutablePatchPlanner.PatchPlan introduced =
                 new ImmutablePatchPlanner(initial).plan(
                         "/",
@@ -328,5 +376,68 @@ class ImmutablePatchPlannerTest {
             return root.contracts(reference);
         }
         throw new IllegalArgumentException("Unsupported intrinsic field: " + field);
+    }
+
+    private static CanonicalTypeIdentityLookup completeInlineTypeEvidence(
+            Node authoredTypeSource,
+            String blueId) {
+        FrozenNode expectedSource = FrozenNode.fromResolvedNode(
+                authoredTypeSource);
+        return new CanonicalTypeIdentityLookup() {
+            @Override
+            public boolean hasCompleteCoverage() {
+                return true;
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(Node completedType) {
+                String blueId = requireCanonicalTypeBlueId(completedType);
+                return Optional.of(completedType.isReferenceOnly()
+                        ? CanonicalTypeIdentityEvidence.referenceSource(blueId)
+                        : CanonicalTypeIdentityEvidence.authoredInline(
+                                blueId,
+                                expectedSource.toNode(),
+                                expectedSource.toNode()));
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(
+                    Node completedType,
+                    Node source) {
+                CanonicalTypeIdentityEvidence evidence =
+                        findCanonicalTypeIdentityEvidence(
+                                completedType).get();
+                if (source == null) {
+                    return Optional.of(evidence);
+                }
+                if (source.isReferenceOnly()) {
+                    return evidence.blueId().equals(source.getBlueId())
+                            ? Optional.of(evidence)
+                            : Optional
+                            .<CanonicalTypeIdentityEvidence>empty();
+                }
+                return expectedSource.sameResolvedStructure(
+                        FrozenNode.fromResolvedNode(source))
+                        ? Optional.of(evidence)
+                        : Optional
+                        .<CanonicalTypeIdentityEvidence>empty();
+            }
+
+            @Override
+            public String requireCanonicalTypeBlueId(Node completedType) {
+                if (completedType.isReferenceOnly()) {
+                    return CanonicalTypeIdentityLookup.incomplete()
+                            .requireCanonicalTypeBlueId(completedType);
+                }
+                if (!expectedSource.sameResolvedStructure(
+                        FrozenNode.fromResolvedNode(completedType))) {
+                    throw new IllegalStateException(
+                            "Unexpected materialized effective type");
+                }
+                return blueId;
+            }
+        };
     }
 }

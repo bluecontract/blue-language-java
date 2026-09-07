@@ -6,6 +6,7 @@ import blue.language.api.BlueOperationResult;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -806,12 +807,12 @@ final class ProcessorRuntimeAccessTest {
                 .build();
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
-                        successor, new Node());
+                        successor, Nodes.emptyObject());
         execution.preflightScope("/");
         ProcessorExecutionContext context = execution.createContext(
                 "/",
                 execution.bundleForScope("/"),
-                new Node(),
+                Nodes.emptyObject(),
                 false);
 
         // when
@@ -997,6 +998,16 @@ final class ProcessorRuntimeAccessTest {
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            record(document);
+            try (blue.language.runtime.BlueLanguage language =
+                    blue.language.runtime.BlueLanguage.builder().build()) {
+                return language.snapshots().resolve(document);
+            }
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
@@ -1039,9 +1050,11 @@ final class ProcessorRuntimeAccessTest {
                 transientResolutionRelease = null;
             }
             lastDocument = document;
-            document.properties(
-                    "managerMutation",
-                    new Node().value("recorded"));
+            if (document.getValue() == null && document.getItems() == null) {
+                document.properties("managerMutation", new Node().value("recorded"));
+            } else {
+                document.description("manager mutation recorded");
+            }
             return new ResolvedSnapshot(
                     FrozenNode.fromNode(document),
                     FrozenNode.fromResolvedNode(document));

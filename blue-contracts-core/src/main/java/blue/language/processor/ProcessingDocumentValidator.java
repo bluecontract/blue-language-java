@@ -128,7 +128,9 @@ public final class ProcessingDocumentValidator {
     }
 
     private static Node fallbackDocument(Node parsedDocument) {
-        return parsedDocument != null ? parsedDocument.clone() : new Node();
+        return parsedDocument != null
+                ? parsedDocument.clone()
+                : null;
     }
 
     private static Iterable<String> iterable(java.util.Iterator<String> iterator) {

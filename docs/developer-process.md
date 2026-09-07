@@ -26,6 +26,11 @@ All invocations in one checkout share module `build/` directories. Do not run
 report-producing or clean builds concurrently, including from a sibling
 composite build. Preserve unrelated user changes and ignored local files.
 
+Use [fast development verification](fast-development-verification.md) for the
+edit/test loop: explicit regression and dynamic-case selection, component gates,
+`fastVerify`, and broader development integration. That guide records exact
+coverage, executed inventories, measurements, and the unchanged release boundary.
+
 ## Module map
 
 | Module | Change it for |
@@ -77,7 +82,7 @@ Useful commands:
 
 ```bash
 ./gradlew :blue-language-core:compileJava
-./gradlew test --tests 'blue.language.identity.*Test'
+./gradlew focusedTest --tests 'blue.language.identity.*Test' --max-workers=1 --no-parallel
 ./gradlew :blue-language-core:verifyJavaPackageCycles
 ./gradlew :blue-language-core:apiBaselineDiff
 ```
@@ -102,7 +107,7 @@ Useful commands:
 
 ```bash
 ./gradlew :blue-contracts-core:compileJava
-./gradlew test --tests 'blue.language.processor.ProcessorEngine*Test'
+./gradlew focusedTest --tests 'blue.language.processor.ProcessorEngine*Test' --max-workers=1 --no-parallel
 ./gradlew runtimeTraceEvidence
 ./gradlew releaseConformanceTest
 ```
@@ -429,8 +434,8 @@ commit the exact result. Do not edit a generated reference by hand.
 ./gradlew semanticBaselineVerify
 ```
 
-The Language fixture package contains 153 exact fixtures and the Contracts
-package contains 276. Generated fixture coverage is the source for category
+The Language fixture package contains 185 exact fixtures and the Contracts
+package contains 295. Generated fixture coverage is the source for category
 subtotals; avoid copying subtotals into authored docs.
 
 `semanticBaselineCapture` is manual and exceptional. Verification never

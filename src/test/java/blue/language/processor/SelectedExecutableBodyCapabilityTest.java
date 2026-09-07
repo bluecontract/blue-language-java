@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,11 +66,14 @@ final class SelectedExecutableBodyCapabilityTest {
                         "script",
                         "schema-body",
                         FrozenNode.fromResolvedNode(body),
+                        false,
                         reference ->
                                 FrozenNode.fromResolvedNode(
                                         new Node().name(
                                                 reference
                                                         .getReferenceBlueId())),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         GasSchedule.contracts10());
         Set<String> expected =
@@ -86,6 +91,45 @@ final class SelectedExecutableBodyCapabilityTest {
         assertEquals(
                 blueIds.get(7),
                 opened.getName());
+    }
+
+    @Test
+    void shouldNotGrantMixedSchemaBlueIdAsAReferenceCapability() {
+        // given
+        String metadataBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().value(
+                                "mixed schema metadata"));
+        Schema authoredMixedSchema =
+                new Schema()
+                        .blueId(metadataBlueId)
+                        .required(new Node().value(true));
+        SelectedExecutableBody selected =
+                new SelectedExecutableBody(
+                        "script",
+                        "mixed-schema-body",
+                        FrozenNode.fromResolvedNode(
+                                new Node().schema(
+                                        authoredMixedSchema)),
+                        false,
+                        reference -> FrozenNode.empty(),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
+                        () -> true,
+                        GasSchedule.contracts10());
+
+        // when
+        Set<String> available =
+                selected.availableReferenceBlueIds();
+        Throwable failure = captureFailure(
+                () -> selected.materializeExactReference(
+                        metadataBlueId));
+
+        // then
+        assertFalse(available.contains(metadataBlueId));
+        assertInstanceOf(
+                IllegalArgumentException.class,
+                failure);
     }
 
     @Test
@@ -107,8 +151,11 @@ final class SelectedExecutableBodyCapabilityTest {
                         FrozenNode.fromResolvedNode(
                                 new Node().items(
                                         oversized)),
+                        false,
                         reference ->
                                 FrozenNode.empty(),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         schedule));
         String limitName = failure
@@ -153,12 +200,15 @@ final class SelectedExecutableBodyCapabilityTest {
                         "transitive-body",
                         FrozenNode.fromResolvedNode(
                                 ref(entry)),
+                        false,
                         reference ->
                                 FrozenNode.fromResolvedNode(
                                         new Node().items(
                                                 references(
                                                         "expanded",
                                                         limit))),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         schedule);
 
@@ -220,13 +270,13 @@ final class SelectedExecutableBodyCapabilityTest {
             ProcessorInvocationState execution =
                     new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
-                            new Node());
+                            Nodes.emptyObject());
             execution.preflightScope("/");
             ProcessorExecutionContext context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             "handler",
                             FrozenNode.fromResolvedNode(
                                     new Node().properties(
@@ -235,7 +285,8 @@ final class SelectedExecutableBodyCapabilityTest {
             context.bindSelectedExecutableBodies(
                     Collections.singletonList("script"),
                     Collections.singletonMap(
-                            "script", bodyBlueId));
+                            "script", bodyBlueId),
+                    context.frozenContractNode());
             SelectedExecutableBody selected =
                     context.selectedExecutableBody(
                             "script");
@@ -291,6 +342,39 @@ final class SelectedExecutableBodyCapabilityTest {
     }
 
     @Test
+    void shouldKeepReferencedAuthoredBodySeparateFromInheritedFields() {
+        // given
+        Node authored = new Node().properties("do", new Node().items(new Node().properties("$return", new Node().value(true))));
+        String bodyBlueId = DirectBlueIdCalculator.calculateBlueId(authored);
+        BasicNodeProvider provider = new BasicNodeProvider(authored);
+        Node resolved = authored.clone().properties("entry", new Node().type(new Node().blueId(blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID)));
+        try (Blue blue = new Blue(provider)) {
+            ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), Nodes.emptyObject());
+            execution.preflightScope("/");
+            ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), Nodes.emptyObject(), "handler", FrozenNode.fromResolvedNode(new Node().properties("script", resolved)), false);
+            context.bindSelectedExecutableBodies(Collections.singletonList("script"), Collections.singletonMap("script", bodyBlueId), FrozenNode.fromNode(new Node().properties("script", new Node().blueId(bodyBlueId))));
+            SelectedExecutableBody selected = context.selectedExecutableBody("script");
+
+            // when
+            FrozenNode exactReference = selected.exactBody();
+            FrozenNode opened = selected.materializeExactReference(bodyBlueId);
+            FrozenNode repeated = selected.materializeExactReference(bodyBlueId);
+            boolean fromReference = selected.wasMaterializedFromReference();
+            context.close();
+            Throwable closedFailure = captureFailure(selected::exactBody);
+
+            // then
+            assertTrue(exactReference.isReferenceOnly());
+            assertEquals(bodyBlueId, exactReference.getReferenceBlueId());
+            assertTrue(fromReference);
+            assertFalse(opened.getProperties().containsKey("entry"));
+            assertEquals(FrozenNode.fromNode(authored).blueId(), opened.blueId());
+            assertSame(opened, repeated);
+            assertInstanceOf(IllegalStateException.class, closedFailure);
+        }
+    }
+
+    @Test
     void shouldVerifyCyclicMemberCanBeOpenedOnlyWithCompleteProviderProof() {
         // given
         Node cyclicSet =
@@ -319,13 +403,13 @@ final class SelectedExecutableBodyCapabilityTest {
             ProcessorInvocationState execution =
                     new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
-                            new Node());
+                            Nodes.emptyObject());
             execution.preflightScope("/");
             ProcessorExecutionContext context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             "handler",
                             FrozenNode.fromResolvedNode(
                                     new Node().properties(
@@ -336,7 +420,8 @@ final class SelectedExecutableBodyCapabilityTest {
             context.bindSelectedExecutableBodies(
                     Collections.singletonList("script"),
                     Collections.singletonMap(
-                            "script", memberBlueId));
+                            "script", memberBlueId),
+                    context.frozenContractNode());
 
             // when
             FrozenNode member =

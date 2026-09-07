@@ -4,22 +4,18 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.provider.Types;
 import blue.language.resolve.ResolutionLimits;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,11 +41,17 @@ final class ResolutionEngine implements NodeResolver {
     private final ReferenceCacheAdmissionPolicy referenceCacheAdmissionPolicy;
     private final ResolutionSession resolutionSession;
     private final ListOverlayMerger listOverlayMerger;
+    private boolean canonicalListPayloads;
     private final LabelProvenanceTracker labelProvenanceTracker;
     private final ActiveTypeStack activeTypeStack;
     private final ReferenceResolver referenceResolver;
     private final CompletedValueValidator completedValueValidator;
     private final ResolutionSnapshotFactory snapshotFactory;
+    private final SchemaValueTypeResolver schemaValueTypeResolver;
+    private final CanonicalTypeIdentityRecorder typeIdentityRecorder;
+    private final TypeMetadataResolver typeMetadataResolver;
+    private final DeclaredTypeContributionResolver
+            declaredTypeContributionResolver;
 
     /**
      * Creates a merge engine without retained resolved-reference caching.
@@ -119,9 +121,23 @@ final class ResolutionEngine implements NodeResolver {
                 this, mergingProcessor, referenceResolver);
         this.snapshotFactory = new ResolutionSnapshotFactory(
                 this, resolvedReferenceCache);
+        this.schemaValueTypeResolver = new SchemaValueTypeResolver(this);
+        this.typeIdentityRecorder = new CanonicalTypeIdentityRecorder();
+        this.activeTypeStack = new ActiveTypeStack();
+        this.typeMetadataResolver = new TypeMetadataResolver(
+                this,
+                referenceResolver,
+                activeTypeStack,
+                typeIdentityRecorder);
         this.labelProvenanceTracker = new LabelProvenanceTracker(
                 this, wrappedNodeProvider, listOverlayMerger);
-        this.activeTypeStack = new ActiveTypeStack();
+        this.declaredTypeContributionResolver =
+                new DeclaredTypeContributionResolver(
+                        this,
+                        referenceResolver,
+                        labelProvenanceTracker,
+                        activeTypeStack,
+                        typeIdentityRecorder);
     }
 
     private ResolutionEngine invocationMerger() {
@@ -131,6 +147,17 @@ final class ResolutionEngine implements NodeResolver {
                 new ResolutionSession());
     }
 
+    /** Resolves exact comparison input independently under the owning semantic goal. */
+    TypeEvidenceResolution resolveDetachedCanonicalContribution(Node canonicalContribution) {
+        Objects.requireNonNull(canonicalContribution, "canonicalContribution");
+        ResolutionEngine detached = invocationMerger();
+        Contribution contribution = activeResolutionState().contribution;
+        Node resolved = detached.withCanonicalListPayloads(() -> detached.resolveRoot(
+                canonicalContribution.clone(), ResolutionLimits.NO_LIMITS, contribution));
+        return new TypeEvidenceResolution(FrozenNode.fromResolvedNode(resolved),
+                detached.completedTypeIdentityEvidence());
+    }
+
     private boolean requiresFreshInvocation() {
         return resolutionSession == null
                 || !resolutionSession.acceptsCurrentThread();
@@ -138,6 +165,24 @@ final class ResolutionEngine implements NodeResolver {
 
     ResolutionState activeResolutionState() {
         return resolutionSession != null ? resolutionSession.state() : null;
+    }
+
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        ResolutionState state = activeResolutionState();
+        if (state == null) {
+            throw new IllegalStateException(
+                    "Canonical type identities are available only during "
+                            + "the owning resolution invocation");
+        }
+        return state.canonicalTypeIdentityIndex;
+    }
+
+    CanonicalTypeIdentityIndex.EvidenceSnapshot
+    completedTypeIdentityEvidence() {
+        return resolutionSession != null
+                ? resolutionSession.completedTypeIdentityEvidence()
+                : CanonicalTypeIdentityIndex.EvidenceSnapshot
+                .incompleteEmpty();
     }
 
     blue.language.merge.SnapshotResolution resolveSnapshot(
@@ -155,6 +200,78 @@ final class ResolutionEngine implements NodeResolver {
             return invocationMerger().resolveSnapshot(canonicalRoot, limits);
         }
         return snapshotFactory.resolve(canonicalRoot, limits);
+    }
+
+    @Override
+    public TypeEvidenceResolution resolveTypeEvidence(
+            Node source,
+            ResolutionLimits limits) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(limits, "limits");
+        if (requiresFreshInvocation() || activeResolutionState() != null) {
+            return invocationMerger().resolveTypeEvidence(source, limits);
+        }
+        Node resolved = resolve(source, limits);
+        FrozenNode frozenResolved = resolvedReferenceCache != null
+                ? resolvedReferenceCache.freezeResolved(resolved)
+                : FrozenNode.fromResolvedNode(resolved);
+        return new TypeEvidenceResolution(
+                frozenResolved,
+                completedTypeIdentityEvidence());
+    }
+
+    TypeEvidenceResolution resolveTypeDeclarationEvidence(
+            Node declaration,
+            ResolutionLimits limits) {
+        Objects.requireNonNull(declaration, "declaration");
+        Objects.requireNonNull(limits, "limits");
+        if (requiresFreshInvocation() || activeResolutionState() != null) {
+            return invocationMerger().resolveTypeDeclarationEvidence(
+                    declaration, limits);
+        }
+        Node wrapper = new Node().type(declaration.clone());
+        Node resolved = resolveRoot(
+                wrapper,
+                limits,
+                Contribution.TYPE_METADATA);
+        FrozenNode frozenResolved = resolvedReferenceCache != null
+                ? resolvedReferenceCache.freezeResolved(resolved)
+                : FrozenNode.fromResolvedNode(resolved);
+        FrozenNode completedType = frozenResolved.getType();
+        if (completedType == null) {
+            throw new IllegalStateException(
+                    "Type declaration resolution produced no effective type");
+        }
+        return new TypeEvidenceResolution(
+                completedType,
+                completedTypeIdentityEvidence());
+    }
+
+    TypeEvidenceResolution materializeTypeReferenceEvidence(
+            FrozenNode reference,
+            ResolutionLimits limits) {
+        Objects.requireNonNull(reference, "reference");
+        Objects.requireNonNull(limits, "limits");
+        if (!reference.isReferenceOnly()
+                || reference.getReferenceBlueId() == null) {
+            throw new IllegalArgumentException(
+                    "Type materialization requires a pure reference");
+        }
+        if (requiresFreshInvocation()) {
+            return invocationMerger().materializeTypeReferenceEvidence(
+                    reference, limits);
+        }
+        Node wrapper = new Node().type(reference.toNode());
+        Node resolved = resolveRoot(
+                wrapper,
+                limits,
+                Contribution.TYPE_METADATA);
+        FrozenNode frozenResolved = resolvedReferenceCache != null
+                ? resolvedReferenceCache.freezeResolved(resolved)
+                : FrozenNode.fromResolvedNode(resolved);
+        return new TypeEvidenceResolution(
+                frozenResolved,
+                completedTypeIdentityEvidence());
     }
 
     /**
@@ -176,9 +293,10 @@ final class ResolutionEngine implements NodeResolver {
         LabelProvenanceTracker.LabelProvenanceScope outermostLabelScope = null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
-            state = new ResolutionState();
-            state.rootInlineTypeDeclaration = completedValueValidator
-                    .isInlineTypeDeclaration(source);
+            InlineTypeCycleValidator.validate(target);
+            InlineTypeCycleValidator.validate(source);
+            state = new ResolutionState(
+                    resolutionSession.canonicalTypeIdentityIndex());
             state.rootSource = source;
             resolutionSession.begin(state);
         }
@@ -200,7 +318,7 @@ final class ResolutionEngine implements NodeResolver {
                 labelProvenanceTracker.validateExplicitInstanceLabels(
                         target, source, inheritedDeclarationOnly);
             }
-            mergeInternal(target, source, limits);
+            declaredTypeContributionResolver.merge(target, source, limits);
             if (labelMergeMode == LabelProvenanceTracker.MergeMode.AUTHORED_OVERLAY) {
                 labelProvenanceTracker.applyExplicitInstanceLabels(
                         target, source, inheritedDeclarationOnly);
@@ -210,6 +328,22 @@ final class ResolutionEngine implements NodeResolver {
             }
             if (outermost) {
                 completedValueValidator.validateCompletedCandidates(state);
+                /*
+                 * A public merge may start from a materialized target created
+                 * by another invocation. That API has no paired sidecar, so
+                 * the result is valid mutable semantic state but cannot claim
+                 * complete whole-graph canonical evidence. Preserve that
+                 * distinction instead of either hashing the completed target
+                 * or rejecting a merge that does not canonicalize it.
+                 */
+                state.canonicalTypeIdentityIndex
+                        .noteCoverageGapIfTypeEvidenceMissing(target);
+                if (limits.retainsEveryAuthoredPath()) {
+                    state.canonicalTypeIdentityIndex.markCompleteCoverage(
+                            target);
+                } else {
+                    state.canonicalTypeIdentityIndex.noteCoverageGap();
+                }
             }
         } finally {
             if (outermost) {
@@ -222,181 +356,11 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    private void mergeInternal(Node target, Node source, ResolutionLimits limits) {
-        if (source.getBlue() != null) {
-            throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
-        }
-
-        ActiveTypeStack.Token deferredTypeResolution = null;
-        /*
-         * A selectively preserved path is an exact authored subtree, not a
-         * complete instance of its declared type. Keep its type metadata for
-         * the eventual exact-path restoration, but do not expand the type or
-         * validate its schema while walking the surrounding document.
-         *
-         * DeferredReferencePathLimits expresses that boundary by allowing the
-         * path itself to merge while denying reference expansion below it.
-         * Ordinary limited and unlimited resolution continue to enter merged
-         * paths with reference expansion enabled.
-         */
-        if (source.getType() != null
-                && activeResolutionState().referenceExpansionAllowed) {
-            Node typeNode = source.getType();
-            String typeBlueId = typeNode.getBlueId();
-            LabelProvenanceTracker.LabelProvenanceScope labelScope =
-                    labelProvenanceTracker.currentLabelProvenanceScope();
-            LabelPath currentLabelPath =
-                    labelProvenanceTracker.currentLabelPath();
-            if (labelScope != null
-                    && activeResolutionState().contribution != Contribution.TYPE_ROOT
-                    && activeResolutionState().contribution != Contribution.TYPE_METADATA
-                    && activeResolutionState().contribution != Contribution.TYPE_DECLARATION
-                    && labelProvenanceTracker.hasLabelPathAtOrBelow(
-                    labelScope.labelPaths, currentLabelPath)) {
-                labelProvenanceTracker.recordTypeDeclarationLabelPaths(
-                        typeNode, currentLabelPath, labelScope.labelPaths);
-            }
-            boolean typeContributionApplied = hasAppliedDeclaredTypeContribution(target, typeBlueId);
-            /*
-             * Type ancestry reached through item/key/value metadata remains
-             * declaration metadata at every depth. Ordinary instance type
-             * expansion keeps the TYPE_ROOT boundary used by completed-value
-             * validation and processor presence accounting.
-             */
-            Contribution typeExpansionContribution =
-                    activeResolutionState().contribution == Contribution.TYPE_METADATA
-                            ? Contribution.TYPE_METADATA
-                            : Contribution.TYPE_ROOT;
-            boolean materializedCyclicType = referenceResolver
-                    .isMaterializedCyclicSetMemberType(typeNode);
-            FrozenNode cachedResolvedType = referenceResolver
-                    .cachedResolvedType(typeBlueId, limits);
-            boolean trackedType = typeBlueId != null;
-            ActiveTypeStack.Token typeResolutionKey = trackedType
-                    ? activeTypeStack.token(
-                    typeBlueId, activeResolutionState().path.size())
-                    : null;
-            if (trackedType && isResolvingType(typeResolutionKey)) {
-                throw new IllegalStateException("Cyclic type hierarchy at path "
-                        + currentPath(activeResolutionState()) + " for blueId: " + typeBlueId);
-            }
-            boolean recursiveTypeBoundary = trackedType && isMaterializingType(typeBlueId);
-            boolean startedTypeResolution = trackedType && !recursiveTypeBoundary;
-            if (startedTypeResolution) {
-                beginResolvingType(typeResolutionKey);
-            }
-            try {
-                if (!recursiveTypeBoundary) {
-                    if (cachedResolvedType != null) {
-                        Node resolvedType = cachedResolvedType.toNode();
-                        if (resolvedType.getBlueId() == null) {
-                            resolvedType.blueId(typeBlueId);
-                        }
-                        source.type(detachedResolvedTypeMetadata(resolvedType));
-                        if (!typeContributionApplied) {
-                            mergeObjectWithContribution(
-                                    target, resolvedType, limits,
-                                    typeExpansionContribution);
-                            recordAppliedDeclaredTypeContribution(target, typeBlueId);
-                        }
-                    } else {
-                        if (typeBlueId != null) {
-                            referenceResolver.expandTypeReference(typeNode, typeBlueId);
-                        }
-
-                        Node resolvedType = resolveWithContribution(
-                                typeNode, limits, typeExpansionContribution);
-                        referenceResolver.cacheResolvedReference(
-                                typeBlueId, resolvedType, limits);
-                        source.type(detachedResolvedTypeMetadata(resolvedType));
-                        if (!typeContributionApplied) {
-                            // Align cold and warm resolution only when the completed type is safe to reuse.
-                            if (referenceResolver.cachedResolvedType(
-                                    typeBlueId, limits) != null) {
-                                mergeObjectWithContribution(
-                                        target, resolvedType, limits,
-                                        typeExpansionContribution);
-                            } else {
-                                mergeWithContribution(
-                                        target, typeNode, limits,
-                                        typeExpansionContribution);
-                            }
-                            recordAppliedDeclaredTypeContribution(target, typeBlueId);
-                        }
-                    }
-                }
-                if (startedTypeResolution && materializedCyclicType) {
-                    deferredTypeResolution = typeResolutionKey;
-                }
-            } finally {
-                if (startedTypeResolution && deferredTypeResolution == null) {
-                    finishResolvingType(typeResolutionKey);
-                }
-            }
-        }
-        try {
-            mergeObject(target, source, limits);
-        } finally {
-            if (deferredTypeResolution != null) {
-                finishResolvingType(deferredTypeResolution);
-            }
-        }
-    }
-
-    private boolean hasAppliedDeclaredTypeContribution(Node target, String sourceTypeBlueId) {
-        if (sourceTypeBlueId == null || activeResolutionState().appliedTypeContributions == null) {
-            return false;
-        }
-        Set<String> applied = activeResolutionState().appliedTypeContributions.get(target);
-        return applied != null && applied.contains(sourceTypeBlueId);
-    }
-
-    private void recordAppliedDeclaredTypeContribution(Node target, String sourceTypeBlueId) {
-        if (sourceTypeBlueId == null) {
-            return;
-        }
-        if (activeResolutionState().appliedTypeContributions == null) {
-            activeResolutionState().appliedTypeContributions = new IdentityHashMap<>();
-        }
-        Set<String> applied = activeResolutionState().appliedTypeContributions.get(target);
-        if (applied == null) {
-            applied = new HashSet<>();
-            activeResolutionState().appliedTypeContributions.put(target, applied);
-        }
-        applied.add(sourceTypeBlueId);
-    }
-
-    /**
-     * Keeps completed type metadata independent from the mutable contribution traversal.
-     * Merging processors may retain and further resolve nodes from the contribution graph;
-     * sharing that graph with {@code source.type} makes an exposed resolved view depend on
-     * traversal and cache history.
-     */
-    private Node detachedResolvedTypeMetadata(Node resolvedType) {
-        return resolvedType.clone();
-    }
-
     Node canonicalTypeForLabelProvenance(Node typeNode) {
         return referenceResolver.canonicalTypeForLabelProvenance(typeNode);
     }
 
-    private boolean isResolvingType(ActiveTypeStack.Token key) {
-        return activeTypeStack.isResolving(key);
-    }
-
-    private boolean isMaterializingType(String blueId) {
-        return activeTypeStack.isMaterializing(blueId);
-    }
-
-    private void beginResolvingType(ActiveTypeStack.Token key) {
-        activeTypeStack.begin(key);
-    }
-
-    private void finishResolvingType(ActiveTypeStack.Token key) {
-        activeTypeStack.finish(key);
-    }
-
-    private void mergeObject(Node target, Node source, ResolutionLimits limits) {
+    void mergeObject(Node target, Node source, ResolutionLimits limits) {
         ResolutionState state = activeResolutionState();
         if (state.referenceExpansionAllowed) {
             referenceResolver.materializeReferenceBackedSchema(source);
@@ -410,8 +374,14 @@ final class ResolutionEngine implements NodeResolver {
 
             if (state.referenceExpansionAllowed) {
                 resolveTypeMetadata(source, limits);
+                schemaValueTypeResolver.resolve(source.getSchema(), limits);
             }
-            mergingProcessor.process(target, source, nodeProvider, this);
+            mergingProcessor.process(
+                    target,
+                    source,
+                    nodeProvider,
+                    this,
+                    state.canonicalTypeIdentityIndex);
 
             List<Node> children = source.getItems();
             if (children != null) {
@@ -464,7 +434,12 @@ final class ResolutionEngine implements NodeResolver {
                 target.blueId(source.getBlueId());
             }
 
-            mergingProcessor.postProcess(target, source, nodeProvider, this);
+            mergingProcessor.postProcess(
+                    target,
+                    source,
+                    nodeProvider,
+                    this,
+                    state.canonicalTypeIdentityIndex);
             if (target.getSchema() != null || source.getBlueId() != null) {
                 completedValueValidator.observeCompletedPath(
                         target, source, limits);
@@ -532,6 +507,13 @@ final class ResolutionEngine implements NodeResolver {
     private void mergeProperty(Node target, String sourceKey, Node sourceValue, ResolutionLimits limits) {
         if (target.getProperties() == null)
             target.properties(new LinkedHashMap<>());
+        if (!activeResolutionState().referenceExpansionAllowed) {
+            activeResolutionState().canonicalTypeIdentityIndex
+                    .noteCoverageGapIfTypeEvidenceMissing(sourceValue);
+            target.getProperties().put(
+                    sourceKey, sourceValue.clone());
+            return;
+        }
         Node targetValue = target.getProperties().get(sourceKey);
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
@@ -554,6 +536,8 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     void mergeInstanceObject(Node target, Node source, ResolutionLimits limits) {
+        Object retainedBody = target.getBlueId() != null && source.getBlueId() == null
+                ? blue.language.model.NodeWireForm.get(target) : null;
         LabelProvenanceTracker.MergeMode labelMergeMode =
                 labelProvenanceTracker.mergeMode(
                         activeResolutionState().contribution);
@@ -565,6 +549,12 @@ final class ResolutionEngine implements NodeResolver {
                     target, source, inheritedDeclarationOnly);
         }
         mergeObject(target, source, limits);
+        if (retainedBody != null && !retainedBody.equals(
+                blue.language.model.NodeWireForm.get(target))) {
+            // A changed body no longer authenticates the inherited reference.
+            // Preserve unchanged exact references and explicit source references.
+            target.blueId(null);
+        }
         if (labelMergeMode == LabelProvenanceTracker.MergeMode.AUTHORED_OVERLAY) {
             labelProvenanceTracker.applyExplicitInstanceLabels(
                     target, source, inheritedDeclarationOnly);
@@ -604,6 +594,7 @@ final class ResolutionEngine implements NodeResolver {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
         state.contribution = previous == Contribution.MATERIALIZED_REFERENCE
+                || previous == Contribution.TYPE_METADATA
                 ? previous
                 : Contribution.CONTRACT_ROOT;
         try {
@@ -614,7 +605,21 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     private boolean hasListControls(Node node) {
-        return listOverlayMerger.hasListControls(node);
+        // A nested Source overlay still needs the containing inherited field
+        // context. Resolving it in isolation consumes its controls and turns
+        // the full result into a second plain-item append on reattachment.
+        java.util.Deque<Node> pending = new java.util.ArrayDeque<>();
+        java.util.Set<Node> visited = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<Node, Boolean>());
+        pending.push(node);
+        while (!pending.isEmpty()) {
+            Node current = pending.pop();
+            if (!visited.add(current) || current.isReferenceOnly()) continue;
+            if (listOverlayMerger.hasListControls(current)) return true;
+            if (current.getProperties() != null) pending.addAll(current.getProperties().values());
+            if (current.getItems() != null) pending.addAll(current.getItems());
+        }
+        return false;
     }
 
     void mergeObjectWithContribution(Node target,
@@ -631,7 +636,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    private void mergeWithContribution(Node target,
+    void mergeWithContribution(Node target,
                                        Node source,
                                        ResolutionLimits limits,
                                        Contribution contribution) {
@@ -656,6 +661,49 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
+    boolean hasCanonicalListPayloads() {
+        return canonicalListPayloads;
+    }
+
+    Node resolveCanonical(Node node, ResolutionLimits limits) {
+        if (requiresFreshInvocation()) {
+            return invocationMerger().resolveCanonical(node, limits);
+        }
+        return withCanonicalListPayloads(() -> resolve(node, limits));
+    }
+
+    Node resolveCanonicalWithContribution(
+            Node node, ResolutionLimits limits, Contribution contribution) {
+        return withCanonicalListPayloads(
+                () -> resolveWithContribution(node, limits, contribution));
+    }
+
+    void mergeCanonicalWithContribution(
+            Node target, Node source, ResolutionLimits limits, Contribution contribution) {
+        withCanonicalListPayloads(() -> {
+            mergeWithContribution(target, source, limits, contribution);
+            return null;
+        });
+    }
+
+    void mergeCanonicalObjectWithContribution(
+            Node target, Node source, ResolutionLimits limits, Contribution contribution) {
+        withCanonicalListPayloads(() -> {
+            mergeObjectWithContribution(target, source, limits, contribution);
+            return null;
+        });
+    }
+
+    private <T> T withCanonicalListPayloads(java.util.function.Supplier<T> action) {
+        boolean previous = canonicalListPayloads;
+        canonicalListPayloads = true;
+        try {
+            return action.get();
+        } finally {
+            canonicalListPayloads = previous;
+        }
+    }
+
     void copyMaterializedReferenceLabels(Node target, Node materialized) {
         labelProvenanceTracker.copyMaterializedReferenceLabels(
                 target, materialized);
@@ -676,6 +724,9 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     void markIncomplete(String segment) {
+        ResolutionState state = activeResolutionState();
+        state.incompleteTraversalEpoch++;
+        state.canonicalTypeIdentityIndex.noteCoverageGap();
         completedValueValidator.markIncomplete(segment);
     }
 
@@ -684,56 +735,34 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     private void resolveTypeMetadata(Node source, ResolutionLimits limits) {
-        source.itemType(resolveTypeMetadataNode(source.getItemType(), limits));
-        source.keyType(resolveTypeMetadataNode(source.getKeyType(), limits));
-        source.valueType(resolveTypeMetadataNode(source.getValueType(), limits));
-    }
-
-    private Node resolveTypeMetadataNode(Node metadataType, ResolutionLimits limits) {
-        if (metadataType == null || metadataType.getBlueId() == null) {
-            return metadataType;
-        }
-        String typeBlueId = metadataType.getBlueId();
-        if (isMaterializingType(typeBlueId)) {
-            return new Node().blueId(typeBlueId);
-        }
-        FrozenNode cached = referenceResolver.cachedResolvedReference(
-                typeBlueId, limits);
-        if (cached != null) {
-            Node resolved = cached.toNode();
-            if (resolved.getBlueId() == null) {
-                resolved.blueId(typeBlueId);
-            }
-            return resolved;
-        }
-        ActiveTypeStack.Token key = activeTypeStack.token(
-                typeBlueId, activeResolutionState().path.size());
-        beginResolvingType(key);
-        try {
-            referenceResolver.expandTypeReference(metadataType, typeBlueId);
-            Node resolved = resolveWithContribution(metadataType, limits, Contribution.TYPE_METADATA);
-            referenceResolver.cacheResolvedReference(
-                    typeBlueId, resolved, limits);
-            return resolved;
-        } finally {
-            finishResolvingType(key);
-        }
+        typeMetadataResolver.resolve(source, limits);
     }
 
     @Override
     public Node resolve(Node node, ResolutionLimits limits) {
+        return resolveRoot(node, limits, Contribution.INSTANCE);
+    }
+
+    private Node resolveRoot(
+            Node node,
+            ResolutionLimits limits,
+            Contribution rootContribution) {
+        Objects.requireNonNull(rootContribution, "rootContribution");
         if (requiresFreshInvocation()) {
-            return invocationMerger().resolve(node, limits);
+            return invocationMerger().resolveRoot(
+                    node, limits, rootContribution);
         }
         ResolutionState state = activeResolutionState();
         boolean outermost = state == null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
+            InlineTypeCycleValidator.validate(node);
             BlueIdReferenceValidator.validate(node);
-            state = new ResolutionState();
-            state.rootInlineTypeDeclaration = completedValueValidator
-                    .isInlineTypeDeclaration(node);
+            state = new ResolutionState(
+                    resolutionSession.canonicalTypeIdentityIndex());
             state.rootSource = node;
+            state.contribution = rootContribution;
+            state.definitionGoal = rootContribution == Contribution.TYPE_METADATA;
             resolutionSession.begin(state);
         }
         try {
@@ -744,6 +773,12 @@ final class ResolutionEngine implements NodeResolver {
             Node result = resolveInternal(node, limits);
             if (outermost) {
                 completedValueValidator.validateCompletedCandidates(state);
+                if (limits.retainsEveryAuthoredPath()) {
+                    state.canonicalTypeIdentityIndex.markCompleteCoverage(
+                            result);
+                } else {
+                    state.canonicalTypeIdentityIndex.noteCoverageGap();
+                }
             }
             return result;
         } finally {
@@ -757,11 +792,28 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     private Node resolveInternal(Node node, ResolutionLimits limits) {
+        /*
+         * A source-preserved path is an authored executable/matcher subtree,
+         * not a value that may be classified by its declared type. Returning
+         * the exact subtree here is what makes the reference-expansion gate a
+         * real cold boundary: downstream List/Dictionary/basic-type stages
+         * must not consult the provider merely to classify a retained pure
+         * type reference. Canonical coverage is certified later only when all
+         * unexpanded type terminals are exact pure references.
+         */
+        if (!activeResolutionState().referenceExpansionAllowed) {
+            activeResolutionState().canonicalTypeIdentityIndex
+                    .noteCoverageGapIfTypeEvidenceMissing(node);
+            return node.clone();
+        }
         LabelProvenanceTracker.LabelProvenanceScope labelScope =
                 labelProvenanceTracker.pushLabelProvenanceScope(
                         node, limits, false);
         try {
-            Node resultNode = new Node();
+            Node resultNode = node.getProperties() != null
+                    && node.getProperties().isEmpty()
+                    ? Nodes.emptyObject()
+                    : new Node();
             merge(resultNode, node, limits);
             resultNode.name(node.getName());
             resultNode.description(node.getDescription());
@@ -783,12 +835,23 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     static final class ResolutionState {
+        final CanonicalTypeIdentityIndex canonicalTypeIdentityIndex;
         final List<String> path = new ArrayList<>();
         boolean referenceExpansionAllowed = true;
         Contribution contribution = Contribution.INSTANCE;
-        private Map<Node, Set<String>> appliedTypeContributions;
-        boolean rootInlineTypeDeclaration;
+        Map<Node, Set<String>> appliedTypeContributions;
+        final Map<Node, String> completedTypeMaterializations =
+                new IdentityHashMap<>();
+        long incompleteTraversalEpoch;
+        boolean definitionGoal;
         Node rootSource;
+
+        ResolutionState(
+                CanonicalTypeIdentityIndex canonicalTypeIdentityIndex) {
+            this.canonicalTypeIdentityIndex = Objects.requireNonNull(
+                    canonicalTypeIdentityIndex,
+                    "canonicalTypeIdentityIndex");
+        }
     }
 
 }

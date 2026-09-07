@@ -31,6 +31,7 @@ import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessingDocumentStateInvariantFailFirstTest {
+
+    private static final List<String> RESOLVED_SEMANTIC_PATHS =
+            Collections.unmodifiableList(Arrays.asList(
+                    "/materializedField",
+                    "/auditRan",
+                    "/selectedOnly",
+                    "/contracts/initialized/document",
+                    "/contracts/checkpoint/entries/incoming/domain",
+                    "/contracts/checkpoint/entries/incoming/subject"));
 
     @Test
     void shouldPreserveSelectedStateBeforeAnyWriteDuringSnapshotConstruction() {
@@ -191,7 +201,8 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         ResolvedSnapshot completedSnapshot =
                 snapshot(processor, completed);
         Node minimized = new MinimizedOverlayBuilder().build(
-                completedSnapshot.resolvedRoot());
+                completedSnapshot.frozenResolvedRoot(),
+                completedSnapshot.canonicalTypeIdentities());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
         Blue reloader = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot reloaded = reloader.resolveToSnapshot(transported);
@@ -204,10 +215,20 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         assertTrue(hasSelectedContract(
                 completedSnapshot.resolvedRoot(), "audit"));
         assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
+        assertTrue(completedSnapshot.isResolutionComplete(),
+                "the completed processing snapshot must be publishable");
+        assertFalse(completedSnapshot.isSourceBacked(),
+                "completed processing publishes Canonical state, not selection");
+        assertTrue(reloaded.isResolutionComplete(),
+                "the transported minimized document must reload completely");
         assertEquals(completedSnapshot.blueId(), reloaded.blueId());
         assertNull(firstDifference(
-                completedSnapshot.resolvedRoot(),
-                reloaded.resolvedRoot()));
+                completedSnapshot.canonicalRoot(),
+                reloaded.canonicalRoot()));
+        assertRelevantResolvedPathParity(
+                completedSnapshot,
+                reloaded,
+                "minimized reload");
         assertEquals(Boolean.TRUE, reloaded.resolvedNodeAt("/auditRan").getValue());
         assertEquals(eventBlueId, reloaded.resolvedNodeAt(
                 "/contracts/checkpoint/entries/incoming/subject").getBlueId());
@@ -300,6 +321,39 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         return firstDifference(NodeWireForm.get(expected), NodeWireForm.get(actual), "");
     }
 
+    private static void assertRelevantResolvedPathParity(
+            ResolvedSnapshot expected,
+            ResolvedSnapshot actual,
+            String label) {
+        List<String> differences = relevantResolvedPathDifferences(
+                expected, actual);
+        assertTrue(differences.isEmpty(),
+                label + " resolved semantic divergence: " + differences);
+    }
+
+    private static List<String> relevantResolvedPathDifferences(
+            ResolvedSnapshot expected,
+            ResolvedSnapshot actual) {
+        List<String> differences = new ArrayList<>();
+        for (String path : RESOLVED_SEMANTIC_PATHS) {
+            Node expectedNode = expected.resolvedNodeAt(path);
+            Node actualNode = actual.resolvedNodeAt(path);
+            if (expectedNode == null || actualNode == null) {
+                if (expectedNode != actualNode) {
+                    differences.add(path);
+                }
+                continue;
+            }
+            String difference = firstDifference(expectedNode, actualNode);
+            if (difference != null) {
+                differences.add(path + ("/".equals(difference)
+                        ? ""
+                        : difference));
+            }
+        }
+        return differences;
+    }
+
     private static String firstDifference(Object expected, Object actual, String path) {
         if (Objects.equals(expected, actual)) {
             return null;
@@ -372,15 +426,19 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         }
 
         private void assertThreeViewInvariant() {
-            String documentDifference = firstDifference(expectedDocument, actual.document());
-            String canonicalDifference = firstDifference(expectedSnapshot.canonicalRoot(), actual.document());
-            String resolvedDifference = firstDifference(
-                    expectedSnapshot.resolvedRoot(),
-                    actualSnapshot.resolvedRoot());
+            String documentDifference = firstDifference(
+                    expectedDocument, actual.document());
+            String canonicalDifference = firstDifference(
+                    expectedSnapshot.canonicalRoot(),
+                    actualSnapshot.canonicalRoot());
+            List<String> resolvedDifferences =
+                    relevantResolvedPathDifferences(
+                            expectedSnapshot,
+                            actualSnapshot);
             List<String> diagnostics = new ArrayList<>();
             diagnostics.add("document=" + documentDifference);
             diagnostics.add("canonical=" + canonicalDifference);
-            diagnostics.add("resolved=" + resolvedDifference);
+            diagnostics.add("resolvedSemantics=" + resolvedDifferences);
             diagnostics.add("expectedBlueId=" + expectedSnapshot.blueId());
             diagnostics.add("actualBlueId="
                     + actualSnapshot.blueId());
@@ -389,7 +447,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
             assertAll(label,
                     () -> assertNull(documentDifference, message),
                     () -> assertNull(canonicalDifference, message),
-                    () -> assertNull(resolvedDifference, message),
+                    () -> assertTrue(
+                            resolvedDifferences.isEmpty(), message),
+                    () -> assertTrue(
+                            actualSnapshot.isResolutionComplete(),
+                            label + " must produce a publishable snapshot"),
+                    () -> assertFalse(
+                            actualSnapshot.isSourceBacked(),
+                            label + " must publish Canonical state, not selection"),
                     () -> assertEquals(
                             expectedSnapshot.blueId(),
                             actualSnapshot.blueId(),

@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformancePlan;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
@@ -103,13 +104,23 @@ class SequentialPatchPlanningSessionTest {
         FrozenNode actualResolved = ImmutablePatchPlanner.forFrozen(first.result().resolvedRoot())
                 .plan("/", JsonPatch.add("/handlerWrite", new Node().value(true)))
                 .root();
+        CanonicalTypeIdentityLookup actualTypeIdentities =
+                CanonicalTypeIdentityLookup.incomplete();
 
         // when
-        session.rebase(actualCanonical, actualResolved);
+        session.rebase(
+                actualCanonical,
+                actualResolved,
+                first.result().isResolutionComplete(),
+                actualTypeIdentities,
+                first.result().isSourceBacked());
+        CanonicalTypeIdentityLookup reboundTypeIdentities =
+                session.canonicalTypeIdentities();
         SequentialPatchPlanningSession.PlannedStep second =
                 session.planNext(JsonPatch.add("/tail", new Node().value("kept")));
 
         // then
+        assertSame(actualTypeIdentities, reboundTypeIdentities);
         assertSame(actualCanonical, second.baseCanonical());
         assertSame(actualResolved, second.baseResolved());
         assertEquals(true, second.result().resolvedRoot().at("/handlerWrite").getValue());
@@ -168,7 +179,7 @@ class SequentialPatchPlanningSessionTest {
     private PatchPlanningContext planning(Node root) {
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(root.clone());
         FrozenNode resolved = FrozenNode.fromResolvedNode(root.clone());
-        return DocumentProcessingRuntime.workingPlanningContext(canonical,
+        return PatchPlanningContextFactory.create(canonical,
                 resolved,
                 false,
                 null);

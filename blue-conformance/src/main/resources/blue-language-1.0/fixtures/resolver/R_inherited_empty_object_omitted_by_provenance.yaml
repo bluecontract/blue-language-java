@@ -1,0 +1,20 @@
+id: R_inherited_empty_object_omitted_by_provenance
+category: Canonicalization
+operation: canonicalize
+description: an exact empty-object contribution is omitted only when the effective type proves it is derivable
+source:
+  type:
+    x: {}
+  x: {}
+alsoEquivalentTo:
+  type:
+    blueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+  x: {}
+provider:
+- requestedBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+  node:
+    x: {}
+expectedCanonicalOverlay:
+  type:
+    blueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+note: The authored x remains semantically present in the Resolved Form; only its redundant canonical overlay contribution is omitted.

@@ -1,0 +1,19 @@
+id: R_empty_object_reference_unavailable_not_absent
+category: LimitedExpansion
+operation: expandLimited
+description: unavailable evidence for an exact empty-object reference is incomplete, never semantic absence
+source:
+  x:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+limits:
+  demandedPaths: [/x]
+provider:
+- requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  outcome: Unavailable
+expectedOutcome: Incomplete
+expectedAbsent: false
+expectedOutstandingBlueIds:
+- 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+expectedProviderOutcome: Unavailable
+expectedRequestedBlueIds:
+- 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK

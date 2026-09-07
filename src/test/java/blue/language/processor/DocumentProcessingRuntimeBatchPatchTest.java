@@ -2,7 +2,9 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
@@ -31,9 +33,33 @@ class DocumentProcessingRuntimeBatchPatchTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
+    void shouldRejectLowLevelMaterializedRootRemoval() {
+        // given
+        Node document = new Node().properties(
+                "status", new Node().value("retained"));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+
+        // when
+        Throwable failure = captureFailure(
+                () -> new MutationCommit(runtime)
+                        .publishSelected(
+                                "/",
+                                null,
+                                document.clone()));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
+        assertEquals(
+                "Direct materialized writes cannot remove the root document",
+                failure.getMessage());
+        assertEquals("retained", document.getAsText("/status"));
+    }
+
+    @Test
     void shouldApplyMultipleObjectPatchesAndCommitOnce() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         List<JsonPatch> patches = Arrays.asList(
@@ -255,7 +281,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyAtomicBatchPreflightTracksIntroducedReferenceBeforeDescendantPatch() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
@@ -276,7 +302,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertInstanceOf(ProcessorFailureException.class, failure);
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
                 ((ProcessorFailureException) failure).errorCategory());
-        assertNull(document.getProperties());
+        assertTrue(document.getProperties().isEmpty());
         assertEquals(0, manager.fromDocumentCalls);
     }
 
@@ -403,8 +429,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldDelegateApplyPatchToApplyPatchesSemantics() {
         // given
-        Node one = new Node();
-        Node two = new Node();
+        Node one = Nodes.emptyObject();
+        Node two = Nodes.emptyObject();
         DocumentProcessingRuntime oneRuntime =
                 new DocumentProcessingRuntime(one);
         DocumentProcessingRuntime twoRuntime =
@@ -497,7 +523,10 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "type:\n" +
                 "  blueId: " + provider.getBlueIdByName("Has Inherited List") + "\n", Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                snapshot,
+                blue.getDocumentProcessor().conformanceEngine(),
+                blue.getDocumentProcessor().snapshotManager());
         Node inheritedList = new Node().items(
                 Collections.singletonList(
                         new Node().value("inherited")));
@@ -518,15 +547,27 @@ class DocumentProcessingRuntimeBatchPatchTest {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
+                "name: Mutable Status\n" +
+                "status:\n" +
+                "  type: Text");
+        provider.addSingleDocs(
                 "name: Has Inherited Status\n" +
+                "type:\n" +
+                "  blueId: " + provider.getBlueIdByName("Mutable Status") + "\n" +
                 "status: idle");
         Blue blue = ProcessorTestSupport.blue(provider);
         Node canonical = YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + provider.getBlueIdByName("Has Inherited Status") + "\n", Node.class);
+        canonical.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                snapshot,
+                blue.getDocumentProcessor().conformanceEngine(),
+                blue.getDocumentProcessor().snapshotManager());
 
         // when
         runtime.applyPatches("/", Arrays.asList(
@@ -536,12 +577,17 @@ class DocumentProcessingRuntimeBatchPatchTest {
 
         // then
         assertEquals("custom", runtime.snapshot().canonicalRoot().getAsText("/status"));
+        assertEquals(
+                provider.getBlueIdByName("Mutable Status"),
+                runtime.snapshot().frozenCanonicalRoot()
+                        .getType()
+                        .getReferenceBlueId());
     }
 
     @Test
     void shouldVerifyEscapedPointerKeysWorkInBatch() {
         // given
-        Node document = new Node().properties("tilde", new Node());
+        Node document = new Node().properties("tilde", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -560,7 +606,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyBatchPatchAvoidsRepeatedSnapshotCommitCost() {
         // given
-        Node document = new Node().properties("values", new Node());
+        Node document = new Node().properties("values", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
         List<JsonPatch> patches = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
@@ -635,25 +681,4 @@ class DocumentProcessingRuntimeBatchPatchTest {
         }
     }
 
-    private static final class PassthroughSnapshotManager implements ProcessingSnapshotManager {
-        @Override
-        public ResolvedSnapshot fromDocument(Node document) {
-            FrozenNode root = FrozenNode.fromNode(document.clone());
-            return new ResolvedSnapshot(root, FrozenNode.fromResolvedNode(document.clone()), root.blueId());
-        }
-
-        @Override
-        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-            CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
-                    snapshot.frozenCanonicalRoot()).apply(patch);
-            return new ResolvedSnapshot(patched.root(),
-                    FrozenNode.fromResolvedNode(patched.root().toNode()),
-                    patched.blueId());
-        }
-
-        @Override
-        public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
-            return snapshot;
-        }
-    }
 }

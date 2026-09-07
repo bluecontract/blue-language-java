@@ -7,6 +7,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
@@ -60,10 +61,8 @@ final class DocumentProcessingRuntime {
             new LinkedHashSet<>();
     private final Set<String> evidenceScopePaths =
             new LinkedHashSet<>();
-    private final List<ManagedGeneralizationWrite>
-            committedGeneralizationWrites =
-                    new ArrayList<ManagedGeneralizationWrite>();
-    private int committedAuthoredPatchCount;
+    private final ProcessingCommittedEvidence committedEvidence =
+            new ProcessingCommittedEvidence();
 
     /** Creates a node-backed invocation with default services. */
     public DocumentProcessingRuntime(Node document) {
@@ -183,7 +182,8 @@ final class DocumentProcessingRuntime {
         this.mutationSession = new ProcessingMutationSession(this);
         this.counters = new ProcessingRuntimeCounters();
         this.conformanceRecorder =
-                new ProcessingConformanceRecorder(this.gasContext.meter());
+                new ProcessingConformanceRecorder(
+                        this.gasContext.meter(), this.snapshotManager);
     }
 
     /** Creates a snapshot-backed invocation. */
@@ -283,7 +283,7 @@ final class DocumentProcessingRuntime {
                 this.executableBodyFieldsByType,
                 this.metrics);
         this.materializedView = new MaterializedDocumentView(
-                prepared.canonicalRoot());
+                prepared.sourceRoot());
         this.snapshot = prepared;
         this.entrySnapshot = prepared;
         this.lazyMaterializedCommits = true;
@@ -298,7 +298,8 @@ final class DocumentProcessingRuntime {
         this.mutationSession = new ProcessingMutationSession(this);
         this.counters = new ProcessingRuntimeCounters();
         this.conformanceRecorder =
-                new ProcessingConformanceRecorder(this.gasContext.meter());
+                new ProcessingConformanceRecorder(
+                        this.gasContext.meter(), this.snapshotManager);
     }
 
     void observe(ProcessingMetricId metricId, long value) {
@@ -376,6 +377,12 @@ final class DocumentProcessingRuntime {
             LanguageRuntimeAccess languageRuntime) {
         return gasContext.newRuntimeWorkSession(languageRuntime,
                 currentSnapshotManager());
+    }
+
+    RuntimeWorkSession newRuntimeWorkSession(
+            LanguageRuntimeAccess languageRuntime, ContractProcessorRegistry registry) {
+        return gasContext.newRuntimeWorkSession(languageRuntime,
+                currentSnapshotManager(), registry);
     }
 
     void mergeRuntimeGasLedger(GasMeter.ChildGasLedger ledger) {
@@ -555,6 +562,10 @@ final class DocumentProcessingRuntime {
         return documentView.snapshot();
     }
 
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return ProcessingSnapshotEvidence.identities(snapshot());
+    }
+
     ResolvedSnapshot entrySnapshot() {
         return entrySnapshot;
     }
@@ -573,20 +584,21 @@ final class DocumentProcessingRuntime {
     public FrozenNode resolvedFrozenAt(String path) {
         return documentView.resolvedFrozenAt(path);
     }
+    ResolvedScopeView scopeViewAt(String path) {
+        return documentView.scopeViewAt(path);
+    }
 
     FrozenNode selectedFrozenAt(String path) {
         return documentView.selectedFrozenAt(path); }
-    FrozenNode contractRecognitionScope(
-            FrozenNode selectedScope, FrozenNode resolvedScope) {
+    ResolvedScopeView contractRecognitionScope(
+            ResolvedScopeView scope) {
         return documentView.contractRecognitionScope(
-                selectedScope, resolvedScope); }
-    FrozenNode contractRecognitionScope(
-            FrozenNode selectedScope,
-            FrozenNode resolvedScope,
+                scope); }
+    ResolvedScopeView contractRecognitionScope(
+            ResolvedScopeView scope,
             Set<String> recognizedContractKeys) {
         return documentView.contractRecognitionScope(
-                selectedScope,
-                resolvedScope,
+                scope,
                 recognizedContractKeys); }
     public Node canonicalNodeAt(String path) {
         return documentView.canonicalNodeAt(path); }
@@ -594,10 +606,6 @@ final class DocumentProcessingRuntime {
         return documentView.canonicalFrozenAt(path); }
     public FrozenNode capturePreInitializationScopeDocument(String scopePath) {
         return documentView.capturePreInitializationScopeDocument(scopePath); }
-    public String calculatePreInitializationScopeNodeBlueId(
-            String scopePath) {
-        return documentView.calculatePreInitializationScopeNodeBlueId(
-                scopePath); }
     public WorkingDocument workingDocument(String originScopePath) {
         return workingDocument(originScopePath, PatchSource.LEGACY_PUBLIC_API); }
     WorkingDocument workingDocument(
@@ -680,8 +688,8 @@ final class DocumentProcessingRuntime {
                 this, originScopePath, patches, preview); }
     UpdateMaterializationMetrics updateMaterializationMetrics() {
         return mutationSession.updateMaterializationMetrics(); }
-    FrozenNode canonicalRootWithoutResolution() {
-        return documentView.canonicalRootWithoutResolution(); }
+    FrozenNode selectedRootWithoutResolution() {
+        return documentView.selectedRootWithoutResolution(); }
     FrozenNode identityChargeCanonicalRoot() {
         return documentView.identityChargeCanonicalRoot(); }
     FrozenNode resolvedRootWithoutResolution() {
@@ -694,101 +702,20 @@ final class DocumentProcessingRuntime {
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager) {
-        return workingPlanningContext(canonicalRoot, resolvedRoot,
-                exactReplacement, snapshotManager, Collections.emptySet(),
-                Collections.emptyMap(), true);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager,
-            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans) {
-        return workingPlanningContext(canonicalRoot, resolvedRoot,
-                exactReplacement, snapshotManager, Collections.emptySet(),
-                Collections.emptyMap(), entryEmbeddedScopePlans, true);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager,
-            Iterable<String> openedScopePaths) {
-        return workingPlanningContext(canonicalRoot, resolvedRoot,
-                exactReplacement, snapshotManager, openedScopePaths,
-                Collections.emptyMap(), true);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager,
-            Iterable<String> openedScopePaths,
-            Map<String, List<String>> executableBodyFieldsByType) {
-        return workingPlanningContext(canonicalRoot, resolvedRoot,
-                exactReplacement, snapshotManager, openedScopePaths,
-                executableBodyFieldsByType, true);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager,
-            Iterable<String> openedScopePaths,
-            Map<String, List<String>> executableBodyFieldsByType,
-            boolean resolutionComplete) {
-        return workingPlanningContext(
-                canonicalRoot,
-                resolvedRoot,
-                exactReplacement,
-                snapshotManager,
-                openedScopePaths,
-                executableBodyFieldsByType,
-                Collections.<String, EmbeddedScopePlan>emptyMap(),
-                resolutionComplete);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
-            ProcessingSnapshotManager snapshotManager,
-            Iterable<String> openedScopePaths,
-            Map<String, List<String>> executableBodyFieldsByType,
-            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
-            boolean resolutionComplete) {
-        return workingPlanningContext(canonicalRoot, resolvedRoot,
-                exactReplacement, snapshotManager, openedScopePaths,
-                executableBodyFieldsByType, entryEmbeddedScopePlans,
-                resolutionComplete, false);
-    }
-
-    static PatchPlanningContext workingPlanningContext(
-            FrozenNode canonicalRoot,
-            FrozenNode resolvedRoot,
-            boolean exactReplacement,
             ProcessingSnapshotManager snapshotManager,
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
             boolean resolutionComplete,
-            boolean strictPlatformInvocation) {
-        return new PatchPlanningContext(null,
-                ImmutablePatchPlanner.forFrozen(canonicalRoot),
-                ImmutablePatchPlanner.forFrozen(resolvedRoot),
-                exactReplacement,
-                exactReplacement ? snapshotManager : null,
-                snapshotManager,
-                openedScopePaths,
-                executableBodyFieldsByType,
-                entryEmbeddedScopePlans,
-                resolutionComplete,
-                strictPlatformInvocation);
+            boolean strictPlatformInvocation,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
+            boolean sourceBacked) {
+        return ProcessingSnapshotEvidence.planningContext(
+                canonicalRoot, resolvedRoot, exactReplacement,
+                snapshotManager, openedScopePaths,
+                executableBodyFieldsByType, entryEmbeddedScopePlans,
+                resolutionComplete, strictPlatformInvocation,
+                canonicalTypeIdentities, sourceBacked);
     }
 
     List<DocumentUpdateData> commitBatchPatchResult(
@@ -800,23 +727,11 @@ final class DocumentProcessingRuntime {
     }
 
     void recordCommittedPatchEvidence(BatchPatchResult result) {
-        BatchPatchResult exact = Objects.requireNonNull(result, "result");
-        for (BatchPatchResult.GeneralizationMetadataWrite write
-                : exact.generalizationMetadataWrites()) {
-            committedGeneralizationWrites.add(
-                    new ManagedGeneralizationWrite(
-                            write.path(),
-                            write.value().blueId(),
-                            committedAuthoredPatchCount
-                                    + write.requiringPatchIndex()));
-        }
-        committedAuthoredPatchCount += exact.requestedPatches().size();
+        committedEvidence.record(result);
     }
 
     List<ManagedGeneralizationWrite> committedGeneralizationWrites() {
-        return Collections.unmodifiableList(
-                new ArrayList<ManagedGeneralizationWrite>(
-                        committedGeneralizationWrites));
+        return committedEvidence.generalizationWrites();
     }
 
     void commitMaterializedSnapshot(ResolvedSnapshot committed) {
@@ -829,6 +744,8 @@ final class DocumentProcessingRuntime {
                 selectedBeforeContinuation); }
     ResolvedSnapshot snapshotFromDocument(Node document) {
         return snapshotTransaction.snapshotFromDocument(document); }
+    ResolvedSnapshot snapshotFromDocumentTransient(Node document) {
+        return snapshotTransaction.snapshotFromDocumentTransient(document); }
     ProcessingSnapshotManager currentSnapshotManager() {
         return snapshotTransaction.currentManager(); }
     ConformanceEngine currentConformanceEngine() {
@@ -839,6 +756,10 @@ final class DocumentProcessingRuntime {
     FrozenNode materializeSelectedExecutableReference(FrozenNode reference) {
         return snapshotTransaction
                 .materializeSelectedExecutableReference(reference); }
+    ResolvedSnapshot resolveSelectedExecutableReference(
+            FrozenNode reference) {
+        return snapshotTransaction
+                .resolveSelectedExecutableReference(reference); }
     Supplier<Node> checkpointSubjectMaterializer(Node subjectReference) {
         return snapshotTransaction
                 .checkpointSubjectMaterializer(subjectReference); }
@@ -853,9 +774,12 @@ final class DocumentProcessingRuntime {
     static Set<String> executableBodyPaths(
             FrozenNode document,
             Iterable<String> openedScopePaths,
-            Map<String, List<String>> executableBodyFieldsByType) {
+            Map<String, List<String>> executableBodyFieldsByType,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         return ExecutableBodyPathCatalog.fromFrozen(document,
-                openedScopePaths, executableBodyFieldsByType);
+                openedScopePaths,
+                executableBodyFieldsByType,
+                canonicalTypeIdentities);
     }
 
     static ResolvedSnapshot resolveCanonicalTransient(
@@ -863,9 +787,9 @@ final class DocumentProcessingRuntime {
             FrozenNode canonicalRoot,
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType) {
-        return ExecutableBodyPathCatalog.resolveCanonicalTransient(manager,
-                canonicalRoot, openedScopePaths,
-                executableBodyFieldsByType);
+        return ProcessingSnapshotEvidence.resolveTransient(
+                manager, canonicalRoot, openedScopePaths,
+                executableBodyFieldsByType, false);
     }
 
     static ResolvedSnapshot resolveCanonicalTransientIncludingTypeContracts(
@@ -873,12 +797,9 @@ final class DocumentProcessingRuntime {
             FrozenNode canonicalRoot,
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType) {
-        return ExecutableBodyPathCatalog
-                .resolveCanonicalTransientIncludingTypeContracts(
-                        manager,
-                        canonicalRoot,
-                        openedScopePaths,
-                        executableBodyFieldsByType);
+        return ProcessingSnapshotEvidence.resolveTransient(
+                manager, canonicalRoot, openedScopePaths,
+                executableBodyFieldsByType, true);
     }
 
     void markStateAdvanced(boolean sharedSnapshotInserted) {
@@ -888,33 +809,24 @@ final class DocumentProcessingRuntime {
     static ResolvedSnapshot cacheSnapshotIfComplete(
             ProcessingSnapshotManager manager,
             ResolvedSnapshot candidate) {
-        Objects.requireNonNull(manager, "snapshotManager");
-        ResolvedSnapshot checked = Objects.requireNonNull(
-                candidate, "snapshot");
-        return !checked.isResolutionComplete()
-                ? checked
-                : Objects.requireNonNull(
-                        manager.cacheSnapshot(checked), "cachedSnapshot");
+        return ProcessingSnapshotEvidence.cacheIfComplete(
+                manager, candidate);
     }
 
     static ResolvedSnapshot snapshotWithCompleteness(
-            FrozenNode canonicalRoot,
+            FrozenNode selectedRoot,
             FrozenNode resolvedRoot,
             boolean resolutionComplete,
-            boolean eagerIdentity) {
-        if (resolutionComplete) {
-            return eagerIdentity
-                    ? new ResolvedSnapshot(canonicalRoot, resolvedRoot,
-                            canonicalRoot.blueId())
-                    : new ResolvedSnapshot(canonicalRoot, resolvedRoot);
-        }
-        ResolvedSnapshot deferred =
-                ResolvedSnapshot.withDeferredResolution(
-                        canonicalRoot, resolvedRoot);
-        if (eagerIdentity) {
-            deferred.blueId();
-        }
-        return deferred;
+            boolean sourceBacked,
+            boolean eagerIdentity,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        return ProcessingSnapshotEvidence.create(
+                selectedRoot,
+                resolvedRoot,
+                resolutionComplete,
+                sourceBacked,
+                eagerIdentity,
+                canonicalTypeIdentities);
     }
 
     ProcessingRuntimeCounters countersForTest() { return counters; }

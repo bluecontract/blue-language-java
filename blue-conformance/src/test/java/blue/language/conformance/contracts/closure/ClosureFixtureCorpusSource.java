@@ -187,7 +187,7 @@ final class ClosureFixtureCorpusSource {
         List<ClosureFixtureInventory.Entry> result = verifyFixtureFiles(
                 root.resolve("fixtures"), fixtures);
         require(result.size() == ClosureFixtureInventory.CLOSURE_FIXTURE_COUNT,
-                "staged package does not contain exactly 93 closure fixtures");
+                "staged package does not contain exactly 98 closure fixtures");
 
         JsonNode specificationDocument = ClosureFixtureInventory.requiredObject(
                 release, "specificationDocument");

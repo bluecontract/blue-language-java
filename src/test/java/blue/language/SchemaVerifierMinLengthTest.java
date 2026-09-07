@@ -21,14 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static blue.language.TestUtils.indent;
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,7 +31,6 @@ public class SchemaVerifierMinLengthTest {
 
     private Node node;
     private Schema schema;
-    private BasicNodeProvider nodeProvider;
     private MergingProcessor mergingProcessor;
     private Merger merger;
 
@@ -86,37 +79,26 @@ public class SchemaVerifierMinLengthTest {
     public void shouldAcceptValueMeetingInheritedMinimumLength() throws Exception {
 
         // given
-        String a = "name: A\n" +
-                   "schema:\n" +
-                   "  minLength: 3";
-
-        String b = "name: B\n" +
-                   "type:\n" +
-                   "  name: A\n" +
-                   "  schema:\n" +
-                   "    minLength: 3\n" +
-                   "schema:\n" +
-                   "  minLength: 4";
-
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: A\n" +
+                "schema:\n" +
+                "  minLength: 3");
+        nodeProvider.addSingleDocs(
+                "name: B\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
+                "schema:\n" +
+                "  minLength: 4");
         String c = "name: C\n" +
                    "type:\n" +
-                   "  name: B\n" +
-                   "  type:\n" +
-                   "    name: A\n" +
-                   "    schema:\n" +
-                   "      minLength: 3\n" +
-                   "  schema:\n" +
-                   "    minLength: 4\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                    "value: Abcd";
-
-        Map<String, Node> nodes = Stream.of(a, b, c)
-                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
-                .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
-        merger = new Merger(mergingProcessor, e -> null);
+        nodeProvider.addSingleDocs(c);
+        merger = new Merger(mergingProcessor, nodeProvider);
 
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0));
+        Node node = merger.resolve(nodeProvider.getNodeByName("C"));
         // then
         assertEquals("Abcd", node.getValue());
 
@@ -126,39 +108,27 @@ public class SchemaVerifierMinLengthTest {
     public void shouldRejectValueBelowStrongestInheritedMinimumLength() throws Exception {
 
         // given
-        String a = "name: A\n" +
-                   "schema:\n" +
-                   "  minLength: 3";
-
-        String b = "name: B\n" +
-                   "type:\n" +
-                   "  name: A\n" +
-                   "  schema:\n" +
-                   "    minLength: 3\n" +
-                   "schema:\n" +
-                   "  minLength: 4";
-
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: A\n" +
+                "schema:\n" +
+                "  minLength: 3");
+        nodeProvider.addSingleDocs(
+                "name: B\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
+                "schema:\n" +
+                "  minLength: 4");
         String c = "name: C\n" +
                    "type:\n" +
-                   "  name: B\n" +
-                   "  type:\n" +
-                   "    name: A\n" +
-                   "    schema:\n" +
-                   "      minLength: 3\n" +
-                   "  schema:\n" +
-                   "    minLength: 4\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                    "value: Abc";
-
-        Map<String, Node> nodes = Stream.of(a, b, c)
-                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
-                .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
-        merger = new Merger(mergingProcessor, e -> null);
+        nodeProvider.addSingleDocs(c);
+        merger = new Merger(mergingProcessor, nodeProvider);
 
         // when
         Throwable failure = captureFailure(
-                () -> merger.resolve(nodeProvider.fetchByBlueId(
-                        calculateBlueId(nodes.get("C"))).get(0)));
+                () -> merger.resolve(nodeProvider.getNodeByName("C")));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
@@ -174,28 +144,30 @@ public class SchemaVerifierMinLengthTest {
                    "schema:\n" +
                    "  minLength: 3";
 
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(a);
         String b = "name: B\n" +
                    "type:\n" +
-                   indent(a, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                    "schema:\n" +
                    "  minLength: 4";
+        nodeProvider.addSingleDocs(b);
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
-                   indent(b, 4) + "\n" +
+                   "    blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                    "  schema:\n" +
                    "    minLength: 5";
+        nodeProvider.addSingleDocs(x);
 
         String y = "name: Y\n" +
                    "type:\n" +
-                   indent(x, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("X") + "\n" +
                    "a:\n" +
                    "  value: Abcde";
-
-        BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        nodeProvider.addSingleDocs(a, b, x, y);
-        merger = new Merger(mergingProcessor, e -> null);
+        nodeProvider.addSingleDocs(y);
+        merger = new Merger(mergingProcessor, nodeProvider);
 
         // when
         Node node = merger.resolve(nodeProvider.getNodeByName("Y"));
@@ -213,28 +185,30 @@ public class SchemaVerifierMinLengthTest {
                    "schema:\n" +
                    "  minLength: 3";
 
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(a);
         String b = "name: B\n" +
                    "type:\n" +
-                   indent(a, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                    "schema:\n" +
                    "  minLength: 4";
+        nodeProvider.addSingleDocs(b);
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
-                   indent(b, 4) + "\n" +
+                   "    blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                    "  schema:\n" +
                    "    minLength: 2";
+        nodeProvider.addSingleDocs(x);
 
         String y = "name: Y\n" +
                    "type:\n" +
-                   indent(x, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("X") + "\n" +
                    "a:\n" +
                    "  value: Abcd";
-
-        BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        nodeProvider.addSingleDocs(a, b, x, y);
-        merger = new Merger(mergingProcessor, e -> null);
+        nodeProvider.addSingleDocs(y);
+        merger = new Merger(mergingProcessor, nodeProvider);
 
         // when
         Node node = merger.resolve(nodeProvider.getNodeByName("Y"));
@@ -252,28 +226,30 @@ public class SchemaVerifierMinLengthTest {
                    "schema:\n" +
                    "  minLength: 3";
 
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(a);
         String b = "name: B\n" +
                    "type:\n" +
-                   indent(a, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("A") + "\n" +
                    "schema:\n" +
                    "  minLength: 4";
+        nodeProvider.addSingleDocs(b);
 
         String x = "name: X\n" +
                    "a:\n" +
                    "  type:\n" +
-                   indent(b, 4) + "\n" +
+                   "    blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                    "  schema:\n" +
                    "    minLength: 2";
+        nodeProvider.addSingleDocs(x);
 
         String y = "name: Y\n" +
                    "type:\n" +
-                   indent(x, 2) + "\n" +
+                   "  blueId: " + nodeProvider.getBlueIdByName("X") + "\n" +
                    "a:\n" +
                    "  value: Abc";
-
-        BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        nodeProvider.addSingleDocs(a, b, x, y);
-        merger = new Merger(mergingProcessor, e -> null);
+        nodeProvider.addSingleDocs(y);
+        merger = new Merger(mergingProcessor, nodeProvider);
 
         // when
         Throwable failure = captureFailure(

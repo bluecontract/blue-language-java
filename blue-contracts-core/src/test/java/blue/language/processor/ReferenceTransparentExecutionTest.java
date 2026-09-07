@@ -267,7 +267,8 @@ final class ReferenceTransparentExecutionTest {
                 new ManagedDocumentResolutionOverlay(
                         Collections.singletonMap(
                                 admittedBlueId, admitted),
-                        expectedByPath);
+                        expectedByPath,
+                        Collections.emptyMap());
         CountingProvider provider = new CountingProvider()
                 .found(admitted)
                 .found(other);
@@ -306,7 +307,7 @@ final class ReferenceTransparentExecutionTest {
         try (ManagedFixture fixture = new ManagedFixture(
                 provider, managedRoot(childBlueId), overlay)) {
             Object before = NodeWireForm.get(fixture.runtime
-                    .canonicalRootWithoutResolution().toNode());
+                    .selectedRootWithoutResolution().toNode());
 
             // when
             assertThrows(IllegalArgumentException.class,
@@ -319,7 +320,7 @@ final class ReferenceTransparentExecutionTest {
 
             // then
             assertEquals(before, NodeWireForm.get(fixture.runtime
-                    .canonicalRootWithoutResolution().toNode()));
+                    .selectedRootWithoutResolution().toNode()));
             assertEquals(0L, fixture.runtime.totalGas());
             assertEquals(0, provider.reads(childBlueId));
         }
@@ -358,9 +359,9 @@ final class ReferenceTransparentExecutionTest {
                             "/observed").getValue(),
                     referenced.runtime.resolvedFrozenAt(
                             "/observed").getValue());
-            assertEquals(inline.runtime.canonicalRootWithoutResolution()
+            assertEquals(inline.runtime.selectedRootWithoutResolution()
                             .blueId(),
-                    referenced.runtime.canonicalRootWithoutResolution()
+                    referenced.runtime.selectedRootWithoutResolution()
                             .blueId());
             assertEquals(inline.runtime.totalGas(),
                     referenced.runtime.totalGas());
@@ -398,7 +399,7 @@ final class ReferenceTransparentExecutionTest {
                     patch.requiredExactBlueIds());
             assertEquals(before,
                     NodeWireForm.get(
-                            fixture.runtime.canonicalRootWithoutResolution()
+                            fixture.runtime.selectedRootWithoutResolution()
                                     .toNode()));
             assertEquals(0L, fixture.runtime.totalGas());
         }
@@ -426,7 +427,7 @@ final class ReferenceTransparentExecutionTest {
                                             BigInteger.valueOf(9)))));
             assertEquals(before,
                     NodeWireForm.get(
-                            fixture.runtime.canonicalRootWithoutResolution()
+                            fixture.runtime.selectedRootWithoutResolution()
                                     .toNode()));
             assertEquals(0L, fixture.runtime.totalGas());
         }
@@ -452,7 +453,7 @@ final class ReferenceTransparentExecutionTest {
                                             BigInteger.valueOf(9)))));
             assertEquals(before,
                     NodeWireForm.get(
-                            fixture.runtime.canonicalRootWithoutResolution()
+                            fixture.runtime.selectedRootWithoutResolution()
                                     .toNode()));
             assertEquals(0L, fixture.runtime.totalGas());
         }
@@ -476,11 +477,11 @@ final class ReferenceTransparentExecutionTest {
 
             assertEquals(
                     NodeWireForm.get(
-                            inline.runtime.canonicalRootWithoutResolution()
+                            inline.runtime.selectedRootWithoutResolution()
                                     .toNode()),
                     NodeWireForm.get(
                             referenced.runtime
-                                    .canonicalRootWithoutResolution()
+                                    .selectedRootWithoutResolution()
                                     .toNode()));
             assertEquals(inline.runtime.totalGas(),
                     referenced.runtime.totalGas());
@@ -488,13 +489,13 @@ final class ReferenceTransparentExecutionTest {
                     inline.runtime.snapshot().isResolutionComplete(),
                     referenced.runtime.snapshot().isResolutionComplete());
             assertEquals(
-                    inline.runtime.canonicalRootWithoutResolution().blueId(),
+                    inline.runtime.selectedRootWithoutResolution().blueId(),
                     referenced.runtime
-                            .canonicalRootWithoutResolution().blueId());
+                            .selectedRootWithoutResolution().blueId());
             assertNotEquals(
                     DirectBlueIdCalculator.calculateBlueId(referenceRoot),
                     referenced.runtime
-                            .canonicalRootWithoutResolution().blueId());
+                            .selectedRootWithoutResolution().blueId());
             assertEquals(BigInteger.valueOf(9),
                     referenced.runtime.resolvedFrozenAt(
                             "/counterValue/value").getValue());
@@ -547,10 +548,10 @@ final class ReferenceTransparentExecutionTest {
             inline.runtime.applyPatch("/", patch);
 
             assertEquals(NodeWireForm.get(
-                            inline.runtime.canonicalRootWithoutResolution()
+                            inline.runtime.selectedRootWithoutResolution()
                                     .toNode()),
                     NodeWireForm.get(referenced.runtime
-                            .canonicalRootWithoutResolution().toNode()));
+                            .selectedRootWithoutResolution().toNode()));
             assertEquals(inline.runtime.totalGas(),
                     referenced.runtime.totalGas());
             assertEquals(new BigDecimal("1250000.0"),
@@ -570,7 +571,7 @@ final class ReferenceTransparentExecutionTest {
 
         try (Fixture fixture = new Fixture(provider, root)) {
             FrozenNode canonical =
-                    fixture.runtime.canonicalRootWithoutResolution();
+                    fixture.runtime.selectedRootWithoutResolution();
             FrozenNode beforeWide = canonical.property("wide");
             FrozenNode expanded = new ReferenceTransparentPathAccess(
                     fixture.manager,
@@ -666,7 +667,7 @@ final class ReferenceTransparentExecutionTest {
 
         try (Fixture fixture = new Fixture(provider, root)) {
             Object before = NodeWireForm.get(
-                    fixture.runtime.canonicalRootWithoutResolution()
+                    fixture.runtime.selectedRootWithoutResolution()
                             .toNode());
             RuntimeException failure = assertThrows(
                     RuntimeException.class,
@@ -683,7 +684,7 @@ final class ReferenceTransparentExecutionTest {
                     ExecutionEvidenceUnavailableException);
             assertEquals(0, provider.reads(counterBlueId));
             assertEquals(before, NodeWireForm.get(
-                    fixture.runtime.canonicalRootWithoutResolution()
+                    fixture.runtime.selectedRootWithoutResolution()
                             .toNode()));
             assertEquals(0L, fixture.runtime.totalGas());
         }
@@ -901,11 +902,11 @@ final class ReferenceTransparentExecutionTest {
 
             assertEquals(
                     NodeWireForm.get(
-                            inline.runtime.canonicalRootWithoutResolution()
+                            inline.runtime.selectedRootWithoutResolution()
                                     .toNode()),
                     NodeWireForm.get(
                             referenced.runtime
-                                    .canonicalRootWithoutResolution()
+                                    .selectedRootWithoutResolution()
                                     .toNode()));
             assertEquals(inline.runtime.totalGas(),
                     referenced.runtime.totalGas());
@@ -1022,7 +1023,8 @@ final class ReferenceTransparentExecutionTest {
             String expectedBlueId) {
         return new ManagedDocumentResolutionOverlay(
                 exactNodes,
-                Collections.singletonMap("/peer", expectedBlueId));
+                Collections.singletonMap("/peer", expectedBlueId),
+                Collections.emptyMap());
     }
 
     private static Node counter(long value) {

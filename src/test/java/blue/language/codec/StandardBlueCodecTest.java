@@ -68,4 +68,81 @@ final class StandardBlueCodecTest {
         assertEquals(TEXT_TYPE_BLUE_ID,
                 roundTrip.getType().getBlueId());
     }
+    @Test
+    void shouldPreserveQuotedNumericTextAcrossYamlRoundTrip() {
+        // given
+        String[] texts = {"7", "7.0", "-2", "1e3", "-2e-3", "1E+3",
+                "12345678901234567890", "true", "null"};
+        java.util.List<String> actual = new java.util.ArrayList<>();
+
+        // when
+        for (String text : texts) {
+            Node original = codec.parseSource("\"" + text + "\"", BlueFormat.JSON);
+            String yaml = codec.write(original, BlueFormat.YAML);
+            actual.add((String) codec.parseSource(yaml, BlueFormat.YAML).getValue());
+        }
+
+        // then
+        assertEquals(java.util.Arrays.asList(texts), actual);
+    }
+
+    @Test
+    void shouldRejectNonStringYamlKeysBeforeJacksonCoercion() {
+        // given
+        String[] sources = {"1: x", "false: x", "null: x", "{1.5: x}",
+                "outer: {1: x}", "? [a, b]\n: c", "? {a: b}\n: c"};
+        java.util.List<Executable> parsing = new java.util.ArrayList<>();
+
+        // when
+        for (String yaml : sources) {
+            parsing.add(() -> codec.parseSource(yaml, BlueFormat.YAML));
+        }
+
+        // then
+        for (Executable operation : parsing) {
+            assertThrows(RuntimeException.class, operation);
+        }
+    }
+
+    @Test
+    void shouldKeepQuotedNumericKeysAndJsonSchemaTextKeys() {
+        // given
+        String[] sources = {"\"1\": x", "'false': x", "yes: x", "no: x"};
+        java.util.List<Node> parsed = new java.util.ArrayList<>();
+
+        // when
+        for (String yaml : sources) parsed.add(codec.parseSource(yaml, BlueFormat.YAML));
+
+        // then
+        for (Node node : parsed) {
+            assertEquals(1, node.getProperties().size());
+            assertEquals("x", node.getProperties().values().iterator().next().getValue());
+        }
+    }
+
+    @Test
+    void shouldKeepMalformedFlowSyntaxInsideTheJsonExceptionBoundary() {
+        // given
+        String source = "value: [\n";
+
+        // when
+        Executable parsing = () -> codec.parseSource(source, BlueFormat.YAML);
+
+        // then
+        assertThrows(blue.language.codec.jackson.UncheckedObjectMapper.JsonException.class, parsing);
+    }
+
+    @Test
+    void shouldKeepUnterminatedQuoteInsideTheJsonExceptionBoundary() {
+        // given
+        String source = "value: \"unfinished\n";
+
+        // when
+        Executable parsing = () -> codec.parseSource(source, BlueFormat.YAML);
+
+        // then
+        assertThrows(blue.language.codec.jackson.UncheckedObjectMapper.JsonException.class, parsing);
+    }
+
+
 }

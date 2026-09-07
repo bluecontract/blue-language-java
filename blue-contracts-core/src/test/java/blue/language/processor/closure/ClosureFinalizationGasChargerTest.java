@@ -26,7 +26,7 @@ final class ClosureFinalizationGasChargerTest {
     private static final String POLICY =
             "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35";
     private static final String MASTER =
-            "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR";
+            "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW";
     private static final DocumentId A = new DocumentId("simple-a");
     private static final DocumentId B = new DocumentId("simple-b");
     private static final DocumentId C = new DocumentId("simple-c");
@@ -460,7 +460,7 @@ final class ClosureFinalizationGasChargerTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference(MASTER + "#1"),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ")));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg")));
         result.put(B, new Node().properties(
                 "documentId", reference(
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
@@ -468,7 +468,7 @@ final class ClosureFinalizationGasChargerTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference(MASTER + "#0"),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz")));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9")));
         return result;
     }
 
@@ -572,7 +572,7 @@ final class ClosureFinalizationGasChargerTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference("this#1"),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg"));
     }
 
     private static Node simpleBPlaceholder() {
@@ -583,7 +583,7 @@ final class ClosureFinalizationGasChargerTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference("this#0"),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9"));
     }
 
     private static String hash(char digit) {

@@ -117,6 +117,9 @@ entries:
 - path: result.document
   type: value
   definition: Exact resulting authoritative Root; input Root for every noncommitting status.
+- path: result.documentBlueId
+  type: scalar-or-node
+  definition: Direct BlueId of the exact resulting authoritative Root.
 - path: result.document.child.b
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -150,6 +153,9 @@ entries:
 - path: result.document.contracts.checkpoint.entries.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.internalOrders
+  type: value
+  definition: Must remain absent because Embedded Collection Event Channel is processor-internal and owns no external checkpoint.
 - path: result.document.contracts.checkpoint.entries.source
   type: value
   definition: Checkpoint entry owned by the raw source Channel.
@@ -257,6 +263,15 @@ entries:
 - path: result.document.lessons.reference.value
   type: value
   definition: Resulting value in the scope using a pure-reference exact Channel binding.
+- path: result.document.orders
+  type: value
+  definition: Exact embedded collection container, whose absence and present empty value are semantically distinct.
+- path: result.document.orders.order-1.state
+  type: scalar-or-node
+  definition: State written with a newly admitted direct collection member.
+- path: result.document.orders.order-1.value
+  type: value
+  definition: Value written with a newly admitted direct collection member.
 - path: result.document.postInitRan
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -308,6 +323,18 @@ entries:
 - path: trace.counters.contractHeaderRecognized
   type: integer
   definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.counters.channelCandidateTested
+  type: integer
+  definition: Number of processor Channel candidates actually tested.
+- path: trace.counters.embeddedEventDelivered
+  type: integer
+  definition: Number of actual Embedded Event deliveries.
+- path: trace.counters.embeddedPathEntryRead
+  type: integer
+  definition: Number of effective Process Embedded path entries read for collection matching.
+- path: trace.counters.embeddedPathSegmentValidated
+  type: integer
+  definition: Number of decoded Runtime Pointer segments validated for collection matching.
 - path: trace.counters.textBlockExamined
   type: integer
   definition: Final quantity of the named canonical counter in the invocation trace.
@@ -362,6 +389,9 @@ entries:
 - path: trace.handlerExecutionCount
   type: integer
   definition: Number of Handler executions after logical-delivery coalescing.
+- path: trace.handlerExecutionOrder
+  type: sequence-or-value
+  definition: Ordered scope, Handler key, and Channel key for every executed Handler.
 - path: trace.initialDocumentBlueId
   type: scalar-or-node
   definition: Exact Node BlueId of the pre-initialization document recorded by marker/event.
@@ -437,12 +467,9 @@ entries:
 - path: trace.validationProofReused
   type: integer
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
-- path: variants.append.trace.semantic.listFoldStepRecomputed
-  type: value
-  definition: Projection from the explicitly named deterministic fixture variant.
-- path: variants.replace-head.trace.semantic.listFoldStepRecomputed
-  type: value
-  definition: Projection from the explicitly named deterministic fixture variant.
+- path: trace.semantic.listFoldStepRecomputed
+  type: integer
+  definition: Deterministic count of List fold steps recomputed for the selected fixture variant.
 - path: variants.retry-after-commit.result.events
   type: sequence-or-value
   definition: Projection from the explicitly named deterministic fixture variant.

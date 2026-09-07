@@ -1,14 +1,18 @@
 package blue.language.merge;
 
-import blue.language.provider.NodeProvider;
-import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.Types;
 import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,12 +80,8 @@ final class ListOverlayMerger {
         for (int index = start; index < sourceChildren.size(); index++) {
             Node child = sourceChildren.get(index);
             if (child.getPosition() != null) {
-                int position = child.getPosition();
-                if (position != result.size()) {
-                    throw new IllegalArgumentException(
-                            "\"$pos\" is out of range for a list without inherited items.");
-                }
-                child = withoutPosition(child);
+                throw new IllegalArgumentException(
+                        "\"$pos\" is out of range for a list without inherited items.");
             }
             Node resolved = resolveListChild(
                     child, limits, String.valueOf(result.size()), itemType);
@@ -97,8 +97,12 @@ final class ListOverlayMerger {
             List<Node> sourceChildren,
             ResolutionLimits limits,
             Node itemType) {
-        appendChildren(targetChildren, sourceChildren,
-                startsWithPrevious(sourceChildren) ? 1 : 0, limits, itemType);
+        if (engine.hasCanonicalListPayloads() && !startsWithPrevious(sourceChildren)) {
+            mergeCanonicalChildren(targetChildren, sourceChildren, 0, limits, itemType, false);
+        } else {
+            appendChildren(targetChildren, sourceChildren,
+                    startsWithPrevious(sourceChildren) ? 1 : 0, limits, itemType);
+        }
     }
 
     private void mergePositionalChildren(
@@ -110,21 +114,22 @@ final class ListOverlayMerger {
                 .anyMatch(child -> child.getPosition() != null);
         int start = startsWithPrevious(sourceChildren) ? 1 : 0;
         if (!hasPositionControls) {
-            if (start > 0) {
+            if (start > 0 || !engine.hasCanonicalListPayloads()) {
                 appendChildren(targetChildren, sourceChildren, start, limits, itemType);
             } else {
-                mergePlainPositionalChildren(
-                        targetChildren, sourceChildren, start, limits, itemType);
+                mergeCanonicalChildren(
+                        targetChildren, sourceChildren, start, limits, itemType, true);
             }
             return;
         }
 
+        int inheritedPrefixSize = targetChildren.size();
         Set<Integer> positions = new HashSet<>();
         for (int index = start; index < sourceChildren.size(); index++) {
             Node sourceChild = sourceChildren.get(index);
             if (sourceChild.getPosition() != null) {
                 int position = sourceChild.getPosition();
-                if (position >= targetChildren.size()) {
+                if (position >= inheritedPrefixSize) {
                     throw new IllegalArgumentException(
                             "\"$pos\" is out of range: " + position);
                 }
@@ -144,12 +149,13 @@ final class ListOverlayMerger {
         }
     }
 
-    private void mergePlainPositionalChildren(
+    private void mergeCanonicalChildren(
             List<Node> targetChildren,
             List<Node> sourceChildren,
             int start,
             ResolutionLimits limits,
-            Node itemType) {
+            Node itemType,
+            boolean positional) {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
@@ -157,8 +163,12 @@ final class ListOverlayMerger {
                     targetChildren.size(), sourceLength));
         }
         List<String> inheritedIdentities = new ArrayList<>(targetChildren.size());
+        CanonicalTypeIdentityLookup activeTypeIdentities =
+                engine.canonicalTypeIdentities();
         for (Node inherited : targetChildren) {
-            inheritedIdentities.add(DirectBlueIdCalculator.calculateBlueId(inherited));
+            inheritedIdentities.add(comparisonBlueId(
+                    inherited,
+                    activeTypeIdentities));
         }
         for (int index = 0; index < sourceLength; index++) {
             Node sourceChild = sourceChildren.get(start + index);
@@ -170,16 +180,32 @@ final class ListOverlayMerger {
                 }
                 continue;
             }
-            String sourceIdentity = DirectBlueIdCalculator.calculateBlueId(sourceChild);
+            TypeEvidenceResolution sourceResolution = engine
+                    .resolveDetachedCanonicalContribution(
+                            applyCompletedItemType(
+                                    sourceChild,
+                                    itemType));
+            String sourceIdentity = comparisonBlueId(
+                    sourceResolution.resolvedRoot().toNode(),
+                    sourceResolution.canonicalTypeIdentities());
             if (!sourceIdentity.equals(inheritedIdentities.get(index))
                     && inheritedIdentities.contains(sourceIdentity)) {
                 throw new IllegalArgumentException(
                         "Positional list overlays cannot reorder inherited items; "
                                 + "use a valid $pos replacement at index " + index + ".");
             }
-            mergeExistingPosition(
-                    targetChildren.get(index), sourceChild,
-                    String.valueOf(index), limits);
+            if (!sourceIdentity.equals(inheritedIdentities.get(index))) {
+                if (!positional) {
+                    throw new IllegalArgumentException(
+                            "Append-only canonical payload cannot modify its inherited prefix.");
+                }
+                Node inherited = targetChildren.get(index);
+                replacePosition(targetChildren, index, sourceChild, limits,
+                        inherited.getType() != null ? inherited.getType() : itemType);
+            } else {
+                mergeExistingPosition(targetChildren.get(index), sourceChild,
+                        String.valueOf(index), limits);
+            }
         }
     }
 
@@ -247,7 +273,8 @@ final class ListOverlayMerger {
             ResolutionLimits limits,
             Node itemType) {
         Node resolved = resolveListChild(
-                source, limits, String.valueOf(position), itemType);
+                source, limits, String.valueOf(position), itemType,
+                targetChildren.get(position).getSchema(), true);
         if (resolved != null) {
             targetChildren.set(position, resolved);
         }
@@ -269,8 +296,7 @@ final class ListOverlayMerger {
     }
 
     private boolean isObjectOverlay(Node overlay) {
-        return overlay.getProperties() != null
-                && !overlay.getProperties().isEmpty();
+        return blue.language.model.Nodes.hasObjectPayload(overlay);
     }
 
     private boolean isObjectCompatibleListItem(Node inherited) {
@@ -320,7 +346,9 @@ final class ListOverlayMerger {
 
     private void validatePreviousAnchor(
             List<Node> targetChildren, Node previousAnchor) {
-        String actualBlueId = DirectBlueIdCalculator.calculateBlueId(targetChildren);
+        String actualBlueId = comparisonBlueId(
+                targetChildren,
+                engine.canonicalTypeIdentities());
         if (!actualBlueId.equals(previousAnchor.getPreviousBlueId())) {
             throw new IllegalArgumentException(
                     "\"$previous\" blueId does not match the inherited list. Expected "
@@ -347,6 +375,12 @@ final class ListOverlayMerger {
 
     private Node resolveListChild(
             Node child, ResolutionLimits limits, String segment, Node itemType) {
+        return resolveListChild(child, limits, segment, itemType, null, false);
+    }
+
+    private Node resolveListChild(
+            Node child, ResolutionLimits limits, String segment,
+            Node itemType, Schema inheritedSchema, boolean replacement) {
         if (child.getPreviousBlueId() != null || child.getPosition() != null) {
             throw new IllegalArgumentException(
                     "List control items must be consumed before resolving list children.");
@@ -360,7 +394,22 @@ final class ListOverlayMerger {
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);
         try {
-            return engine.resolve(applyItemType(child, itemType), limits);
+            if ((child.isReferenceOnly() && itemType != null)
+                    || (replacement && (itemType != null || inheritedSchema != null))) {
+                /* Replacement changes the value, not its inherited type or
+                 * schema constraints. Keep those constraints on a fresh target;
+                 * ordinary merge validation also checks explicit child types
+                 * and materializes exact references when proof is required. */
+                Node context = new Node();
+                if (itemType != null) context.type(itemType.clone());
+                if (inheritedSchema != null) context.schema(inheritedSchema.clone());
+                Node target = engine.resolve(context, limits);
+                engine.merge(target, child, limits);
+                return target;
+            }
+            return engine.resolve(
+                    applyCompletedItemType(child, itemType),
+                    limits);
         } finally {
             engine.exitValidationPath();
             limits.exitPathSegment();
@@ -375,8 +424,145 @@ final class ListOverlayMerger {
     }
 
     Node itemTypeReference(Node itemType) {
-        return itemType.getBlueId() != null
+        return itemType.isReferenceOnly()
                 ? new Node().blueId(itemType.getBlueId()) : itemType.clone();
+    }
+
+    private Node applyCompletedItemType(Node child, Node itemType) {
+        if (child.getType() != null
+                || child.getBlueId() != null
+                || itemType == null) {
+            return child;
+        }
+        engine.canonicalTypeIdentities()
+                .requireCanonicalTypeBlueId(itemType);
+        /*
+         * Inline type identities are resolver-side evidence, not necessarily
+         * independently fetchable provider objects. Carry the completed type
+         * through semantic resolution; Canonical Identity Input reconstruction
+         * will collapse it to the already-proven pure reference.
+         */
+        return child.clone().type(itemType.clone());
+    }
+
+    private String comparisonBlueId(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Node canonical = node.clone();
+        canonicalizeTypePositions(
+                canonical,
+                typeIdentities,
+                Collections.newSetFromMap(
+                        new IdentityHashMap<Node, Boolean>()));
+        return DirectBlueIdCalculator.calculateBlueId(canonical);
+    }
+
+    private String comparisonBlueId(
+            List<Node> nodes,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        List<Node> canonical = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            Node canonicalNode = node.clone();
+            canonicalizeTypePositions(
+                    canonicalNode,
+                    typeIdentities,
+                    Collections.newSetFromMap(
+                            new IdentityHashMap<Node, Boolean>()));
+            canonical.add(canonicalNode);
+        }
+        return DirectBlueIdCalculator.calculateBlueId(canonical);
+    }
+
+    private void canonicalizeTypePositions(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (node == null || !visited.add(node)) {
+            return;
+        }
+        if (node.getType() != null) {
+            node.type(canonicalTypeReference(
+                    node.getType(), typeIdentities));
+        }
+        if (node.getItemType() != null) {
+            node.itemType(canonicalTypeReference(
+                    node.getItemType(), typeIdentities));
+        }
+        if (node.getKeyType() != null) {
+            node.keyType(canonicalTypeReference(
+                    node.getKeyType(), typeIdentities));
+        }
+        if (node.getValueType() != null) {
+            node.valueType(canonicalTypeReference(
+                    node.getValueType(), typeIdentities));
+        }
+        canonicalizeTypePositions(
+                node.getBlue(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                node.getContracts(), typeIdentities, visited);
+        if (node.getItems() != null) {
+            for (Node item : node.getItems()) {
+                canonicalizeTypePositions(
+                        item, typeIdentities, visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node property : node.getProperties().values()) {
+                canonicalizeTypePositions(
+                        property, typeIdentities, visited);
+            }
+        }
+        canonicalizeSchemaTypePositions(
+                node.getSchema(), typeIdentities, visited);
+    }
+
+    private void canonicalizeSchemaTypePositions(
+            Schema schema,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (schema == null) {
+            return;
+        }
+        canonicalizeTypePositions(
+                schema.getRequired(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMultipleOf(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getUniqueItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinFields(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxFields(), typeIdentities, visited);
+        if (schema.getEnum() != null) {
+            for (Node value : schema.getEnum()) {
+                canonicalizeTypePositions(
+                        value, typeIdentities, visited);
+            }
+        }
+    }
+
+    private Node canonicalTypeReference(
+            Node completedType,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return new Node().blueId(
+                typeIdentities.requireCanonicalTypeBlueId(
+                        completedType));
     }
 
     Node withoutPosition(Node node) {
@@ -414,12 +600,16 @@ final class ListOverlayMerger {
         if (type == null) {
             return false;
         }
-        if (LIST_TYPE_BLUE_ID.equals(type.getBlueId())
+        if ((type.isReferenceOnly()
+                && LIST_TYPE_BLUE_ID.equals(type.getBlueId()))
                 || LIST_TYPE.equals(type.getName())) {
             return true;
         }
         Object value = type.getValue();
-        return LIST_TYPE.equals(value) || Types.isListType(type, nodeProvider);
+        return LIST_TYPE.equals(value) || Types.isListType(
+                type,
+                nodeProvider,
+                engine.canonicalTypeIdentities());
     }
 
     private void validateListControls(

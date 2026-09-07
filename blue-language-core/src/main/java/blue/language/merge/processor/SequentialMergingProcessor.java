@@ -1,5 +1,6 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.MergingProcessor;
@@ -27,13 +28,33 @@ public class SequentialMergingProcessor implements MergingProcessor, Incremental
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        mergingProcessors.forEach(e -> e.process(target, source, nodeProvider, nodeResolver));
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        mergingProcessors.forEach(e -> e.process(
+                target,
+                source,
+                nodeProvider,
+                nodeResolver,
+                typeIdentities));
     }
 
     @Override
-    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        mergingProcessors.forEach(e -> e.postProcess(target, source, nodeProvider, nodeResolver));
+    public void postProcess(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        mergingProcessors.forEach(e -> e.postProcess(
+                target,
+                source,
+                nodeProvider,
+                nodeResolver,
+                typeIdentities));
     }
 
     @Override
@@ -57,10 +78,28 @@ public class SequentialMergingProcessor implements MergingProcessor, Incremental
     }
 
     @Override
-    public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+    public void validateCompleted(
+            Node node,
+            boolean semanticallyPresent,
+            String path,
+            CanonicalTypeIdentityLookup typeIdentities) {
         for (MergingProcessor processor : mergingProcessors) {
             if (processor.hasCompletedValidation(node)) {
-                processor.validateCompleted(node, semanticallyPresent, path);
+                processor.validateCompleted(
+                        node,
+                        semanticallyPresent,
+                        path,
+                        typeIdentities);
+            }
+        }
+    }
+
+    @Override
+    public void validateDefinition(Node node, boolean hasFixedPayload,
+                                   String path, CanonicalTypeIdentityLookup typeIdentities) {
+        for (MergingProcessor processor : mergingProcessors) {
+            if (processor.hasCompletedValidation(node)) {
+                processor.validateDefinition(node, hasFixedPayload, path, typeIdentities);
             }
         }
     }

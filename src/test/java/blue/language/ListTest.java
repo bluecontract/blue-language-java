@@ -92,7 +92,7 @@ public class ListTest {
 
         nodeProvider.addSingleNodes(x, y);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS);
+        Node node = merger.resolveSnapshot(blue.language.snapshot.FrozenNode.fromNode(blue.language.identity.NodeToBlueIdInput.stripResolvedBlueIdMetadata(nodeProvider.fetchByBlueId(yId).get(0))), ResolutionLimits.NO_LIMITS).resolvedRoot().toNode();
 
         // then
         assertEquals(3, node.getItems().size());
@@ -121,7 +121,7 @@ public class ListTest {
         // when
         nodeProvider.addSingleNodes(x, y);
         // then
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolveSnapshot(blue.language.snapshot.FrozenNode.fromNode(blue.language.identity.NodeToBlueIdInput.stripResolvedBlueIdMetadata(nodeProvider.fetchByBlueId(yId).get(0))), ResolutionLimits.NO_LIMITS).resolvedRoot().toNode());
     }
 
     @Test
@@ -145,7 +145,7 @@ public class ListTest {
 
         nodeProvider.addSingleNodes(x, y);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS);
+        Node node = merger.resolveSnapshot(blue.language.snapshot.FrozenNode.fromNode(blue.language.identity.NodeToBlueIdInput.stripResolvedBlueIdMetadata(nodeProvider.fetchByBlueId(yId).get(0))), ResolutionLimits.NO_LIMITS).resolvedRoot().toNode();
 
         // then
         assertEquals(2, node.getItems().size());

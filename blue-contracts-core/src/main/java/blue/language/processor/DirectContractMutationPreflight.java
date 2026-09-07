@@ -45,13 +45,15 @@ final class DirectContractMutationPreflight {
         }
 
         if (targetSegments.equals(contractsSegments)) {
-            preflightContractsMap(value);
+            preflightContractsMap(
+                    value, patch.canonicalTypeIdentities());
             return;
         }
         if (isDirectContractEntry(
                 targetSegments, contractsSegments)) {
             String key = targetSegments.get(contractsSegments.size());
-            preflightContract(key, value);
+            preflightContract(
+                    key, value, patch.canonicalTypeIdentities());
             return;
         }
         if (isDirectContractType(
@@ -60,7 +62,8 @@ final class DirectContractMutationPreflight {
             preflightContract(
                     key,
                     FrozenNode.fromResolvedNode(
-                            new Node().type(value.toNode())));
+                            new Node().type(value.toNode())),
+                    patch.canonicalTypeIdentities());
         }
     }
 
@@ -72,20 +75,31 @@ final class DirectContractMutationPreflight {
         return value;
     }
 
-    private void preflightContractsMap(FrozenNode value) {
+    private void preflightContractsMap(
+            FrozenNode value,
+            blue.language.identity.CanonicalTypeIdentityLookup
+                    canonicalTypeIdentities) {
         if (value.getProperties() == null) {
             return;
         }
         for (Map.Entry<String, FrozenNode> entry
                 : value.getProperties().entrySet()) {
-            preflightContract(entry.getKey(), entry.getValue());
+            preflightContract(
+                    entry.getKey(),
+                    entry.getValue(),
+                    canonicalTypeIdentities);
         }
     }
 
-    private void preflightContract(String key, FrozenNode value) {
+    private void preflightContract(
+            String key,
+            FrozenNode value,
+            blue.language.identity.CanonicalTypeIdentityLookup
+                    canonicalTypeIdentities) {
         if (!DirectProtectedStateMutationGuard
                 .isProcessorProtectedContractKey(key)) {
-            contractLoader.preflightDirectContractHeader(key, value);
+            contractLoader.preflightDirectContractHeader(
+                    key, value, canonicalTypeIdentities);
         }
     }
 

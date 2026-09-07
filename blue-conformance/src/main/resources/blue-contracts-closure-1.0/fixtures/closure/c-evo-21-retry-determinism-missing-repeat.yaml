@@ -23,13 +23,13 @@ input:
   documents:
     c-evo-21-a:
       documentId: c-evo-21-a
-      blueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+      blueId: ETdDAktharmBCfpuH9LZCszCHD8YvCipF1AQdGcrhy9y
       document:
         name: C-EVO 21 dynamic A
         contracts:
           embedded:
             type:
-              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+              blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
             paths:
             - /peer
           lifecycle:
@@ -38,7 +38,7 @@ input:
             order: 0
           installPeer:
             type:
-              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+              blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
             channel: lifecycle
             event:
               type:
@@ -65,13 +65,13 @@ input:
   occurrences: []
   components:
   - componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
-    componentStateIdentity: sha256:8c40ff61a1a11e0ab676b1023fc271707edca481089cd4d79a7f406b5e84bd66
+    componentStateIdentity: sha256:cf5c6c8b853490538e5f65755441f2843449f2201405bdecab9e2a98a31d75fa
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - c-evo-21-a
     orderedMemberBlueIds:
-    - HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+    - ETdDAktharmBCfpuH9LZCszCHD8YvCipF1AQdGcrhy9y
   - componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
     componentStateIdentity: sha256:652e5074bd58c0a695f9dceb90946792c8d575fa510e38c78ac8e5cb81c6e501
     componentGeneration: 1
@@ -85,17 +85,17 @@ input:
   - c-evo-21-a
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
-  closureIdentity: sha256:76e58c15a827042cd100cb35c2ddbfadc88572832c68ff05696da07f3ea0272e
-  invocationIdentity: sha256:b271c388d8add212f10e03a015425625ef54114cb01264d06a4eff5c6e44dfa7
+  closureIdentity: sha256:fa4b0649c4cd9d2b69c3dbd22e1037aacc5a0809b4c06abb44548e91efaf020c
+  invocationIdentity: sha256:7985355e53bc05c6386228297c4fa69b5286bdf6358e9dbb80bbbd328800f58d
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
     localLimits: {}
     label: release-default
   environment:
-    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
-    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
+    contractsSpecificationIdentity: sha256:0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
+    runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
@@ -179,8 +179,8 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
-    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+    cyclicFinalizerIdentity: sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c
+    cyclicProofVerifierIdentity: sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84
 runtime:
   initializationHandlers:
     c-evo-21-a/installPeer:
@@ -203,14 +203,14 @@ expected:
   requiredBlueIds: []
   resourceDemands:
   - kind: MANAGED_OCCURRENCE_EVIDENCE
-    demandIdentity: sha256:7897da5f59541b62781ea8637bcd589e8534172d7e2b85df410e22a898ec8831
+    demandIdentity: sha256:6fa646df5d0303f1b4ca9e0e73c9d1269453dea136dec705e60f67c2be134848
     sourceDocumentId: c-evo-21-a
     sourcePath: /peer
     suppliedValueBlueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
     logicalCauseIdentity: sha256:ae9ca03169455613e8d9f2cfb17a153142a1995052be52d922c5ce67e7b4f756
-    inputClosureIdentity: sha256:76e58c15a827042cd100cb35c2ddbfadc88572832c68ff05696da07f3ea0272e
+    inputClosureIdentity: sha256:fa4b0649c4cd9d2b69c3dbd22e1037aacc5a0809b4c06abb44548e91efaf020c
     inputGraphGeneration: 1
-    processEmbeddedDeclarationIdentity: 6GLvxTgSnt3UyrZZa7VSN2pvqCnBZL5UjfyQK5AFx3h7
+    processEmbeddedDeclarationIdentity: 5Y5mU5TAJt7hV4aTysSKYN9sEEN4F2zdfDrxvAgkpdPL
     demandOrdinal: 0
 sharedLimitSource:
   kind: RELEASE_DEFAULT

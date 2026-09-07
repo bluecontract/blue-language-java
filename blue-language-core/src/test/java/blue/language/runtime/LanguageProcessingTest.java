@@ -5,8 +5,10 @@ import blue.language.api.BlueOperationResult;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProofResult;
@@ -18,8 +20,10 @@ import blue.language.registry.NodeProviderWrapper;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +41,7 @@ import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,6 +54,50 @@ final class LanguageProcessingTest {
             "recentProcessingSnapshots";
     private static final String CACHE_VERIFIED_REFERENCES =
             "verifiedReferences";
+
+    @Test
+    void shouldIdentifyConstrainedInlineTypeDeclarationWithoutInstanceValidation() {
+        Node parent = new Node()
+                .name("Constrained inline parent")
+                .properties(
+                        "requiredText",
+                        new Node()
+                                .type(new Node().blueId(
+                                        blue.language.model.wire
+                                                .BlueLanguageConstants
+                                                .TEXT_TYPE_BLUE_ID))
+                                .schema(new Schema()
+                                        .required(true)
+                                        .minLength(3)));
+        Node child = new Node()
+                .name("Inline child")
+                .type(parent.clone());
+        Node validInstance = new Node()
+                .type(child.clone())
+                .properties("requiredText", new Node().value("valid"));
+
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            CanonicalTypeIdentityEvidence declarationIdentity =
+                    scope.resolveTypeDeclarationIdentity(child.clone());
+            ResolvedSnapshot instance = scope.resolveTransient(validInstance);
+            String instanceTypeIdentity = instance.canonicalTypeIdentities()
+                    .requireCanonicalTypeBlueId(
+                            instance.resolvedRoot().getType(),
+                            instance.sourceRoot().getType());
+            Node canonicalDeclaration = declarationIdentity
+                    .canonicalTypeIdentityInput();
+
+            assertEquals(instanceTypeIdentity, declarationIdentity.blueId());
+            assertTrue(canonicalDeclaration.getType().isReferenceOnly(),
+                    "inline parent must become a canonical type reference");
+            assertEquals(
+                    declarationIdentity.blueId(),
+                    DirectBlueIdCalculator.calculateBlueId(
+                            canonicalDeclaration));
+        }
+    }
 
     @Test
     void shouldReusePublishedProcessingSnapshotWithoutChangingSemantics() {
@@ -69,6 +118,45 @@ final class LanguageProcessingTest {
             assertEquals(1, observer.misses.get());
             assertEquals(2, observer.lookupCount.get());
             assertTrue(observer.totalLookupNanos.get() >= 0L);
+        }
+    }
+
+    @Test
+    void shouldKeepExactSourceSpellingAfterEquivalentCanonicalCacheWarmup() {
+        Node exactSubject = new Node()
+                .name("Source-backed cache subject")
+                .properties("payload", new Node().value("present"));
+        BasicNodeProvider provider = new BasicNodeProvider(exactSubject);
+        String subjectBlueId = provider.getBlueIdByName(
+                exactSubject.getName());
+        Node referenced = new Node().properties(
+                "subject", new Node().blueId(subjectBlueId));
+        Node inlineSubject = provider.fetchFirstByBlueId(
+                subjectBlueId).clone();
+        inlineSubject.blueId(null);
+        Node inline = new Node().properties(
+                "subject", inlineSubject);
+
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build()) {
+            ResolvedSnapshot referencedFirst =
+                    language.snapshots().resolve(referenced);
+            ResolvedSnapshot inlineSecond =
+                    language.snapshots().resolve(inline);
+            ResolvedSnapshot cachedCanonical = language.snapshots()
+                    .load(referencedFirst.blueId());
+
+            assertEquals(referencedFirst.blueId(), inlineSecond.blueId());
+            assertTrue(referencedFirst.isSourceBacked());
+            assertTrue(inlineSecond.isSourceBacked());
+            assertTrue(referencedFirst.sourceRoot()
+                    .getNode("/subject").isReferenceOnly());
+            assertFalse(inlineSecond.sourceRoot()
+                    .getNode("/subject").isReferenceOnly());
+            assertNotNull(referencedFirst.verifiedReferenceResolution());
+            assertNotNull(inlineSecond.verifiedReferenceResolution());
+            assertFalse(cachedCanonical.isSourceBacked());
         }
     }
 
@@ -358,7 +446,7 @@ final class LanguageProcessingTest {
             try (LanguageProcessing.Scope scope = language.processing()
                     .openScope(provider)) {
                 scope.materializeVerifiedExactReference(reference(blueId));
-                ResolvedSnapshot snapshot = scope.resolve(new Node());
+                ResolvedSnapshot snapshot = scope.resolve(Nodes.emptyObject());
                 scope.publish(snapshot);
             }
 
@@ -378,8 +466,7 @@ final class LanguageProcessingTest {
         String schemaBlueId = blueId("preserved schema");
         String contractsBlueId = blueId("preserved contracts");
         String itemTypeBlueId = blueId("preserved item type");
-        String keyTypeBlueId = BlueCoreTypeRegistry.INSTANCE.blueId(
-                TEXT_TYPE);
+        String keyTypeBlueId = blueId("preserved key type");
         String valueTypeBlueId = blueId("preserved value type");
         Node authored = new Node()
                 .name("Authored preserved subtree")
@@ -405,9 +492,17 @@ final class LanguageProcessingTest {
         Node document = new Node().properties(
                 "preserved", authored,
                 "ordinary", new Node().value("resolved normally"));
-        AtomicInteger providerReads = new AtomicInteger();
+        Set<String> preservedBlueIds = new java.util.HashSet<>(Arrays.asList(
+                schemaBlueId,
+                contractsBlueId,
+                itemTypeBlueId,
+                keyTypeBlueId,
+                valueTypeBlueId));
+        AtomicInteger preservedProviderReads = new AtomicInteger();
         NodeProvider provider = blueId -> {
-            providerReads.incrementAndGet();
+            if (preservedBlueIds.contains(blueId)) {
+                preservedProviderReads.incrementAndGet();
+            }
             return null;
         };
 
@@ -424,7 +519,15 @@ final class LanguageProcessingTest {
         // then
         Node retained = snapshot.resolvedRoot()
                 .getProperties().get("preserved");
-        assertEquals(0, providerReads.get());
+        assertEquals(0, preservedProviderReads.get());
+        assertFalse(snapshot.isResolutionComplete());
+        assertTrue(snapshot.canonicalTypeIdentities()
+                .hasCompleteCoverage());
+        assertTrue(snapshot.hasCanonicalIdentity());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(
+                        snapshot.sourceRoot()),
+                snapshot.blueId());
         assertEquals(
                 DirectBlueIdCalculator.calculateBlueId(authored),
                 DirectBlueIdCalculator.calculateBlueId(retained));
@@ -442,6 +545,92 @@ final class LanguageProcessingTest {
                 retainedDictionary.getKeyType().getBlueId());
         assertEquals(valueTypeBlueId,
                 retainedDictionary.getValueType().getBlueId());
+    }
+
+    @Test
+    void shouldKeepInheritedMatcherOverlayOpaqueAtPreservedPath() {
+        // given
+        Node eventType = new Node().properties(
+                "document",
+                new Node().schema(new Schema().required(true)));
+        String eventTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                eventType);
+        Node handlerType = new Node().properties(
+                "matcher",
+                new Node().description("Inherited matcher declaration"));
+        String handlerTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                handlerType);
+        Node partialMatcher = new Node()
+                .type(new Node().blueId(eventTypeBlueId))
+                .properties("marker", new Node().value(true));
+        Node document = new Node()
+                .type(new Node().blueId(handlerTypeBlueId))
+                .properties(
+                        "matcher", partialMatcher,
+                        "ordinary", new Node().value("resolved"));
+        AtomicInteger handlerTypeProviderReads = new AtomicInteger();
+        AtomicInteger eventTypeProviderReads = new AtomicInteger();
+        NodeProvider provider = blueId -> {
+            if (handlerTypeBlueId.equals(blueId)) {
+                handlerTypeProviderReads.incrementAndGet();
+                return Collections.singletonList(handlerType.clone());
+            }
+            if (eventTypeBlueId.equals(blueId)) {
+                eventTypeProviderReads.incrementAndGet();
+                return Collections.singletonList(eventType.clone());
+            }
+            return null;
+        };
+
+        // when
+        ResolvedSnapshot snapshot;
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope = language.processing()
+                     .openScope(provider)) {
+            snapshot = scope.resolveTransientPreservingPaths(
+                    document,
+                    Collections.singleton("/matcher"));
+        }
+
+        // then
+        assertTrue(handlerTypeProviderReads.get() > 0);
+        assertEquals(0, eventTypeProviderReads.get());
+        assertFalse(snapshot.isResolutionComplete());
+        assertTrue(snapshot.canonicalTypeIdentities()
+                .hasCompleteCoverage());
+        assertTrue(snapshot.hasCanonicalIdentity());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(document),
+                snapshot.blueId());
+        Node retained = snapshot.resolvedRoot()
+                .getProperties().get("matcher");
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(partialMatcher),
+                DirectBlueIdCalculator.calculateBlueId(retained));
+        assertEquals(eventTypeBlueId,
+                retained.getType().getBlueId());
+        assertTrue(retained.getType().isReferenceOnly());
+        assertNull(retained.getDescription());
+        assertEquals(1, retained.getProperties().size());
+        assertTrue(retained.getProperties().containsKey("marker"));
+        assertEquals(true,
+                retained.getProperties().get("marker").getValue());
+
+        // and: ordinary resolution still validates complete event instances
+        handlerTypeProviderReads.set(0);
+        eventTypeProviderReads.set(0);
+        IllegalArgumentException failure;
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope = language.processing()
+                     .openScope(provider)) {
+            failure = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> scope.resolveTransient(document.clone()));
+        }
+        assertTrue(handlerTypeProviderReads.get() > 0);
+        assertTrue(eventTypeProviderReads.get() > 0);
+        assertTrue(failure.getMessage().contains("/matcher/document"));
+        assertTrue(failure.getMessage().contains("Required node"));
     }
 
     @Test
@@ -466,7 +655,8 @@ final class LanguageProcessingTest {
                      .openScope(invocationProvider);
              blue.language.conformance.ConformanceEngine conformance =
                      scope.newConformanceEngine()) {
-            FrozenNode materialized = scope.runtimeAccess()
+            blue.language.merge.TypeEvidenceResolution materialized =
+                    scope.runtimeAccess()
                     .materializeTypeReferenceForMatching(
                             reference(typeBlueId));
             boolean conformant = conformance.conforms(
@@ -474,7 +664,9 @@ final class LanguageProcessingTest {
 
             // then
             assertNotNull(materialized);
-            assertEquals("Invocation Type", materialized.getName());
+            assertEquals(
+                    "Invocation Type",
+                    materialized.resolvedRoot().getName());
             assertTrue(conformant);
             assertEquals(0, constructionFetches.get());
             assertEquals(1, invocationFetches.get());
@@ -610,7 +802,7 @@ final class LanguageProcessingTest {
         // given
         ConformanceEngine parent = new ConformanceEngine(
                 blueId -> null,
-                (target, source, provider, resolver) -> {
+                (target, source, provider, resolver, typeIdentities) -> {
                 });
         ConformanceEngine transientView = parent.transientView();
 
@@ -646,7 +838,8 @@ final class LanguageProcessingTest {
         };
         ConformanceEngine engine = new ConformanceEngine(
                 provider,
-                (target, source, suppliedProvider, resolver) -> {
+                (target, source, suppliedProvider, resolver,
+                 typeIdentities) -> {
                 });
         engineReference.set(engine);
 
@@ -745,7 +938,7 @@ final class LanguageProcessingTest {
         CountDownLatch releaseConformance = new CountDownLatch(1);
         ConformanceEngine parent = new ConformanceEngine(
                 blueId -> null,
-                (target, source, provider, resolver) -> {
+                (target, source, provider, resolver, typeIdentities) -> {
                     conformanceEntered.countDown();
                     await(releaseConformance, "conformance release");
                 });

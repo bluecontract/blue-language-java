@@ -1,0 +1,76 @@
+schema: blue-contracts-fixture/1.0
+id: c-upd-parent-02
+vectors:
+- C-UPD-PARENT-02
+category: upd
+description: Adding the complete collection subtree in one patch admits and activates its direct member atomically.
+operation: process
+input:
+  root:
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: admin
+        eventKey: admin
+        accept: true
+        checkpointDomain: admin-v1
+      h:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: add
+            path: /orders
+            val:
+              order-1:
+                value: 1
+                contracts:
+                  in:
+                    type:
+                      blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+                    order: 0
+                    subscriptionKey: order-1
+                    eventKey: order-1
+                    accept: true
+                    checkpointDomain: order-1-v1
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths:
+        - /orders
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: admin
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, admin, 1]
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.orders.order-1.value
+    op: equals
+    expected: 1
+  - actual: commit.newIntervals.0.scopePath
+    op: equals
+    expected: /orders/order-1
+  - actual: commit.rootCommitted
+    op: equals
+    expected: true

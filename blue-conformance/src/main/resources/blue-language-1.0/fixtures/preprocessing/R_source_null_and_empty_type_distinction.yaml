@@ -1,0 +1,14 @@
+id: R_source_null_and_empty_type_distinction
+category: Resolution
+operation: preprocess
+description: a null reserved type is omitted while an explicit empty type remains present
+source:
+  nullType:
+    type: null
+  emptyType:
+    type: {}
+expectedPreprocessed:
+  nullType: {}
+  emptyType:
+    type: {}
+expectedIdempotent: true

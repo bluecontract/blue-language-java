@@ -83,7 +83,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "  description: Instance city label.",
                 "  value: Warsaw"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         String reorderedJson = reorderAsJsonObjectStore(writer.nodeToJson(minimized));
 
         BasicNodeProvider readerProvider = fixedValueProvider();
@@ -563,7 +565,7 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void shouldPublicMergeUsesTheMaterializedTargetsTypeProvenance() {
+    void shouldPublicMergeCarriesMaterializedTargetWithoutClaimingTypeEvidence() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
@@ -588,8 +590,8 @@ class MinimizedOverlayJsonObjectOrderTest {
         // then
 
         assertDoesNotThrow(() -> new Merger(
-                blue.getMergingProcessor(), provider).merge(target, overlay, NO_LIMITS));
-
+                blue.getMergingProcessor(), provider).merge(
+                target, overlay, NO_LIMITS));
         assertEquals("Specific Item", target.getAsNode("/item").getName());
         assertEquals("x", target.getAsText("/item/field"));
     }
@@ -616,9 +618,7 @@ class MinimizedOverlayJsonObjectOrderTest {
                 IllegalArgumentException.class,
                 () -> new Merger(blue.getMergingProcessor(), provider)
                         .merge(target, overlay, NO_LIMITS));
-
-        assertEquals(BlueLanguageErrorCategory.FixedValueConflict,
-                BlueLanguageErrorClassifier.classify(failure));
+        assertTrue(failure.getMessage().contains("Inherited fixed value name conflicts"));
     }
 
     @Test
@@ -910,7 +910,9 @@ class MinimizedOverlayJsonObjectOrderTest {
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         ResolvedSnapshot original = writer.resolveToSnapshot(source(writer, writerProvider));
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         // when
 
         // then
@@ -1069,13 +1071,21 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "        schema:",
                 "          required: true"));
         String baseTypeId = provider.getBlueIdByName("Base Metadata List Type");
-        provider.addSingleDocs(String.join("\n",
+        String derivedSource = String.join("\n",
                 "name: Derived Metadata List Type",
                 "type:",
                 "  blueId: " + baseTypeId,
                 "entries:",
                 "  items:",
-                "    - name: Derived Entry"));
+                "    - $pos: 0",
+                "      name: Derived Entry");
+        // The provider stores full canonical list payloads, so prepare the
+        // authored label refinement before assigning its exact content ID.
+        try (blue.language.runtime.BlueLanguage language =
+                     blue.language.runtime.BlueLanguage.builder().nodeProvider(provider).build()) {
+            provider.addSingleNodes(language.identity().canonicalIdentityInput(
+                    language.codec().parseSource(derivedSource, blue.language.codec.BlueFormat.YAML)));
+        }
         return provider;
     }
 

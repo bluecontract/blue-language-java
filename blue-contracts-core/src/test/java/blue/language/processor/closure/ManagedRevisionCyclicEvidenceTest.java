@@ -37,7 +37,7 @@ final class ManagedRevisionCyclicEvidenceTest {
             ManagedRevisionCause cause = fixture.cause;
 
             ClosureInvocationVerifier.Verification verified =
-                    ClosureInvocationVerifier.verify(fixture.input);
+                    ClosureInvocationVerifier.verify(fixture.input, null);
 
             assertEquals(fixture.input.invocationIdentity(),
                     verified.invocationIdentity());
@@ -64,7 +64,7 @@ final class ManagedRevisionCyclicEvidenceTest {
             assertNotSame(first, second);
             first.declaredPlaceholderSet().get(0)
                     .properties("tampered", new Node().value(Boolean.TRUE));
-            ClosureInvocationVerifier.verify(fixture.input);
+            ClosureInvocationVerifier.verify(fixture.input, null);
         }
     }
 
@@ -145,7 +145,8 @@ final class ManagedRevisionCyclicEvidenceTest {
             // when
             IllegalArgumentException failure = assertThrows(
                     IllegalArgumentException.class,
-                    () -> ClosureInvocationVerifier.verify(invalidInput));
+                    () -> ClosureInvocationVerifier.verify(
+                            invalidInput, null));
 
             // then
             assertTrue(failure.getMessage() != null
@@ -412,7 +413,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                 fixture.input.executionPolicy(),
                 fixture.input.environment());
         assertThrows(IllegalArgumentException.class,
-                () -> ClosureInvocationVerifier.verify(input));
+                () -> ClosureInvocationVerifier.verify(input, null));
     }
 
     private static CyclicSetProof proof() {
@@ -485,7 +486,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference("this#1"),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg"));
     }
 
     private static Node authoredPlaceholderB() {
@@ -496,7 +497,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference("this#0"),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9"));
     }
 
     private static Node bodyA() {

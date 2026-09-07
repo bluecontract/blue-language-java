@@ -32,6 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceFixtureTest {
 
+    @org.junit.jupiter.api.TestFactory
+    java.util.stream.Stream<org.junit.jupiter.api.DynamicTest> selectedContractsFixtures() {
+        String selector = System.getProperty(ContractsFixtureSelection.PROPERTY);
+        // The original complete suite below remains the default/release path.
+        return selector == null ? java.util.stream.Stream.empty()
+                : ContractsFixtureSelection.dynamicTests(selector);
+    }
+
     private static final ObjectMapper YAML = new ObjectMapper(
             YAMLFactory.builder()
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -47,7 +55,7 @@ class BlueContractsConformanceFixtureTest {
         int fixtureCount = report.getFixtureIds().size();
 
         // then
-        assertEquals(276, fixtureCount);
+        assertEquals(295, fixtureCount);
         assertEquals(report.getFixtureIds(),
                 report.getPassedFixtureIds(),
                 report.getFailures()::toString);
@@ -145,6 +153,71 @@ class BlueContractsConformanceFixtureTest {
             JsonNode input = resource(fixture);
             new ContractsFixtureHarness()
                     .execute(input, false);
+            executed++;
+        }
+
+        // then
+        assertEquals(fixtures.length, executed);
+    }
+
+    @Test
+    void shouldExecuteEmptyObjectAndCollectionRevisionFixtures()
+            throws IOException {
+        // given
+        String[] fixtures = {
+                "emb/c-emb-empty-01.yaml",
+                "emb/c-emb-empty-02.yaml",
+                "emb/c-emb-empty-03.yaml",
+                "emb/c-emb-empty-04.yaml",
+                "emb/c-emb-empty-05.yaml",
+                "upd/c-upd-parent-01.yaml",
+                "upd/c-upd-parent-02.yaml",
+                "evt/c-evt-collection-01.yaml",
+                "evt/c-evt-collection-02.yaml",
+                "evt/c-evt-collection-03.yaml",
+                "evt/c-evt-collection-04.yaml",
+                "evt/c-evt-collection-05.yaml",
+                "evt/c-evt-collection-06.yaml",
+                "evt/c-evt-collection-07.yaml"
+        };
+
+        // when
+        int executed = 0;
+        for (String fixture : fixtures) {
+            try {
+                JsonNode input = resource(fixture);
+                ContractsConformanceSuite.validateFixture(input);
+                new ContractsFixtureHarness().execute(input, false);
+            } catch (Throwable failure) {
+                throw new AssertionError(
+                        "Failed revision fixture " + fixture, failure);
+            }
+            executed++;
+        }
+
+        // then
+        assertEquals(fixtures.length, executed);
+    }
+
+    @Test
+    void shouldExecuteOpaqueDiscoveryAndOccurrenceContinuityFixtures()
+            throws IOException {
+        // given
+        String[] fixtures = {
+                "disc/c-disc-01.yaml",
+                "disc/c-disc-02.yaml",
+                "disc/c-disc-04.yaml",
+                "emb/c-emb-10.yaml",
+                "emb/c-emb-11.yaml",
+                "emb/c-emb-13.yaml"
+        };
+
+        // when
+        int executed = 0;
+        for (String fixture : fixtures) {
+            JsonNode input = resource(fixture);
+            ContractsConformanceSuite.validateFixture(input);
+            new ContractsFixtureHarness().execute(input, false);
             executed++;
         }
 

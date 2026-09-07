@@ -9,6 +9,7 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 from typing import Any, Iterable
@@ -18,6 +19,7 @@ sys.dont_write_bytecode = True
 import yaml
 
 from gas_reference import gas_trace_identity
+from implementation_baseline import IMPLEMENTATION_BASELINE_SOURCE_PATHS
 from jcs import dumps as jcs_dumps
 from package_hygiene import release_inventory_files
 
@@ -29,6 +31,99 @@ SEMANTIC = "actual-semantic-state-result-change"
 FORMATTING = "fixture-byte-only-formatting"
 UNEXPECTED = "unexpected"
 CATEGORIES = (SPEC, INVOCATION, TRACE, SEMANTIC, FORMATTING, UNEXPECTED)
+LOWERCASE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+IMPLEMENTATION_BASELINE_INPUT_PATH = (
+    Path(__file__).resolve().parent
+    / "migration"
+    / "classify-fixture-identity-delta-implementation-baseline.json"
+)
+IMPLEMENTATION_BASELINE_INPUT_SCHEMA = (
+    "blue-classifier-implementation-baseline/1.0"
+)
+IMPLEMENTATION_BASELINE_INPUT_SOURCE = (
+    "blue-conformance/src/main/resources/blue-contracts-closure-1.0/"
+    "release-manifest.yaml#/languageDependency/inputImplementationBaseline"
+)
+IMPLEMENTATION_BASELINE_INPUT_PROVENANCE = (
+    "42e407c914c7813f327a0ed62e7599bab06a0ecb"
+)
+IMPLEMENTATION_BASELINE_INPUT_SHA256 = (
+    "c4220da1d2f0934c69768623f73c4bdbbd7f17bf0715a3231d82dd6cf2ec2d9d"
+)
+
+
+def parse_implementation_baseline_input(data: bytes) -> dict[str, Any]:
+    """Load the exact reviewed pre-transition implementation snapshot."""
+    def strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(
+                    "duplicate key in classifier implementation baseline: "
+                    + key
+                )
+            result[key] = value
+        return result
+
+    try:
+        document = json.loads(
+            data.decode("utf-8"), object_pairs_hook=strict_object
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exception:
+        raise ValueError(
+            "invalid classifier implementation baseline JSON"
+        ) from exception
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "sourcePath",
+        "provenanceCommit",
+        "files",
+    }:
+        raise ValueError(
+            "classifier implementation baseline must have the exact reviewed shape"
+        )
+    if document["schema"] != IMPLEMENTATION_BASELINE_INPUT_SCHEMA:
+        raise ValueError("unexpected classifier implementation baseline schema")
+    if document["sourcePath"] != IMPLEMENTATION_BASELINE_INPUT_SOURCE:
+        raise ValueError("unexpected classifier implementation baseline source path")
+    if (
+        document["provenanceCommit"]
+        != IMPLEMENTATION_BASELINE_INPUT_PROVENANCE
+    ):
+        raise ValueError(
+            "unexpected classifier implementation baseline provenance commit"
+        )
+    files = document["files"]
+    if not isinstance(files, list) or len(files) != 16:
+        raise ValueError(
+            "classifier implementation baseline must contain exactly 16 files"
+        )
+    paths: set[str] = set()
+    for entry in files:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            raise ValueError(
+                "classifier implementation baseline file must contain path and sha256"
+            )
+        path = entry["path"]
+        digest = entry["sha256"]
+        if not isinstance(path, str) or not path or path in paths:
+            raise ValueError(
+                "classifier implementation baseline paths must be unique and non-empty"
+            )
+        if (
+            not isinstance(digest, str)
+            or LOWERCASE_SHA256_RE.fullmatch(digest) is None
+        ):
+            raise ValueError(
+                "classifier implementation baseline sha256 must be lowercase 64-hex"
+            )
+        paths.add(path)
+    if hashlib.sha256(data).hexdigest() != IMPLEMENTATION_BASELINE_INPUT_SHA256:
+        raise ValueError(
+            "classifier implementation baseline bytes do not match the reviewed input"
+        )
+    return document
 
 APPROVED_SUPPORT_DOCUMENTS = frozenset(
     {
@@ -49,7 +144,11 @@ INVOCATION_FIELDS = frozenset(
         "publicEventsIdentity",
         "commitCompanionIdentity",
         "companionIdentity",
+        "emittedRootEventsIdentity",
+        "managedTransitionReceiptsIdentity",
         "rejectedChargeIdentity",
+        "sourceInvocationIdentity",
+        "transitionReceiptIdentity",
     }
 )
 TRACE_FIELDS = frozenset(
@@ -62,8 +161,10 @@ TRACE_FIELDS = frozenset(
         "workIdentity",
         "eventOccurrenceId",
         "eventOccurrenceIdentity",
+        "occurrenceIdentity",
         "rootEventOccurrenceId",
         "sourceOccurrenceIdentity",
+        "transitionOccurrenceIdentity",
     }
 )
 ADMISSION_CONTEXT_FIELDS = frozenset(
@@ -80,6 +181,9 @@ SPEC_FIELDS = frozenset(
         "oraclePackageIdentity",
         "contractsReleaseIdentity",
         "contractsSpecificationIdentity",
+        "blueLanguageSpecificationIdentity",
+        "cyclicFinalizerIdentity",
+        "cyclicProofVerifierIdentity",
     }
 )
 
@@ -89,43 +193,132 @@ SPEC_FIELDS = frozenset(
 # stricter than accepting a filename prefix: changing status, gas, events,
 # checkpoints, or any other fixture evidence requires a new reviewed release.
 APPROVED_CEVO_FIXTURE_IDENTITIES = {
-    "fixtures/evo/c-evo-01.yaml": "2293214b979464fd87b251618d0462b75f3d661f1f8355e226ff7907836dca9d",
-    "fixtures/evo/c-evo-02.yaml": "74110197e82cca10f6d86c55400f0c1035766147c0ac8f8258db3a8a41a19567",
-    "fixtures/evo/c-evo-03.yaml": "67f70bbedae84635fc2dba0b7cba2a60bd8879c7cb65d6a7c69004475c886eea",
-    "fixtures/evo/c-evo-04.yaml": "bc91496f2d3a29d138abf4afcf9fe90238e5f517ee5c1584bac2731557b05468",
-    "fixtures/evo/c-evo-05.yaml": "7aba7f8ba014e239b870e31f83c3b2d54e39aac57b36475ea650cfc0c22fc82d",
-    "fixtures/evo/c-evo-06.yaml": "fccb64da8809682b03a8372003d1387ea3bdb9c0141beaf85302d1f29c736213",
-    "fixtures/evo/c-evo-07-checkpoint.yaml": "529e71f3ef49ef32d97bc545c38db7cbd57864f8fc2f5d9efc8267cc3962f9b2",
-    "fixtures/evo/c-evo-07-initialized.yaml": "8af8736373932c52d909a8b35159c7547cc5349e86baefb0e4b561364cf5e7da",
-    "fixtures/evo/c-evo-07-terminated.yaml": "3f759bd7c88de3c67484e8590288d0ad3c7c0f49c4a48b9ad3b88c7584649826",
-    "fixtures/evo/c-evo-08.yaml": "76bb22a18cd04482337e78b55be1eb9921141c36bfa3c45c12b50c2247164d54",
-    "fixtures/evo/c-evo-09.yaml": "8f560a0734caf915c85634844a8741f13a56525907c33dd205c6e28c6d45e26d",
-    "fixtures/evo/c-evo-10.yaml": "dc7ab97a8e56476534f64fb050ed0c74677fb77e93a2cbde7901ba796cc3e8d0",
-    "fixtures/evo/c-evo-14.yaml": "87169a55b0b4c14b10c0acfc607785e5500ae17447dec41355b21fcdf40c01cf",
-    "fixtures/evo/c-evo-15.yaml": "54d63b6c727bedce7d8882be24e8283d0ed7b18aef19736cb518b394c75f8cc1",
-    "fixtures/evo/c-evo-16.yaml": "b1752e7211108d89b9b1780a63c3146860bec1ca6f04a0faf86690885f4c265f",
-    "fixtures/evo/c-evo-17.yaml": "4043e7894b6568bedd0c932a8501defcce98d79d9ee39f516dbf883ee774b09a",
-    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "02217cbae4dc66e755e58476c0d9fbe30ff885afd88650ddbfb3434a5233f463",
-    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "2c4462a4e6d4b95d13fda4862e892bcd15d147484d9a99311f80e7ab3c2b5295",
-    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "2243eaacca9254af004c01616381856241b1b3cc95e0dc4abfa9691666856063",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "5e68a95bb266ab547f2bc108d46e93e39f23dd7d78cee5b568f40f7c6659c742",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "48e8537ee92f514e50f72b3cb14555dec471129d6904d3f788d7795825da6c02",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "257604b22e5b756376d6910dfec9432901ce77dcafbcf05188b037e22fafd558",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "45ead3c1e0430c0891c9a31d3f09e50944f4577c0a5e3506a02c995f3fd77e82",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "0c3187976a9f7fa87f0c67a9ca805618889f016aed087baa7a4dabea48f499f7",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "71b9264c20bae63200cff67a49b5306e41c8c47c12bccbaaf31feadf60305074",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "fc9da0d6f81bd19ee1aa18feba09ac11f945fca93047d283facd38ae21931f05",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "34a2adadd5e61f6acd7fdd81b64f6d5489db1960270c0d96dd405d357991cba0",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "941ddb1357e7eba9d93b4fa75b719d7974a9a8dd74926e47a4800ca38887a14b",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "8ebc4446c42bedb6dd9fcecb62a2f9c44bce1d177886f3bdf280b6ad21db60b5",
+    "fixtures/evo/c-evo-01.yaml": "720bff1e2ae3edbf3ba56265b408f0be802ee2ef39dada2e897b491b7fecaf0a",
+    "fixtures/evo/c-evo-02.yaml": "fe117d8d31132da476ac8368512fbe7aadc0b0b054d21aeb9c991304fe8620e1",
+    "fixtures/evo/c-evo-03.yaml": "f8510758436577219438aae69e91d6a9756c33de0dfbedd404de2cf67229f2a5",
+    "fixtures/evo/c-evo-04.yaml": "7e7ccf0ca63ddcb0acb53c5cba7af5d59f52e4bf2707f10a09727085899af62e",
+    "fixtures/evo/c-evo-05.yaml": "347612b325b46e36bf18c43721988e57c07e596e324ae911536e5b0e6a0d9ae4",
+    "fixtures/evo/c-evo-06.yaml": "c7195e10a1b438f8cf61aca931aeb31baa086d3c4cd2f40b1376636a86138819",
+    "fixtures/evo/c-evo-07-checkpoint.yaml": "b41fa87114c12349e7ac6f420ca2b72e58e47e01f93d548a4535797c1e833bb5",
+    "fixtures/evo/c-evo-07-initialized.yaml": "b0ec1ea7a91d7db161c79af06b738432a44dbc12156c8930a6ab646c5b2e166c",
+    "fixtures/evo/c-evo-07-terminated.yaml": "801f6c3d341a185ef03e1cb711a2fe4026ad1c0c36ac9f26ff9752b55f06c8c2",
+    "fixtures/evo/c-evo-08.yaml": "a532b91d9bd35fb46432a2437fa5397491bef9ae7cc6492b5dfcdcb636f860be",
+    "fixtures/evo/c-evo-09.yaml": "57c1ebceba0600340eee675cf1ab2925c4fe7330b05f19c600f72b55fed22546",
+    "fixtures/evo/c-evo-10.yaml": "cc1d445e4b2773164d2468948e531529c7c23369f4c6be51e5be4fec70febfe0",
+    "fixtures/evo/c-evo-14.yaml": "4005bbc00e4822a1fa040d5f21ac12f537dd97a918c049eb788b07009e2cc1e3",
+    "fixtures/evo/c-evo-15.yaml": "4f97850da9597a5309e6d9d624b04f6c8930299ee25c8b6b2b2038cc35be8e83",
+    "fixtures/evo/c-evo-16.yaml": "2a3949c61b15be5e47f5c23465c8923bb99ed80b827e8023b85fd091b8b9e70b",
+    "fixtures/evo/c-evo-17.yaml": "5a9e57473811a43b4f477e307c57737810af82517b7f13e7d9b60c8632909202",
+    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "171f6c844691da5d454b187a11d91668a339104bc941cf96771d08a239c19b9b",
+    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "df6f15e14677b2955606bfb56229a1802b062195636d502f770740f3c6c5756e",
+    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "e0f1640c2ae1f6e5586d5dff58105810b80b901cf9ffa2c896e906e8311b41b3",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "2ca0af7b83b73940e8b3cc8ed8befbd40b92d919b7a1c212b786aae228df4f39",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "cbddadbcf5b3981c5f93affc2298c2887a2f08a829c32cdb041d85091a5809eb",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "1a7fddf477c76b723e2fd868273d74760d93b14914571b2f35fcd237098377be",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "36626d53116307233f5a5e2aeb6909250b8c8aa17a2497cdbf6ca84dffa4603e",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "189466429083b47f7923f9a61765b3545fb3f63ddea84e881b8c876bfd8e0881",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "2f14181f25076c59430f5ffadddc620356836240883e416e22afb749d441aa8c",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "1c4c6603bbcd92cef9f34ba4e44bdbd123bad678d5c8da7b18442f6791c494b5",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "545f9dc5aeef1cdb8e3362c1a571f22772879fc4789cec59edc476b58f568584",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "a99dbdfd962cd0c902eb722209086161b8e5fddec7eab884fb6c55a7e05f12d4",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "70921a351dc2f981c940d6d8c22b30e9bfb54aec2e038521688af1e57c5d9639",
 }
 
 APPROVED_CONTRACTS_SPECIFICATION_SHA256 = (
-    "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242"
+    "99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd"
+)
+APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE = {
+    "expectedSha256": (
+        "7be5116d8e7a64bccf471c11a93127d4924a36686e23bbbf634fc0713d6d33c9"
+    ),
+    "filenameIsNonNormative": True,
+}
+APPROVED_LANGUAGE_DEPENDENCY_TRANSITION = {
+    "specificationSha256": (
+        "019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
+        "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+    ),
+    "cyclicSetFinalizerBaselineIdentity": (
+        "sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76",
+        "sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb",
+    ),
+    "cyclicSetProofVerifierBaselineIdentity": (
+        "sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd",
+        "sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f53",
+    ),
+}
+
+# The old release carried this exact, order-sensitive sixteen-file snapshot.
+# It is strict review data rather than an active source binding, so its bytes
+# live in the migration baseline file and are pinned above.  The new release
+# carries the entire closed six-module inventory.  Its 722 digests are
+# approved through one canonical aggregate.  Array order remains significant.
+APPROVED_IMPLEMENTATION_BASELINE_DOCUMENT = (
+    parse_implementation_baseline_input(
+        IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+    )
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE = tuple(
+    (entry["path"], entry["sha256"])
+    for entry in APPROVED_IMPLEMENTATION_BASELINE_DOCUMENT["files"]
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE_ORDER = tuple(
+    path for path, _ in APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH = dict(
+    APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+)
+IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN = (
+    "blue-contracts-implementation-source-baseline/1.0"
 )
 
+
+def implementation_baseline_aggregate_identity(
+    order: tuple[str, ...],
+    by_path: dict[str, str],
+) -> str:
+    """Bind exact path order and digests into one reviewed approval identity."""
+    value = {
+        "domain": IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN,
+        "files": [
+            {"path": path, "sha256": by_path[path]} for path in order
+        ],
+    }
+    return "sha256:" + hashlib.sha256(jcs_dumps(value)).hexdigest()
+
+
+# Recompute deliberately when production source bytes or inventory membership
+# changes.  This pin approves one exact after-snapshot, not arbitrary hashes.
+APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY = (
+    "sha256:c4f2d27f85b5ca92f9e15fe4340813c1beda9daf924969da6dcae5722f107842"
+)
+
+if any(
+    LOWERCASE_SHA256_RE.fullmatch(digest) is None
+    for _, digest in APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+):
+    raise RuntimeError(
+        "approved pre-transition implementation baseline has a malformed digest"
+    )
+if len(APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH) != len(
+    APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+):
+    raise RuntimeError(
+        "approved pre-transition implementation baseline has duplicate paths"
+    )
+if not APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY.startswith(
+    "sha256:"
+) or LOWERCASE_SHA256_RE.fullmatch(
+    APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY.removeprefix(
+        "sha256:"
+    )
+) is None:
+    raise RuntimeError(
+        "approved implementation-baseline aggregate identity is malformed"
+    )
+
 APPROVED_SCRIPTED_OPERATION_SHA256 = (
-    "b8304f600d22c0faa98222a96664f133fd6a34c73c9148989c143e7b435a2fc8"
+    "804c979ff5d97065aa3cbd75bd6a699a3ee42da139246d6ef93006473c64837d"
 )
 
 # The two larger normative documents are pinned by canonical structured
@@ -134,11 +327,11 @@ APPROVED_SCRIPTED_OPERATION_SHA256 = (
 APPROVED_STRUCTURED_TRANSITIONS = {
     "fixtures/closure-fixture-schema.yaml": (
         "eeb167d13cc2088d3d5760613e2d1eb395fe0d0a354b8f9c511952cafb35f693",
-        "dca5231dce4ec1cabb27f0670ccd64c4c4087bae12c9f6f5e20ca6d4ee750952",
+        "ab5fc2e2484d5926c2238f1e79573db618f361395766396e635d3c05ea4bfb2f",
     ),
     "identity-constructors.yaml": (
         "d4fd3263fcf40c3dbae2a11f5e05573b9b88063b2ef33c9065e5dc481fc73f89",
-        "4b46b82af73f496a4ce6a09987379b50d06889c41f4e76b301dd6719392031c2",
+        "2191db64b2258378e53324b8c02f13c176a94d0735bd0bfff7951d64adb6a9f1",
     ),
 }
 
@@ -162,8 +355,8 @@ APPROVED_EXACT_NODE_DEMAND = {
     "demandIdentity": "sha256:8c1e312399e706565572986d131bdf829e57666285b6486fb931cfe9dd41920f",
     "sourceDocumentId": "blue-contracts/exact-node-provider",
     "sourcePath": "/",
-    "suppliedValueBlueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
-    "blueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+    "suppliedValueBlueId": "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8",
+    "blueId": "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8",
     "logicalPath": "/",
 }
 
@@ -635,6 +828,31 @@ def approved_registry_manifest_transition(
     return actual == after.get("packageIdentity") == before.get("packageIdentity")
 
 
+def implementation_baseline_snapshot(
+    value: Any,
+) -> tuple[tuple[str, ...], dict[str, str]] | None:
+    """Parse one closed ordered path/digest baseline without positional meaning."""
+    if not isinstance(value, list):
+        return None
+    order: list[str] = []
+    by_path: dict[str, str] = {}
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            return None
+        path = entry.get("path")
+        digest = entry.get("sha256")
+        if (
+            not isinstance(path, str)
+            or path in by_path
+            or not isinstance(digest, str)
+            or LOWERCASE_SHA256_RE.fullmatch(digest) is None
+        ):
+            return None
+        order.append(path)
+        by_path[path] = digest
+    return tuple(order), by_path
+
+
 def approved_release_manifest_transition(
     package_root: Path,
     before: dict[str, Any],
@@ -645,9 +863,44 @@ def approved_release_manifest_transition(
     try:
         fixture = after["fixturePackage"]
         constructors = after["identityConstructors"]
-        implementation = after["languageDependency"]["inputImplementationBaseline"]
-        embedded_scope = implementation[12]
-    except (KeyError, IndexError, TypeError):
+        before_implementation = before["languageDependency"][
+            "inputImplementationBaseline"
+        ]
+        after_implementation = after["languageDependency"][
+            "inputImplementationBaseline"
+        ]
+    except (KeyError, TypeError):
+        return False
+    before_snapshot = implementation_baseline_snapshot(before_implementation)
+    after_snapshot = implementation_baseline_snapshot(after_implementation)
+    expected_before = (
+        APPROVED_IMPLEMENTATION_BASELINE_BEFORE_ORDER,
+        APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH,
+    )
+    if before_snapshot != expected_before or after_snapshot is None:
+        return False
+    after_order, after_by_path = after_snapshot
+    if (
+        after_order != IMPLEMENTATION_BASELINE_SOURCE_PATHS
+        or implementation_baseline_aggregate_identity(
+            after_order, after_by_path
+        )
+        != APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY
+    ):
+        return False
+    before_language = before.get("languageDependency", {})
+    after_language = after.get("languageDependency", {})
+    if not all(
+        before_language.get(field) == transition[0]
+        and after_language.get(field) == transition[1]
+        for field, transition in APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()
+    ):
+        return False
+    if (
+        before.get("sourceArchiveBaseline")
+        != APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE
+        or "sourceArchiveBaseline" in after
+    ):
         return False
     if fixture != {
         "path": "fixtures/manifest.yaml",
@@ -662,10 +915,6 @@ def approved_release_manifest_transition(
         return False
     if constructors.get("sha256") != sha256(package_root / "identity-constructors.yaml"):
         return False
-    if embedded_scope.get("sha256") != (
-        "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"
-    ):
-        return False
     if after.get("specificationDocument", {}).get("sha256") != (
         APPROVED_CONTRACTS_SPECIFICATION_SHA256
     ):
@@ -677,20 +926,65 @@ def approved_release_manifest_transition(
     normalized["identityConstructors"]["sha256"] = before[
         "identityConstructors"
     ]["sha256"]
-    normalized["languageDependency"]["inputImplementationBaseline"][12][
-        "sha256"
-    ] = before["languageDependency"]["inputImplementationBaseline"][12]["sha256"]
+    normalized["languageDependency"]["inputImplementationBaseline"] = deepcopy(
+        before_implementation
+    )
+    for field in APPROVED_LANGUAGE_DEPENDENCY_TRANSITION:
+        normalized["languageDependency"][field] = before_language[field]
     normalized["specificationDocument"]["sha256"] = before[
         "specificationDocument"
     ]["sha256"]
+    normalized["sourceArchiveBaseline"] = deepcopy(
+        before["sourceArchiveBaseline"]
+    )
     normalized["releaseIdentity"] = before["releaseIdentity"]
     return normalized == before
+
+
+
+TYPED_PATCH_REVIEW_INPUT_PATH = (
+    Path(__file__).resolve().parent / "migration" / "classify-typed-patch-transition.json"
+)
+TYPED_PATCH_REVIEW_INPUT_SHA256 = "b644d1544bec0ad74150fbfc66cedbdb887dd6b234c5e79d64aa7fef75436969"
+
+
+def reviewed_typed_patch_transition(
+    before_files: dict[str, Path], after_files: dict[str, Path]
+) -> dict[str, Any] | None:
+    """Select only the reviewed pair of complete immutable package inventories."""
+    data = TYPED_PATCH_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != TYPED_PATCH_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed typed-patch baseline bytes changed")
+    review = json.loads(data)
+    before_inventory = {path: sha256(file) for path, file in before_files.items()}
+    after_inventory = {path: sha256(file) for path, file in after_files.items()}
+    if (before_inventory != review["before"]["files"]
+            or after_inventory != review["after"]["files"]):
+        return None
+    return review
+
+
+REPRESENTATION_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-historical-representation-transition.json")
+REPRESENTATION_REVIEW_INPUT_SHA256 = "117fa2e267efc605eef9f22718dd5f8e476c312dd5120369b5ac6066082e244f"
+
+
+def reviewed_representation_transition(before_files, after_files):
+    """Proposed closed pair only; no acceptance of future inventory changes."""
+    data = REPRESENTATION_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != REPRESENTATION_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed representation baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
 
 
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
     after_files: dict[str, Path],
+    reviewed_transition: dict[str, Any] | None = None,
 ) -> list[str]:
     release_present = bool(set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES))
     if not release_present:
@@ -713,7 +1007,12 @@ def cevo_release_integrity_violations(
             f"unexpected={sorted(actual_added - expected_added)}"
         )
     for relative in sorted(expected_added & set(after_files)):
-        if not approved_cevo_added_fixture(relative, after_files[relative]):
+        reviewed_fixture = (
+            reviewed_transition is not None
+            and sha256(after_files[relative])
+            == reviewed_transition["after"]["files"].get(relative)
+        )
+        if not reviewed_fixture and not approved_cevo_added_fixture(relative, after_files[relative]):
             violations.append(f"C-EVO fixture content drifted: {relative}")
     scripted = after_files.get("registry/ScriptedOperation.blue")
     if scripted is None or sha256(scripted) != APPROVED_SCRIPTED_OPERATION_SHA256:
@@ -757,12 +1056,22 @@ def cevo_release_integrity_violations(
             expected_fixture_manifest["packageIdentity"],
         ):
             violations.append("registry reverse fixture binding is invalid")
-        if not approved_release_manifest_transition(
-            after_root,
-            before_release,
-            after_release,
-            expected_fixture_manifest,
-            after_registry,
+        reviewed_release = (
+            reviewed_transition is not None
+            and before_release.get("releaseIdentity")
+            == reviewed_transition["before"]["releaseIdentity"]
+            and after_release.get("releaseIdentity")
+            == reviewed_transition["after"]["releaseIdentity"]
+            and package_identity(after_release, "releaseIdentity")
+            == after_release.get("releaseIdentity")
+            and after_release.get("fixturePackage", {}).get("packageIdentity")
+            == expected_fixture_manifest["packageIdentity"]
+            and after_release.get("contractsRegistry", {}).get("packageIdentity")
+            == after_registry["packageIdentity"]
+        )
+        if not reviewed_release and not approved_release_manifest_transition(
+            after_root, before_release, after_release,
+            expected_fixture_manifest, after_registry,
         ):
             violations.append("release manifest bindings or identity are invalid")
     except (ClassificationFailure, KeyError, OSError, TypeError, ValueError) as failure:
@@ -1011,7 +1320,12 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
                 result["unexpected"] = True
         difference["category"] = category
         categories.add(category)
-    if bounded_cevo_transition_path(relative):
+    if (
+        bounded_cevo_transition_path(relative)
+        and not approved_identity_rebinding_transition(
+            relative, before_value, after_value
+        )
+    ):
         result["unexpected"] = True
     if result["unexpected"]:
         categories.add(UNEXPECTED)
@@ -1119,8 +1433,11 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
     cevo_release_present = bool(
         set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES)
     )
+    reviewed_transition = reviewed_typed_patch_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_representation_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
-        before_root, after_root, after_files
+        before_root, after_root, after_files, reviewed_transition
     )
     if cevo_release_present and not integrity_violations:
         for row in rows:
@@ -1133,6 +1450,11 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
                 if category != UNEXPECTED
             ]
             row.pop("reason", None)
+            if reviewed_transition is not None:
+                row["categories"] = [SPEC]
+                for difference in row["differences"]:
+                    difference["category"] = SPEC
+                row["reviewedTransition"] = reviewed_transition["id"]
     elif integrity_violations:
         rows.append(
             {
@@ -1157,6 +1479,18 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "summary": {category: counts[category] for category in CATEGORIES},
         "unexpectedCount": sum(1 for row in rows if row["unexpected"]),
         "approvedCorrections": approved_corrections(rows, after_files),
+        "reviewedBaselineTransition": None if reviewed_transition is None else {
+            "id": reviewed_transition["id"],
+            "rationale": reviewed_transition["rationale"],
+            "reviewInputSha256": (REPRESENTATION_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "historical-representation-exact-proposed-transition"
+                else TYPED_PATCH_REVIEW_INPUT_SHA256),
+            "beforeSourceCommit": reviewed_transition["before"]["sourceCommit"],
+            "afterSourceCommit": reviewed_transition["after"]["sourceCommit"],
+            "closedInventoryFiles": len(after_files),
+            "executableFixturesUnchanged": reviewed_transition.get(
+                "executableFixturesUnchanged", reviewed_transition["executableFixtureCount"]),
+        },
         "files": rows,
     }
 
@@ -1243,6 +1577,12 @@ def markdown_report(report: dict[str, Any]) -> str:
     )
     for category in CATEGORIES:
         lines.append(f"| `{category}` | {report['summary'][category]} |")
+    reviewed = report.get("reviewedBaselineTransition")
+    if reviewed:
+        lines.extend(["", "## Reviewed baseline transition", "", reviewed["rationale"],
+                      "", f"- Exact review input: `{reviewed['reviewInputSha256']}`",
+                      f"- Before source: `{reviewed['beforeSourceCommit']}`",
+                      f"- After source: `{reviewed['afterSourceCommit']}`"])
     corrections = report.get("approvedCorrections", [])
     if corrections:
         lines.extend(["", "## Approved bounded corrections", ""])

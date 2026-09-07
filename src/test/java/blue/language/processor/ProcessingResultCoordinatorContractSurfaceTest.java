@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
@@ -315,7 +316,7 @@ final class ProcessingResultCoordinatorContractSurfaceTest {
     }
 
     private static Node documentWithoutEmbedded() {
-        return new Node().contracts(new Node());
+        return new Node().contracts(Nodes.emptyObject());
     }
 
     private static Node documentWithEmbedded(String path) {

@@ -1,7 +1,10 @@
 package blue.language.model;
 
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.value.BlueNumbers;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,28 +46,32 @@ public final class SchemaWireForm {
                     schema.getBlueId());
             return result;
         }
-        put(result, KEY_REQUIRED,
-                schema.getRequired() == null
-                        ? null : schema.getRequiredValue());
-        put(result, KEY_MIN_LENGTH, countValue(schema.getMinLength()));
-        put(result, KEY_MAX_LENGTH, countValue(schema.getMaxLength()));
-        put(result, KEY_MINIMUM,
-                numericValue(schema.getMinimum(), nodeConverter));
-        put(result, KEY_MAXIMUM,
-                numericValue(schema.getMaximum(), nodeConverter));
-        put(result, KEY_EXCLUSIVE_MINIMUM,
-                numericValue(schema.getExclusiveMinimum(), nodeConverter));
-        put(result, KEY_EXCLUSIVE_MAXIMUM,
-                numericValue(schema.getExclusiveMaximum(), nodeConverter));
-        put(result, KEY_MULTIPLE_OF,
-                numericValue(schema.getMultipleOf(), nodeConverter));
-        put(result, KEY_MIN_ITEMS, countValue(schema.getMinItems()));
-        put(result, KEY_MAX_ITEMS, countValue(schema.getMaxItems()));
-        put(result, KEY_UNIQUE_ITEMS,
-                schema.getUniqueItems() == null
-                        ? null : schema.getUniqueItemsValue());
-        put(result, KEY_MIN_FIELDS, countValue(schema.getMinFields()));
-        put(result, KEY_MAX_FIELDS, countValue(schema.getMaxFields()));
+        put(result, KEY_REQUIRED, scalarOrExplicitNode(
+                schema.getRequired(), nodeConverter));
+        put(result, KEY_MIN_LENGTH, scalarOrExplicitNode(
+                schema.getMinLength(), nodeConverter));
+        put(result, KEY_MAX_LENGTH, scalarOrExplicitNode(
+                schema.getMaxLength(), nodeConverter));
+        put(result, KEY_MINIMUM, scalarOrExplicitNode(
+                schema.getMinimum(), nodeConverter));
+        put(result, KEY_MAXIMUM, scalarOrExplicitNode(
+                schema.getMaximum(), nodeConverter));
+        put(result, KEY_EXCLUSIVE_MINIMUM, scalarOrExplicitNode(
+                schema.getExclusiveMinimum(), nodeConverter));
+        put(result, KEY_EXCLUSIVE_MAXIMUM, scalarOrExplicitNode(
+                schema.getExclusiveMaximum(), nodeConverter));
+        put(result, KEY_MULTIPLE_OF, scalarOrExplicitNode(
+                schema.getMultipleOf(), nodeConverter));
+        put(result, KEY_MIN_ITEMS, scalarOrExplicitNode(
+                schema.getMinItems(), nodeConverter));
+        put(result, KEY_MAX_ITEMS, scalarOrExplicitNode(
+                schema.getMaxItems(), nodeConverter));
+        put(result, KEY_UNIQUE_ITEMS, scalarOrExplicitNode(
+                schema.getUniqueItems(), nodeConverter));
+        put(result, KEY_MIN_FIELDS, scalarOrExplicitNode(
+                schema.getMinFields(), nodeConverter));
+        put(result, KEY_MAX_FIELDS, scalarOrExplicitNode(
+                schema.getMaxFields(), nodeConverter));
         if (schema.getEnum() != null) {
             List<Object> values = new ArrayList<>(schema.getEnum().size());
             for (Node value : schema.getEnum()) {
@@ -75,31 +82,22 @@ public final class SchemaWireForm {
         return result;
     }
 
-    private static Object countValue(Node node) {
-        return node == null ? null : node.getValue();
-    }
-
-    private static Object numericValue(
-            Node node, Function<Node, Object> nodeConverter) {
-        if (node == null) {
-            return null;
-        }
-        return isPlainScalar(node)
-                ? node.getValue() : nodeConverter.apply(node);
-    }
-
     private static Object scalarOrExplicitNode(
             Node node, Function<Node, Object> nodeConverter) {
-        return isPlainScalar(node)
+        return node == null
+                ? null
+                : isPlainScalar(node)
                 ? node.getValue() : nodeConverter.apply(node);
     }
 
     private static boolean isPlainScalar(Node node) {
         return node != null
                 && node.getValue() != null
+                && isInteroperableScalar(node.getValue())
                 && node.getName() == null
                 && node.getDescription() == null
-                && node.getType() == null
+                && isImplicitScalarType(
+                        node.getType(), node.getValue())
                 && node.getItemType() == null
                 && node.getKeyType() == null
                 && node.getValueType() == null
@@ -112,6 +110,36 @@ public final class SchemaWireForm {
                 && node.getPreviousBlueId() == null
                 && node.getPosition() == null
                 && node.getBlue() == null;
+    }
+
+    private static boolean isInteroperableScalar(Object value) {
+        if (!(value instanceof BigInteger)) {
+            return true;
+        }
+        BigInteger integer = (BigInteger) value;
+        // Large Integers require their explicit type when the wire value is
+        // quoted; plain schema sugar would turn the constraint into Text.
+        return integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) >= 0
+                && integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) <= 0;
+    }
+
+    private static boolean isImplicitScalarType(
+            Node type, Object value) {
+        if (type == null) {
+            return true;
+        }
+        if (!type.isReferenceOnly()) {
+            return false;
+        }
+        String blueId = type.getBlueId();
+        return value instanceof Boolean
+                && BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID.equals(blueId)
+                || value instanceof BigInteger
+                && BlueLanguageConstants.INTEGER_TYPE_BLUE_ID.equals(blueId)
+                || value instanceof BigDecimal
+                && BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID.equals(blueId)
+                || value instanceof String
+                && BlueLanguageConstants.TEXT_TYPE_BLUE_ID.equals(blueId);
     }
 
     private static void put(

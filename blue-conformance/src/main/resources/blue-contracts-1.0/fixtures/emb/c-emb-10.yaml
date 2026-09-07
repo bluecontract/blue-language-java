@@ -3,7 +3,7 @@ id: c-emb-10
 vectors:
 - C-EMB-10
 category: emb
-description: A collection member added by the current event becomes active only after commit.
+description: A collection member cannot be added without the exact inactive prospective row required by Contracts 1.0 section 5.2.
 operation: process
 input:
   root:
@@ -22,7 +22,7 @@ input:
         checkpointDomain: admin-v1
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
         result:
@@ -42,13 +42,13 @@ input:
                   checkpointDomain: new-lesson-v1
                 h:
                   type:
-                    blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+                    blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
                   channel: in
                   order: 0
                   result: {}
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         collectionPaths:
         - /lessons
   event:
@@ -76,17 +76,13 @@ expected:
   assertions:
   - actual: result.status
     op: equals
-    expected: success
+    expected: invalid-processing-document
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
   - actual: trace.externalDeliveryOrder
     op: sequenceEquals
-    expected:
-    - /:in
-  - actual: commit.newIntervals.0.scopePath
+    expected: []
+  - actual: commit.rootCommitted
     op: equals
-    expected: /lessons/new
-  - actual: commit.newIntervals.0.startAfterExternalOrderKey
-    op: equals
-    expected:
-    - 1000
-    - admin
-    - 1
+    expected: false

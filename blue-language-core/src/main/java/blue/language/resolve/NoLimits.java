@@ -15,14 +15,13 @@ final class NoLimits implements ResolutionLimits {
         return true;
     }
 
-    /** Legacy binary-API spelling delegated to the canonical method. */
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return shouldExpandPathSegment(pathSegment, currentNode);
+    public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
+        return true;
     }
 
     @Override
-    public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
+    public boolean retainsEveryAuthoredPath() {
         return true;
     }
 

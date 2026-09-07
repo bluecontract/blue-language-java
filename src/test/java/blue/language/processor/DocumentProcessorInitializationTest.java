@@ -521,6 +521,10 @@ class DocumentProcessorInitializationTest {
     void shouldVerifyInitializationHandlesCustomPaths() {
         // given
         String yaml = "name: Custom Path Doc\n" +
+                "nested:\n" +
+                "  branch: {}\n" +
+                "a:\n" +
+                "  x: {}\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
@@ -563,6 +567,13 @@ class DocumentProcessorInitializationTest {
 
         // when
         DocumentProcessingResult initResult = blue.initializeDocument(original);
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, initResult.status(),
+                () -> initResult.diagnostic() != null
+                        ? initResult.diagnostic().category() + ": "
+                                + initResult.diagnostic().message()
+                        : "missing initialization diagnostic");
         Node processed = initResult.document();
         Node nested = processed.getProperties().get("nested");
         Node branch = nested.getProperties().get("branch");
@@ -570,8 +581,6 @@ class DocumentProcessorInitializationTest {
         Node aNode = processed.getProperties().get("a");
         Node firstX = aNode.getProperties().get("x");
         Node explicit = firstX.getProperties().get("x");
-
-        // then
         assertEquals(new BigInteger("3"), processed.getProperties().get("x").getValue());
         assertNotNull(nested);
         assertNotNull(branch);

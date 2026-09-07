@@ -143,15 +143,13 @@ def _validate_empty_list_placeholder(value: Mapping[str, Any]) -> None:
 
 
 def _clean_direct_object(value: Mapping[str, Any]) -> dict[str, Any]:
-    """Recursively omit object fields whose normalized map is empty."""
+    """Recursively omit null fields while preserving exact empty objects."""
     cleaned: dict[str, Any] = {}
     for key, child in value.items():
         if child is None:
             continue
         if isinstance(child, dict):
             normalized_child = _clean_direct_object(child)
-            if not normalized_child:
-                continue
             cleaned[key] = normalized_child
         elif isinstance(child, list):
             cleaned[key] = _clean_direct_list(child)
@@ -171,10 +169,6 @@ def _clean_direct_list(value: Sequence[Any]) -> list[Any]:
         if isinstance(item, dict):
             _validate_empty_list_placeholder(item)
             normalized_item = _clean_direct_object(item)
-            if not normalized_item:
-                raise ValueError(
-                    'Use {"$empty": true} for empty object list placeholders'
-                )
             cleaned.append(normalized_item)
         elif isinstance(item, list):
             cleaned.append(_clean_direct_list(item))
@@ -185,9 +179,8 @@ def _clean_direct_list(value: Sequence[Any]) -> list[Any]:
 
 def _store_normalized_object_field(
         target: dict[str, Any], key: str, value: Any) -> None:
-    """Store one field unless its recursively normalized object is empty."""
-    if not isinstance(value, dict) or value:
-        target[key] = value
+    """Store one present field, including an exact empty-object value."""
+    target[key] = value
 
 
 def _normalized_schema_input(value: Any) -> Any:
@@ -223,10 +216,6 @@ def _normalized_schema_input(value: Any) -> Any:
                     if not isinstance(item, (dict, list))
                     else _normalized_preliminary_input(item)
                 )
-                if isinstance(normalized_item, dict) and not normalized_item:
-                    raise ValueError(
-                        'Use {"$empty": true} for empty object list placeholders'
-                    )
                 normalized_items.append(normalized_item)
             normalized[key] = normalized_items
         else:
@@ -251,10 +240,6 @@ def _normalized_preliminary_input(value: Any) -> Any:
                 normalized_items.append({"$empty": True})
             else:
                 normalized_item = _normalized_preliminary_input(item)
-                if isinstance(normalized_item, dict) and not normalized_item:
-                    raise ValueError(
-                        'Use {"$empty": true} for empty object list placeholders'
-                    )
                 normalized_items.append(normalized_item)
         return normalized_items
     if not isinstance(value, dict):

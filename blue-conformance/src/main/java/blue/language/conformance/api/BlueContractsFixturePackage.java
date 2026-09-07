@@ -39,20 +39,9 @@ final class BlueContractsFixturePackage {
             16 * 1024 * 1024;
 
     static final String CONTRACTS_RELEASE_IDENTITY =
-            "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3";
+            "sha256:0de1d6ff58cd8895eddbb8c891ca09ff0a5294458d40b0ec4b79ba2b4fec4056";
     private static final String CONTRACTS_RELEASE_MANIFEST_RESOURCE =
             "blue-contracts-closure-1.0/release-manifest.yaml";
-
-    /*
-     * The aggregate Language release manifest predates the normative closure
-     * amendment. Its own identity remains verified exactly while the current
-     * Contracts report binds the superseding gas and combined-fixture
-     * packages directly.
-     */
-    private static final String LEGACY_RELEASE_CONTRACTS_GAS_IDENTITY =
-            "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
-    private static final String LEGACY_RELEASE_CONTRACTS_FIXTURE_IDENTITY =
-            "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is
@@ -272,8 +261,8 @@ final class BlueContractsFixturePackage {
         requireCount(manifest, "ordinaryFixtureCount", behavior + gas);
         requireCount(manifest, "totalExecutableFixtureCount",
                 behavior + gas + closure);
-        requireCount(manifest, "vectorCount", 168);
-        requireCount(manifest, "ordinaryVectorCount", 114);
+        requireCount(manifest, "vectorCount", 182);
+        requireCount(manifest, "ordinaryVectorCount", 128);
         requireCount(manifest, "closureVectorCount", 54);
         if (behavior
                 != ConformanceReportConstants.FixtureCount
@@ -285,8 +274,8 @@ final class BlueContractsFixturePackage {
                 != ConformanceReportConstants.FixtureCount
                         .CONTRACTS_CLOSURE) {
             throw new IllegalStateException(
-                    "Contracts fixture inventory must contain exactly 112 "
-                            + "ordinary behavior, 71 ordinary gas, and 93 "
+                    "Contracts fixture inventory must contain exactly 126 "
+                            + "ordinary behavior, 71 ordinary gas, and 98 "
                             + "closure fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
@@ -318,12 +307,32 @@ final class BlueContractsFixturePackage {
                 LANGUAGE_REGISTRY_PACKAGE_IDENTITY);
         requireText(components, "languageFixturePackageIdentity",
                 LANGUAGE_FIXTURE_PACKAGE_IDENTITY);
+        requireText(components, "languageSpecificationSha256",
+                LANGUAGE_SPECIFICATION_SHA256);
+        requireCount(components, "languageVectorCount", 150);
+        requireCount(components, "languageBehaviorFixtureCount",
+                BlueReleaseConformanceReport.LANGUAGE_FIXTURE_COUNT);
         requireText(components, "contractsRegistryPackageIdentity",
                 CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
+        requireText(components, "contractsSpecificationSha256",
+                CONTRACTS_SPECIFICATION_SHA256);
         requireText(components, "contractsGasPackageIdentity",
-                LEGACY_RELEASE_CONTRACTS_GAS_IDENTITY);
+                CONTRACTS_GAS_PACKAGE_IDENTITY);
         requireText(components, "contractsFixturePackageIdentity",
-                LEGACY_RELEASE_CONTRACTS_FIXTURE_IDENTITY);
+                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+        requireCount(components, "contractsVectorCount", 182);
+        requireCount(components, "contractsBehaviorFixtureCount",
+                ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_BEHAVIOR);
+        requireCount(components, "contractsGasFixtureCount",
+                ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_GAS);
+        requireCount(components, "contractsClosureFixtureCount",
+                ConformanceReportConstants.FixtureCount.CONTRACTS_CLOSURE);
+        requireCount(components, "contractsTotalExecutableFixtureCount",
+                BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT);
+        requireText(components, "processEmbeddedBlueId",
+                RuntimeBlueIds.PROCESS_EMBEDDED);
         requireText(release, RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
                 RELEASE_PACKAGE_IDENTITY);
         if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
@@ -530,7 +539,7 @@ final class BlueContractsFixturePackage {
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "112 ordinary behavior, 71 ordinary gas, and 93 "
+                            + "126 ordinary behavior, 71 ordinary gas, and 98 "
                             + "closure fixtures; found " + behavior
                             + " ordinary behavior, " + gas
                             + " ordinary gas, and " + closure + " closure");
@@ -690,7 +699,7 @@ final class BlueContractsFixturePackage {
     static void requireCount(JsonNode manifest, String field, int expected) {
         if (!manifest.has(field) || manifest.get(field).asInt(-1) != expected) {
             throw new IllegalStateException(
-                    "Contracts fixture manifest " + field + " mismatch: expected " + expected);
+                    "Contracts package field " + field + " mismatch: expected " + expected);
         }
     }
 

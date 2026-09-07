@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -41,20 +42,13 @@ public class BlueLanguageConformanceFixtureTest {
     @TestFactory
     Stream<DynamicTest> shouldPassAllBlueLanguage10Fixtures() {
         // given
+        String selector = System.getProperty(LanguageFixtureSelection.CASES_PROPERTY);
+
         // when
-        BlueConformanceReport report = BlueConformanceSuiteRunner.run();
-        Map<String, BlueConformanceFailure> failuresById = report.getFailures().stream()
-                .collect(Collectors.toMap(BlueConformanceFailure::getFixtureId, Function.identity()));
+        Stream<DynamicTest> selected = LanguageFixtureSelection.dynamicTests(selector);
 
         // then
-        return report.getFixtureIds().stream()
-                .map(id -> DynamicTest.dynamicTest(id, () -> {
-                    BlueConformanceFailure failure = failuresById.get(id);
-                    if (failure != null) {
-                        fail(failureMessage(failure));
-                    }
-                    assertTrue(report.getPassedFixtureIds().contains(id), "Fixture did not run: " + id);
-                }));
+        return selected;
     }
 
     @Test
@@ -231,6 +225,7 @@ public class BlueLanguageConformanceFixtureTest {
                         + "operation: expandLimited\n"
                         + "source:\n"
                         + "  left: wanted\n"
+                        + "provider: []\n"
                         + "limits:\n"
                         + "  demandedPaths: [/left]\n"
                         + "expectedOutcome: Established\n"
@@ -240,21 +235,22 @@ public class BlueLanguageConformanceFixtureTest {
                         + "category: LimitedResolution\n"
                         + "operation: semanticExists\n"
                         + "source: {}\n"
+                        + "provider: []\n"
                         + "path: /missing\n"
                         + "expectedOutcome: Established\n");
 
         // when
-        AssertionError identityFailure = captureFailure(
+        Throwable identityFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongIdentity));
-        AssertionError valueFailure = captureFailure(
+        Throwable valueFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongValue));
-        AssertionError outcomeFailure = captureFailure(
+        Throwable outcomeFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongOutcome));
 
         // then
-        assertTrue(identityFailure instanceof AssertionError);
-        assertTrue(valueFailure instanceof AssertionError);
-        assertTrue(outcomeFailure instanceof AssertionError);
+        assertInstanceOf(AssertionError.class, identityFailure);
+        assertInstanceOf(AssertionError.class, valueFailure);
+        assertInstanceOf(AssertionError.class, outcomeFailure);
     }
 
     @Test
@@ -473,9 +469,8 @@ public class BlueLanguageConformanceFixtureTest {
     }
 
     private boolean isFixtureResource(String path) {
-        String name = path.substring(path.lastIndexOf('/') + 1);
-        return !"manifest.yaml".equals(name)
-                && !"manifest.yml".equals(name);
+        return !"manifest.yaml".equals(path)
+                && !"manifest.yml".equals(path);
     }
 
     private String failureMessage(BlueConformanceFailure failure) {

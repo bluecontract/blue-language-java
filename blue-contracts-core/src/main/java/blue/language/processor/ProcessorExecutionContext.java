@@ -1,11 +1,13 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
-import java.util.Collections;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,9 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private final Node event;
     private final Node occurrenceEvent;
     private final FrozenNode exactEvent;
+    private final ExactEventIdentityEvidence exactEventIdentityEvidence;
+    private final ExactEventIdentityEvidence
+            exactOccurrenceEventIdentityEvidence;
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
     private final RuntimeWorkSession runtimeWorkSession;
@@ -41,6 +46,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
             new LinkedHashMap<>();
     private long acceptedPatchCount;
     private long acceptedEventCount;
+    private CanonicalTypeIdentityLookup effectTypeIdentities;
     private boolean effectsApplied;
     private boolean closed;
 
@@ -52,6 +58,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                               Node event,
                               Node occurrenceEvent,
                               FrozenNode exactEvent,
+                              String exactEventBlueId,
+                              String occurrenceEventBlueId,
                               List<ExactBlueValue> carriedExactValues,
                               boolean allowReservedMutation) {
         this.execution = Objects.requireNonNull(execution, "execution");
@@ -64,18 +72,50 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                 occurrenceEvent,
                 "occurrenceEvent");
         this.exactEvent = exactEvent;
+        String admittedEventBlueId = exactEventBlueId == null
+                ? null
+                : BlueIds.requireBlueIdOrCyclicMember(
+                        exactEventBlueId,
+                        "exactEventBlueId");
+        if ((this.exactEvent == null) != (admittedEventBlueId == null)) {
+            throw new IllegalArgumentException(
+                    "exactEvent and exactEventBlueId must appear together");
+        }
+        String admittedOccurrenceEventBlueId = occurrenceEventBlueId == null
+                ? null
+                : BlueIds.requireBlueIdOrCyclicMember(
+                        occurrenceEventBlueId,
+                        "occurrenceEventBlueId");
+        this.exactEventIdentityEvidence = this.exactEvent == null
+                ? null
+                : ExactEventIdentityEvidence.fromAdmitted(
+                        new ExactBlueValue(
+                                this.exactEvent,
+                                admittedEventBlueId));
+        this.exactOccurrenceEventIdentityEvidence =
+                admittedOccurrenceEventBlueId == null
+                        ? null
+                        : ExactEventIdentityEvidence.fromAdmitted(
+                                new ExactBlueValue(
+                                        FrozenNode.fromResolvedNode(
+                                                this.occurrenceEvent.clone()),
+                                        admittedOccurrenceEventBlueId));
         this.allowReservedMutation = allowReservedMutation;
+        this.effectTypeIdentities = bundle.canonicalTypeIdentities();
         this.runtimeWorkSession =
                 execution.runtime().newRuntimeWorkSession(
-                        execution.blue());
-        if (exactEvent != null
-                && runtimeWorkSession.hasSemanticOutputBoundary()) {
+                        execution.blue(), execution.contractRegistry());
+        if (exactEvent != null) {
             runtimeWorkSession.carryExactInput(
                     exactEvent,
-                    exactEvent.blueId());
+                    admittedEventBlueId);
         }
-        if (runtimeWorkSession.hasSemanticOutputBoundary()
-                && carriedExactValues != null
+        if (exactOccurrenceEventIdentityEvidence != null) {
+            runtimeWorkSession.carryExactInput(
+                    exactOccurrenceEventIdentityEvidence.frozenEvent(),
+                    admittedOccurrenceEventBlueId);
+        }
+        if (carriedExactValues != null
                 && !carriedExactValues.isEmpty()) {
             runtimeWorkSession.carryExactInputs(carriedExactValues);
         }
@@ -153,6 +193,34 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     /**
+     * Returns the admission proof for this handler's exact channelized event.
+     *
+     * <p>This is input evidence, not an output-admission operation. It remains
+     * available in managed runtime phases that deliberately have no semantic
+     * output boundary.</p>
+     *
+     * @return immutable exact event evidence, or {@code null} for an internal
+     *         path that did not retain exact event identity
+     */
+    public ExactEventIdentityEvidence exactEventIdentityEvidence() {
+        return exactEventIdentityEvidence;
+    }
+
+    /**
+     * Returns the admission proof for the semantic event occurrence.
+     *
+     * <p>Adapter Channels may expose a different channelized wrapper through
+     * {@link #exactEventIdentityEvidence()}; this capability always describes
+     * the originating occurrence passed to {@link #occurrenceEvent()}.</p>
+     *
+     * @return immutable exact occurrence evidence, or {@code null} for an
+     *         internal path that did not retain occurrence identity
+     */
+    public ExactEventIdentityEvidence exactOccurrenceEventIdentityEvidence() {
+        return exactOccurrenceEventIdentityEvidence;
+    }
+
+    /**
      * Returns whether this execution was started by {@code PROCESS(document, event)}.
      *
      * <p>This is a constant-time presence check and never constructs the immutable
@@ -223,6 +291,28 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                 patches.size());
         effects.addPatches(patches);
         acceptedPatchCount = observedPatchCount;
+    }
+
+    private List<JsonPatch> applyResolvedPatches(
+            SelectedExecutableBody origin,
+            List<JsonPatch> patches) {
+        ensureOpen();
+        if (execution.shouldStopScopeWork(scopePath)) {
+            return Collections.emptyList();
+        }
+        if (patches == null || patches.isEmpty()) {
+            return Collections.emptyList();
+        }
+        requireResolvedEffectOrigin(origin);
+        long observedPatchCount = requireEffectCapacity(
+                ProcessorErrorCategory.PatchLimitExceeded,
+                PATCH_LIMIT,
+                acceptedPatchCount,
+                patches.size());
+        List<JsonPatch> accepted = effects.addResolvedPatches(
+                patches, effectTypeIdentities);
+        acceptedPatchCount = observedPatchCount;
+        return accepted;
     }
 
     /**
@@ -297,8 +387,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                 PATCH_LIMIT,
                 acceptedPatchCount,
                 admittedPatches.size());
-        effects.addFrozenPatches(
-                admittedPatches);
+        effects.addFrozenPatches(admittedPatches);
         acceptedPatchCount = observedPatchCount;
     }
 
@@ -360,6 +449,26 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                 1L);
         effects.emit(emission);
         acceptedEventCount = observedEventCount;
+    }
+
+    private Node emitResolvedEvent(
+            SelectedExecutableBody origin,
+            Node emission) {
+        ensureOpen();
+        if (execution.shouldStopScopeWork(scopePath)) {
+            return null;
+        }
+        Objects.requireNonNull(emission, "emission");
+        requireResolvedEffectOrigin(origin);
+        long observedEventCount = requireEffectCapacity(
+                ProcessorErrorCategory.InternalEventLimitExceeded,
+                EVENT_LIMIT,
+                acceptedEventCount,
+                1L);
+        Node accepted = effects.emitResolved(
+                emission, effectTypeIdentities);
+        acceptedEventCount = observedEventCount;
+        return accepted;
     }
 
     /**
@@ -546,7 +655,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
 
     void bindSelectedExecutableBodies(
             List<String> fields,
-            Map<String, String> bodyBlueIds) {
+            Map<String, String> bodyBlueIds,
+            FrozenNode selectedSourceContract) {
         ensureOpen();
         if (!selectedExecutableBodies.isEmpty()) {
             throw new IllegalStateException(
@@ -561,6 +671,10 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         }
         Map<String, FrozenNode> properties =
                 contractNode.getProperties();
+        Map<String, FrozenNode> sourceProperties =
+                selectedSourceContract != null
+                        ? selectedSourceContract.getProperties()
+                        : null;
         for (String field : new ArrayList<>(fields)) {
             FrozenNode body =
                     properties != null
@@ -574,23 +688,42 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                             ? bodyBlueIds.get(field)
                             : null;
             if (bodyBlueId == null) {
-                bodyBlueId =
-                        body.isReferenceOnly()
-                                ? body.getReferenceBlueId()
-                                : body.blueId();
+                throw new IllegalStateException(
+                        "Selected executable body '" + field
+                                + "' is missing canonical identity evidence");
             }
             selectedExecutableBodies.put(
                     field,
                     new SelectedExecutableBody(
                             field,
                             bodyBlueId,
-                            body,
+                            sourceProperties != null
+                                    && sourceProperties.get(field) != null
+                                    && sourceProperties.get(field).isReferenceOnly()
+                                    ? sourceProperties.get(field) : body,
+                            sourceProperties != null
+                                    && sourceProperties.get(field) != null
+                                    && sourceProperties.get(field)
+                                            .isReferenceOnly(),
                             runtime()
                                     ::materializeSelectedExecutableReference,
+                            this::applyResolvedPatches,
+                            this::emitResolvedEvent,
                             () -> !closed,
                             runtime().gasMeter()
                                     .schedule()));
         }
+    }
+
+    void bindEffectTypeIdentities(
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        ensureOpen();
+        if (acceptedPatchCount != 0L || acceptedEventCount != 0L) {
+            throw new IllegalStateException(
+                    "Effect identity evidence cannot change after buffering effects");
+        }
+        effectTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
     }
 
     /**
@@ -731,6 +864,18 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private void ensureOpen() {
         if (closed) {
             throw new IllegalStateException("Processor execution context is closed");
+        }
+    }
+
+    private void requireResolvedEffectOrigin(
+            SelectedExecutableBody origin) {
+        SelectedExecutableBody checked = Objects.requireNonNull(
+                origin, "selectedExecutableBody");
+        if (selectedExecutableBodies.get(checked.field()) != checked
+                || !checked.wasMaterializedFromReference()) {
+            throw new IllegalArgumentException(
+                    "Resolved effects require this invocation's selected "
+                            + "materialized-reference body");
         }
     }
 

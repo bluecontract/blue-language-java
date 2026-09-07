@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.snapshot.FrozenNode;
@@ -420,6 +421,7 @@ final class ChannelRunner {
         private final ContractBundle dispatchBundle;
         private final boolean initializationPendingAtDispatchFreeze;
         private final FrozenNode payload;
+        private final String payloadBlueId;
         private final List<ExactBlueValue> carriedExactValues;
         private final CheckpointManager.CheckpointRecord checkpoint;
         private final String eventSignature;
@@ -435,6 +437,7 @@ final class ChannelRunner {
                 ContractBundle dispatchBundle,
                 boolean initializationPendingAtDispatchFreeze,
                 FrozenNode payload,
+                String payloadBlueId,
                 List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
@@ -451,6 +454,18 @@ final class ChannelRunner {
             this.initializationPendingAtDispatchFreeze =
                     initializationPendingAtDispatchFreeze;
             this.payload = payload;
+            this.payloadBlueId = payloadBlueId == null
+                    ? null
+                    : BlueIds.requireBlueIdOrCyclicMember(
+                            payloadBlueId,
+                            "payloadBlueId");
+            if ((state == State.ACCEPTED_NEW)
+                    != (this.payload != null
+                    && this.payloadBlueId != null)) {
+                throw new IllegalArgumentException(
+                        "Accepted external classification requires exact "
+                                + "payload identity evidence");
+            }
             this.carriedExactValues = carriedExactValues == null
                     ? Collections.<ExactBlueValue>emptyList()
                     : Collections.unmodifiableList(
@@ -498,6 +513,7 @@ final class ChannelRunner {
                     null,
                     null,
                     null,
+                    null,
                     null);
         }
 
@@ -509,6 +525,7 @@ final class ChannelRunner {
                 ChannelMemberSnapshot handlerChannel,
                 ContractBundle dispatchBundle,
                 FrozenNode payload,
+                String payloadBlueId,
                 List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
@@ -529,6 +546,7 @@ final class ChannelRunner {
                             "dispatchBundle"),
                     false,
                     payload,
+                    payloadBlueId,
                     carriedExactValues,
                     checkpoint,
                     eventSignature,
@@ -585,6 +603,7 @@ final class ChannelRunner {
                             "frozenDispatchBundle"),
                     initializationPending,
                     payload,
+                    payloadBlueId,
                     carriedExactValues,
                     checkpoint,
                     eventSignature,
@@ -596,7 +615,7 @@ final class ChannelRunner {
         }
 
         String payloadBlueId() {
-            return payload != null ? payload.blueId() : null;
+            return payloadBlueId;
         }
 
         Node payloadNode() {
@@ -651,13 +670,34 @@ final class ChannelRunner {
                         ContractBundle bundle,
                         String channelKey,
                         Node event,
-                        Node occurrenceEvent) {
+                        Node occurrenceEvent,
+                        String occurrenceEventBlueId) {
         return handlerDispatcher.dispatch(
                 scopePath,
                 bundle,
                 channelKey,
                 event,
-                occurrenceEvent);
+                occurrenceEvent,
+                occurrenceEventBlueId);
+    }
+
+    boolean runHandlers(String scopePath,
+                        ContractBundle bundle,
+                        String channelKey,
+                        Node exactEvent,
+                        String exactEventBlueId,
+                        boolean allowTerminatingScope) {
+        return handlerDispatcher.dispatch(
+                scopePath,
+                bundle,
+                channelKey,
+                FrozenNode.fromResolvedNode(
+                        Objects.requireNonNull(
+                                exactEvent,
+                                "exactEvent").clone()),
+                exactEventBlueId,
+                Collections.<ExactBlueValue>emptyList(),
+                allowTerminatingScope);
     }
 
     void cleanupInactiveCheckpoints(String scopePath, ContractBundle bundle) {

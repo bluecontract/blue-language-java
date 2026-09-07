@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
@@ -269,7 +270,7 @@ class DocumentProcessorBoundaryTest {
     @Test
     void shouldRejectEmptyPointerSegments() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
@@ -292,7 +293,7 @@ class DocumentProcessorBoundaryTest {
     @Test
     void shouldDenyPatchingOutsideScope() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
@@ -315,7 +316,7 @@ class DocumentProcessorBoundaryTest {
     @Test
     void shouldPreventParentFromModifyingEmbeddedChildInterior() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ProcessEmbedded embedded = new ProcessEmbedded().addPath("/child");
@@ -435,7 +436,7 @@ class DocumentProcessorBoundaryTest {
     @Test
     void shouldWriteProtectReservedRootContracts() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();
@@ -453,7 +454,7 @@ class DocumentProcessorBoundaryTest {
     @Test
     void shouldWriteProtectReservedContractsWithinScope() {
         // given
-        Node document = new Node().properties("foo", new Node());
+        Node document = new Node().properties("foo", Nodes.emptyObject());
         DocumentProcessor processor = new DocumentProcessor();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, document);
         ContractBundle bundle = ContractBundle.builder().build();

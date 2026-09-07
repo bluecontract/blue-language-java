@@ -38,8 +38,8 @@ final class RevisionBoundNoMatchProgressTest {
                 .exactRuntimeState()
                 .build();
         VerifiedExecutionEvidence evidence = plan.bind(
-                root,
-                event,
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(event),
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY);
         DocumentProcessor processor = DocumentProcessor.builder()
                 .deliveryPlanDeriver(

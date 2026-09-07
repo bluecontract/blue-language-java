@@ -2,6 +2,9 @@ package blue.language.resolve;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.merge.Merger;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.SnapshotResolution;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.matching.NodeTypeMatcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,6 +95,61 @@ public class ResolutionLimitsTest {
         assertTrue(depthTwoIncludesAny);
         assertTrue(depthThreeIncludesC);
         assertFalse(depthFourIncludesE);
+    }
+
+    @Test
+    public void shouldCertifyAuthoredPathRetentionConservatively() {
+        // given
+        ResolutionLimits deferred = ResolutionLimits
+                .deferringReferencesAt(Collections.singleton("/cold"));
+        ResolutionLimits pathFiltered = ResolutionLimits.withSinglePath(
+                "/selected");
+
+        // when
+        ResolutionLimits deferredAndUnlimited = ResolutionLimits.allOf(
+                ResolutionLimits.NO_LIMITS,
+                deferred);
+
+        // then
+        assertTrue(ResolutionLimits.NO_LIMITS.retainsEveryAuthoredPath());
+        assertTrue(deferred.retainsEveryAuthoredPath());
+        assertTrue(deferredAndUnlimited.retainsEveryAuthoredPath());
+        assertFalse(pathFiltered.retainsEveryAuthoredPath());
+        assertFalse(ResolutionLimits.allOf(
+                deferred,
+                pathFiltered).retainsEveryAuthoredPath());
+        assertFalse(ResolutionLimits.excluding(
+                Collections.emptySet()).retainsEveryAuthoredPath());
+        assertFalse(ResolutionLimits.filteringPropertiesForType(
+                "type-id",
+                Collections.emptySet()).retainsEveryAuthoredPath());
+    }
+
+    @Test
+    public void shouldKeepLimitedResolverSnapshotDeferredWhenAdapted() {
+        // given
+        Node exactChild = new Node().properties(
+                "payload", new Node().value("present"));
+        String childBlueId = calculateBlueId(exactChild);
+        BasicNodeProvider provider = new BasicNodeProvider(exactChild);
+        Blue blue = new Blue(provider);
+        Node source = new Node().properties(
+                "child", new Node().blueId(childBlueId));
+        ResolutionLimits limits = ResolutionLimits.deferringReferencesAt(
+                Collections.singleton("/child"));
+
+        // when
+        SnapshotResolution resolution = new Merger(
+                blue.getMergingProcessor(), provider)
+                .resolveSnapshot(source, limits);
+        ResolvedSnapshot adapted = ResolvedSnapshot.fromResolverResult(
+                resolution);
+
+        // then
+        assertFalse(resolution.isResolutionComplete());
+        assertFalse(adapted.isResolutionComplete());
+        assertTrue(adapted.frozenResolvedRoot()
+                .property("child").isReferenceOnly());
     }
 
     @Test
@@ -291,7 +349,7 @@ public class ResolutionLimitsTest {
     }
 
     @Test
-    public void shouldIncludeSchemaAndBlueIdMetadata() throws Exception {
+    public void shouldFailClosedWhenFilteredPropertyStillRequiresReferenceEvidence() throws Exception {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
@@ -337,7 +395,7 @@ public class ResolutionLimitsTest {
                         .matchesType(bInstNode, bNode, globalLimits);
 
         // then
-        assertTrue(result);
+        assertFalse(result);
     }
 
 }

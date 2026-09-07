@@ -109,15 +109,68 @@ class ContractsAssertionEvaluatorTest {
         assertTrue(failure instanceof AssertionError);
     }
 
+    @Test
+    void shouldVerifyNotEqualsProjectionUsesExactNodeIdentity() {
+        // given
+        Node first = new Node().name("first");
+        Node second = new Node().name("second");
+        ContractsConformanceProjection projection =
+                new ContractsConformanceProjection()
+                        .put("actual", first)
+                        .put("expected", second)
+                        .put("same", first);
+
+        // when
+        Throwable distinctFailure = captureFailure(
+                () -> new ContractsAssertionEvaluator().evaluate(
+                        projectionFixture(
+                                "notEqualsProjection", "expected"),
+                        projection));
+        Throwable equalFailure = captureFailure(
+                () -> new ContractsAssertionEvaluator().evaluate(
+                        projectionFixture(
+                                "notEqualsProjection", "same"),
+                        projection));
+
+        // then
+        assertTrue(distinctFailure == null);
+        assertTrue(equalFailure instanceof AssertionError);
+    }
+
+    @Test
+    void shouldValidateCatalogPathsInsideNamedVariant() {
+        // given
+        ContractsProjectionCatalog catalog =
+                new ContractsProjectionCatalog();
+
+        // when
+        Runnable declared = () -> catalog.requireDeclared(
+                "variants.reference-warm.result.documentBlueId",
+                "test");
+        Runnable undeclared = () -> catalog.requireDeclared(
+                "variants.reference-warm.result.notDeclared",
+                "test");
+
+        // then
+        assertDoesNotThrow(declared::run);
+        assertThrows(IllegalArgumentException.class, undeclared::run);
+    }
+
     private static ObjectNode equalsProjectionFixture() {
+        return projectionFixture("equalsProjection", "input.root");
+    }
+
+    private static ObjectNode projectionFixture(
+            String operation,
+            String expectedProjection) {
         ObjectNode fixture =
                 UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
         ObjectNode assertion = fixture.putObject("expected")
                 .putArray("assertions")
                 .addObject();
         assertion.put("actual", "actual");
-        assertion.put("op", "equalsProjection");
-        assertion.put("expectedProjection", "input.root");
+        assertion.put("op", operation);
+        assertion.put("expectedProjection", expectedProjection);
         return fixture;
     }
 

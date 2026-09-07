@@ -3,7 +3,7 @@ id: c-emb-11
 vectors:
 - C-EMB-11
 category: emb
-description: Removing and re-adding a collection key creates a fresh occurrence and checkpoint lineage.
+description: Same-invocation remove-then-re-add is rejected by the Contracts 1.0 section 5.6 retirement fence.
 operation: process
 input:
   root:
@@ -21,7 +21,7 @@ input:
             checkpointDomain: old-domain
           checkpoint:
             type:
-              blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+              blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
             entries:
               in:
                 type:
@@ -39,7 +39,7 @@ input:
         checkpointDomain: admin-v1
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: admin
         order: 0
         result:
@@ -61,13 +61,13 @@ input:
                   checkpointDomain: new-domain
                 h:
                   type:
-                    blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+                    blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
                   channel: in
                   order: 0
                   result: {}
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         collectionPaths:
         - /lessons
   event:
@@ -95,15 +95,10 @@ expected:
   assertions:
   - actual: result.status
     op: equals
-    expected: success
-  - actual: result.document.lessons.lesson-a.generation
+    expected: invalid-processing-document
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: commit.rootCommitted
     op: equals
-    expected: new
-  - actual: result.document.lessons.lesson-a.contracts.checkpoint
-    op: absent
-  - actual: commit.retiredIntervals.0.scopePath
-    op: equals
-    expected: /lessons/lesson-a
-  - actual: commit.newIntervals.0.scopePath
-    op: equals
-    expected: /lessons/lesson-a
+    expected: false

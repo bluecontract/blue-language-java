@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -15,6 +16,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -348,7 +350,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
     }
 
     private static String emptyNodeBlueId() {
-        return DirectBlueIdCalculator.calculateBlueId(new Node());
+        return DirectBlueIdCalculator.calculateBlueId(Nodes.emptyObject());
     }
 
     private static Node reference(String blueId) {
@@ -682,6 +684,45 @@ class SelectedScopeContentBlueIdFailFirstTest {
         @Override
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             return delegate.fromDocumentTransient(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return delegate.fromDocumentPreservingPaths(
+                    document,
+                    preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return delegate.fromDocumentTransientPreservingPaths(
+                    document,
+                    preservedPaths);
+        }
+
+        @Override
+        public FrozenNode materializeVerifiedExactReference(FrozenNode reference) {
+            return delegate.materializeVerifiedExactReference(reference);
+        }
+
+        @Override
+        public blue.language.merge.TypeEvidenceResolution materializeVerifiedTypeReference(FrozenNode reference) {
+            return delegate.materializeVerifiedTypeReference(reference);
+        }
+
+        @Override
+        public blue.language.identity.CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(Node declaration) {
+            return delegate.resolveTypeDeclarationIdentity(declaration);
+        }
+
+        @Override
+        public blue.language.identity.CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration, blue.language.runtime.LanguageProcessing.ExactResolutionOverlay overlay) {
+            return delegate.resolveTypeDeclarationIdentity(declaration, overlay);
         }
 
         @Override

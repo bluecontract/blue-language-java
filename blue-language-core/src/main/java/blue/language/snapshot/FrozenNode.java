@@ -83,12 +83,14 @@ public final class FrozenNode {
     }
 
     /**
-     * Creates a strict canonical node with no modeled fields.
+     * Creates the strict canonical exact empty-object value {@code {}}.
      *
      * @return the shared semantics of an empty strict canonical value
      */
     public static FrozenNode empty() {
-        return FrozenNodeBuilder.builder().build();
+        return FrozenNodeBuilder.builder()
+                .properties(java.util.Collections.emptyMap())
+                .build();
     }
 
     /**
@@ -102,6 +104,23 @@ public final class FrozenNode {
      */
     public static FrozenNode fromNode(Node node) {
         return FrozenNodeConverter.INSTANCE.fromNode(node);
+    }
+
+    /**
+     * Defensively freezes exact preprocessed Source input.
+     *
+     * <p>Unlike {@link #fromNode(Node)}, this entry point accepts ordinary
+     * authoring controls and does not claim that the input is a strict
+     * Canonical Identity Input.</p>
+     *
+     * @param node mutable preprocessed Source input to freeze
+     * @return an immutable Source representation with no direct BlueId
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the source contains an unsupported
+     *         value graph or incompatible payload shapes
+     */
+    public static FrozenNode fromSourceNode(Node node) {
+        return FrozenNodeConverter.INSTANCE.fromSourceNode(node);
     }
 
     /**
@@ -153,10 +172,8 @@ public final class FrozenNode {
      * @param nodes canonical nodes to freeze, or {@code null}
      * @return an immutable frozen list, or {@code null} when {@code nodes} is
      *         {@code null}
-     * @throws NullPointerException when a supplied list element is
-     *         {@code null}
-     * @throws IllegalArgumentException when an element is not valid strict
-     *         canonical Blue input
+     * @throws IllegalArgumentException when a supplied list element is
+     *         {@code null} or is not valid strict canonical Blue input
      */
     public static List<FrozenNode> fromNodes(List<Node> nodes) {
         return FrozenNodeConverter.INSTANCE.fromNodes(nodes);
@@ -183,10 +200,10 @@ public final class FrozenNode {
     }
 
     /**
-     * Calculates the BlueId for an ordered canonical frozen sequence.
+     * Calculates the BlueId for an ordered frozen sequence through the strict
+     * or resolved identity lane represented by its elements.
      *
-     * @param nodes ordered canonical frozen nodes; {@code null} is treated as
-     *        an empty sequence
+     * @param nodes ordered frozen nodes
      * @return the deterministic sequence BlueId
      * @throws IllegalArgumentException when an element is {@code null} or is
      *         not valid canonical list input

@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceReportTest {
 
-    private static final int CONTRACTS_BEHAVIOR_FIXTURE_COUNT = 112;
+    private static final int CONTRACTS_BEHAVIOR_FIXTURE_COUNT = 126;
     private static final int CONTRACTS_GAS_FIXTURE_COUNT = 71;
-    private static final int CONTRACTS_CLOSURE_FIXTURE_COUNT = 93;
+    private static final int CONTRACTS_CLOSURE_FIXTURE_COUNT = 98;
 
     private static final Pattern SPECIFICATION_REGISTRY_IDENTITY = Pattern.compile(
             "(?s)The canonical core-registry package identity bound by this "
@@ -40,7 +40,7 @@ class BlueContractsConformanceReportTest {
                     + "(sha256:[0-9a-f]{64})\\s*```");
     private static final Pattern RELEASE_LANGUAGE_REGISTRY_IDENTITY =
             Pattern.compile(
-                    "(?m)^\\s*languageRegistryPackage:\\s*"
+                    "(?m)^\\s*languageRegistryPackageIdentity:\\s*"
                             + "(sha256:[0-9a-f]{64})\\s*$");
     private static final Pattern MACHINE_LANGUAGE_REGISTRY_IDENTITY =
             Pattern.compile(
@@ -57,7 +57,7 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldReportEveryLanguageFixturePassingInExactRelease() {
         // given
-        int expectedLanguageFixtures = 153;
+        int expectedLanguageFixtures = 185;
 
         // when
         BlueReleaseConformanceReport release =
@@ -123,15 +123,15 @@ class BlueContractsConformanceReportTest {
     void shouldExposeExactPackageAndSpecificationBindingsInReleaseReport() {
         // given
         String expectedLanguageRegistry =
-                "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
+                "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
         String expectedLanguageFixtures =
-                "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
+                "sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695";
         String expectedContractsRegistry =
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
         String expectedContractsGas =
                 "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
         String expectedContractsFixtures =
-                "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c";
+                "sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -144,7 +144,7 @@ class BlueContractsConformanceReportTest {
                         .RELEASE_PACKAGE_IDENTITY,
                 nested(encoded, "release", "packageIdentity"));
         assertEquals(
-                "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3",
+                "sha256:0de1d6ff58cd8895eddbb8c891ca09ff0a5294458d40b0ec4b79ba2b4fec4056",
                 nested(encoded, "release", "contractsReleaseIdentity"));
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -165,7 +165,7 @@ class BlueContractsConformanceReportTest {
                 expectedContractsFixtures,
                 nested(encoded, "packages", "contractsFixtures"));
         assertEquals(
-                "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3",
+                "sha256:0de1d6ff58cd8895eddbb8c891ca09ff0a5294458d40b0ec4b79ba2b4fec4056",
                 nested(encoded, "packages", "contractsRelease"));
         assertEquals(
                 BlueContractsConformanceReport
@@ -250,10 +250,10 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
+                "sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
+                "sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -277,15 +277,15 @@ class BlueContractsConformanceReportTest {
         assertTrue(BlueContractsConformanceReport
                 .fixturePackageIdentityMatchesFixtureFiles());
         assertEquals(
-                "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
+                "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc",
+                "0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 
-        assertEquals(276, fixtures.size());
+        assertEquals(295, fixtures.size());
         assertTrue(fixtures.stream().allMatch(
                 result -> "FAIL".equals(result.get("status"))
                         && "HarnessDidNotRunFixture".equals(
@@ -367,6 +367,9 @@ class BlueContractsConformanceReportTest {
                             repository.relativize(path)
                                     .toString()
                                     .replace('\\', '/');
+                    if (isHistoricalIdentityRecord(relative)) {
+                        continue;
+                    }
                     String content = new String(
                             Files.readAllBytes(path),
                             StandardCharsets.UTF_8);
@@ -454,6 +457,14 @@ class BlueContractsConformanceReportTest {
                 || name.endsWith(".json")
                 || name.endsWith(".java")
                 || name.endsWith(".txt");
+    }
+
+    private static boolean isHistoricalIdentityRecord(String relative) {
+        // This migration record deliberately preserves the identities of the
+        // release it describes. It is evidence for an old-to-new transition,
+        // not an active registry binding.
+        return "docs/language-1.0-contracts-kernel-1.0-migration.md"
+                .equals(relative);
     }
 
     private static void collectBindings(

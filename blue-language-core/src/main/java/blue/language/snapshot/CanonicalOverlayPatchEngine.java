@@ -3,6 +3,7 @@ package blue.language.snapshot;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.ParsedJsonPointer;
 
@@ -128,9 +129,10 @@ public final class CanonicalOverlayPatchEngine {
         if (root.isStrictCanonical()) {
             return root.isStrictBlueIdValidation()
                     ? FrozenNode.empty()
-                    : FrozenNode.fromUncheckedCanonicalNode(new Node());
+                    : FrozenNode.fromUncheckedCanonicalNode(
+                            Nodes.emptyObject());
         }
-        return FrozenNode.fromResolvedNode(new Node());
+        return FrozenNode.fromResolvedNode(Nodes.emptyObject());
     }
 
     private FrozenNode add(FrozenNode node, List<String> segments, FrozenNode value, String path) {

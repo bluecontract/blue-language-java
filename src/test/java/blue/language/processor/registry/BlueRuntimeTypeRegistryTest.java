@@ -7,6 +7,7 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.DocumentUpdate;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedEventDelivery;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.InitializationMarker;
 import blue.language.processor.model.JsonPatch;
@@ -228,6 +229,8 @@ class BlueRuntimeTypeRegistryTest {
         expected.put(DocumentUpdate.class, RuntimeTypeKey.DOCUMENT_UPDATE);
         expected.put(DocumentUpdateChannel.class, RuntimeTypeKey.DOCUMENT_UPDATE_CHANNEL);
         expected.put(EmbeddedEventDelivery.class, RuntimeTypeKey.EMBEDDED_EVENT_DELIVERY);
+        expected.put(EmbeddedCollectionEventChannel.class,
+                RuntimeTypeKey.EMBEDDED_COLLECTION_EVENT_CHANNEL);
         expected.put(EmbeddedNodeChannel.class, RuntimeTypeKey.EMBEDDED_NODE_CHANNEL);
         expected.put(InitializationMarker.class, RuntimeTypeKey.PROCESSING_INITIALIZED_MARKER);
         expected.put(JsonPatch.class, RuntimeTypeKey.JSON_PATCH_ENTRY);

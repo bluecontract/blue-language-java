@@ -94,6 +94,11 @@ public final class StandardPreprocessingPipeline {
         if (node == null || !visited.add(node)) {
             return;
         }
+        if (Nodes.isSourceNullLiteral(node)) {
+            throw new IllegalArgumentException(
+                    "Source null must be consumed during preprocessing. Path: "
+                            + path);
+        }
         if (node.getBlue() != null) {
             throw new IllegalArgumentException(
                     "Reserved \"blue\" directive is valid only while preprocessing the Source root. Path: "
@@ -122,8 +127,13 @@ public final class StandardPreprocessingPipeline {
         }
         if (node.getItems() != null) {
             for (int index = 0; index < node.getItems().size(); index++) {
-                validateNode(node.getItems().get(index),
-                        child(path, String.valueOf(index)), visited);
+                Node item = node.getItems().get(index);
+                String itemPath = child(path, String.valueOf(index));
+                if (item != null && item.getProperties() != null
+                        && item.getProperties().containsKey(BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
+                    Nodes.validateEmptyPlaceholder(item, itemPath);
+                }
+                validateNode(item, itemPath, visited);
             }
         }
     }
@@ -145,8 +155,7 @@ public final class StandardPreprocessingPipeline {
         if (node.getItems() != null) {
             payloadKinds++;
         }
-        if (node.getProperties() != null
-                && !node.getProperties().isEmpty()) {
+        if (Nodes.hasObjectPayload(node)) {
             payloadKinds++;
         }
         if (payloadKinds > 1) {
@@ -158,11 +167,6 @@ public final class StandardPreprocessingPipeline {
             throw new IllegalArgumentException(
                     "A Preprocessed Document blueId node must be a pure reference. Path: "
                             + path);
-        }
-        if (node.getProperties() != null
-                && node.getProperties().containsKey(
-                BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
-            Nodes.validateEmptyPlaceholder(node, path);
         }
     }
 

@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
@@ -196,7 +197,7 @@ class ChannelCheckpointContextTest {
                         exactPreviousSubject);
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(),
+                        Nodes.emptyObject(),
                         null,
                         manager);
         // when
@@ -243,7 +244,7 @@ class ChannelCheckpointContextTest {
                                 "wrong"));
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(),
+                        Nodes.emptyObject(),
                         null,
                         manager);
         ChannelCheckpointContext context =
@@ -292,7 +293,7 @@ class ChannelCheckpointContextTest {
                         unavailable);
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(),
+                        Nodes.emptyObject(),
                         null,
                         manager);
         // when

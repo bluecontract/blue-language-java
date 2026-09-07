@@ -1,0 +1,13 @@
+id: R_empty_object_minimized_overlay_round_trip
+category: Minimization
+operation: minimizeAndResolve
+description: a non-derivable exact empty-object child remains in the minimized overlay and re-resolves exactly
+source:
+  x: {}
+provider:
+- requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  node: {}
+expectedResolved:
+  x: {}
+expectedRoundTripEqual: true
+expectedSameContentBlueIdThroughPipeline: true

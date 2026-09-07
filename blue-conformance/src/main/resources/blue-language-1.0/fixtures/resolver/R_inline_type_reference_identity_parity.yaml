@@ -1,0 +1,24 @@
+id: R_inline_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: A materialized inline effective type and its verified pure reference
+  produce the same parent Canonical Identity Input and Source-derived BlueId
+source:
+  name: Parity Parent
+  type:
+    name: Inline Type Alpha
+alsoEquivalentTo:
+  name: Parity Parent
+  type:
+    blueId: 9RgWgDnbhELs1kTouQD5dCCdSsuwVp6JSXUonKXsfwV6
+provider:
+- requestedBlueId: 9RgWgDnbhELs1kTouQD5dCCdSsuwVp6JSXUonKXsfwV6
+  node:
+    name: Inline Type Alpha
+expectedCanonicalOverlay:
+  name: Parity Parent
+  type:
+    blueId: 9RgWgDnbhELs1kTouQD5dCCdSsuwVp6JSXUonKXsfwV6
+expectedNodeBlueId: 4unj5x4kEnRPTtZ111A9ATgxvD6c8fB4oqnVtw41WFky
+note: The expected type and parent identities are direct independent BlueId
+  oracle results, not values copied from canonicalizer output.

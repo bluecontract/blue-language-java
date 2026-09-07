@@ -1,0 +1,28 @@
+id: R_nested_inline_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: Inline and verified-reference effective types agree at both nested
+  child identity and containing parent identity
+source:
+  name: Nested Parent
+  child:
+    name: Nested Child
+    type:
+      name: Nested Child Shape
+alsoEquivalentTo:
+  name: Nested Parent
+  child:
+    name: Nested Child
+    type:
+      blueId: 7bp5nuWfTX2dZ4vb3KAAi6D79NteiB8S4Xmqif31VDi1
+provider:
+- requestedBlueId: 7bp5nuWfTX2dZ4vb3KAAi6D79NteiB8S4Xmqif31VDi1
+  node:
+    name: Nested Child Shape
+expectedCanonicalOverlay:
+  name: Nested Parent
+  child:
+    name: Nested Child
+    type:
+      blueId: 7bp5nuWfTX2dZ4vb3KAAi6D79NteiB8S4Xmqif31VDi1
+expectedNodeBlueId: CSJc1bsW2torf63FaiJk7o4stWCQvomyDhsx5xworyRc

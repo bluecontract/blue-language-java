@@ -10,7 +10,7 @@ stages:
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /b
       source:
@@ -23,7 +23,7 @@ stages:
         logicalDeliveryKey: simple-a
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
   - documentId: simple-b
@@ -33,7 +33,7 @@ stages:
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /a
       source:
@@ -46,12 +46,12 @@ stages:
         logicalDeliveryKey: simple-b
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
   preliminaryBlueIds:
-    '0': 3jgWvAPHBa9eEFoqZpjRakuCjLc8sRWkj8yCg3wmxsus
-    '1': DRNLAkbNLojeLmowTVyozL5h59ZnEibrKzguwrqpqvVi
+    '0': 5mK5MBnKAvBxFKV566wLJ79P27AB9gEr2wvEDN5c6rZ3
+    '1': Fs4sa5dJZqzvRJhDrKJDsgCuATf4iyxaC4px8ohQARmd
   sortedSourceIndices:
   - 0
   - 1
@@ -63,7 +63,7 @@ stages:
     b:
       blueId: this#1
     contracts:
-      blueId: AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ
+      blueId: Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg
   - documentId:
       blueId: 8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a
     memberIdentity:
@@ -71,21 +71,21 @@ stages:
     a:
       blueId: this#0
     contracts:
-      blueId: F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz
-  canonicalMasterInputUtf8Bytes: 485
-  masterBlueId: AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR
+      blueId: fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9
+  canonicalMasterInputUtf8Bytes: 484
+  masterBlueId: 9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW
   memberBlueIdsInSourceOrder:
-  - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0
-  - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1
+  - 9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#0
+  - 9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#1
   materializedDocuments:
   - documentId: simple-a
     memberIdentity: simple-a
     b:
-      blueId: AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1
+      blueId: 9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#1
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /b
       source:
@@ -98,17 +98,17 @@ stages:
         logicalDeliveryKey: simple-a
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
   - documentId: simple-b
     memberIdentity: simple-b
     a:
-      blueId: AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0
+      blueId: 9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#0
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /a
       source:
@@ -121,6 +121,6 @@ stages:
         logicalDeliveryKey: simple-b
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0

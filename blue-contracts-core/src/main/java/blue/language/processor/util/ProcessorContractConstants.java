@@ -52,6 +52,11 @@ public final class ProcessorContractConstants {
     public static final String KEY_EVENT = "event";
     /** Property containing an embedded event's source path. */
     public static final String KEY_SOURCE_PATH = "sourcePath";
+    /** Property selecting one declared embedded collection path. */
+    public static final String KEY_COLLECTION_PATH = "collectionPath";
+    /** Property enabling nested collection-member event selection. */
+    public static final String KEY_INCLUDE_DESCENDANTS =
+            "includeDescendants";
     /** Property containing a patch operation. */
     public static final String KEY_OPERATION = "op";
     /** Property containing a root-relative path. */

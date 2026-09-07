@@ -6,11 +6,24 @@ parent:
   mergePolicy: positional
   items: [A, B]
 variants:
-  - source:
+  - canonicalInput:
+      type:
+        blueId: 3bDzuCK3TfLiTHSmLqaNFz6wph6F6EWXUbnRUUHXjps1
       items: [B, A]
     expectedErrorCategory: ListControlViolation
+  - source:
+      items: [B, A]
+    expectedValid: true
+    expectedResolvedItems: [A, B, B, A]
   - source:
       items:
         - $pos: 1
           $replace: {$empty: true}
     expectedErrorCategory: FixedValueConflict
+provider:
+- requestedBlueId: 3bDzuCK3TfLiTHSmLqaNFz6wph6F6EWXUbnRUUHXjps1
+  node:
+    type:
+      blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
+    mergePolicy: positional
+    items: [A, B]

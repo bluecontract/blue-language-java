@@ -1,0 +1,15 @@
+id: R_source_empty_object_list_retained
+category: Resolution
+operation: preprocess
+description: a Source list exact empty object remains ordinary empty-object content
+source:
+  items:
+  - A
+  - {}
+  - B
+expectedPreprocessed:
+  items:
+  - value: A
+  - {}
+  - value: B
+expectedIdempotent: true

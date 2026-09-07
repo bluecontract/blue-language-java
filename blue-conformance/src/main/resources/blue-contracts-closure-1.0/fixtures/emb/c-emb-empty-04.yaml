@@ -1,0 +1,45 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-empty-04
+vectors:
+- C-EMB-EMPTY-04
+category: emb
+description: Unavailable exact collection content suspends with a typed demand and is never guessed to be absent.
+operation: process-attempt
+input:
+  root:
+    orders:
+      blueId: BmGyab5CtVAXfknzyBJDHVUHtK4gswCRdQ3Hjx4FPUcW
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths:
+        - /orders
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, none, 1]
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    transientUnavailableAt: BmGyab5CtVAXfknzyBJDHVUHtK4gswCRdQ3Hjx4FPUcW
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: attempt.kind
+    op: equals
+    expected: needs-resources
+  - actual: attempt.processResult
+    op: absent
+  - actual: attempt.portableGas
+    op: absent
+  - actual: commit.progressCommitted
+    op: equals
+    expected: false

@@ -9,10 +9,12 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CanonicalOverlayPatchEngineTest {
 
@@ -55,6 +57,38 @@ class CanonicalOverlayPatchEngineTest {
     }
 
     @Test
+    void shouldRetainCreatedAncestorsAsExactEmptyObjectsInEveryRootMode() {
+        // given
+        FrozenNode[] roots = new FrozenNode[]{
+                FrozenNode.empty(),
+                FrozenNode.fromUncheckedCanonicalNode(
+                        blue.language.model.Nodes.emptyObject()),
+                FrozenNode.fromResolvedNode(
+                        blue.language.model.Nodes.emptyObject())
+        };
+        FrozenNode[] parents = new FrozenNode[roots.length];
+
+        // when
+        for (int index = 0; index < roots.length; index++) {
+            FrozenNode root = roots[index];
+            FrozenNode withLeaf = new CanonicalOverlayPatchEngine(root)
+                    .apply(JsonPatch.add("/a/b", new Node().value("value")))
+                    .root();
+            FrozenNode withoutLeaf = new CanonicalOverlayPatchEngine(withLeaf)
+                    .apply(JsonPatch.remove("/a/b"))
+                    .root();
+            parents[index] = withoutLeaf.property("a");
+        }
+
+        // then
+        for (FrozenNode parent : parents) {
+            assertNotNull(parent);
+            assertNotNull(parent.getProperties());
+            assertTrue(parent.getProperties().isEmpty());
+        }
+    }
+
+    @Test
     void shouldDecodeJsonPointerEscapesForObjectKeyPatchPaths() {
         // given
         FrozenNode root = FrozenNode.empty();
@@ -73,7 +107,10 @@ class CanonicalOverlayPatchEngineTest {
         // then
         assertEquals("escaped", patched.property("a/b").property("c~d").getValue());
         assertEquals("updated", replaced.property("a/b").property("c~d").getValue());
-        assertNull(removed.property("a/b"));
+        FrozenNode emptyParent = removed.property("a/b");
+        assertNotNull(emptyParent);
+        assertNotNull(emptyParent.getProperties());
+        assertTrue(emptyParent.getProperties().isEmpty());
     }
 
     @Test

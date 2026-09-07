@@ -54,9 +54,9 @@ final class DefaultClosureProcessorTest {
     private static final DocumentId C = new DocumentId("c");
     private static final DocumentId D = new DocumentId("d");
     private static final String C34_A_BLUE_ID =
-            "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
+            "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ";
     private static final String C34_B_BLUE_ID =
-            "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
+            "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C34_X_BLUE_ID =
             "EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR";
     private static final String C34_Y_BLUE_ID =
@@ -177,9 +177,7 @@ final class DefaultClosureProcessorTest {
 
     @Test
     void activatesOneDraftOnceAndRoutesItsEventThroughEveryOccurrence() {
-        Node parent = managedDraftParentDocument();
-        Node draft = managedDraftDocument(
-                DirectBlueIdCalculator.calculateBlueId(parent));
+        Node draft = managedDraftDocument();
         try (DocumentProcessor owner = managedDraftOwner(
                 draft, true, false, false)) {
             Capture capture = new Capture();
@@ -214,10 +212,9 @@ final class DefaultClosureProcessorTest {
             assertEquals(0L, child.epoch());
             Node marker = property(
                     child.document().getContracts(), "initialized");
-            assertEquals(capture.evidence.tentativeFinalizations().get(0)
-                            .memberBlueIds().get(B),
+            assertEquals(input.snapshot().managedDocument(B).blueId(),
                     property(marker, "document").getBlueId());
-            assertEquals(3, attempt.processResult()
+            assertEquals(2, attempt.processResult()
                     .occurrenceBindings().size());
             int childOccurrences = 0;
             for (ManagedOccurrenceBinding binding
@@ -230,18 +227,6 @@ final class DefaultClosureProcessorTest {
                 }
             }
             assertEquals(2, childOccurrences);
-            assertEquals(Arrays.asList(
-                            TentativeFinalization.Boundary.Kind.WORK,
-                            TentativeFinalization.Boundary.Kind
-                                    .INITIALIZATION_BATCH,
-                            TentativeFinalization.Boundary.Kind
-                                    .CHECKPOINT_SETTLEMENT),
-                    finalizationKinds(capture.evidence
-                            .tentativeFinalizations()));
-            assertEquals(Long.valueOf(4L),
-                    capture.evidence.tentativeFinalizations()
-                            .get(1)
-                            .boundary().afterWorkOrdinal());
         }
     }
 
@@ -299,10 +284,8 @@ final class DefaultClosureProcessorTest {
     }
 
     @Test
-    void rejectsAProcessThatDoesNotActivateItsProspectiveDraft() {
-        Node parent = managedDraftParentDocument();
-        Node draft = managedDraftDocument(
-                DirectBlueIdCalculator.calculateBlueId(parent));
+    void retainsDormantProspectiveDraftWhenProcessDoesNotActivateIt() {
+        Node draft = managedDraftDocument();
         try (DocumentProcessor owner = managedDraftOwner(
                 draft, false, false, false)) {
             Capture capture = new Capture();
@@ -316,14 +299,15 @@ final class DefaultClosureProcessorTest {
             }
 
             assertTrue(attempt.isComplete());
-            assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+            assertEquals(ProcessorStatus.SUCCESS,
                     attempt.processResult().status(), diagnostic(attempt));
-            assertFalse(attempt.processResult().commits());
-            assertEquals(
-                    ProcessorErrorCategory.ManagedOccurrenceBindingMissing,
-                    attempt.processResult().diagnostic().category());
-            assertEquals(input.snapshot().closureIdentity(),
-                    attempt.processResult().outputClosureIdentity());
+            assertTrue(attempt.processResult().commits());
+            assertFalse(resultingDocument(attempt, B).initialized());
+            for (ManagedOccurrenceBinding binding
+                    : attempt.processResult().occurrenceBindings()) {
+                assertFalse(binding.active());
+                assertNull(binding.pendingHistoricalEpoch());
+            }
             assertEquals(Collections.singletonList(
                             WorkKind.EXTERNAL_DELIVERY),
                     workKinds(capture.evidence.workTrace()));
@@ -332,9 +316,7 @@ final class DefaultClosureProcessorTest {
 
     @Test
     void rejectsAProspectiveDraftWithTheWrongExactState() {
-        Node parent = managedDraftParentDocument();
-        Node draft = managedDraftDocument(
-                DirectBlueIdCalculator.calculateBlueId(parent));
+        Node draft = managedDraftDocument();
         try (DocumentProcessor owner = managedDraftOwner(
                 draft, true, false, true)) {
             Capture capture = new Capture();
@@ -366,9 +348,7 @@ final class DefaultClosureProcessorTest {
 
     @Test
     void requestsEvidenceForAnActivatedUntrackedManagedOccurrence() {
-        Node parent = managedDraftParentDocument();
-        Node draft = managedDraftDocument(
-                DirectBlueIdCalculator.calculateBlueId(parent));
+        Node draft = managedDraftDocument();
         try (DocumentProcessor owner = managedDraftOwner(
                 draft, true, true, false)) {
             Capture capture = new Capture();
@@ -395,7 +375,7 @@ final class DefaultClosureProcessorTest {
             assertEquals("/children/unexpected", demand.sourcePath());
             assertNull(capture.evidence,
                     "A resource demand must not publish completion evidence");
-            assertEquals(3, input.snapshot().occurrences().size());
+            assertEquals(2, input.snapshot().occurrences().size());
             assertNull(NodePathEditor.getOrNull(
                     input.snapshot().managedDocument(ROOT).document(),
                     "/children"));
@@ -1278,14 +1258,6 @@ final class DefaultClosureProcessorTest {
                 null));
         bindings.add(ManagedOccurrenceBinding.derived(
                 bindingPolicyIdentity,
-                B,
-                ScopeAddress.embedded("/parent", 1L),
-                ROOT,
-                DirectBlueIdCalculator.calculateBlueId(parent),
-                true,
-                null));
-        bindings.add(ManagedOccurrenceBinding.derived(
-                bindingPolicyIdentity,
                 ROOT,
                 ScopeAddress.embedded("/children/second", 1L),
                 B,
@@ -1398,20 +1370,11 @@ final class DefaultClosureProcessorTest {
         return markInitialized(document);
     }
 
-    private static Node managedDraftDocument(String parentBlueId) {
+    private static Node managedDraftDocument() {
         return new Node()
                 .name("Managed Draft Child")
                 .properties("documentId", new Node().value("b"))
-                .properties("parent", new Node().blueId(parentBlueId))
                 .contracts(new Node()
-                        .properties(
-                                "embedded",
-                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
-                                        .properties(
-                                                "paths",
-                                                new Node().items(
-                                                        new Node().value(
-                                                                "/parent"))))
                         .properties(
                                 "lifecycle",
                                 typed(RuntimeBlueIds
@@ -2263,7 +2226,7 @@ final class DefaultClosureProcessorTest {
                         .properties(
                                 "document",
                                 new Node().blueId(
-                                        "6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm")));
+                                        "4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ")));
         return document;
     }
 

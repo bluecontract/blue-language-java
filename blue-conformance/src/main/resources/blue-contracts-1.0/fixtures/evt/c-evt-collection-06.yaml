@@ -1,0 +1,72 @@
+schema: blue-contracts-fixture/1.0
+id: c-evt-collection-06
+vectors:
+- C-EVT-COLLECTION-06
+category: evt
+description: Processor-internal collection channels never enter the external delivery, completeness, or checkpoint surface.
+operation: process
+input:
+  root:
+    value: 0
+    orders: {}
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: timeline-v1
+      h:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths: [/orders]
+      internalOrders:
+        type:
+          blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
+        collectionPath: /orders
+        order: 0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, timeline, 1]
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.externalDeliveryOrder
+    op: sequenceEquals
+    expected:
+    - /:in
+  - actual: trace.sourceCheckpointKeys
+    op: sequenceEquals
+    expected:
+    - in
+  - actual: result.document.contracts.checkpoint.entries.internalOrders
+    op: absent

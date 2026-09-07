@@ -1,13 +1,13 @@
 package blue.language.processor;
 
-import blue.language.model.wire.BlueLanguageConstants;
-
-import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.NodeCanonicalizer;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.BlueIds;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -16,6 +16,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 
 /**
@@ -34,6 +35,7 @@ public final class SemanticOutputBoundary {
     private final ProcessingSnapshotManager snapshotManager;
     private final SemanticGasMeter semantic;
     private final AdmissionMemo admissionMemo;
+    private final ContractProcessorRegistry contractRegistry;
     private final Map<String, ExactBlueValue> admittedByIdentity;
     private final Map<FrozenNode.ResolvedStructuralKey, ExactBlueValue>
             admittedByCanonicalStructure;
@@ -55,6 +57,16 @@ public final class SemanticOutputBoundary {
                            ProcessingSnapshotManager snapshotManager,
                            SemanticGasMeter semantic,
                            AdmissionMemo admissionMemo) {
+        this(workSession, languageRuntime, snapshotManager, semantic, admissionMemo, null);
+    }
+
+    SemanticOutputBoundary(RuntimeWorkSession workSession,
+                           LanguageRuntimeAccess languageRuntime,
+                           ProcessingSnapshotManager snapshotManager,
+                           SemanticGasMeter semantic,
+                           AdmissionMemo admissionMemo,
+                           ContractProcessorRegistry registry) {
+        this.contractRegistry = registry;
         this.workSession =
                 Objects.requireNonNull(workSession, "workSession");
         this.languageRuntime = Objects.requireNonNull(
@@ -120,8 +132,7 @@ public final class SemanticOutputBoundary {
             try {
                 normalized =
                         FrozenNode.fromResolvedNode(
-                                languageRuntime.canonicalize(
-                                        exactInput.toNode()));
+                                canonicalizeOutput(exactInput.toNode()));
             } catch (ExecutionEvidenceUnavailableException ex) {
                 throw ex;
             } catch (RuntimeException invalid) {
@@ -141,6 +152,23 @@ public final class SemanticOutputBoundary {
                     exhaustion);
             throw exhaustion;
         }
+    }
+
+    private Node canonicalizeOutput(Node output) {
+        if (snapshotManager != null) {
+            ProcessingSnapshotManager valueManager = snapshotManager.forValueIdentity();
+            Set<String> exactFields = contractRegistry == null
+                    ? java.util.Collections.<String>emptySet()
+                    : ExecutableBodyPathCatalog.forHostedOutput(
+                            output, contractRegistry.exactSourceFieldsByType(), valueManager);
+            Set<String> executableFields = contractRegistry == null
+                    ? java.util.Collections.<String>emptySet()
+                    : ExecutableBodyPathCatalog.forHostedOutput(
+                            output, contractRegistry.executableBodyFieldsByType(), valueManager);
+            return CanonicalIdentityEvidence.canonicalSourceWithExactFields(output,
+                    valueManager, "Hosted runtime output", exactFields, executableFields);
+        }
+        return languageRuntime.canonicalize(output);
     }
 
     /**
@@ -216,45 +244,6 @@ public final class SemanticOutputBoundary {
         }
         admittedByIdentity.put(exact.blueId(), exact);
         return exact;
-    }
-
-    /**
-     * Carries an exact runtime cursor by an identity already admitted for this
-     * invocation.
-     *
-     * <p>This is the return lane for hosted runtimes that preserve an exact
-     * input identity while exposing a run-local resolved cursor for reads. If
-     * the identity is already present, the invocation-owned capability is
-     * returned directly and the cursor is never normalized or re-hashed. A
-     * previously unseen identity follows the ordinary admission path and must
-     * reproduce the asserted identity.</p>
-     *
-     * @param blueId exact identity retained by the hosted runtime
-     * @param cursor canonical value, pure reference, or resolved read cursor
-     * @return invocation-owned exact capability
-     */
-    public synchronized ExactBlueValue carryExactValue(
-            String blueId,
-            FrozenNode cursor) {
-        ensureOpen();
-        String asserted = BlueIds.requireBlueIdOrCyclicMember(
-                Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
-                "hosted exact value blueId");
-        ExactBlueValue existing = admittedByIdentity.get(asserted);
-        if (existing != null) {
-            return existing;
-        }
-        ExactBlueValue admitted = admit(
-                Objects.requireNonNull(cursor, "cursor"));
-        if (!asserted.equals(admitted.blueId())) {
-            throw new InvalidExecutionEvidenceException(
-                    "Hosted runtime exact cursor changed identity: expected "
-                            + asserted + " but calculated "
-                            + admitted.blueId() + " (strict="
-                            + cursor.isStrictCanonical() + ", reference="
-                            + cursor.isReferenceOnly() + ")");
-        }
-        return admitted;
     }
 
     /**
@@ -390,11 +379,20 @@ public final class SemanticOutputBoundary {
                             + blueId);
         }
         existing = admittedByIdentity.get(blueId);
-        if (existing != null) {
+        if (existing != null
+                && (canonical.isReferenceOnly()
+                        || !existing.frozenValue().isReferenceOnly())) {
             admittedByCanonicalStructure.put(
                     structuralKey, existing);
             return existing;
         }
+        /*
+         * An input edge proves identity without proving target content. Once
+         * this admission has normalized, charged, and verified the complete
+         * output, retain that stronger evidence instead of returning the old
+         * opaque edge. Previously issued handles remain immutable; subsequent
+         * admissions can reuse the complete value under the same identity.
+         */
         ExactBlueValue admitted =
                 new ExactBlueValue(
                         canonical,
@@ -637,7 +635,7 @@ public final class SemanticOutputBoundary {
                 languageRuntime,
                 snapshotManager,
                 sessionSemanticMeter(session),
-                new AdmissionMemo(admissionMemo));
+                new AdmissionMemo(admissionMemo), contractRegistry);
     }
 
     synchronized void carryExactInput(
@@ -658,7 +656,8 @@ public final class SemanticOutputBoundary {
                 "exact input blueId");
         admit(new ExactBlueValue(frozen, asserted, admissionMemo));
         for (Map.Entry<String, FrozenNode> entry : frozen.pathIndex().entrySet()) {
-            if (entry.getKey().isEmpty()) {
+            if (entry.getKey().isEmpty()
+                    || JsonPointer.ROOT.equals(entry.getKey())) {
                 continue;
             }
             FrozenNode descendant = entry.getValue();

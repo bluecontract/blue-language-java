@@ -1,0 +1,5 @@
+name: Foo
+type:
+  type: Integer
+  value: 1
+value: 2

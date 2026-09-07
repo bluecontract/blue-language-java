@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.identity.BlueIds;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -120,6 +121,34 @@ public final class ContractMatchingService {
             return true;
         }
         return matcher.matchesType(event, pattern);
+    }
+
+    /**
+     * Matches an exact value whose canonical identity was already established
+     * by the owning admission boundary.
+     *
+     * <p>A pure-reference pattern denotes that exact value identity. Other
+     * patterns retain the ordinary structural/type matching behavior. Keeping
+     * the identity as explicit evidence avoids rehashing a resolver-completed
+     * graph while preserving exact-reference event semantics.</p>
+     */
+    boolean matchesExactValue(
+            FrozenNode value,
+            String valueBlueId,
+            FrozenNode pattern) {
+        if (pattern == null) {
+            return true;
+        }
+        if (value == null) {
+            return false;
+        }
+        String exactBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                valueBlueId, "exactValueBlueId");
+        if (pattern.isReferenceOnly()
+                && exactBlueId.equals(pattern.getReferenceBlueId())) {
+            return true;
+        }
+        return matcher.matchesType(value, pattern);
     }
 
     /**

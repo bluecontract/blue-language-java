@@ -1,15 +1,15 @@
 fixturePackage: blue-language-conformance
 specificationVersion: '1.0'
 schemaVersion: blue-language-fixture/1.0
-registryPackageIdentity: sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
-vectorCount: 126
-behaviorFixtureCount: 153
+registryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
+vectorCount: 150
+behaviorFixtureCount: 185
 gasFixtureCount: 0
 files:
 - path: HARNESS.md
   role: support
-  sha256: cf87fb9cc5d86ab2c3067640bfb95b4dede39dd02a68795068deba2d7a984161
-  bytes: 12395
+  sha256: 8d2415587aaeb7b6e74fcb3c92bdf37f5657bb41d960f60ccb8ab2fc616ab99d
+  bytes: 15456
 - path: README.md
   role: support
   sha256: a110099c94b5def40e9995500dee3592e9bc31ab0100f40f5bc9ae4fd85a2f22
@@ -34,10 +34,14 @@ files:
   role: behavior-fixture
   sha256: c826d47f1cd15529d57dfef3022499c7274bb2945dd5e2fe21fe6e2d5a3b460f
   bytes: 193
-- path: blueid/B_empty_object_list_element_rejected.yaml
+- path: blueid/B_empty_object_child_reference_equivalence.yaml
   role: behavior-fixture
-  sha256: 38271b3833a2b1596f6a36f7bb6e81225e69423e1c07da3ed0251181b9372e7c
-  bytes: 206
+  sha256: 018470d9b5cd038d45cfb09039602761580ffd132726e3c3e7bf8a71e5e8b337
+  bytes: 492
+- path: blueid/B_empty_object_list_element_identity.yaml
+  role: behavior-fixture
+  sha256: 3a75de49c60ea4bcbf8165a1d96297b66dadba0820247de1abeb8cba347ac0fc
+  bytes: 722
 - path: blueid/B_empty_placeholder.yaml
   role: behavior-fixture
   sha256: c39caecf2029b86ff9ef49692eef86db8b61cb75d09d1db87712b61d90136893
@@ -70,14 +74,26 @@ files:
   role: behavior-fixture
   sha256: 8b26f745d2a32629a6ab051ef6ebf47f3a369a4d62b6a9f435ca7b396a6be770
   bytes: 136
+- path: blueid/B_null_item_type_blueid_rejected.yaml
+  role: behavior-fixture
+  sha256: 96c84e9b860ebaca5b29cd9a2e309effabff5990367b00e141f8a7258c34b7ff
+  bytes: 216
+- path: blueid/B_null_key_type_blueid_rejected.yaml
+  role: behavior-fixture
+  sha256: b13da44c26c5003d4eee578963cd9b4d5ac5e9ed67cd869db44f3236a2f99cb8
+  bytes: 213
 - path: blueid/B_null_list_element_rejected.yaml
   role: behavior-fixture
   sha256: 8683b9b4abdeabc670ea2901245e9bfb80c927428c9ba4eff0fc274589fcce1b
   bytes: 192
-- path: blueid/B_object_field_null_removal.yaml
+- path: blueid/B_null_type_blueid_rejected.yaml
   role: behavior-fixture
-  sha256: 6a87876c6446fe73b1c9bd517e1a24ad9d2edd38618417848491cbf435e403ed
-  bytes: 251
+  sha256: 618eb0731185338d4accd06def5a9cef4c05babbdbc81473fdaa70672b9db9ee
+  bytes: 203
+- path: blueid/B_null_value_type_blueid_rejected.yaml
+  role: behavior-fixture
+  sha256: f9b5a0ab841b9b419138a937d2f6345a46b4a9734f48d9b496ba63047be2a8e2
+  bytes: 219
 - path: blueid/B_payload_only_scalar_typed_identity.yaml
   role: behavior-fixture
   sha256: 26b626dc9586dc22fd1df15112b62c0b93d1bc663befa985f54ddc8886fc961f
@@ -164,8 +180,16 @@ files:
   bytes: 673
 - path: fixture-schema.yaml
   role: support
-  sha256: 957dbb5cddad812ce7e2a22c3d300207dd3297f821334a184b89ba36b436b564
-  bytes: 4312
+  sha256: a4f0280e69377695e213101dd4052003b9edc6544bba89da25adc16b1679861e
+  bytes: 4346
+- path: limited/F_empty_object_collapse_reference_expand_parent_identity.yaml
+  role: behavior-fixture
+  sha256: 03e30ab7048a97879fa65cce490b05f048f710613e78b1ff07282525eeae966d
+  bytes: 675
+- path: limited/F_empty_object_reference_cache_parity.yaml
+  role: behavior-fixture
+  sha256: 8b3fb45992d104c2574aff18c62e9a14236fbccb5c2d89dd86d9d22f61a7bab4
+  bytes: 708
 - path: limited/F_inline_reference_partial_equivalence.yaml
   role: behavior-fixture
   sha256: a6f354ff33764cfffbe20f22781e202481a3af49c2343035459cbf44402ff92f
@@ -182,10 +206,18 @@ files:
   role: behavior-fixture
   sha256: d0b12d37e0f768ef89c325f4b3b0b64f9a3a3cc6de3029c8ebaa4909c70d4219
   bytes: 867
+- path: limited/R_empty_object_incomplete_resource_completion.yaml
+  role: behavior-fixture
+  sha256: 7e6a5c8dda80529ae0f3eeb0410321f5f1890800baf7eaf65ec43a9cf0c7d4f0
+  bytes: 825
+- path: limited/R_empty_object_reference_unavailable_not_absent.yaml
+  role: behavior-fixture
+  sha256: 366fb25f4453dfab58f7486ae33add1857f9515d1f45621b34d292a1dfba812d
+  bytes: 644
 - path: limited/R_incomplete_cannot_canonicalize.yaml
   role: behavior-fixture
-  sha256: 6ae753b5674aaa220ea0fdb0f3e1ee4b733a28f58fb59954e9c4e4764fe44f45
-  bytes: 310
+  sha256: f8cc8f9c895677acdad41c929bff5e099ea51badff5943d2cec32074b250d0fe
+  bytes: 608
 - path: limited/R_limit_does_not_prove_absence.yaml
   role: behavior-fixture
   sha256: 39cb53aa0174def4821c496087ef1133ee1b68c82a3fceff08b0e62bcbdaba2f
@@ -302,6 +334,18 @@ files:
   role: behavior-fixture
   sha256: adb8c7603694de446c3a8befaf44963fce2da57998ca95db5e3c462c961fafa1
   bytes: 405
+- path: preprocessing/R_source_empty_object_distinctions.yaml
+  role: behavior-fixture
+  sha256: d925cef2471cce228ab49c72cdf716d73703034ec6591240c7b066ad80f7aa34
+  bytes: 467
+- path: preprocessing/R_source_null_and_empty_type_distinction.yaml
+  role: behavior-fixture
+  sha256: 409f45d061bc657e0427f53b535e679a9ed125aad147e4047eb4ba56f0ada32c
+  bytes: 327
+- path: preprocessing/R_source_object_null_omission.yaml
+  role: behavior-fixture
+  sha256: 9ea345b35a6cb88032cd7d0e5b179df5517d012a4f56f551b659ec2f440c6357
+  bytes: 252
 - path: preprocessing/registry/AppendRootTextTransformation.blue
   role: support
   sha256: 48f02ec336a35e543838c69de95aa95407916c953b2cd6c374eab170c37ab918
@@ -318,6 +362,10 @@ files:
   role: support
   sha256: 097733a85812a4845cd7f699cf5f798b18359f45984d064c8af6e5df84121c36
   bytes: 256
+- path: preprocessing/registry/manifest.yaml
+  role: support
+  sha256: 572295001dce50893de283c88df4edb688b40b695873dd81438573a5ab7bc4b2
+  bytes: 775
 - path: provider/F_all_language_vectors_pass.yaml
   role: behavior-fixture
   sha256: 5fa9b1e78ada4c9781b947fd1a546d4ad2d635526865feacdb0768d33e2c58f7
@@ -400,7 +448,7 @@ files:
   bytes: 296
 - path: registry/coreRegistryDictionaryNodeHashesToPublishedBlueId.yaml
   role: behavior-fixture
-  sha256: 704f9bcaa4eebacba2632c8c3875de50f1cd6409b38950d2de61b5d0314512a1
+  sha256: 10dfed3a6a376a029e4c523c0150d0020e65793ea61e9e54857bb81aa9276a6a
   bytes: 302
 - path: registry/coreRegistryDoubleNodeHashesToPublishedBlueId.yaml
   role: behavior-fixture
@@ -412,7 +460,7 @@ files:
   bytes: 296
 - path: registry/coreRegistryListNodeHashesToPublishedBlueId.yaml
   role: behavior-fixture
-  sha256: f40785cc555664652bc92818e378f599242886b53abe84feff2ffdf2394a735b
+  sha256: 478517b796b0f266698480934c66644a292ebf9defd6845adb9f9be88902e045
   bytes: 290
 - path: registry/coreRegistryTextNodeHashesToPublishedBlueId.yaml
   role: behavior-fixture
@@ -428,8 +476,8 @@ files:
   bytes: 538
 - path: resolver/R_append_canonicalization_final_payload_three_items.yaml
   role: behavior-fixture
-  sha256: 7aa00c087ecf48b933fa74a62c5e7f2b9fcd9101ca06a4a52f66ed1e5c1dbaad
-  bytes: 437
+  sha256: 03883bef39ced167a91e9257a46e0f07e91aaf1ebd62e8f5f6d649e421cdaa98
+  bytes: 500
 - path: resolver/R_append_minimized_previous_round_trip.yaml
   role: behavior-fixture
   sha256: b7684f61a91710ab7ebd2bc4208f2a50f314dbbfcd75a3ddb97bd2d974586a62
@@ -448,12 +496,12 @@ files:
   bytes: 671
 - path: resolver/R_canonical_overlay_no_previous_no_pos.yaml
   role: behavior-fixture
-  sha256: b42c4a39120b2faa587f828624c4f612cb8ab3a07f2e13ce8c9bc5abcb42fd19
-  bytes: 438
+  sha256: 6f23ac2d961eb5a2ff3b5a085f6f89469b5c8819f42d093c005e05714e24cfe4
+  bytes: 639
 - path: resolver/R_canonicalization_deterministic_for_same_resolved_view.yaml
   role: behavior-fixture
-  sha256: 497f1701d8a45ae5904f0da382a58c20246238c235031d367c4e58bcf758c9f2
-  bytes: 304
+  sha256: 5ace623bc384fcb14557954f5c7630a197c0db1b4501c1803de4b85ac43c2b93
+  bytes: 358
 - path: resolver/R_child_field_labels_materialize_until_overridden.yaml
   role: behavior-fixture
   sha256: 427f3700a00a50b6346b055a13101b6fc5721c99a46022dcf24ab7cce8f31bd1
@@ -464,16 +512,16 @@ files:
   bytes: 481
 - path: resolver/R_contracts_canonicalization_deterministic.yaml
   role: behavior-fixture
-  sha256: 562c85f28ac7e626df84f3d8f5122549eb2be98470702879e34aa5a9e6a8e8c2
-  bytes: 396
+  sha256: 81b4c948280f1e1ca2d918133e0730bffba18f6dc30fd283f384611bbd09ca89
+  bytes: 450
 - path: resolver/R_contracts_merge_as_content.yaml
   role: behavior-fixture
   sha256: 82f311f7bce4bb293b3ed41b5d1fc148403e5b94373883d8d0b586098b365c7e
   bytes: 391
 - path: resolver/R_core_type_compatibility_nominal_by_blueid.yaml
   role: behavior-fixture
-  sha256: dad759ee21fde6630a929119a0c23d1a615244a4f3212d5a82fde6f89ccd6b4d
-  bytes: 359
+  sha256: ddca1a225d4fb997b32a334222d9403c0c79956417b7a966b2e6e98c81808fb6
+  bytes: 488
 - path: resolver/R_default_positional_policy.yaml
   role: behavior-fixture
   sha256: abc38246c6b17600f7d0adacc132c9d6d267736311151020c84758731b7c6a21
@@ -482,6 +530,30 @@ files:
   role: behavior-fixture
   sha256: d2689135d463cd03b8ca28c79d8f805af342ad073177886d61b2544a928da79b
   bytes: 255
+- path: resolver/R_empty_object_canonical_identity.yaml
+  role: behavior-fixture
+  sha256: 87fdef980604fbef9a11806889e71cb1767a0c0454798315715d61b6c0bb56e5
+  bytes: 294
+- path: resolver/R_empty_object_child_field_count.yaml
+  role: behavior-fixture
+  sha256: 85abc2de127b5ac2ebc5e4b0d7467d3991aa6d36e0dc50c364bbe8d05736b48f
+  bytes: 187
+- path: resolver/R_empty_object_minimized_overlay_round_trip.yaml
+  role: behavior-fixture
+  sha256: a018df7cbab9d94908abd3217d18304b7a4a7b43fc3b465798526afde0f156d2
+  bytes: 415
+- path: resolver/R_empty_object_over_inherited_list_conflicts.yaml
+  role: behavior-fixture
+  sha256: 41a9897ff66fb1f17187e3eab7d2f2bf4f11eb6d72443a27928fffafccde9027
+  bytes: 567
+- path: resolver/R_empty_object_over_inherited_scalar_conflicts.yaml
+  role: behavior-fixture
+  sha256: 0629c9c0729190620b746aef213d58dc8e5a0ef17c640580e4e4775b570debb3
+  bytes: 548
+- path: resolver/R_empty_object_parent_field_count.yaml
+  role: behavior-fixture
+  sha256: 2d0fa5c26b163fa00b5d087f8978ed5439e409707934f57a8c42862b90011d25
+  bytes: 218
 - path: resolver/R_enum_integer_vs_double.yaml
   role: behavior-fixture
   sha256: 72c965a05639a0af1c04c4e9b6a941cdb09c41cc7ca748ed5148d7a76d671f90
@@ -492,24 +564,56 @@ files:
   bytes: 155
 - path: resolver/R_inherited_append_only_policy.yaml
   role: behavior-fixture
-  sha256: 240ca1dcd082cea999734ab5c63b0d626b9873cdd00d0d9e30b3f34fc982cd37
+  sha256: d7d68fe70880d3d4b716b5ba2484457c9863b04b953d1d91ce08afc5e4dedf3c
   bytes: 374
+- path: resolver/R_inherited_empty_object_omitted_by_provenance.yaml
+  role: behavior-fixture
+  sha256: 7f25b4b0138cabe6f6619d6c21cca56171b5db62cf8ef2174388c470c64f63bc
+  bytes: 655
 - path: resolver/R_inherited_integer_large_text.yaml
   role: behavior-fixture
   sha256: c513d9773639bb454830d8742c9314a2e4c7f709a754616a6b8ca337fe9d0224
   bytes: 251
 - path: resolver/R_inherited_item_type.yaml
   role: behavior-fixture
-  sha256: 2e1a39f2e4aeeadeed1cbb8195192f9aa68be4325cf65995ad28f28217047801
+  sha256: 95b87727a1c4fdd1b6f2c96cfe175e3fda7b9a8f2552535d5d2d7233a5b0355c
   bytes: 353
 - path: resolver/R_inherited_keyType_valueType.yaml
   role: behavior-fixture
-  sha256: 3c98bdc4e2d3edc0069ec5d662004997e8b5e1d3afcb6802c7968765411c6cc3
+  sha256: de4c005349bf4d3939bea6e143e7d2ccf2b79c49000173babe1008c25d9c2f84
   bytes: 465
+- path: resolver/R_inline_empty_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: c0f8e94ab5570a8e6fb0001bc06fbf37ecbbe2379746534720188afaa39880d6
+  bytes: 599
+- path: resolver/R_inline_item_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: a40a6efb94b5b1fc91d4b0afbd0736456ca7f0617c4de7510386348eac061c59
+  bytes: 753
+- path: resolver/R_inline_key_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: bb33bf037d0b8b6bc9a7f371defb1feaf15ffd27ee0996961ddd01bbdc6f9840
+  bytes: 878
+- path: resolver/R_inline_type_false_convergence_guard.yaml
+  role: behavior-fixture
+  sha256: b4303af7c9eee00f63500177dd49e83e481a02679cab0edc3f22c932788196a3
+  bytes: 730
+- path: resolver/R_inline_type_parent_chain_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 9653557f64b9a1bf6e10f304822c480b1f64a6832669805c5032e086408fbc81
+  bytes: 1176
+- path: resolver/R_inline_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 316d117e05e090e9dd2d1b7c5a0da2c4d819e649de52006ed4edb9720f5e9657
+  bytes: 852
+- path: resolver/R_inline_value_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: cf032ccbf9daa58cbe6ac50f5449f54943a8560e3680a902ea57357e3258abaa
+  bytes: 808
 - path: resolver/R_instance_field_kept.yaml
   role: behavior-fixture
-  sha256: 15bf2394d13e4716a9e970244771097f77762cff13f8278fcbd2dc6a13049723
-  bytes: 276
+  sha256: 00fdce48c0c7c92454846881f9b6412088f2bf3125e7dd9635340c762f0709ad
+  bytes: 896
 - path: resolver/R_label_override_rules.yaml
   role: behavior-fixture
   sha256: aa6b151436f4f3875d25471369b79bd3a063c318409f5172d8b2d85ccdd3ceaf
@@ -522,26 +626,46 @@ files:
   role: behavior-fixture
   sha256: 4e9f4bf229ed2d6af10982a895f8a02d886cd80bfb768d828f0028f7b06f3f4e
   bytes: 203
+- path: resolver/R_minfields_rejects_empty_object.yaml
+  role: behavior-fixture
+  sha256: 6400a34a57c2a01df7f0d99ad039c3b9bb82527c5269c079ffe15c54f78d5de8
+  bytes: 352
 - path: resolver/R_minimized_overlay_round_trip.yaml
   role: behavior-fixture
   sha256: c63b118afe11b111d2b4da6feec0945722dd20c679ec20b9a9a4637ed1d27fcd
   bytes: 371
+- path: resolver/R_nested_collection_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 56692f27937f2e8609506a0c56c5055351b22648c23c3b9bfa92ef58c13558f4
+  bytes: 1179
+- path: resolver/R_nested_inline_type_reference_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 0e8911622b0ec412931e2b905fec242bc87179d6cdd165b6203fef5a006c7311
+  bytes: 799
 - path: resolver/R_noncanonical_inherited_integer_rejected.yaml
   role: behavior-fixture
   sha256: 2c86ab53e6803d1fd6c0969ff722059bce64d1327ff1fb74568df665dae2ceb7
   bytes: 205
+- path: resolver/R_pos_without_inherited_prefix_rejected.yaml
+  role: behavior-fixture
+  sha256: 487c7fc60fcff6a10d1d3375f7e245cd623af947f3babc6003ae1da6d9eb5e50
+  bytes: 327
 - path: resolver/R_positional_canonical_final_payload.yaml
   role: behavior-fixture
   sha256: 2d27905db8b371681f3e6b4ea883995cbf972f79389eb5b6bd871024f53cc41e
   bytes: 273
+- path: resolver/R_positional_inline_item_type_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 5c7acd518968250d38cc54d423812af5507763512faf297777d1963966770005
+  bytes: 1807
 - path: resolver/R_positional_minimized_round_trip.yaml
   role: behavior-fixture
   sha256: a768618f5eeb32c80d8108b339990d990bb11e07412d59d03d7a2cbbcfed5027
   bytes: 297
 - path: resolver/R_positional_reorder_or_remove_rejected.yaml
   role: behavior-fixture
-  sha256: ad47beabf9caaabc798979ed10d23e3f6ef9de518a10fb31aa8b7c4d4713aa44
-  bytes: 369
+  sha256: 19dd4aba8997b4376ee142e7fd618f00a3a8e82be60dde4696bd33d0eb2830e0
+  bytes: 743
 - path: resolver/R_previous_anchor_mismatch.yaml
   role: behavior-fixture
   sha256: 37bf04ea74080392a9c0c9ed5f15290e68252b5777b48e8a8a2b46c989af34f6
@@ -558,6 +682,10 @@ files:
   role: behavior-fixture
   sha256: f65eb13b311a6a369a90f701d983787ebe077cac891fd56d3812ac06a3822c64
   bytes: 167
+- path: resolver/R_required_empty_object_present.yaml
+  role: behavior-fixture
+  sha256: c5de1f733215cbe2c17cff3f877e402399a882c184f3ca0d62ee3da0580f0387
+  bytes: 323
 - path: resolver/R_required_semantic_presence.yaml
   role: behavior-fixture
   sha256: 79155c7a9ad9bbe9f714875c34749ecfa76f3525023f42ddce2f1f17c4c354e5
@@ -568,8 +696,8 @@ files:
   bytes: 370
 - path: resolver/R_resolved_form_not_direct_content_id.yaml
   role: behavior-fixture
-  sha256: 5a872fdd271f9290d5835dd7c1c46ed91901bfad3a4da857e053e27fb52c294c
-  bytes: 263
+  sha256: 7137c974b1bcaca770d6ea7a6ad12ac5a16321e1c78a93ca06c1a66f19d743a0
+  bytes: 222
 - path: resolver/R_schema_accumulation_conflict.yaml
   role: behavior-fixture
   sha256: 8cd273e7d6c629cefc686a7859833b53d6992faa9581c58f46c8b8223dacb972
@@ -584,12 +712,12 @@ files:
   bytes: 372
 - path: resolver/R_schema_enum_order_and_duplicates_canonical.yaml
   role: behavior-fixture
-  sha256: d82992c16594bbba6078992394f6218ba0acb3200d0368594226e705e7ce1b7b
-  bytes: 430
+  sha256: f31bc68126df0d1a984978ad97d2059298e2ad3b872a6921fa4f6b271290e915
+  bytes: 440
 - path: resolver/R_schema_integer_multiple_of_lcm_merge.yaml
   role: behavior-fixture
-  sha256: 36cbdc681b2d3be66ccac811670ce94faf4babdf824ac7f7c6b3cb860dbccdeb
-  bytes: 345
+  sha256: 5cc02f6d6157d894027e4ef5dcbe78b8b2efe0f80bdb4e25bb37e05f113448ed
+  bytes: 355
 - path: resolver/R_schema_large_integer_minimum_with_type_alias.yaml
   role: behavior-fixture
   sha256: 931045e2da6439f2c14fe1c7402891e8d0639b1d96210c56b38cea94916c22e1
@@ -606,18 +734,18 @@ files:
   role: behavior-fixture
   sha256: 78dcbdb3f0e3bce56e1d8f51971e72353e35ee6365becfba683e8d44aaf75af0
   bytes: 271
-- path: resolver/R_source_empty_object_list_to_empty.yaml
+- path: resolver/R_source_empty_object_list_retained.yaml
   role: behavior-fixture
-  sha256: 7bb8720de2bd13f791afc615840b70a744ef70eb0e163501caa2269eed776f65
-  bytes: 269
+  sha256: 8d03db55dfe8f8f426afc0b12df826b8965a4a1bdacddd2e884f3e0b865758d4
+  bytes: 292
 - path: resolver/R_source_null_list_to_empty.yaml
   role: behavior-fixture
   sha256: f03869f58309f257909c99dc89aa06b79f0bcfbe30f136b31e7ea06b32978b23
   bytes: 255
-- path: resolver/R_source_recursive_empty_object_list_to_empty.yaml
+- path: resolver/R_source_recursive_empty_object_list_retained.yaml
   role: behavior-fixture
-  sha256: 7b918ed76662e38dcdb39c9adca5423e15f731ee0fcc1e531593528470f6cbaa
-  bytes: 324
+  sha256: a6daf35bb9c160d36fc51e5cacb3ba5832a6770ab6a0e8780b3935b7e468e891
+  bytes: 353
 - path: resolver/R_specialization_creates_new_node.yaml
   role: behavior-fixture
   sha256: fa980fd9d8c1aef35f85191a7385aa04ac63d9c5a30f465b2d791082b3cd4ae8
@@ -640,18 +768,22 @@ files:
   bytes: 569
 - path: resolver/R_type_derived_field_removed.yaml
   role: behavior-fixture
-  sha256: 28af5be22a7f268de871c7586dc2088954a2c3495bf04d711a3702a6cb1e6215
-  bytes: 282
+  sha256: c99f0c82986baf6b2404dea080585ba040bf2c08fb4eede7c26fdd7e3cdd844d
+  bytes: 855
 - path: resolver/R_view_path_root_is_empty_string.yaml
   role: behavior-fixture
   sha256: 107154b2e46350f5633e99ee617dadc2958525b6bbc689a1cd9c9407c2d6d8c6
   bytes: 497
+- path: resolver/R_wholly_inherited_collection_metadata_identity_parity.yaml
+  role: behavior-fixture
+  sha256: 47adcab3f10c7f6740cd9ddda500286bf27f59f66df818b3b8d1736702befe13
+  bytes: 1574
 - path: vector-coverage.yaml
   role: support
-  sha256: dcf6a25c83c6c1efc0d1141a73e9d8fb534cf231fb0ffff28d7128b22c9b4c57
-  bytes: 8551
+  sha256: 0bf6016400f6e28296b8cfc4b3cc1d2445ebcc14bf9a0bb63391fdfc4c3d1f38
+  bytes: 13220
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
+packageIdentity: sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695

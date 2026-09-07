@@ -23,6 +23,9 @@ public final class ManagedOccurrenceEvidenceDemand
     private final String processEmbeddedDeclarationIdentity;
     private final long demandOrdinal;
     private final Node suppliedExactValue;
+    // Runtime-issued authority is separate from the public canonical value.
+    // It is immutable, process-local, and bound to the complete verified input.
+    private final String emittedInvocationIdentity;
 
     /**
      * Creates and verifies one managed-occurrence evidence demand.
@@ -58,7 +61,8 @@ public final class ManagedOccurrenceEvidenceDemand
                 suppliedValueBlueId,
                 demandOrdinal,
                 null,
-                false);
+                false,
+                null);
     }
 
     /**
@@ -105,7 +109,8 @@ public final class ManagedOccurrenceEvidenceDemand
                 demandOrdinal,
                 Objects.requireNonNull(
                         suppliedExactValue, "suppliedExactValue"),
-                true);
+                true,
+                null);
     }
 
     private ManagedOccurrenceEvidenceDemand(
@@ -119,7 +124,8 @@ public final class ManagedOccurrenceEvidenceDemand
             String suppliedValueBlueId,
             long demandOrdinal,
             Node suppliedExactValue,
-            boolean exactValuePresent) {
+            boolean exactValuePresent,
+            String emittedInvocationIdentity) {
         super(Kind.MANAGED_OCCURRENCE_EVIDENCE,
                 demandIdentity,
                 sourceDocumentId,
@@ -140,6 +146,7 @@ public final class ManagedOccurrenceEvidenceDemand
                         "processEmbeddedDeclarationIdentity");
         this.demandOrdinal = ClosureValueSupport.requireSafeInteger(
                 demandOrdinal, "demandOrdinal");
+        this.emittedInvocationIdentity = emittedInvocationIdentity;
         this.suppliedExactValue = exactValuePresent
                 ? verifiedExactInlineValue(
                         suppliedExactValue, suppliedValueBlueId())
@@ -332,6 +339,22 @@ public final class ManagedOccurrenceEvidenceDemand
         return suppliedExactValue == null
                 ? Optional.<Node>empty()
                 : Optional.of(suppliedExactValue.clone());
+    }
+
+    /** Called only when the processor returns an actual resource suspension. */
+    ManagedOccurrenceEvidenceDemand emittedBy(String invocationIdentity) {
+        return new ManagedOccurrenceEvidenceDemand(
+                demandIdentity(), logicalCauseIdentity, inputClosureIdentity,
+                inputGraphGeneration, sourceDocumentId(), sourcePath(),
+                processEmbeddedDeclarationIdentity, suppliedValueBlueId(),
+                demandOrdinal, suppliedExactValue, suppliedExactValue != null,
+                ClosureValueSupport.requireSha256Identity(
+                        invocationIdentity, "emittedInvocationIdentity"));
+    }
+
+    boolean wasEmittedBy(String invocationIdentity) {
+        return emittedInvocationIdentity != null
+                && emittedInvocationIdentity.equals(invocationIdentity);
     }
 
     private static Node verifiedExactInlineValue(

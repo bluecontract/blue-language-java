@@ -18,7 +18,7 @@ final class DirectiveResolverUnavailableTest {
     @Test
     void retainsRequestedExactBlueId() {
         String requested =
-                "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e";
+                "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3";
         NodeProvider unavailable = new NodeProvider() {
             @Override
             public List<Node> fetchByBlueId(String blueId) {

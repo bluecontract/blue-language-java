@@ -1,5 +1,9 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIds;
+import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.provider.CyclicSetProof;
@@ -32,7 +36,12 @@ final class DocumentStepBoundaryTest {
         Node payload = new Node().name("event");
 
         DocumentStepInput input = new DocumentStepInput(
-                0L, work, state.managedDocument(A), payload, context);
+                0L,
+                work,
+                state.managedDocument(A),
+                payload,
+                DirectBlueIdCalculator.calculateBlueId(payload),
+                context);
         payload.name("caller-mutation");
 
         assertEquals("event", input.exactPayload().getName());
@@ -49,7 +58,13 @@ final class DocumentStepBoundaryTest {
                 true, false, true, 0L, 1L);
         assertThrows(IllegalArgumentException.class,
                 () -> new DocumentStepInput(
-                        0L, work, stale, new Node().name("event"), context));
+                        0L,
+                        work,
+                        stale,
+                        new Node().name("event"),
+                        DirectBlueIdCalculator.calculateBlueId(
+                                new Node().name("event")),
+                        context));
     }
 
     @Test
@@ -120,6 +135,8 @@ final class DocumentStepBoundaryTest {
                 work(A, 0L),
                 state.managedDocument(A),
                 new Node().name("event"),
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("event")),
                 TentativeResolutionContext.from(invocation, state, A));
     }
 
@@ -139,29 +156,38 @@ final class DocumentStepBoundaryTest {
     }
 
     private static AffectedClosureSnapshot cyclicState() {
+        List<Node> declaredMembers = Arrays.asList(
+                new Node().name("a-proof").properties(
+                        "peer", new Node().blueId("this#1")),
+                new Node().name("b-proof").properties(
+                        "peer", new Node().blueId("this#0")));
+        CyclicSetFinalization finalization =
+                CircularSetIdentityCalculator
+                        .calculateCircularSetFinalization(
+                                declaredMembers);
+        List<String> memberBlueIds =
+                finalization.memberBlueIdsInInputOrder();
         CyclicSetProof proof = CyclicSetProof.fromDeclaredPlaceholderSet(
-                Arrays.asList(
-                        new Node().name("a-proof"),
-                        new Node().name("b-proof")));
+                declaredMembers);
         ComponentSnapshot component = new ComponentSnapshot(
                 hash('3'), hash('4'), 2L, ComponentKind.CYCLIC,
                 Arrays.asList(A, B),
-                Arrays.asList("master#0", "master#1"),
-                "master", proof, hash('5'));
+                memberBlueIds,
+                finalization.masterBlueId(), proof, hash('5'));
         return new AffectedClosureSnapshot(
                 hash('6'), 2L,
                 Arrays.asList(
-                        managed(A, "master#0", true),
-                        managed(B, "master#1", false)),
+                        managed(A, memberBlueIds.get(0), true),
+                        managed(B, memberBlueIds.get(1), false)),
                 Arrays.asList(
                         new ManagedOccurrenceBinding(
                                 hash('1'), hash('2'), hash('3'),
                                 A, ScopeAddress.embedded("/b", 1L),
-                                B, "master#1", true, null),
+                                B, memberBlueIds.get(1), true, null),
                         new ManagedOccurrenceBinding(
                                 hash('4'), hash('5'), hash('6'),
                                 B, ScopeAddress.embedded("/a", 1L),
-                                A, "master#0", true, null)),
+                                A, memberBlueIds.get(0), true, null)),
                 hash('f'),
                 Collections.singletonList(component),
                 Collections.singletonList(A));
@@ -174,7 +200,7 @@ final class DocumentStepBoundaryTest {
         return new ManagedDocumentSnapshot(
                 documentId, blueId, new Node().name(documentId.value()),
                 true, false, publicRoot, 0L,
-                blueId.startsWith("master#") ? 2L : 1L);
+                BlueIds.hasCyclicMemberSeparator(blueId) ? 2L : 1L);
     }
 
     private static ClosureInvocationInput invocation(

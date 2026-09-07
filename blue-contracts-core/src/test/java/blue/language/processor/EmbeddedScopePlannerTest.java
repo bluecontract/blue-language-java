@@ -1,8 +1,13 @@
 package blue.language.processor;
 
 import blue.language.api.NodeProviderOutcome;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.provider.NodeProvider;
@@ -19,6 +24,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -214,6 +220,552 @@ final class EmbeddedScopePlannerTest {
         assertEquals(
                 Collections.emptyList(),
                 plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldTreatExplicitEmptyObjectCollectionAsPresentWithZeroMembers() {
+        Node scope = new Node().properties(
+                "lessons", Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                Collections.emptyList(),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldTreatAuthoredMetadataOnlyDictionaryCollectionAsAbsent() {
+        Node dictionary = new Node().type(new Node().blueId(
+                BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+        Node scope = new Node().properties("lessons", dictionary);
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                Collections.emptyList(),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldClassifyMetadataOnlyCollectionBeforeDeclaredPayloadKind() {
+        Node scope = new Node().properties(
+                "lessons",
+                new Node().type(new Node().blueId(
+                        BlueLanguageConstants.TEXT_TYPE_BLUE_ID)));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldOmitMetadataOnlyExplicitTarget() {
+        Node scope = new Node().properties(
+                "payment",
+                new Node().type(new Node().blueId(
+                        BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID)));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.singletonList("/payment"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldTreatMetadataOnlyIntermediateAsAbsentWithoutTypeEvidence() {
+        Node customDictionary = customDictionaryType();
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    throw new AssertionError(
+                            "Absent metadata must not demand type evidence");
+                },
+                CanonicalTypeIdentityLookup.incomplete());
+        Node scope = new Node().properties(
+                "outer", new Node().type(new Node().blueId(typeBlueId)));
+
+        EmbeddedScopePlan plan = planner.plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/outer/children"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                plan.collectionStatesByDeclaration().get(
+                        "/outer/children"));
+    }
+
+    @Test
+    void shouldTreatInheritedMetadataOnlyDictionaryCollectionAsAbsent() {
+        Node scopeType = new Node().properties(
+                "lessons",
+                new Node().type(new Node().blueId(
+                        BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID)))
+                .type(new Node().blueId(
+                        BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+        EmbeddedScopePlan plan;
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            ResolvedSnapshot snapshot = manager.fromDocument(
+                    new Node()
+                            .type(scopeType)
+                            .properties("anchor", Nodes.emptyObject()));
+            plan = new EmbeddedScopePlanner(
+                    manager,
+                    snapshot.canonicalTypeIdentities()).plan(
+                            snapshot.frozenResolvedRoot(),
+                            "/",
+                            Collections.<String>emptyList(),
+                            Collections.singletonList("/lessons"),
+                            GasSchedule.contracts10());
+        }
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                Collections.emptyList(),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldOmitMetadataOnlyCollectionMember() {
+        Node scope = new Node().properties(
+                "lessons",
+                new Node().properties(
+                        "declared-only",
+                        new Node().type(new Node().blueId(
+                                BlueLanguageConstants
+                                        .DICTIONARY_TYPE_BLUE_ID)),
+                        "present-empty", Nodes.emptyObject()));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("present-empty"),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                Collections.singletonList("/lessons/present-empty"),
+                plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldRejectPresentTextTypedObjectCollectionWithStableCategory() {
+        assertDeclaredCollectionTypeRejected(
+                BlueLanguageConstants.TEXT_TYPE_BLUE_ID);
+    }
+
+    @Test
+    void shouldRejectPresentListTypedObjectCollectionWithStableCategory() {
+        assertDeclaredCollectionTypeRejected(
+                BlueLanguageConstants.LIST_TYPE_BLUE_ID);
+    }
+
+    @Test
+    void shouldRejectPresentWrongTypedObjectExplicitTargets() {
+        assertDeclaredExplicitTargetTypeRejected(
+                BlueLanguageConstants.TEXT_TYPE_BLUE_ID);
+        assertDeclaredExplicitTargetTypeRejected(
+                BlueLanguageConstants.LIST_TYPE_BLUE_ID);
+    }
+
+    @Test
+    void shouldRejectPresentWrongTypedObjectCollectionMembers() {
+        assertDeclaredCollectionMemberTypeRejected(
+                BlueLanguageConstants.TEXT_TYPE_BLUE_ID);
+        assertDeclaredCollectionMemberTypeRejected(
+                BlueLanguageConstants.LIST_TYPE_BLUE_ID);
+    }
+
+    @Test
+    void shouldRejectTraversalThroughPresentWrongTypedObject() {
+        Node scope = new Node().properties(
+                "outer",
+                Nodes.emptyObject()
+                        .type(new Node().blueId(
+                                BlueLanguageConstants.LIST_TYPE_BLUE_ID))
+                        .properties("children", Nodes.emptyObject()));
+
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        scope,
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/outer/children"),
+                        GasSchedule.contracts10()));
+
+        assertEquals(
+                ProcessorErrorCategory.InvalidEmbeddedCollectionPath,
+                failure.diagnostic().category());
+    }
+
+    @Test
+    void shouldTraverseTypedAdmittedScopeRootWithoutDictionaryLineage() {
+        Node applicationRootType = new Node().name(
+                "Application processing scope");
+        String applicationRootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationRootType);
+        Node scope = new Node()
+                .type(new Node().blueId(applicationRootTypeBlueId))
+                .properties("child", Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldAcceptObjectBearingApplicationTypedExplicitTarget() {
+        Node applicationType = new Node().name(
+                "Application embedded document");
+        String applicationTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationType);
+        Node child = new Node()
+                .type(new Node().blueId(applicationTypeBlueId))
+                .properties("state", new Node().value("ready"));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                new Node().properties("child", child),
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldTreatContractsOnlyExplicitTargetAsPresentScope() {
+        Node child = new Node().contracts(Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                new Node().properties("child", child),
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldAcceptObjectBearingApplicationTypedCollectionMember() {
+        Node applicationType = new Node().name(
+                "Application collection member");
+        String applicationTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationType);
+        Node member = new Node()
+                .type(new Node().blueId(applicationTypeBlueId))
+                .properties("state", new Node().value("ready"));
+        Node scope = new Node().properties(
+                "members", new Node().properties("one", member));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/root",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/members"),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/members/one"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldSuspendForPresentUnknownIntermediateObjectType() {
+        Node customDictionary = customDictionaryType();
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        Node scope = new Node().properties(
+                "outer",
+                Nodes.emptyObject()
+                        .type(new Node().blueId(typeBlueId))
+                        .properties("children", Nodes.emptyObject()));
+
+        ExecutionEvidenceUnavailableException failure = assertThrows(
+                ExecutionEvidenceUnavailableException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        scope,
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/outer/children"),
+                        GasSchedule.contracts10()));
+
+        assertEquals(
+                Collections.singletonList(typeBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldAcceptVerifiedReferenceToCustomDictionarySubtype() {
+        Node customDictionary = customDictionaryType();
+        FrozenNode completedType = FrozenNode.fromResolvedNode(
+                customDictionary);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        CanonicalTypeIdentityLookup identities = canonicalTypeLookup(
+                completedType, typeBlueId);
+        AtomicInteger materializations = new AtomicInteger();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    materializations.incrementAndGet();
+                    assertEquals(typeBlueId, reference.getReferenceBlueId());
+                    return new TypeEvidenceResolution(
+                            completedType, identities);
+                },
+                CanonicalTypeIdentityLookup.incomplete());
+        Node collection = Nodes.emptyObject().type(
+                new Node().blueId(typeBlueId));
+
+        EmbeddedScopePlan plan = planner.plan(
+                new Node().properties("lessons", collection),
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(1, materializations.get());
+    }
+
+    @Test
+    void shouldSuspendForCustomCollectionTypeReferenceWithoutDefinition() {
+        Node customDictionary = customDictionaryType();
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        Node collection = Nodes.emptyObject().type(
+                new Node().blueId(typeBlueId));
+
+        ExecutionEvidenceUnavailableException failure = assertThrows(
+                ExecutionEvidenceUnavailableException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        new Node().properties("lessons", collection),
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/lessons"),
+                        GasSchedule.contracts10()));
+
+        assertEquals(
+                Collections.singletonList(typeBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldAcceptVerifiedInlineCustomDictionarySubtype() {
+        Node customDictionary = customDictionaryType();
+        FrozenNode completedType = FrozenNode.fromResolvedNode(
+                customDictionary);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        AtomicInteger materializations = new AtomicInteger();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    materializations.incrementAndGet();
+                    throw new AssertionError(
+                            "Completed inline type must not be materialized");
+                },
+                canonicalTypeLookup(completedType, typeBlueId));
+        Node collection = Nodes.emptyObject().type(
+                customDictionary.clone());
+
+        EmbeddedScopePlan plan = planner.plan(
+                new Node().properties("lessons", collection),
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(0, materializations.get());
+    }
+
+    @Test
+    void shouldAcceptVerifiedCustomDictionaryForExplicitAndMemberScopes() {
+        Node customDictionary = customDictionaryType();
+        FrozenNode completedType = FrozenNode.fromResolvedNode(
+                customDictionary);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    throw new AssertionError(
+                            "Completed inline type must not be materialized");
+                },
+                canonicalTypeLookup(completedType, typeBlueId));
+        Node scope = new Node().properties(
+                "fixed", Nodes.emptyObject().type(customDictionary.clone()),
+                "members", new Node().properties(
+                        "a", Nodes.emptyObject().type(
+                                customDictionary.clone())));
+
+        EmbeddedScopePlan plan = planner.plan(
+                scope,
+                "/root",
+                Collections.singletonList("/fixed"),
+                Collections.singletonList("/members"),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Arrays.asList("/root/fixed", "/root/members/a"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldTraverseVerifiedInlineCustomDictionarySubtype() {
+        Node customDictionary = customDictionaryType();
+        FrozenNode completedType = FrozenNode.fromResolvedNode(
+                customDictionary);
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                customDictionary);
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    throw new AssertionError(
+                            "Completed inline type must not be materialized");
+                },
+                canonicalTypeLookup(completedType, typeBlueId));
+        Node scope = new Node().properties(
+                "outer",
+                Nodes.emptyObject()
+                        .type(customDictionary.clone())
+                        .properties("child", Nodes.emptyObject()));
+
+        EmbeddedScopePlan plan = planner.plan(
+                scope,
+                "/root",
+                Collections.singletonList("/outer/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/outer/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldSuspendForInlineCustomCollectionTypeWithoutIdentityEvidence() {
+        Node customDictionary = customDictionaryType();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(
+                null,
+                reference -> {
+                    throw new AssertionError(
+                            "Completed inline type must not be materialized");
+                },
+                CanonicalTypeIdentityLookup.incomplete());
+        Node collection = Nodes.emptyObject().type(customDictionary);
+
+        ExecutionEvidenceUnavailableException failure = assertThrows(
+                ExecutionEvidenceUnavailableException.class,
+                () -> planner.plan(
+                        new Node().properties("lessons", collection),
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/lessons"),
+                        GasSchedule.contracts10()));
+
+        assertTrue(failure.getMessage().contains(
+                "canonical type identity evidence"));
+        assertEquals(
+                Collections.emptyList(),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldTreatVerifiedReferenceToEmptyObjectAsZeroMemberCollection() {
+        Node empty = Nodes.emptyObject();
+        String emptyBlueId = DirectBlueIdCalculator.calculateBlueId(empty);
+        AtomicInteger materializations = new AtomicInteger();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(reference -> {
+            materializations.incrementAndGet();
+            assertEquals(emptyBlueId, reference.getReferenceBlueId());
+            return FrozenNode.fromResolvedNode(empty);
+        });
+
+        EmbeddedScopePlan plan = planner.plan(
+                new Node().properties(
+                        "lessons", new Node().blueId(emptyBlueId)),
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(1, materializations.get());
     }
 
     @Test
@@ -234,6 +786,25 @@ final class EmbeddedScopePlannerTest {
                         GasSchedule.contracts10()));
 
         // then
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
+                failure.diagnostic().category());
+    }
+
+    @Test
+    void shouldRejectScalarCollectionTargetWithStableCategory() {
+        Node scope = new Node().properties(
+                "lessons", new Node().value("not an object"));
+
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        scope,
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/lessons"),
+                        GasSchedule.contracts10()));
+
         assertEquals(
                 ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
                 failure.diagnostic().category());
@@ -330,7 +901,7 @@ final class EmbeddedScopePlannerTest {
     }
 
     @Test
-    void shouldRejectGraphEquivalentInlineCollectionDeclarations() {
+    void shouldKeepGraphEquivalentInlineCollectionsAtDistinctPaths() {
         // given
         Node first = collectionWithOneMember();
         Node second = collectionWithOneMember();
@@ -339,23 +910,27 @@ final class EmbeddedScopePlannerTest {
                 "second", second);
 
         // when
-        SubscriptionSurfaceInvalidException failure = assertThrows(
-                SubscriptionSurfaceInvalidException.class,
-                () -> new EmbeddedScopePlanner().plan(
-                        scope,
-                        "/",
-                        Collections.emptyList(),
-                        Arrays.asList("/first", "/second"),
-                        GasSchedule.contracts10()));
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.emptyList(),
+                Arrays.asList("/first", "/second"),
+                GasSchedule.contracts10());
 
         // then
         assertEquals(
-                ProcessorErrorCategory.OverlappingEmbeddedDeclaration,
-                failure.diagnostic().category());
+                Arrays.asList("/first/member", "/second/member"),
+                plan.concreteChildPaths());
+        assertEquals(
+                Arrays.asList("member"),
+                plan.collectionMemberKeysByDeclaration().get("/first"));
+        assertEquals(
+                Arrays.asList("member"),
+                plan.collectionMemberKeysByDeclaration().get("/second"));
     }
 
     @Test
-    void shouldRejectGraphEquivalentPureReferenceCollectionDeclarations() {
+    void shouldKeepGraphEquivalentReferencesAtDistinctCollectionPaths() {
         // given
         AtomicInteger materializations = new AtomicInteger();
         Node exactCollection = collectionWithOneMember();
@@ -370,20 +945,40 @@ final class EmbeddedScopePlannerTest {
         });
 
         // when
-        SubscriptionSurfaceInvalidException failure = assertThrows(
-                SubscriptionSurfaceInvalidException.class,
-                () -> planner.plan(
-                        scope,
-                        "/",
-                        Collections.emptyList(),
-                        Arrays.asList("/first", "/second"),
-                        GasSchedule.contracts10()));
+        EmbeddedScopePlan plan = planner.plan(
+                scope,
+                "/",
+                Collections.emptyList(),
+                Arrays.asList("/first", "/second"),
+                GasSchedule.contracts10());
 
         // then
         assertEquals(
-                ProcessorErrorCategory.OverlappingEmbeddedDeclaration,
-                failure.diagnostic().category());
+                Arrays.asList("/first/member", "/second/member"),
+                plan.concreteChildPaths());
         assertEquals(2, materializations.get());
+    }
+
+    @Test
+    void shouldKeepDistinctPresentEmptyCollectionsDespiteEqualIdentity() {
+        Node scope = new Node().properties(
+                "first", Nodes.emptyObject(),
+                "second", Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Arrays.asList("/first", "/second"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/first"));
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/second"));
     }
 
     @Test
@@ -504,6 +1099,60 @@ final class EmbeddedScopePlannerTest {
         assertEquals(
                 Collections.singletonList("/root/child"),
                 plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldRejectWrongKindMaterializedOpaqueManagedExplicitTarget() {
+        Node child = Nodes.emptyObject().type(new Node().blueId(
+                BlueLanguageConstants.LIST_TYPE_BLUE_ID));
+        Node scope = new Node().properties("child", child);
+        Map<String, String> expected = new LinkedHashMap<String, String>();
+        expected.put(
+                "/root/child",
+                DirectBlueIdCalculator.calculateBlueId(child));
+
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner()
+                        .planForOpaqueManagedRoot(
+                                FrozenNode.fromNode(scope),
+                                ROOT_SCOPE_PATH,
+                                Collections.singletonList("/child"),
+                                Collections.<String>emptyList(),
+                                expected,
+                                GasSchedule.contracts10()));
+
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedScopeNotObject,
+                failure.diagnostic().category());
+    }
+
+    @Test
+    void shouldRejectWrongKindMaterializedOpaqueManagedCollectionMember() {
+        Node member = Nodes.emptyObject().type(new Node().blueId(
+                BlueLanguageConstants.TEXT_TYPE_BLUE_ID));
+        Node scope = new Node().properties(
+                "members", new Node().properties("a", member));
+        Map<String, String> expected = new LinkedHashMap<String, String>();
+        expected.put(
+                "/root/members/a",
+                DirectBlueIdCalculator.calculateBlueId(member));
+
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner()
+                        .planForOpaqueManagedRoot(
+                                FrozenNode.fromNode(scope),
+                                ROOT_SCOPE_PATH,
+                                Collections.<String>emptyList(),
+                                Collections.singletonList("/members"),
+                                expected,
+                                GasSchedule.contracts10()));
+
+        assertEquals(
+                ProcessorErrorCategory
+                        .EmbeddedCollectionMemberMustBeObject,
+                failure.diagnostic().category());
     }
 
     @Test
@@ -1029,7 +1678,91 @@ final class EmbeddedScopePlannerTest {
     }
 
     private static Node object() {
-        return new Node();
+        return Nodes.emptyObject();
+    }
+
+    private static void assertDeclaredCollectionTypeRejected(
+            String typeBlueId) {
+        Node collection = Nodes.emptyObject().type(
+                new Node().blueId(typeBlueId));
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        new Node().properties("lessons", collection),
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/lessons"),
+                        GasSchedule.contracts10()));
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
+                failure.diagnostic().category());
+    }
+
+    private static void assertDeclaredExplicitTargetTypeRejected(
+            String typeBlueId) {
+        Node child = Nodes.emptyObject().type(
+                new Node().blueId(typeBlueId));
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        new Node().properties("child", child),
+                        "/",
+                        Collections.singletonList("/child"),
+                        Collections.<String>emptyList(),
+                        GasSchedule.contracts10()));
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedScopeNotObject,
+                failure.diagnostic().category());
+    }
+
+    private static void assertDeclaredCollectionMemberTypeRejected(
+            String typeBlueId) {
+        Node member = Nodes.emptyObject().type(
+                new Node().blueId(typeBlueId));
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        new Node().properties(
+                                "members",
+                                new Node().properties("a", member)),
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/members"),
+                        GasSchedule.contracts10()));
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedCollectionMemberMustBeObject,
+                failure.diagnostic().category());
+    }
+
+    private static Node customDictionaryType() {
+        return new Node()
+                .name("Custom embedded collection dictionary")
+                .type(new Node().blueId(
+                        BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+    }
+
+    private static CanonicalTypeIdentityLookup canonicalTypeLookup(
+            FrozenNode completedType,
+            String typeBlueId) {
+        return new CanonicalTypeIdentityLookup() {
+            @Override
+            public boolean hasCompleteCoverage() {
+                return false;
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(Node candidate) {
+                FrozenNode frozenCandidate = FrozenNode.fromResolvedNode(
+                        candidate);
+                if (!completedType.resolvedStructuralKey().equals(
+                        frozenCandidate.resolvedStructuralKey())) {
+                    return Optional.empty();
+                }
+                return Optional.of(CanonicalTypeIdentityEvidence
+                        .identityOnly(typeBlueId));
+            }
+        };
     }
 
     private static Node collectionWithOneMember() {

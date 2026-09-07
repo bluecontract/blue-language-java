@@ -11,6 +11,8 @@ public interface BlueSnapshots {
 
     /**
      * Creates a complete snapshot from authored Source.
+     * Completeness describes resolution's semantic closure, not conformance
+     * of undemanded reference targets. Opaque references can remain in the lane.
      *
      * @param source authored Source Document
      * @return complete resolved snapshot
@@ -36,7 +38,8 @@ public interface BlueSnapshots {
     ResolvedSnapshot load(Node canonicalIdentityInput);
 
     /**
-     * Loads verified canonical content addressed by {@code blueId}.
+     * Loads verified canonical content addressed by {@code blueId} and runs
+     * completed resolution on that target, retaining any undemanded inner references.
      *
      * @param blueId Content BlueId selecting the canonical content
      * @return snapshot loaded from verified provider content

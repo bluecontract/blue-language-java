@@ -13,8 +13,10 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIdReferenceValidator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -238,24 +240,17 @@ public class NodeDeserializerTest {
 
     @Test
     public void shouldRejectInvalidListControlMetadata() {
-        // given
+        // given: controls are recognized only at the top of a list element (§11.3).
         String[] invalidDocuments = {
                 "mergePolicy: replace-all",
-                "$previous: prevHash",
-                "$previous:\n" +
-                        "  blueId: prevHash\n" +
-                        "  extra: value",
-                "$pos: -1\n" +
-                        "value: C",
-                "$pos: 1.5\n" +
-                        "value: C",
-                "$pos: \"1\"\n" +
-                        "value: C",
-                "$pos: 2147483648\n" +
-                        "value: C",
-                "$pos: 0",
-                "$previous:\n" +
-                        "  blueId: 123"
+                "items: [{ $previous: prevHash }]",
+                "items: [{ $previous: {blueId: prevHash, extra: value} }]",
+                "items: [{ $pos: -1, value: C }]",
+                "items: [{ $pos: 1.5, value: C }]",
+                "items: [{ $pos: \"1\", value: C }]",
+                "items: [{ $pos: 2147483648, value: C }]",
+                "items: [{ $pos: 0 }]",
+                "items: [{ $previous: {blueId: 123} }]"
         };
 
         // when
@@ -722,8 +717,6 @@ public class NodeDeserializerTest {
                 "schema:\n  enum:\n    - null",
                 "schema:\n  enum:\n    - {}",
                 "schema:\n  enum:\n    - $empty: true",
-                "schema:\n  enum:\n    - blueId: abc",
-                "schema:\n  enum:\n    - blueId: this#0",
                 "schema:\n  enum:\n    - value: 1\n      contracts: {}",
                 "schema:\n  enum:\n    - name: one\n      value: 1",
                 "schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0",
@@ -752,6 +745,20 @@ public class NodeDeserializerTest {
         assertEquals(new BigInteger("9007199254740992"), node.getSchema().getMinimum().getValue());
         assertEquals(new BigInteger("9007199254740991"), safeLargeCount.getSchema().getMinItems().getValue());
         assertEquals(new BigInteger("9007199254740992"), enumNode.getSchema().getEnum().get(0).getValue());
+    }
+
+    @Test
+    public void shouldValidateEnumReferenceSyntaxAtTheExactReferenceBoundary() {
+        // given
+        String[] ids = {"abc", "this#0"};
+        // when
+        for (String id : ids) {
+            Node parsed = YAML_MAPPER.readValue("schema:\n  enum:\n    - blueId: " + id, Node.class);
+            // then
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> BlueIdReferenceValidator.validate(parsed));
+            assertTrue(failure.getMessage().contains("/schema/enum/0/blueId"));
+        }
     }
 
     @Test
@@ -935,31 +942,87 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void shouldRejectReservedNullFields() {
+    public void shouldPreserveReservedNullFieldsUntilMandatoryPreprocessing() {
         // given
-        String[] invalidDocuments = {
+        String[] reservedFields = {
+                "name",
+                "description",
+                "mergePolicy",
+                "value",
+                "items",
+                "type",
+                "itemType",
+                "keyType",
+                "valueType",
+                "schema",
+                "contracts",
+                "blueId"
+        };
+        String[] sourceDocuments = {
                 "name: null",
                 "description: null",
                 "mergePolicy: null",
                 "value: null",
                 "items: null",
                 "type: null",
+                "itemType: null",
+                "keyType: null",
+                "valueType: null",
                 "schema: null",
-                "contracts: null"
+                "contracts: null",
+                "blueId: null"
         };
 
         // when
-        Throwable[] failures = new Throwable[invalidDocuments.length];
-        for (int index = 0; index < invalidDocuments.length; index++) {
-            String document = invalidDocuments[index];
-            failures[index] = captureFailure(
-                    () -> YAML_MAPPER.readValue(document, Node.class));
+        for (int index = 0; index < sourceDocuments.length; index++) {
+            Node raw = YAML_MAPPER.readValue(
+                    sourceDocuments[index], Node.class);
+
+            // then
+            Node rawReservedValue = "contracts".equals(
+                    reservedFields[index])
+                    ? raw.getContracts()
+                    : raw.getProperties().get(reservedFields[index]);
+            assertTrue(Nodes.isSourceNullLiteral(rawReservedValue),
+                    reservedFields[index]);
+            Node preprocessed = new Blue().preprocess(raw);
+            assertTrue(Nodes.isExactEmptyObject(preprocessed));
         }
+    }
+
+    @Test
+    public void shouldDistinguishSourceNullEmptyObjectAndEmptyList() {
+        // given
+        Node raw = YAML_MAPPER.readValue(
+                "x: null\n"
+                        + "emptyObject: {}\n"
+                        + "emptyList: []",
+                Node.class);
+        Node rawList = YAML_MAPPER.readValue(
+                "items: [null, {}, []]",
+                Node.class);
+
+        // when
+        Node preprocessed = new Blue().preprocess(raw);
+        Node preprocessedList = new Blue().preprocess(rawList);
 
         // then
-        for (Throwable failure : failures) {
-            assertInstanceOf(RuntimeException.class, failure);
-        }
+        assertTrue(Nodes.isSourceNullLiteral(
+                raw.getProperties().get("x")));
+        assertTrue(Nodes.isExactEmptyObject(
+                raw.getProperties().get("emptyObject")));
+        assertNotNull(raw.getProperties().get("emptyList").getItems());
+        assertTrue(Nodes.isSourceNullLiteral(rawList.getItems().get(0)));
+        assertTrue(Nodes.isExactEmptyObject(rawList.getItems().get(1)));
+        assertNotNull(rawList.getItems().get(2).getItems());
+
+        assertFalse(preprocessed.getProperties().containsKey("x"));
+        assertTrue(Nodes.isExactEmptyObject(
+                preprocessed.getProperties().get("emptyObject")));
+        assertNotNull(preprocessed.getProperties().get("emptyList").getItems());
+        assertTrue(Nodes.isEmptyPlaceholder(preprocessedList.getItems().get(0)));
+        assertTrue(Nodes.isExactEmptyObject(preprocessedList.getItems().get(1)));
+        assertNotNull(preprocessedList.getItems().get(2).getItems());
     }
 
     @Test

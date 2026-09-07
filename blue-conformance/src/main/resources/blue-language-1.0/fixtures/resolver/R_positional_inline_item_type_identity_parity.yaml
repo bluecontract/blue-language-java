@@ -1,0 +1,65 @@
+id: R_positional_inline_item_type_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: Positional list overlay canonicalization is final-payload based and
+  independent of whether the inherited item type is inline or referenced
+source:
+  type:
+    type: List
+    itemType:
+      name: Overlay Item Shape
+      type: Text
+    items:
+    - type:
+        name: Overlay Item Shape
+        type: Text
+      value: A
+    - type:
+        name: Overlay Item Shape
+        type: Text
+      value: B
+  items:
+  - $pos: 1
+    type:
+      name: Overlay Item Shape
+      type: Text
+    value: C
+alsoEquivalentTo:
+  type:
+    type: List
+    itemType:
+      blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+    items:
+    - type:
+        blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+      value: A
+    - type:
+        blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+      value: B
+  items:
+  - $pos: 1
+    type:
+      blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+    value: C
+provider:
+- requestedBlueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+  node:
+    name: Overlay Item Shape
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+expectedCanonicalOverlay:
+  type:
+    blueId: 2L7SZbWFLA1D1u7EyVFe1YsqbrctpTguD9o21ffEWtSD
+  items:
+  - type:
+      blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+    value: A
+  - type:
+      blueId: 6THShM7TfHuBai45KuvJwY9MdBwgZ9sQ1x2gqKWfZiik
+    value: C
+expectedCanonicalItems: [A, C]
+expectedCanonicalContainsControls: false
+expectedNodeBlueId: 4Xqxw8ovYddv3aDfRcDtJTqj3QoEkX9mUCB7CobmRaq9
+note: The canonical input contains the final list payload and a pure canonical
+  reference to the effective list type. Neither $pos nor representation of the
+  nested itemType participates in the parent identity.

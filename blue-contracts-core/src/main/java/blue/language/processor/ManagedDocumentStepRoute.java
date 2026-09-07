@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 
 import java.util.Objects;
@@ -17,21 +18,15 @@ public final class ManagedDocumentStepRoute {
     private final String channelKey;
     private final Node exactPayload;
     private final Node occurrenceEvent;
+    private final String matchingEventBlueId;
     private final ContractBundle frozenDispatchBundle;
 
     ManagedDocumentStepRoute(
             ManagedDocumentWorkKind workKind,
             String channelKey,
             Node exactPayload,
-            Node occurrenceEvent) {
-        this(workKind, channelKey, exactPayload, occurrenceEvent, null);
-    }
-
-    ManagedDocumentStepRoute(
-            ManagedDocumentWorkKind workKind,
-            String channelKey,
-            Node exactPayload,
             Node occurrenceEvent,
+            String matchingEventBlueId,
             ContractBundle frozenDispatchBundle) {
         this.workKind = Objects.requireNonNull(workKind, "workKind");
         if (workKind != ManagedDocumentWorkKind.TRIGGERED_EVENT
@@ -47,6 +42,8 @@ public final class ManagedDocumentStepRoute {
         this.occurrenceEvent = occurrenceEvent != null
                 ? occurrenceEvent.clone()
                 : null;
+        this.matchingEventBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                matchingEventBlueId, "matchingEventBlueId");
         this.frozenDispatchBundle = frozenDispatchBundle;
         if ((workKind == ManagedDocumentWorkKind.EMBEDDED_EVENT)
                 != (this.occurrenceEvent != null)) {
@@ -89,6 +86,19 @@ public final class ManagedDocumentStepRoute {
      */
     public Node occurrenceEvent() {
         return occurrenceEvent != null ? occurrenceEvent.clone() : null;
+    }
+
+    /**
+     * Returns the admitted identity of the semantic value handlers match.
+     *
+     * <p>For an embedded adapter this identifies {@link #occurrenceEvent()}.
+     * For every other routed work kind it identifies
+     * {@link #exactPayload()}.</p>
+     *
+     * @return exact event identity, including a cyclic-member identity
+     */
+    public String matchingEventBlueId() {
+        return matchingEventBlueId;
     }
 
     ContractBundle frozenDispatchBundle() {

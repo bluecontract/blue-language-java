@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 
@@ -23,17 +24,19 @@ public final class ManagedCheckpointCandidate {
     private final String handlerChannelKey;
     private final String logicalDeliveryKey;
     private final FrozenNode exactPayload;
+    private final String payloadBlueId;
 
     ManagedCheckpointCandidate(
             ManagedRootChannelOccurrence channelOccurrence,
             ManagedCheckpointDomain domain,
-            Node exactSubject,
+            FrozenNode exactSubject,
             String subjectBlueId,
             ManagedCheckpointState beforeState,
             boolean eligibleNew,
             String handlerChannelKey,
             String logicalDeliveryKey,
-            Node exactPayload) {
+            FrozenNode exactPayload,
+            String payloadBlueId) {
         this.channelOccurrence = Objects.requireNonNull(
                 channelOccurrence, "channelOccurrence");
         if (!channelOccurrence.externalSource()) {
@@ -41,9 +44,11 @@ public final class ManagedCheckpointCandidate {
                     "Checkpoint candidate requires an External Channel");
         }
         this.domain = Objects.requireNonNull(domain, "domain");
-        this.exactSubject = FrozenNode.fromNode(
-                Objects.requireNonNull(exactSubject, "exactSubject").clone());
-        this.subjectBlueId = requireText(subjectBlueId, "subjectBlueId");
+        this.exactSubject = Objects.requireNonNull(
+                exactSubject, "exactSubject");
+        this.subjectBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                subjectBlueId,
+                "subjectBlueId");
         this.beforeState = Objects.requireNonNull(
                 beforeState, "beforeState");
         this.eligibleNew = eligibleNew;
@@ -51,8 +56,11 @@ public final class ManagedCheckpointCandidate {
                 handlerChannelKey, "handlerChannelKey");
         this.logicalDeliveryKey = requireText(
                 logicalDeliveryKey, "logicalDeliveryKey");
-        this.exactPayload = FrozenNode.fromNode(
-                Objects.requireNonNull(exactPayload, "exactPayload").clone());
+        this.exactPayload = Objects.requireNonNull(
+                exactPayload, "exactPayload");
+        this.payloadBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                payloadBlueId,
+                "payloadBlueId");
     }
 
     /**
@@ -95,6 +103,24 @@ public final class ManagedCheckpointCandidate {
     public String subjectBlueId() { return subjectBlueId; }
 
     /**
+     * Returns the stable checkpoint representation to publish.
+     *
+     * <p>A resolved cursor for a cyclic member cannot be serialized as if it
+     * were standalone authored content. Its canonical persistent form is the
+     * already-proved member reference. Ordinary subjects retain their exact
+     * inline representation so custom ordering functions can read them later
+     * without an unrelated provider lookup.</p>
+     *
+     * @return detached exact persistent subject representation
+     */
+    Node settlementSubject() {
+        return BlueIds.hasCyclicMemberSeparator(subjectBlueId)
+                && !exactSubject.isReferenceOnly()
+                ? new Node().blueId(subjectBlueId)
+                : exactSubject.toNode();
+    }
+
+    /**
      * Returns the exact raw-key state observed before comparison.
      *
      * @return immutable complete before side
@@ -128,6 +154,17 @@ public final class ManagedCheckpointCandidate {
      * @return detached exact payload
      */
     public Node exactPayload() { return exactPayload.toNode(); }
+
+    /**
+     * Returns the identity proved when the external payload was admitted.
+     *
+     * <p>This value is carried separately because a cyclic member has no
+     * standalone ordinary identity input and therefore must not be rehashed
+     * from its frozen representation.</p>
+     *
+     * @return exact payload BlueId, including a cyclic-member identity
+     */
+    public String payloadBlueId() { return payloadBlueId; }
 
     private static String requireText(String value, String label) {
         if (value == null || value.isEmpty()) {

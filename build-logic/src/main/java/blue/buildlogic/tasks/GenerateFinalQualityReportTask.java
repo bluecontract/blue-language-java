@@ -34,6 +34,7 @@ import org.gradle.work.DisableCachingByDefault;
 /** Produces the final source, API, test, docs, benchmark, and release eligibility report. */
 @DisableCachingByDefault(because = "Source commit and executed release evidence are invocation facts")
 public abstract class GenerateFinalQualityReportTask extends DefaultTask {
+    public static final int DEFAULT_MAXIMUM_ORDINARY_CLASS_LINES = 1200;
 
     public GenerateFinalQualityReportTask() {
         getExpectedModuleCount().convention(7);
@@ -41,7 +42,7 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
                 .convention(BuildLogicConstants.EXPECTED_LANGUAGE_FIXTURE_COUNT);
         getExpectedContractsFixtures()
                 .convention(BuildLogicConstants.EXPECTED_CONTRACTS_FIXTURE_COUNT);
-        getMaximumOrdinaryClassLines().convention(1200);
+        getMaximumOrdinaryClassLines().convention(DEFAULT_MAXIMUM_ORDINARY_CLASS_LINES);
         getBlueFacadeLineLimit().convention(700);
         getBlueFacadeMemberLimit().convention(24);
         getPublicFacadeMemberLimit().convention(100);

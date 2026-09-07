@@ -19,7 +19,7 @@ input:
         checkpointDomain: domain-v1
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
         result:
@@ -29,7 +29,7 @@ input:
             val: 1
       unused:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: other
         result:
           blueId: oBKKfsTkqb9pcSZUd1edF1c57QW2uHKBsWR2EbXYXcv

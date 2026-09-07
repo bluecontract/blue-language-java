@@ -1,9 +1,11 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
@@ -55,6 +57,7 @@ final class ContractHeaderLoader {
     private final ContractContributionCollector contributions;
     private final ExecutableBodyLoader executableBodies;
     private final ContractSnapshotFactory snapshots;
+    private final ProcessingSnapshotManager snapshotManager;
     private final boolean canonicalContractOrder;
     private GasSchedule gasSchedule = GasSchedule.contracts10();
 
@@ -66,6 +69,7 @@ final class ContractHeaderLoader {
             ContractContributionCollector contributions,
             ExecutableBodyLoader executableBodies,
             ContractSnapshotFactory snapshots,
+            ProcessingSnapshotManager snapshotManager,
             boolean canonicalContractOrder) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.converter = Objects.requireNonNull(converter, "converter");
@@ -75,6 +79,7 @@ final class ContractHeaderLoader {
         this.contributions = Objects.requireNonNull(contributions, "contributions");
         this.executableBodies = Objects.requireNonNull(executableBodies, "executableBodies");
         this.snapshots = Objects.requireNonNull(snapshots, "snapshots");
+        this.snapshotManager = snapshotManager;
         this.canonicalContractOrder = canonicalContractOrder;
     }
 
@@ -101,17 +106,24 @@ final class ContractHeaderLoader {
         }
         for (Map.Entry<String, FrozenNode> entry : contracts.getProperties().entrySet()) {
             if (!EffectiveContractResolver.isDirectProcessorStateKey(entry.getKey())) {
-                preflightDirectContractHeader(entry.getKey(), entry.getValue());
+                preflightDirectContractHeader(
+                        entry.getKey(), entry.getValue(), null);
             }
         }
     }
 
-    void preflightDirectContractHeader(String key, FrozenNode contractNode) {
+    void preflightDirectContractHeader(
+            String key,
+            FrozenNode contractNode,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         validateContractKey(key);
         if (contractNode == null || contractNode.isReferenceOnly()) {
             return;
         }
-        String typeBlueId = effectiveContracts.typeBlueId(contractNode);
+        String typeBlueId = exactSourceTypeBlueId(
+                contractNode,
+                "Direct contract header '" + key + "'",
+                canonicalTypeIdentities);
         if (typeBlueId == null) {
             return;
         }
@@ -124,13 +136,43 @@ final class ContractHeaderLoader {
         validateReservedContractRole(key, contractClass);
     }
 
+    private String exactSourceTypeBlueId(
+            FrozenNode contractNode,
+            String purpose,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        FrozenNode type = contractNode != null
+                ? contractNode.getType()
+                : null;
+        if (type == null) {
+            return null;
+        }
+        if (type.isReferenceOnly()) {
+            return type.getReferenceBlueId();
+        }
+        if (canonicalTypeIdentities != null) {
+            Optional<String> established = canonicalTypeIdentities
+                    .findCanonicalTypeBlueId(type.toNode());
+            if (established.isPresent()) {
+                return established.get();
+            }
+        }
+        return CanonicalIdentityEvidence.sourceTypeBlueId(
+                type.toNode(),
+                snapshotManager,
+                purpose + " type identity");
+    }
+
     ContractBundle load(
             Node selectedScopeNode,
             FrozenNode effectiveScopeNode,
             String scopePath,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
-        ContractBundle.Builder bundle = ContractBundle.builder();
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
+        ContractBundle.Builder bundle = ContractBundle.builder(
+                Objects.requireNonNull(typeIdentities, "typeIdentities"));
         Node exactSelectedScope =
                 effectiveContracts.materializeSelectedContractsMap(selectedScopeNode);
         Node selectedContractMap =
@@ -154,10 +196,13 @@ final class ContractHeaderLoader {
             }
         }
         Map<String, FrozenNode> contractNodes =
-                effectiveContracts.effectiveApplicationContracts(effectiveScopeNode);
+                effectiveContracts.effectiveApplicationContracts(
+                        effectiveScopeNode,
+                        typeIdentities);
         Map<String, String> typeBlueIds = new LinkedHashMap<>();
         for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
-            String typeBlueId = effectiveContracts.typeBlueId(entry.getValue());
+            String typeBlueId = effectiveContracts.typeBlueId(
+                    entry.getValue(), typeIdentities);
             if (typeBlueId != null) {
                 typeBlueIds.put(entry.getKey(), typeBlueId);
             }
@@ -180,9 +225,15 @@ final class ContractHeaderLoader {
                     typeBlueIds,
                     contractNodes,
                     recognitionMeter,
-                    recognitionReason);
+                    recognitionReason,
+                    typeIdentities,
+                    mappingEvidence,
+                    identityMemo);
         }
-        return bundle.build();
+        ContractBundle result = bundle.build();
+        validateEmbeddedCollectionChannels(
+                result, scopePath, recognitionMeter);
+        return result;
     }
 
     private void recognize(
@@ -195,7 +246,10 @@ final class ContractHeaderLoader {
             Map<String, String> typeBlueIds,
             Map<String, FrozenNode> contractNodes,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
         String typeBlueId = typeBlueIds.get(key);
         if (typeBlueId == null) {
             throw new MustUnderstandFailureException(
@@ -216,13 +270,31 @@ final class ContractHeaderLoader {
         List<String> deferredFields = handlerContract
                 ? executableBodies.deferredHandlerFields(executableBodyFields)
                 : executableBodyFields;
+        List<String> exactSourceFields = new ArrayList<>(deferredFields);
+        for (String nodeField : registry.nodeValuedHeaderFields(typeBlueId)) {
+            if (!exactSourceFields.contains(nodeField)) {
+                exactSourceFields.add(nodeField);
+            }
+        }
+        String eventField = EffectiveContractSnapshotConstants
+                .DispatchField.EVENT;
+        boolean managedEventChannel = TriggeredEventChannel.class
+                .isAssignableFrom(contractClass)
+                || EmbeddedNodeChannel.class.isAssignableFrom(contractClass)
+                || EmbeddedCollectionEventChannel.class
+                .isAssignableFrom(contractClass);
+        if (managedEventChannel && !exactSourceFields.contains(eventField)) {
+            exactSourceFields.add(eventField);
+        }
         ContractContributionResolver.BindingResolution binding =
                 contributions.collect(
                         exactSelectedScope,
                         effectiveScopeNode,
                         key,
                         true,
-                        deferredFields);
+                        exactSourceFields,
+                        executableBodyFields,
+                        identityMemo);
         List<String> sourceContributions = binding.sourceContributions();
         if (recognitionMeter != null) {
             recognitionMeter.recognizeHeader(
@@ -235,14 +307,20 @@ final class ContractHeaderLoader {
         }
         Node executableContract = executableBodies.exactExecutableContract(
                 effectiveContract,
-                deferredFields,
+                exactSourceFields,
                 binding.exactExecutableBodies());
         FrozenNode exactExecutable = FrozenNode.fromResolvedNode(executableContract);
         Node conversionNode = deferredFields.isEmpty()
                 ? executableContract
                 : executableBodies.headerNode(executableContract, deferredFields);
-        Contract contract = converter.convertWithType(
-                conversionNode, Contract.class, false);
+        Contract contract = mappingEvidence.convertContract(
+                key,
+                conversionNode,
+                deferredFields,
+                Contract.class,
+                false,
+                converter,
+                typeIdentities);
         if (contract == null) {
             return;
         }
@@ -255,19 +333,29 @@ final class ContractHeaderLoader {
         contract.setKey(key);
         contract.setTypeBlueId(typeBlueId);
 
+        FrozenNode normalizedExecutable = contract instanceof ChannelContract
+                ? NormalizedRuntimeContribution.channel(
+                        exactExecutable,
+                        typeBlueId,
+                        exactSourceFields,
+                        typeIdentities,
+                        snapshotManager)
+                : exactExecutable;
+
         EffectiveContractSnapshot.Builder snapshot = snapshots.begin(
                 scopePath,
                 key,
                 typeBlueId,
                 contractOrder(contract),
                 sourceContributions);
-        snapshots.addHeaderFields(snapshot, exactExecutable, executableBodyFields);
+        snapshots.addHeaderFields(
+                snapshot, normalizedExecutable, executableBodyFields);
         classify(
                 bundle,
                 snapshot,
                 contract,
                 effectiveContract,
-                exactExecutable,
+                normalizedExecutable,
                 executableBodyFields,
                 binding,
                 scopePath,
@@ -275,7 +363,9 @@ final class ContractHeaderLoader {
                 typeBlueId,
                 contractNodes,
                 typeBlueIds,
-                recognitionMeter);
+                recognitionMeter,
+                typeIdentities,
+                mappingEvidence);
         bundle.addEffectiveContractSnapshot(snapshot.build());
     }
 
@@ -292,9 +382,19 @@ final class ContractHeaderLoader {
             String typeBlueId,
             Map<String, FrozenNode> contractNodes,
             Map<String, String> typeBlueIds,
-            ContractRecognitionMeter recognitionMeter) {
+            ContractRecognitionMeter recognitionMeter,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence) {
         if (contract instanceof ChannelContract) {
-            addChannel(bundle, snapshot, key, (ChannelContract) contract, effectiveContract, typeBlueId);
+            addChannel(
+                    bundle,
+                    snapshot,
+                    key,
+                    (ChannelContract) contract,
+                    effectiveContract,
+                    exactExecutable,
+                    typeBlueId,
+                    binding);
         } else if (contract instanceof HandlerContract) {
             addHandler(
                     bundle,
@@ -308,7 +408,9 @@ final class ContractHeaderLoader {
                     typeBlueId,
                     contractNodes,
                     typeBlueIds,
-                    recognitionMeter);
+                    recognitionMeter,
+                    typeIdentities,
+                    mappingEvidence);
         } else if (contract instanceof ProcessEmbedded) {
             ProcessEmbedded embedded = (ProcessEmbedded) contract;
             bundle.setEmbedded(embedded, effectiveContract);
@@ -335,14 +437,16 @@ final class ContractHeaderLoader {
             String key,
             ChannelContract channel,
             FrozenNode effectiveContract,
-            String typeBlueId) {
+            FrozenNode exactContract,
+            String typeBlueId,
+            ContractContributionResolver.BindingResolution binding) {
         if (!ProcessorManagedChannelTypes.contains(channel)
                 && !registry.lookupChannel(channel).isPresent()) {
             throw new MustUnderstandFailureException(
                     "Unsupported contract type: " + typeBlueId,
                     ProcessorErrorCategory.UnsupportedRuntimeType);
         }
-        bundle.addChannel(key, channel, effectiveContract);
+        bundle.addChannel(key, channel, exactContract);
         snapshot.role(
                         ProcessorManagedChannelTypes.contains(channel)
                                 ? EffectiveContractSnapshotConstants.Role.PROCESSOR_CHANNEL
@@ -352,14 +456,98 @@ final class ContractHeaderLoader {
                         channel.getOrder());
         if (channel instanceof EmbeddedNodeChannel) {
             EmbeddedNodeChannel embedded = (EmbeddedNodeChannel) channel;
+            Node exactEvent = exactManagedEvent(
+                    key, effectiveContract, binding);
+            embedded.setEvent(exactEvent != null ? exactEvent.clone() : null);
             snapshot.dispatchField(
                     EffectiveContractSnapshotConstants.DispatchField.SOURCE_PATH,
                     embedded.getSourcePath());
-            snapshots.addEventDispatch(snapshot, embedded.getEvent());
+            snapshots.addEventDispatch(snapshot, exactEvent);
+        } else if (channel instanceof EmbeddedCollectionEventChannel) {
+            EmbeddedCollectionEventChannel embedded =
+                    (EmbeddedCollectionEventChannel) channel;
+            Node exactEvent = exactManagedEvent(
+                    key, effectiveContract, binding);
+            embedded.setEvent(exactEvent != null ? exactEvent.clone() : null);
+            snapshot.dispatchField(
+                    EffectiveContractSnapshotConstants.DispatchField
+                            .COLLECTION_PATH,
+                    embedded.getCollectionPath());
+            snapshot.dispatchField(
+                    EffectiveContractSnapshotConstants.DispatchField
+                            .INCLUDE_DESCENDANTS,
+                    embedded.includesDescendants());
+            snapshots.addEventDispatch(snapshot, exactEvent);
         } else if (channel instanceof TriggeredEventChannel) {
-            snapshots.addEventDispatch(
-                    snapshot, ((TriggeredEventChannel) channel).getEvent());
+            TriggeredEventChannel triggered = (TriggeredEventChannel) channel;
+            Node exactEvent = exactManagedEvent(
+                    key, effectiveContract, binding);
+            triggered.setEvent(exactEvent != null ? exactEvent.clone() : null);
+            snapshots.addEventDispatch(snapshot, exactEvent);
         }
+    }
+
+    private void validateEmbeddedCollectionChannels(
+            ContractBundle bundle,
+            String scopePath,
+            ContractRecognitionMeter recognitionMeter) {
+        for (ContractBundle.ChannelBinding binding
+                : bundle.channelsOfType(
+                        EmbeddedCollectionEventChannel.class)) {
+            EmbeddedCollectionEventChannelSupport.validateHeader(
+                    (EmbeddedCollectionEventChannel) binding.contract(),
+                    bundle.embeddedScopeDeclaration(),
+                    scopePath,
+                    gasSchedule,
+                    recognitionMeter);
+        }
+    }
+
+    private Node exactManagedEvent(
+            String key,
+            FrozenNode effectiveContract,
+            ContractContributionResolver.BindingResolution binding) {
+        String eventField = EffectiveContractSnapshotConstants
+                .DispatchField.EVENT;
+        Node exactEvent = binding.exactExecutableBodies().get(eventField);
+        FrozenNode effectiveEvent = effectiveContract != null
+                && effectiveContract.getProperties() != null
+                ? effectiveContract.getProperties().get(eventField)
+                : null;
+        if (effectiveEvent != null
+                && exactEvent == null
+                && !hasOnlyEventDocumentation(effectiveEvent)) {
+            throw new MustUnderstandFailureException(
+                    "Cannot establish exact event Source for managed channel '"
+                            + key + "'",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        return exactEvent;
+    }
+
+    /**
+     * Distinguishes the inherited optional-field descriptor on the built-in
+     * managed channel types from an effective event matcher.
+     *
+     * <p>Name and description are declaration documentation and are ignored
+     * by matching. Any other modeled field is matcher content and therefore
+     * still requires an exact Source contribution.</p>
+     */
+    private boolean hasOnlyEventDocumentation(FrozenNode event) {
+        return event.getType() == null
+                && event.getItemType() == null
+                && event.getKeyType() == null
+                && event.getValueType() == null
+                && event.getValue() == null
+                && !event.hasItems()
+                && !event.hasProperties()
+                && event.getContracts() == null
+                && event.getReferenceBlueId() == null
+                && event.getSchema() == null
+                && event.getMergePolicy() == null
+                && event.getPreviousBlueId() == null
+                && event.getPosition() == null
+                && event.getBlue() == null;
     }
 
     private void addHandler(
@@ -374,7 +562,9 @@ final class ContractHeaderLoader {
             String typeBlueId,
             Map<String, FrozenNode> contractNodes,
             Map<String, String> typeBlueIds,
-            ContractRecognitionMeter recognitionMeter) {
+            ContractRecognitionMeter recognitionMeter,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence) {
         Optional<HandlerProcessor<? extends HandlerContract>> processor =
                 registry.lookupHandler(handler);
         if (!processor.isPresent()) {
@@ -389,14 +579,22 @@ final class ContractHeaderLoader {
                 processor.get(),
                 contractNodes,
                 typeBlueIds,
-                recognitionMeter);
+                recognitionMeter,
+                typeIdentities,
+                mappingEvidence);
         handler.setChannelKey(channelKey);
-        if (hasRegisteredSameScopeChannel(channelKey, contractNodes, typeBlueIds)) {
+        if (hasRegisteredSameScopeChannel(
+                channelKey,
+                contractNodes,
+                typeBlueIds,
+                typeIdentities,
+                mappingEvidence)) {
             bundle.addHandler(
                     key,
                     handler,
                     exactExecutable,
-                    executableBodyFields);
+                    executableBodyFields,
+                    typeIdentities);
         }
         snapshot.role(EffectiveContractSnapshotConstants.Role.HANDLER)
                 .dispatchField(
@@ -482,7 +680,9 @@ final class ContractHeaderLoader {
             HandlerProcessor<? extends HandlerContract> processor,
             Map<String, FrozenNode> contractNodes,
             Map<String, String> typeBlueIds,
-            ContractRecognitionMeter recognitionMeter) {
+            ContractRecognitionMeter recognitionMeter,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence) {
         String channelKey = trimToNull(handler.getChannelKey());
         if (channelKey == null) {
             RuntimeWorkSession work = recognitionMeter != null
@@ -496,7 +696,9 @@ final class ContractHeaderLoader {
                     contractNodes,
                     typeBlueIds,
                     converter,
-                    work);
+                    work,
+                    typeIdentities,
+                    mappingEvidence);
             HandlerProcessor<HandlerContract> typed =
                     (HandlerProcessor<HandlerContract>) processor;
             try {
@@ -524,7 +726,9 @@ final class ContractHeaderLoader {
     private boolean hasRegisteredSameScopeChannel(
             String channelKey,
             Map<String, FrozenNode> contractNodes,
-            Map<String, String> typeBlueIds) {
+            Map<String, String> typeBlueIds,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence) {
         FrozenNode channelNode = contractNodes.get(channelKey);
         if (channelNode == null) {
             return false;
@@ -538,8 +742,14 @@ final class ContractHeaderLoader {
                 || !ChannelContract.class.isAssignableFrom(channelClass)) {
             return false;
         }
-        Contract converted = converter.convertWithType(
-                channelNode.toNode(), Contract.class, false);
+        Contract converted = mappingEvidence.convertContract(
+                channelKey,
+                channelNode.toNode(),
+                Collections.<String>emptyList(),
+                Contract.class,
+                false,
+                converter,
+                typeIdentities);
         if (!(converted instanceof ChannelContract)) {
             return false;
         }

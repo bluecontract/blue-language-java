@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
@@ -21,8 +23,10 @@ public final class HandlerMatchContext {
     private final FrozenNode eventFrozen;
     private final Node occurrenceEvent;
     private final FrozenNode occurrenceEventFrozen;
+    private final String occurrenceEventBlueId;
     private final Map<String, MarkerContract> markers;
     private final ContractMatchingService matchingService;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
     private final RuntimeWorkSession runtimeWorkSession;
     private final ExternalChannelFunctionEvaluation.MatcherSession
             matcherSession;
@@ -32,14 +36,17 @@ public final class HandlerMatchContext {
                         String channelKey,
                         Node event,
                         Map<String, MarkerContract> markers,
-                        ContractMatchingService matchingService) {
+                        ContractMatchingService matchingService,
+                        CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         this(scopePath,
                 handlerKey,
                 channelKey,
                 event,
                 event,
+                null,
                 markers,
                 matchingService,
+                canonicalTypeIdentities,
                 null,
                 null);
     }
@@ -50,14 +57,17 @@ public final class HandlerMatchContext {
                         Node event,
                         Map<String, MarkerContract> markers,
                         ContractMatchingService matchingService,
+                        CanonicalTypeIdentityLookup canonicalTypeIdentities,
                         RuntimeWorkSession runtimeWorkSession) {
         this(scopePath,
                 handlerKey,
                 channelKey,
                 event,
                 event,
+                null,
                 markers,
                 matchingService,
+                canonicalTypeIdentities,
                 runtimeWorkSession,
                 null);
     }
@@ -67,8 +77,10 @@ public final class HandlerMatchContext {
                         String channelKey,
                         Node event,
                         Node occurrenceEvent,
+                        String occurrenceEventBlueId,
                         Map<String, MarkerContract> markers,
                         ContractMatchingService matchingService,
+                        CanonicalTypeIdentityLookup canonicalTypeIdentities,
                         RuntimeWorkSession runtimeWorkSession,
                         ExternalChannelFunctionEvaluation.MatcherSession
                                 matcherSession) {
@@ -86,10 +98,22 @@ public final class HandlerMatchContext {
                         ? FrozenNode.fromResolvedNode(
                                 occurrenceEvent)
                         : null;
+        this.occurrenceEventBlueId = occurrenceEventBlueId != null
+                ? BlueIds.requireBlueIdOrCyclicMember(
+                        occurrenceEventBlueId,
+                        "occurrenceEventBlueId")
+                : null;
+        if (occurrenceEvent == null
+                && this.occurrenceEventBlueId != null) {
+            throw new IllegalArgumentException(
+                    "occurrenceEventBlueId requires occurrenceEvent");
+        }
         this.markers = markers == null
                 ? Collections.emptyMap()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(markers));
         this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         this.runtimeWorkSession = runtimeWorkSession;
         this.matcherSession = matcherSession;
     }
@@ -199,9 +223,19 @@ public final class HandlerMatchContext {
                     || expected == null) {
                 return false;
             }
+            String candidateTypeBlueId =
+                    CanonicalIdentityEvidence.resolvedTypeBlueId(
+                            candidateType,
+                            canonicalTypeIdentities,
+                            "Handler event declared type");
+            String expectedTypeBlueId =
+                    CanonicalIdentityEvidence.resolvedTypeBlueId(
+                            expected,
+                            canonicalTypeIdentities,
+                            "Handler expected declared type");
             return matcherSession.isAssignableToType(
-                    candidateType.blueId(),
-                    expected.blueId());
+                    candidateTypeBlueId,
+                    expectedTypeBlueId);
         }
         return matchingService.eventDeclaredTypeIsSameOrDescendantOf(
                 occurrenceEvent != null
@@ -225,6 +259,12 @@ public final class HandlerMatchContext {
         }
         FrozenNode frozenPattern =
                 FrozenNode.fromResolvedNode(pattern);
+        if (occurrenceEventBlueId != null
+                && frozenPattern.isReferenceOnly()
+                && occurrenceEventBlueId.equals(
+                        frozenPattern.getReferenceBlueId())) {
+            return true;
+        }
         return matcherSession != null
                 ? matcherSession.matches(
                         occurrenceEventFrozen,

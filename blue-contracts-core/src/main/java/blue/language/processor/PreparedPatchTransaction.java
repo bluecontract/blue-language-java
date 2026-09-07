@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
@@ -33,6 +34,9 @@ class PreparedPatchTransaction implements AutoCloseable {
     private FrozenNode observedCanonical;
     private FrozenNode observedResolved;
     private boolean observedResolutionComplete = true;
+    private boolean observedSourceBacked;
+    private CanonicalTypeIdentityLookup observedCanonicalTypeIdentities =
+            CanonicalTypeIdentityLookup.incomplete();
     private long observedVersion = Long.MIN_VALUE;
     private boolean advanced;
     private boolean closed;
@@ -98,7 +102,8 @@ class PreparedPatchTransaction implements AutoCloseable {
                 && prepared.isBasedOn(
                         actual.canonical,
                         actual.resolved,
-                        actual.resolutionComplete)) {
+                        actual.resolutionComplete,
+                        actual.sourceBacked)) {
             result = prepared.result();
         } else {
             if (preview != null) {
@@ -111,11 +116,14 @@ class PreparedPatchTransaction implements AutoCloseable {
             if (!planningSession.isBasedOn(
                     actual.canonical,
                     actual.resolved,
-                    actual.resolutionComplete)) {
+                    actual.resolutionComplete,
+                    actual.sourceBacked)) {
                 planningSession.rebase(
                         actual.canonical,
                         actual.resolved,
-                        actual.resolutionComplete);
+                        actual.resolutionComplete,
+                        actual.canonicalTypeIdentities,
+                        actual.sourceBacked);
                 runtime.counters().recordSuffixRebase();
                 runtime.observe(
                         ProcessingMetricId.SEQUENCE_SUFFIX_REBASES,
@@ -263,7 +271,9 @@ class PreparedPatchTransaction implements AutoCloseable {
                         runtime.executableBodyFieldsByType,
                         runtime.entryEmbeddedScopePlans(),
                         roots.resolutionComplete,
-                        runtime.strictPlatformInvocation);
+                        runtime.strictPlatformInvocation,
+                        roots.canonicalTypeIdentities,
+                        roots.sourceBacked);
         return new SequentialPatchPlanningSession(
                 originScope,
                 planning,
@@ -300,7 +310,8 @@ class PreparedPatchTransaction implements AutoCloseable {
                 && prepared.isBasedOn(
                         roots.canonical,
                         roots.resolved,
-                        roots.resolutionComplete)) {
+                        roots.resolutionComplete,
+                        roots.sourceBacked)) {
             sequenceSnapshotManager =
                     preview.takeSequenceSnapshotManager();
         }
@@ -359,37 +370,56 @@ class PreparedPatchTransaction implements AutoCloseable {
             return new SequenceRoots(
                     observedCanonical,
                     observedResolved,
-                    observedResolutionComplete);
+                    observedResolutionComplete,
+                    observedCanonicalTypeIdentities,
+                    observedSourceBacked);
         }
         ResolvedSnapshot current = runtime.snapshot;
         if (current != null) {
-            observedCanonical = current.frozenCanonicalRoot();
+            observedCanonical = runtime.selectedRootWithoutResolution();
             observedResolved = current.frozenResolvedRoot();
             observedResolutionComplete = current.isResolutionComplete();
+            observedSourceBacked = runtime.selectedDocumentBacked
+                    || current.isSourceBacked();
+            observedCanonicalTypeIdentities =
+                    current.canonicalTypeIdentities();
         } else {
             PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
             observedCanonical = planning.canonicalPlanner().root();
             observedResolved = planning.resolvedPlanner().root();
             observedResolutionComplete = planning.isResolutionComplete();
+            observedSourceBacked = planning.isSourceBacked();
+            observedCanonicalTypeIdentities =
+                    planning.canonicalTypeIdentities();
         }
         observedVersion = runtime.stateVersion;
         return new SequenceRoots(
                 observedCanonical,
                 observedResolved,
-                observedResolutionComplete);
+                observedResolutionComplete,
+                observedCanonicalTypeIdentities,
+                observedSourceBacked);
     }
 
     private void rememberCurrentRoots(BatchPatchResult result) {
         if (runtime.snapshot != null) {
-            observedCanonical = runtime.snapshot.frozenCanonicalRoot();
+            observedCanonical = runtime.selectedRootWithoutResolution();
             observedResolved = runtime.snapshot.frozenResolvedRoot();
             observedResolutionComplete =
                     runtime.snapshot.isResolutionComplete();
+            observedSourceBacked =
+                    runtime.selectedDocumentBacked
+                            || runtime.snapshot.isSourceBacked();
+            observedCanonicalTypeIdentities =
+                    runtime.snapshot.canonicalTypeIdentities();
         } else {
             observedCanonical = result.canonicalRoot();
             observedResolved = result.resolvedRoot();
             observedResolutionComplete = result.isResolutionComplete();
+            observedSourceBacked = result.isSourceBacked();
+            observedCanonicalTypeIdentities =
+                    result.canonicalTypeIdentities();
         }
         observedVersion = runtime.stateVersion;
     }
@@ -444,6 +474,8 @@ class PreparedPatchTransaction implements AutoCloseable {
         sequenceSnapshotManager = null;
         observedCanonical = null;
         observedResolved = null;
+        observedCanonicalTypeIdentities =
+                CanonicalTypeIdentityLookup.incomplete();
         closed = true;
         if (managerToRelease != null) {
             managerToRelease.releaseTransientState();
@@ -461,16 +493,23 @@ class PreparedPatchTransaction implements AutoCloseable {
         private final FrozenNode canonical;
         private final FrozenNode resolved;
         private final boolean resolutionComplete;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+        private final boolean sourceBacked;
 
         private SequenceRoots(
                 FrozenNode canonical,
                 FrozenNode resolved,
-                boolean resolutionComplete) {
+                boolean resolutionComplete,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities,
+                boolean sourceBacked) {
             this.canonical = Objects.requireNonNull(
                     canonical, "canonical");
             this.resolved = Objects.requireNonNull(
                     resolved, "resolved");
             this.resolutionComplete = resolutionComplete;
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
+            this.sourceBacked = sourceBacked;
         }
     }
 }

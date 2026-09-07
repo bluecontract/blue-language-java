@@ -1,9 +1,10 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,7 +34,15 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event) {
         return dispatch(
-                scopePath, bundle, channelKey, event, event, null,
+                scopePath,
+                bundle,
+                channelKey,
+                event,
+                event,
+                CheckpointIdentityCalculator.identity(
+                        event, owner.languageRuntimeAccess()),
+                null,
+                null,
                 java.util.Collections.<ExactBlueValue>emptyList(), false);
     }
 
@@ -42,12 +51,42 @@ final class ScopeHandlerDispatcher {
             ContractBundle bundle,
             String channelKey,
             FrozenNode exactEvent,
+            String exactEventBlueId,
             List<ExactBlueValue> carriedExactValues) {
+        return dispatch(
+                scopePath,
+                bundle,
+                channelKey,
+                exactEvent,
+                exactEventBlueId,
+                carriedExactValues,
+                false);
+    }
+
+    boolean dispatch(
+            String scopePath,
+            ContractBundle bundle,
+            String channelKey,
+            FrozenNode exactEvent,
+            String exactEventBlueId,
+            List<ExactBlueValue> carriedExactValues,
+            boolean allowTerminatingScope) {
         FrozenNode carried = Objects.requireNonNull(exactEvent, "exactEvent");
+        String admittedEventBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                exactEventBlueId,
+                "exactEventBlueId");
         Node event = carried.toNode();
         return dispatch(
-                scopePath, bundle, channelKey, event, event, carried,
-                carriedExactValues, false);
+                scopePath,
+                bundle,
+                channelKey,
+                event,
+                event,
+                admittedEventBlueId,
+                carried,
+                admittedEventBlueId,
+                carriedExactValues,
+                allowTerminatingScope);
     }
 
     boolean dispatch(
@@ -62,6 +101,9 @@ final class ScopeHandlerDispatcher {
                 channelKey,
                 event,
                 event,
+                CheckpointIdentityCalculator.identity(
+                        event, owner.languageRuntimeAccess()),
+                null,
                 null,
                 java.util.Collections.<ExactBlueValue>emptyList(),
                 allowTerminatingScope);
@@ -72,15 +114,35 @@ final class ScopeHandlerDispatcher {
             ContractBundle bundle,
             String channelKey,
             Node event,
-            Node occurrenceEvent) {
+            Node occurrenceEvent,
+            String occurrenceEventBlueId) {
+        Node checkedEvent = Objects.requireNonNull(event, "event");
+        Node checkedOccurrence = Objects.requireNonNull(
+                occurrenceEvent, "occurrenceEvent");
+        String admittedOccurrenceBlueId =
+                BlueIds.requireBlueIdOrCyclicMember(
+                        occurrenceEventBlueId,
+                        "occurrenceEventBlueId");
+        FrozenNode frozenEvent = FrozenNode.fromResolvedNode(
+                checkedEvent.clone());
+        FrozenNode frozenOccurrence = FrozenNode.fromResolvedNode(
+                checkedOccurrence.clone());
+        String eventBlueId = CheckpointIdentityCalculator.identity(
+                checkedEvent,
+                owner.languageRuntimeAccess());
         return dispatch(
                 scopePath,
                 bundle,
                 channelKey,
-                event,
-                occurrenceEvent,
-                null,
-                java.util.Collections.<ExactBlueValue>emptyList(),
+                checkedEvent,
+                checkedOccurrence,
+                admittedOccurrenceBlueId,
+                frozenEvent,
+                eventBlueId,
+                java.util.Collections.singletonList(
+                        new ExactBlueValue(
+                                frozenOccurrence,
+                                admittedOccurrenceBlueId)),
                 false);
     }
 
@@ -90,7 +152,9 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event,
             Node occurrenceEvent,
+            String occurrenceEventBlueId,
             FrozenNode exactEvent,
+            String exactEventBlueId,
             List<ExactBlueValue> carriedExactValues,
             boolean allowTerminatingScope) {
         ProcessingObserver metrics = owner.observer();
@@ -113,6 +177,7 @@ final class ScopeHandlerDispatcher {
                     channelKey,
                     event,
                     occurrenceEvent,
+                    occurrenceEventBlueId,
                     bundle,
                     handler,
                     metrics)) {
@@ -129,6 +194,8 @@ final class ScopeHandlerDispatcher {
                     event,
                     occurrenceEvent,
                     exactEvent,
+                    exactEventBlueId,
+                    occurrenceEventBlueId,
                     carriedExactValues,
                     bundle,
                     handler,
@@ -146,46 +213,69 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event,
             Node occurrenceEvent,
+            String occurrenceEventBlueId,
             ContractBundle bundle,
             ContractBundle.HandlerBinding handler,
             ProcessingObserver metrics) {
-        RuntimeWorkSession matchWork = runtime.newRuntimeWorkSession(
-                execution.blue());
-        ExternalChannelFunctionEvaluation.MatcherSession matcherSession =
-                runtime.externalChannelMatcherSessions().open();
-        HandlerMatchContext context = new HandlerMatchContext(
-                scopePath,
-                handler.key(),
-                channelKey,
-                event,
-                occurrenceEvent,
-                bundle.markers(),
-                owner.matchingService(),
-                matchWork,
-                matcherSession);
-        ProcessingObservations.record(
-                metrics, ProcessingMetricId.HANDLER_MATCH_ATTEMPTS, 1L);
-        runtime.chargeHandlerCandidateTested(scopePath, handler.key());
-        long matchStart = System.nanoTime();
+        RuntimeWorkSession matchWork = null;
+        ExternalChannelFunctionEvaluation.MatcherSession matcherSession = null;
+        Boolean matched = null;
+        Throwable failure = null;
+        boolean evidenceUnavailable = false;
+        long matchStart = 0L;
+        boolean timingStarted = false;
         try {
-            boolean matches = ProcessorEngine.matchesHandler(
+            matchWork = runtime.newRuntimeWorkSession(execution.blue());
+            matcherSession = runtime.externalChannelMatcherSessions().open();
+            HandlerMatchContext context = new HandlerMatchContext(
+                    scopePath,
+                    handler.key(),
+                    channelKey,
+                    event,
+                    occurrenceEvent,
+                    occurrenceEventBlueId,
+                    bundle.markers(),
+                    owner.matchingService(),
+                    bundle.canonicalTypeIdentities(),
+                    matchWork,
+                    matcherSession);
+            ProcessingObservations.record(
+                    metrics, ProcessingMetricId.HANDLER_MATCH_ATTEMPTS, 1L);
+            runtime.chargeHandlerCandidateTested(scopePath, handler.key());
+            matchStart = System.nanoTime();
+            timingStarted = true;
+            matched = ProcessorEngine.matchesHandler(
                     owner, handler.contract(), context);
             matchWork.complete();
-            return matches;
         } catch (ExecutionEvidenceUnavailableException unavailable) {
-            matchWork.suspend();
-            throw unavailable;
-        } catch (RuntimeException | Error failure) {
-            matchWork.failDeterministically();
-            throw failure;
+            failure = unavailable;
+            evidenceUnavailable = true;
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
         } finally {
-            matcherSession.close();
-            matchWork.close();
-            ProcessingObservations.record(
-                    metrics,
-                    ProcessingMetricId.HANDLER_MATCH_NANOS,
-                    System.nanoTime() - matchStart);
+            if (failure != null) {
+                failure = evidenceUnavailable
+                        ? RuntimeWorkSession.suspendIfOpenPreserving(
+                                matchWork, failure)
+                        : RuntimeWorkSession.failIfOpenPreserving(
+                                matchWork, failure);
+            }
+            failure = RuntimeWorkSession.closePreserving(
+                    matcherSession == null ? null : matcherSession::close,
+                    failure);
+            failure = RuntimeWorkSession.closePreserving(matchWork, failure);
+            if (timingStarted) {
+                final long elapsed = System.nanoTime() - matchStart;
+                failure = RuntimeWorkSession.closePreserving(
+                        () -> ProcessingObservations.record(
+                                metrics,
+                                ProcessingMetricId.HANDLER_MATCH_NANOS,
+                                elapsed),
+                        failure);
+            }
         }
+        RuntimeWorkSession.rethrow(failure);
+        return Objects.requireNonNull(matched, "handlerMatchResult");
     }
 
     private ContractBundle.HandlerBinding materialize(
@@ -197,7 +287,7 @@ final class ScopeHandlerDispatcher {
             return owner.contractLoader()
                     .materializeSelectedExecutableBodies(
                             handler,
-                            runtime::materializeSelectedExecutableReference);
+                            runtime::resolveSelectedExecutableReference);
         } catch (RuntimeException exception) {
             if (exception instanceof GasLimitExceededException
                     || exception instanceof PortableLimitExceededException
@@ -228,6 +318,8 @@ final class ScopeHandlerDispatcher {
             Node event,
             Node occurrenceEvent,
             FrozenNode exactEvent,
+            String exactEventBlueId,
+            String occurrenceEventBlueId,
             List<ExactBlueValue> carriedExactValues,
             ContractBundle bundle,
             ContractBundle.HandlerBinding selectedHandler,
@@ -246,13 +338,18 @@ final class ScopeHandlerDispatcher {
                 event,
                 occurrenceEvent,
                 exactEvent,
+                exactEventBlueId,
+                occurrenceEventBlueId,
                 carriedExactValues,
                 executableHandler.key(),
                 executableHandler.node(),
                 false);
         context.bindSelectedExecutableBodies(
                 executableHandler.executableBodyFields(),
-                selectedExecutableBodyBlueIds(selectedHandler));
+                selectedExecutableBodyBlueIds(selectedHandler),
+                selectedHandler.node());
+        context.bindEffectTypeIdentities(
+                executableHandler.typeIdentities());
         ProcessingObservations.record(
                 metrics, ProcessingMetricId.HANDLERS_EXECUTED, 1L);
         long executionStart = System.nanoTime();
@@ -361,11 +458,15 @@ final class ScopeHandlerDispatcher {
         for (String field : binding.executableBodyFields()) {
             FrozenNode body = properties.get(field);
             if (body != null) {
+                Node sourceProjection = body.toNode();
                 identities.put(
                         field,
-                        body.isReferenceOnly()
-                                ? body.getReferenceBlueId()
-                                : body.blueId());
+                        CanonicalIdentityEvidence.executableBodyBlueId(
+                                sourceProjection,
+                                runtime.snapshotManager,
+                                "Selected executable body '" + field
+                                        + "' for contract '"
+                                        + binding.key() + "'"));
             }
         }
         return identities;

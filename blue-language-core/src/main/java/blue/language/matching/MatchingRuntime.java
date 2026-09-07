@@ -1,6 +1,7 @@
 package blue.language.matching;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.resolve.ResolutionLimits;
@@ -26,6 +27,8 @@ public interface MatchingRuntime {
      *
      * @param source authored source graph
      * @return preprocessed graph used for matching
+     * @throws NullPointerException if {@code source} is null
+     * @throws IllegalStateException if the runtime is closed
      */
     Node preprocessForMatching(Node source);
 
@@ -34,24 +37,46 @@ public interface MatchingRuntime {
      *
      * @param source mutable candidate to expand
      * @param limits target-driven expansion limits
+     * @throws NullPointerException if an argument is null
+     * @throws IllegalArgumentException if the candidate contains a malformed
+     *         reference
+     * @throws IllegalStateException if the runtime is closed
      */
     void expandForMatching(Node source, ResolutionLimits limits);
 
     /**
-     * Resolves a candidate under the supplied target-driven limits.
+     * Resolves a candidate under the supplied target-driven limits while
+     * retaining the canonical type identities issued by that same resolver
+     * invocation. Matching limits retain unexpanded paths as exact authored
+     * subtrees, so the returned graph remains semantic Blue content even when
+     * the target demands no candidate path.
      *
      * @param source candidate to resolve
      * @param limits target-driven resolution limits
-     * @return resolved candidate
+     * @return immutable resolved candidate and invocation-local evidence
+     * @throws NullPointerException if an argument is null
+     * @throws IllegalArgumentException if the candidate contains invalid
+     *         reference or type metadata
+     * @throws IllegalStateException if the runtime is closed or exact type
+     *         evidence cannot be established
      */
-    Node resolveForMatching(Node source, ResolutionLimits limits);
+    TypeEvidenceResolution resolveTypeEvidenceForMatching(
+            Node source,
+            ResolutionLimits limits);
 
     /**
      * Materializes one pure type reference through a verified exact-content
      * boundary.
      *
      * @param reference pure reference whose identity must select the result
-     * @return resolved type definition, or {@code null} when unavailable
+     * @return resolved reference content and invocation-local type identity
+     *         evidence, or {@code null} when unavailable
+     * @throws NullPointerException if {@code reference} is null
+     * @throws IllegalArgumentException if {@code reference} is not a pure
+     *         valid reference
+     * @throws IllegalStateException if the runtime is closed or returned
+     *         content cannot be verified exactly
      */
-    FrozenNode materializeTypeReferenceForMatching(FrozenNode reference);
+    TypeEvidenceResolution materializeTypeReferenceForMatching(
+            FrozenNode reference);
 }

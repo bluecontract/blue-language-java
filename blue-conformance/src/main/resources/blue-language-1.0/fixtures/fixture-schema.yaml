@@ -40,7 +40,6 @@ properties:
   expectedDefensiveCopies:
     type: boolean
   expectedDescendantRequests: {}
-  expectedDirectResolvedBlueIdMayDiffer: {}
   expectedDirectResultStillContainsAllOrderedElementIdentities: {}
   expectedEffectiveType: {}
   expectedEffectiveTypes: {}
@@ -118,7 +117,7 @@ properties:
     - canonicalizeLimitedResult
     - changingRegistryDescriptionChangesBlueId
     - collapse
-    - compareContentAndDirectResolvedBlueId
+    - verifyResolvedFormNotDirectIdentityInput
     - compareExpansionStrategies
     - compareGraphEquivalentInputs
     - compareLimitedAndCompleteResolution
@@ -135,6 +134,7 @@ properties:
     - preprocess
     - registryNodeHashesToPublishedBlueId
     - resolve
+    - resolveDefinition
     - resolveLimited
     - resolveVariants
     - retrieveDirectList
@@ -168,6 +168,8 @@ properties:
   source: {}
   storedOptimization: {}
   variants: {}
+  verifyCollapseReferenceExpand:
+    type: boolean
 $defs:
   limitedOutcome:
     enum:

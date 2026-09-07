@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -59,13 +60,16 @@ final class EvidenceClassificationView {
      */
     void preflightOpaqueProcessEmbeddedBoundaries() {
         String scopePath = JsonPointer.ROOT;
-        FrozenNode selectedScope = runtime.selectedFrozenAt(scopePath);
+        ResolvedScopeView scope = runtime.scopeViewAt(scopePath);
+        FrozenNode selectedScope = scope != null
+                ? scope.selected()
+                : null;
         if (!requiresEmbeddedPreflight(selectedScope)) {
             return;
         }
         FrozenNode effectiveScope = requiresEffectiveScopeResolution(
                 selectedScope)
-                ? runtime.resolvedFrozenAt(scopePath)
+                ? scope.resolved()
                 : selectedScope;
         if (effectiveScope == null) {
             return;
@@ -77,11 +81,14 @@ final class EvidenceClassificationView {
                         scopePath,
                         null,
                         true,
-                        owner.observer());
+                        owner.observer(),
+                        scope.canonicalTypeIdentities(),
+                        owner.contributionIdentityMemo());
         EmbeddedScopeEntryPlans.attach(
                 runtime,
                 scopePath,
                 effectiveScope,
+                scope.canonicalTypeIdentities(),
                 structural);
     }
 
@@ -138,40 +145,37 @@ final class EvidenceClassificationView {
     }
 
     FrozenNode selectedAt(String scopePath) {
-        String normalized = ProcessorEngine.normalizeScope(scopePath);
-        if (inputSnapshot != null
-                && !owner.strictPlatformInvocation()) {
-            return selectedAt(inputSnapshot, normalized);
-        }
-        ensureProjected();
-        if (classificationSnapshot != null) {
-            return selectedAt(classificationSnapshot, normalized);
-        }
-        Node selected = ProcessorEngine.nodeAt(
-                classificationDocument,
-                normalized);
-        return selected != null
-                ? FrozenNode.fromResolvedNode(selected)
-                : null;
+        ResolvedScopeView view = scopeAt(scopePath);
+        return view != null ? view.selected() : null;
     }
 
     FrozenNode resolvedAt(String scopePath) {
+        ResolvedScopeView view = scopeAt(scopePath);
+        return view != null ? view.resolved() : null;
+    }
+
+    ResolvedScopeView scopeAt(String scopePath) {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
         if (inputSnapshot != null
                 && !owner.strictPlatformInvocation()) {
             ensureConfiguredSnapshotAdmission();
-            return resolvedAt(inputSnapshot, normalized);
+            return scopeAt(inputSnapshot, normalized);
         }
         ensureProjected();
         if (classificationSnapshot != null) {
-            return resolvedAt(classificationSnapshot, normalized);
+            return scopeAt(classificationSnapshot, normalized);
         }
         Node selected = ProcessorEngine.nodeAt(
                 classificationDocument,
                 normalized);
-        return selected != null
-                ? FrozenNode.fromResolvedNode(selected)
-                : null;
+        if (selected == null) {
+            return null;
+        }
+        FrozenNode frozen = FrozenNode.fromResolvedNode(selected);
+        return new ResolvedScopeView(
+                frozen,
+                frozen,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /**
@@ -179,31 +183,51 @@ final class EvidenceClassificationView {
      * inheriting an eagerly resolved executable body from the containing
      * document snapshot.
      */
-    private FrozenNode resolvedAt(
+    private ResolvedScopeView scopeAt(
             ResolvedSnapshot snapshot,
             String normalizedScope) {
-        FrozenNode canonical = snapshot.canonicalAt(normalizedScope);
-        if (canonical == null || !canonical.isReferenceOnly()) {
-            return snapshot.resolvedAt(normalizedScope);
+        FrozenNode source = snapshot.sourceAt(normalizedScope);
+        FrozenNode exact = selectedAt(snapshot, normalizedScope);
+        if (source != null && !source.isReferenceOnly()) {
+            return exact != null || snapshot.resolvedAt(normalizedScope) != null
+                    ? new ResolvedScopeView(
+                            exact,
+                            snapshot.resolvedAt(normalizedScope),
+                            snapshot.canonicalTypeIdentities())
+                    : null;
         }
         ProcessingSnapshotManager manager = owner.snapshotManager();
-        if (manager == null) {
-            return snapshot.resolvedAt(normalizedScope);
+        if (manager == null || exact == null) {
+            FrozenNode effective = snapshot.resolvedAt(normalizedScope);
+            return exact != null || effective != null
+                    ? new ResolvedScopeView(
+                            exact,
+                            effective,
+                            snapshot.canonicalTypeIdentities())
+                    : null;
         }
-        FrozenNode exact = selectedAt(snapshot, normalizedScope);
         ResolvedSnapshot resolved = owner.strictPlatformInvocation()
                 ? DocumentProcessingRuntime
                         .resolveCanonicalTransientIncludingTypeContracts(
                                 manager,
                                 exact,
                                 Collections.singleton(JsonPointer.ROOT),
-                                runtime.executableBodyFieldsByType)
+                                executableBodyFieldsByType())
                 : DocumentProcessingRuntime.resolveCanonicalTransient(
                         manager,
                         exact,
                         Collections.singleton(JsonPointer.ROOT),
-                        runtime.executableBodyFieldsByType);
-        return resolved.frozenResolvedRoot();
+                        executableBodyFieldsByType());
+        return new ResolvedScopeView(
+                exact,
+                resolved.frozenResolvedRoot(),
+                resolved.canonicalTypeIdentities());
+    }
+
+    private Map<String, List<String>> executableBodyFieldsByType() {
+        return runtime != null
+                ? runtime.executableBodyFieldsByType
+                : Collections.<String, List<String>>emptyMap();
     }
 
     SubscriptionDelta.Entry activeSubscriptionInterval(
@@ -230,17 +254,20 @@ final class EvidenceClassificationView {
     private FrozenNode selectedAt(
             ResolvedSnapshot snapshot,
             String normalizedScope) {
-        FrozenNode selected = snapshot.canonicalAt(normalizedScope);
+        FrozenNode selected = snapshot.sourceAt(normalizedScope);
         if (selected != null && selected.isReferenceOnly()) {
             ProcessingSnapshotManager manager = owner.snapshotManager();
             return manager != null
-                    ? manager.materializeVerifiedExactReference(selected)
+                    ? ExecutableBodyPathCatalog.materializeVerifiedExact(
+                            manager,
+                            selected,
+                            "Evidence-classification selected scope")
                     : selected;
         }
         if (selected != null) {
             return selected;
         }
-        FrozenNode root = snapshot.frozenCanonicalRoot();
+        FrozenNode root = snapshot.frozenSourceRoot();
         if (!root.isReferenceOnly()) {
             return null;
         }
@@ -249,7 +276,10 @@ final class EvidenceClassificationView {
             return null;
         }
         FrozenNode materializedRoot =
-                manager.materializeVerifiedExactReference(root);
+                ExecutableBodyPathCatalog.materializeVerifiedExact(
+                        manager,
+                        root,
+                        "Evidence-classification selected Root");
         return materializedRoot.pathIndex().get(normalizedScope);
     }
 
@@ -340,7 +370,7 @@ final class EvidenceClassificationView {
     private Node admittedProjectionRoot(
             Map<String, Set<String>> selectedContracts) {
         Node source = inputSnapshot != null
-                ? inputSnapshot.canonicalRoot()
+                ? inputSnapshot.sourceRoot()
                 : inputDocument.clone();
         ProcessingSnapshotManager manager = owner.snapshotManager();
         if (manager == null) {
@@ -599,7 +629,9 @@ final class EvidenceClassificationView {
                     continue;
                 }
                 entry.setValue(ExternalSubscriptionProjectionBuilder
-                        .exactReference(entry.getValue()));
+                        .exactReference(
+                                entry.getValue(),
+                                owner.snapshotManager()));
                 deferredDirectContractPaths.add(
                         PointerUtils.appendPointer(
                                 PointerUtils.appendPointer(

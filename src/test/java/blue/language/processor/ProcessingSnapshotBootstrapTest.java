@@ -1,7 +1,9 @@
 package blue.language.processor;
 
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -22,6 +24,47 @@ final class ProcessingSnapshotBootstrapTest {
 
     private static final String EXECUTABLE_BODY_PATH =
             "/lessons/lesson-a/contracts/handler/event";
+
+    @Test
+    void shouldValidateUncheckedCanonicalIdentityBeforeExecution() {
+        // given
+        Node source = new Node().properties("value", new Node().value(7));
+        FrozenNode unchecked = FrozenNode.fromUncheckedCanonicalNode(source);
+        ResolvedSnapshot input = new ResolvedSnapshot(unchecked,
+                FrozenNode.fromResolvedNode(source), unchecked.blueId());
+        RecordingProcessingObserver observer = new RecordingProcessingObserver();
+
+        // when
+        ResolvedSnapshot prepared = ProcessingSnapshotBootstrap.prepare(
+                input, Collections.emptyMap(), observer);
+
+        // then
+        assertTrue(prepared.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertTrue(prepared.frozenSourceRoot().isStrictBlueIdValidation());
+        assertFalse(input.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertEquals(input.blueId(), prepared.blueId());
+        assertEquals(1L, observer.snapshot().counter("processorInputUncheckedCanonical"));
+        assertEquals(0L, observer.snapshot().counter("processorInputStrictCanonical"));
+    }
+
+    @Test
+    void shouldRejectMalformedUncheckedReferenceBeforeExecution() {
+        // given
+        Node source = new Node().properties("child", new Node().blueId("not-a-blue-id"));
+        FrozenNode unchecked = FrozenNode.fromUncheckedCanonicalNode(source);
+        ResolvedSnapshot input = new ResolvedSnapshot(unchecked,
+                FrozenNode.fromResolvedNode(source), unchecked.blueId());
+
+        // when
+        IllegalArgumentException failure = FailureCapture.captureFailure(
+                () -> ProcessingSnapshotBootstrap.prepare(
+                        input, Collections.emptyMap(), NoOpProcessingObserver.INSTANCE));
+
+        // then
+        assertNotNull(failure);
+        assertFalse(input.frozenCanonicalRoot().isStrictBlueIdValidation());
+        assertEquals("not-a-blue-id", input.canonicalAt("/child").getReferenceBlueId());
+    }
 
     @Test
     void shouldPreserveColdExecutableBodyInCollectionGeneratedScope() {
@@ -66,11 +109,16 @@ final class ProcessingSnapshotBootstrapTest {
                 declarationDefinition());
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
-                Collections.singletonMap("payment", new Node()));
+                Collections.singletonMap(
+                        "payment", Nodes.emptyObject()));
 
         // when
         EmbeddedScopePlan plan = ProcessingSnapshotBootstrap
-                .embeddedScopePlan(effectiveScope, "/", null);
+                .embeddedScopePlan(
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -91,14 +139,18 @@ final class ProcessingSnapshotBootstrapTest {
                 declarationDefinition(),
                 declarations("/lessons"));
         Node lessons = new Node().properties(
-                "lesson-a", new Node());
+                "lesson-a", Nodes.emptyObject());
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
                 Collections.singletonMap("lessons", lessons));
 
         // when
         EmbeddedScopePlan plan = ProcessingSnapshotBootstrap
-                .embeddedScopePlan(effectiveScope, "/", null);
+                .embeddedScopePlan(
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -126,7 +178,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -149,7 +204,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -163,7 +221,8 @@ final class ProcessingSnapshotBootstrapTest {
         // given
         Node embedded = processEmbedded(
                 declarationDefinition(),
-                new Node().properties("unexpected", new Node()));
+                new Node().properties(
+                        "unexpected", Nodes.emptyObject()));
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
                 Collections.emptyMap());
@@ -172,7 +231,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -195,7 +257,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -218,7 +283,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);

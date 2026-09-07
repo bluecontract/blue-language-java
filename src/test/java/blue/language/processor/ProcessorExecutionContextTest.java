@@ -1,15 +1,19 @@
 package blue.language.processor;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +21,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Focused tests for the slim handler context surface.
  */
 final class ProcessorExecutionContextTest {
+
+    @Test
+    void shouldCarryAdmissionProvedCyclicMemberIdentityForExactEvent() {
+        // given
+        Node event = new Node().properties(
+                "kind", new Node().value("cyclic-member"));
+        FrozenNode frozenEvent = FrozenNode.fromNode(event.clone());
+        String directEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(event);
+        String admittedEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("event-cycle")) + "#0";
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                new DocumentProcessor(), Nodes.emptyObject());
+        execution.preflightScope("/");
+
+        // when
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                event,
+                frozenEvent,
+                admittedEventBlueId,
+                admittedEventBlueId,
+                Collections.<ExactBlueValue>emptyList(),
+                null,
+                null,
+                false);
+        List<ExactBlueValue> exactValues =
+                context.runtimeWorkSession().exactValuesSnapshot();
+
+        // then
+        assertNotEquals(directEventBlueId, admittedEventBlueId);
+        assertTrue(exactValues.stream().anyMatch(value ->
+                admittedEventBlueId.equals(value.blueId())
+                        && frozenEvent.resolvedStructuralKey().equals(
+                                value.frozenValue().resolvedStructuralKey())));
+    }
 
     @Test
     void shouldVerifyDocumentHelpersExposeSnapshots() {
@@ -59,9 +102,11 @@ final class ProcessorExecutionContextTest {
     void shouldEnqueueOneInvocationOccurrenceAndRecordRootOutputWhenEmittingEvent() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                owner, Nodes.emptyObject());
         execution.preflightScope("/");
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
+        ProcessorExecutionContext context = execution.createContext(
+                "/", execution.bundleForScope("/"), Nodes.emptyObject(), false);
 
         // when
         context.emitEvent(new Node().value("payload"));
@@ -239,10 +284,12 @@ final class ProcessorExecutionContextTest {
     void shouldVerifyInvalidEmitEventAbortsBeforeQueueOrPortableGas() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                owner, Nodes.emptyObject());
         execution.preflightScope("/");
         long admittedBeforeEffects = execution.runtime().totalGas();
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
+        ProcessorExecutionContext context = execution.createContext(
+                "/", execution.bundleForScope("/"), Nodes.emptyObject(), false);
         Node invalidEvent = new Node()
                 .value("payload")
                 .properties("alsoPayload", new Node().value("invalid"));
@@ -363,13 +410,13 @@ final class ProcessorExecutionContextTest {
         // given
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
-                        new DocumentProcessor(), new Node());
+                        new DocumentProcessor(), Nodes.emptyObject());
         execution.preflightScope("/");
         ProcessorExecutionContext context =
                 execution.createContext(
                         "/",
                         execution.bundleForScope("/"),
-                        new Node(),
+                        Nodes.emptyObject(),
                         false);
         GasMeter.ChildGasLedger first =
                 context.newRuntimeGasLedger(
@@ -413,13 +460,13 @@ final class ProcessorExecutionContextTest {
                 .properties("propertyKey", new Node().value("/x"));
         FrozenNode frozen = FrozenNode.fromResolvedNode(contract);
         ProcessorInvocationState execution = new ProcessorInvocationState(
-                new DocumentProcessor(), new Node());
+                new DocumentProcessor(), Nodes.emptyObject());
         execution.preflightScope("/");
         // when
         ProcessorExecutionContext context = execution.createContext(
                 "/",
                 execution.bundleForScope("/"),
-                new Node(),
+                Nodes.emptyObject(),
                 "probe",
                 frozen,
                 false);

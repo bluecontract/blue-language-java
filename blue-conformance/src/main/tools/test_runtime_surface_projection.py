@@ -69,9 +69,20 @@ class RuntimeSurfaceProjectionTest(unittest.TestCase):
             projection.subscription_header["order"],
         )
         self.assertEqual(
-            {"description": "Optional event matcher."},
+            {"blueId": "9uncWU9V9UadZA5zV3We6KBkM1azpwz8RLnMb7bVWTzv"},
             projection.subscription_header["event"],
         )
+
+    def test_absent_exact_header_stays_absent_and_present_definition_stays_opaque(self) -> None:
+        source = {"type": {"blueId": "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"}}
+        absent = project_runtime_surface(source)
+        self.assertNotIn("payload", absent.subscription_header)
+        pattern = {"type": {"blueId": "11111111111111111111111111111111"},
+                   "request": {"schema": {"required": True}}}
+        supplied = project_runtime_surface({**source, "payload": pattern})
+        self.assertEqual(pattern, supplied.subscription_header["payload"])
+        self.assertNotEqual(absent.subscription_header_blue_id, supplied.subscription_header_blue_id)
+        self.assertEqual(source["type"], supplied.effective_runtime_contribution["type"])
 
     def test_schema_enum_is_a_canonical_set(self) -> None:
         projection = self._projection("a", "source")

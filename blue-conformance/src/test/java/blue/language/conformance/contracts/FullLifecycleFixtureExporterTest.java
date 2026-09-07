@@ -13,6 +13,7 @@ import blue.language.processor.closure.ClosureEvidenceFactory;
 import blue.language.processor.closure.ClosureExecutionObserver;
 import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
+import blue.language.processor.registry.RuntimeBlueIds;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,9 +28,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -82,7 +86,12 @@ final class FullLifecycleFixtureExporterTest {
                     "c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
                     "c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
                     "c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
-                    "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml"));
+                    "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
+                    "c-emb-empty-05-prospective-activation.yaml",
+                    "c-evt-collection-07-closure-work-order-inline-cold.yaml",
+                    "c-evt-collection-07-closure-work-order-inline-warm.yaml",
+                    "c-evt-collection-07-closure-work-order-reference-cold.yaml",
+                    "c-evt-collection-07-closure-work-order-reference-warm.yaml"));
 
     @Test
     void shouldKeepExporterAndHelpersWithinSourceSizeLimits()
@@ -135,7 +144,7 @@ final class FullLifecycleFixtureExporterTest {
         List<Path> secondFiles = FullLifecycleFixtureExporter.export(
                 sourceRoot(), packageRoot(), second);
 
-        assertEquals(26, firstFiles.size());
+        assertEquals(31, firstFiles.size());
         assertEquals(EXPECTED_NAMES, names(first));
         assertEquals(EXPECTED_NAMES, names(second));
         for (String name : EXPECTED_NAMES) {
@@ -151,6 +160,17 @@ final class FullLifecycleFixtureExporterTest {
             if (name.equals(
                     "fl-adm-03-non-public-containing-route.yaml")) {
                 assertFlAdm03InitializationSnapshots(fixture);
+            }
+            if (name.equals(
+                    "c-emb-empty-05-prospective-activation.yaml")) {
+                assertCEmb05PreinitializedTarget(fixture);
+            }
+            if (name.startsWith(
+                    "c-evt-collection-07-closure-work-order-")) {
+                assertC07NormativeClosureOracle(name, fixture);
+            }
+            if (name.equals("fl-adm-07-finite-cyclic-route.yaml")) {
+                assertFlAdm07CyclicEmptyCollection(fixture);
             }
             JsonNode cause = fixture.path("input").path("cause");
             String admissionLabel = cause.path("label").textValue();
@@ -184,18 +204,7 @@ final class FullLifecycleFixtureExporterTest {
             JsonNode provider = fixture.get("provider");
             assertNotNull(provider, name);
             assertTrue(provider.isObject(), name);
-            assertEquals(3, provider.size(), name);
-            assertTrue(provider.path("nodes").isObject(), name);
-            assertEquals(0, provider.path("nodes").size(), name);
-            assertTrue(provider.path("expectedRequiredBlueIds").isArray(),
-                    name);
-            assertEquals(fixture.path("expected")
-                            .path("requiredBlueIds").size(),
-                    provider.path("expectedRequiredBlueIds").size(), name);
-            assertTrue(provider.path("expectedLoads").isArray(), name);
-            assertEquals(fixture.path("expected")
-                            .path("requiredBlueIds").size(),
-                    provider.path("expectedLoads").size(), name);
+            assertProviderHarness(name, fixture, provider);
             JsonNode locality = fixture.get("locality");
             assertNotNull(locality, name);
             assertTrue(locality.isObject(), name);
@@ -305,6 +314,326 @@ final class FullLifecycleFixtureExporterTest {
                 .textValue();
         assertEquals(bInvocationBlueId, bMarkerBlueId,
                 "FL-ADM-03 B must freeze its invocation-input batch entry");
+    }
+
+    private static void assertCEmb05PreinitializedTarget(JsonNode fixture) {
+        ObjectNode child = (ObjectNode) fixture.path("input")
+                .path("documents").path("c-emb-empty-05-child");
+        assertFalse(child.path("publicRoot").booleanValue());
+        assertTrue(child.path("initialized").booleanValue());
+        ObjectNode exact = (ObjectNode) child.path("document").deepCopy();
+        String frozen = exact.path("contracts").path("initialized")
+                .path("document").path("blueId").textValue();
+        ObjectNode contracts = (ObjectNode) exact.path("contracts");
+        contracts.remove("initialized");
+        if (contracts.isEmpty()) {
+            exact.remove("contracts");
+        }
+        assertEquals(frozen, DirectBlueIdCalculator.calculateBlueId(
+                UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        exact, Node.class)));
+        List<String> initializationTargets = new ArrayList<String>();
+        for (JsonNode work : fixture.path("expected")
+                .path("workTrace")) {
+            if ("INITIALIZATION".equals(
+                    work.path("kind").textValue())) {
+                initializationTargets.add(
+                        work.path("targetDocumentId").textValue());
+            }
+        }
+        assertEquals(Collections.singletonList(
+                        "c-emb-empty-05-root"),
+                initializationTargets,
+                "the non-public preinitialized target must not be queued");
+    }
+
+    private static void assertFlAdm07CyclicEmptyCollection(
+            JsonNode fixture) {
+        JsonNode input = fixture.path("input");
+        JsonNode root = input.path("documents").path("fl-adm-07-a")
+                .path("document");
+        assertTrue(root.path("emptyPeers").isObject());
+        assertEquals(0, root.path("emptyPeers").size());
+        assertEquals("/emptyPeers", root.path("contracts")
+                .path("embedded").path("collectionPaths").path(0)
+                .textValue());
+        assertEquals("CYCLIC", input.path("components").path(0)
+                .path("kind").textValue());
+        JsonNode resultingCollection = resultingDocument(
+                fixture, "fl-adm-07-a").path("document")
+                .path("emptyPeers");
+        assertTrue(resultingCollection.isObject());
+        assertEquals(0, resultingCollection.size());
+        for (JsonNode occurrence : input.path("occurrenceBindings")) {
+            assertFalse(occurrence.path("sourcePath").textValue()
+                            .startsWith("/emptyPeers/"),
+                    "explicit {} in a cyclic containing graph contributes "
+                            + "no collection occurrence");
+        }
+    }
+
+    private static void assertC07NormativeClosureOracle(
+            String name,
+            JsonNode fixture) {
+        JsonNode expected = fixture.path("expected");
+        JsonNode representedMember = fixture.path("input")
+                .path("documents").path("c-evt-collection-07-root")
+                .path("document").path("orders").path("order-1");
+        boolean expandedMember = name.contains("inline-");
+        assertReferenceForm(representedMember, !expandedMember, name);
+        JsonNode workTrace = expected.path("workTrace");
+        List<String> actualWork = new ArrayList<String>();
+        for (int index = 0; index < workTrace.size(); index++) {
+            JsonNode work = workTrace.get(index);
+            assertEquals(index, work.path("ordinal").intValue(), name);
+            actualWork.add(work.path("kind").textValue()
+                    + "|" + work.path("targetDocumentId").textValue()
+                    + "|" + work.path("channelKey").textValue()
+                    + "|" + (work.has("occurrenceOrdinal")
+                    ? work.path("occurrenceOrdinal").asText() : "-"));
+        }
+        assertEquals(Arrays.asList(
+                        "INITIALIZATION|c-evt-collection-07-leaf|"
+                                + "initialization|-",
+                        "LIFECYCLE|c-evt-collection-07-leaf|lifecycle|-",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "tildeCollection|0",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "slashCollection|0",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "orderTree|0",
+                        "INITIALIZATION|c-evt-collection-07-order|"
+                                + "initialization|-",
+                        "LIFECYCLE|c-evt-collection-07-order|lifecycle|-",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "exactOrder|1",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "directOrders|1",
+                        "EMBEDDED_EVENT|c-evt-collection-07-root|"
+                                + "orderTree|1",
+                        "INITIALIZATION|c-evt-collection-07-root|"
+                                + "lifecycle|-"),
+                actualWork, name);
+        assertFalse(actualWork.stream().anyMatch(
+                        value -> value.contains("|wrongEvent|")),
+                name + " mismatched event Channel must enqueue no work");
+
+        JsonNode gas = expected.path("gasTrace");
+        // Four leaf-source occurrence paths and one order-source path each
+        // test six ordered Channels. Five are Collection Channels, so they
+        // read one configured path each. Three direct leaf members compare
+        // all five first segments; the nested leaf path compares only the two
+        // descendant-enabled /orders candidates; the direct order compares
+        // all five. Those authored facts derive 30, 25, and 22 independently
+        // of the runtime-produced trace.
+        assertEquals((4L + 1L) * 6L,
+                matcherQuantity(gas, "channelCandidateTested"), name);
+        assertEquals((4L + 1L) * 5L,
+                matcherQuantity(gas, "embeddedPathEntryRead"), name);
+        assertEquals(3L * 5L + 1L * 2L + 1L * 5L,
+                matcherQuantity(gas, "embeddedPathSegmentValidated"), name);
+
+        Map<String, long[]> deliveryGas = new LinkedHashMap<String, long[]>();
+        Map<Long, long[]> eventBatches = new LinkedHashMap<Long, long[]>();
+        for (JsonNode work : workTrace) {
+            if (!"EMBEDDED_EVENT".equals(
+                    work.path("kind").textValue())) {
+                continue;
+            }
+            String workIdentity = work.path("workIdentity").textValue();
+            deliveryGas.put(workIdentity,
+                    new long[]{0L, 0L, 0L, Long.MIN_VALUE,
+                            Long.MAX_VALUE});
+            long occurrence = work.path("occurrenceOrdinal").longValue();
+            eventBatches.putIfAbsent(
+                    Long.valueOf(occurrence),
+                    new long[]{Long.MIN_VALUE, Long.MAX_VALUE, 0L});
+        }
+        for (JsonNode charge : gas) {
+            String workIdentity = charge.path(
+                    "workOccurrenceId").textValue();
+            long[] counts = deliveryGas.get(workIdentity);
+            if (counts == null) {
+                continue;
+            }
+            String counter = charge.path("counter").textValue();
+            long quantity = charge.path("quantity").longValue();
+            long sequence = charge.path("sequence").longValue();
+            if ("closureWorkOccurrenceEnqueued".equals(counter)) {
+                counts[0] += quantity;
+                counts[3] = sequence;
+            } else if ("closureWorkOccurrenceDequeued".equals(counter)) {
+                counts[1] += quantity;
+                counts[4] = sequence;
+            } else if ("embeddedEventDelivered".equals(counter)) {
+                counts[2] += quantity;
+            }
+        }
+        for (JsonNode work : workTrace) {
+            if (!"EMBEDDED_EVENT".equals(
+                    work.path("kind").textValue())) {
+                continue;
+            }
+            long[] counts = deliveryGas.get(
+                    work.path("workIdentity").textValue());
+            assertEquals(1L, counts[0], name + " enqueue");
+            assertEquals(1L, counts[1], name + " dequeue");
+            assertEquals(1L, counts[2], name + " delivery");
+            long occurrence = work.path("occurrenceOrdinal").longValue();
+            long[] batch = eventBatches.get(Long.valueOf(occurrence));
+            batch[0] = Math.max(batch[0], counts[3]);
+            batch[1] = Math.min(batch[1], counts[4]);
+            batch[2]++;
+        }
+        assertEquals(2, eventBatches.size(), name);
+        for (long[] batch : eventBatches.values()) {
+            assertEquals(3L, batch[2], name + " matched routes");
+            assertTrue(batch[0] < batch[1],
+                    name + " must enqueue every match before first dequeue");
+        }
+        assertEquals(6L, gasQuantity(gas, "embeddedEventDelivered"), name);
+        assertEquals(11L,
+                gasQuantity(gas, "closureWorkOccurrenceEnqueued"), name);
+        assertEquals(11L,
+                gasQuantity(gas, "closureWorkOccurrenceDequeued"), name);
+        assertEquals(0, expected.path("publicEvents").size(), name);
+        assertEquals(0, expected.path("checkpointWrites").size(), name);
+        assertEquals("admission", fixture.path("input").path("cause")
+                .path("kind").textValue(),
+                name + " is internal admission, not external delivery");
+    }
+
+    private static long matcherQuantity(JsonNode gas, String counter) {
+        long result = 0L;
+        for (JsonNode charge : gas) {
+            if (counter.equals(charge.path("counter").textValue())
+                    && !charge.has("workOccurrenceId")) {
+                result += charge.path("quantity").longValue();
+            }
+        }
+        return result;
+    }
+
+    private static long gasQuantity(JsonNode gas, String counter) {
+        long result = 0L;
+        for (JsonNode charge : gas) {
+            if (counter.equals(charge.path("counter").textValue())) {
+                result += charge.path("quantity").longValue();
+            }
+        }
+        return result;
+    }
+
+    private static void assertProviderHarness(
+            String name,
+            JsonNode fixture,
+            JsonNode provider) {
+        boolean physicalVariant = provider.has("cache");
+        assertEquals(physicalVariant ? 5 : 3, provider.size(), name);
+        JsonNode nodes = provider.path("nodes");
+        assertTrue(nodes.isObject(), name);
+        List<String> nodeIds = new ArrayList<String>();
+        nodes.fieldNames().forEachRemaining(nodeIds::add);
+        assertEquals(new ArrayList<String>(new TreeSet<String>(nodeIds)), nodeIds,
+                name + " provider nodes must use canonical key order");
+
+        boolean referenceForms = name.contains("reference-");
+        if (physicalVariant) {
+            assertEquals(referenceForms ? 5 : 2, nodes.size(), name);
+        }
+        JsonNode required = provider.path("expectedRequiredBlueIds");
+        assertTrue(required.isArray(), name);
+        assertEquals(fixture.path("expected")
+                        .path("requiredBlueIds").size(),
+                required.size(), name);
+        JsonNode loads = provider.path("expectedLoads");
+        assertTrue(loads.isArray(), name);
+        TreeSet<String> expectedLoads = new TreeSet<String>();
+        required.forEach(value -> expectedLoads.add(value.textValue()));
+        if (!physicalVariant) {
+            nodes.fields().forEachRemaining(field -> {
+                Node exact = UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        field.getValue(), Node.class);
+                assertEquals(field.getKey(),
+                        DirectBlueIdCalculator.calculateBlueId(exact), name);
+                expectedLoads.add(field.getKey());
+            });
+            assertEquals(expectedLoads,
+                    new TreeSet<String>(textValues(loads)), name);
+            return;
+        }
+
+        TreeSet<String> exactFormIds = new TreeSet<String>();
+        nodes.fields().forEachRemaining(field -> {
+            Node exact = UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                    field.getValue(), Node.class);
+            assertEquals(field.getKey(),
+                    DirectBlueIdCalculator.calculateBlueId(exact), name);
+            exactFormIds.add(field.getKey());
+        });
+        JsonNode contracts = fixture.path("input").path("documents")
+                .path("c-evt-collection-07-root").path("document")
+                .path("contracts");
+        assertReferenceForm(contracts.path("receiveExactOrder"), true, name);
+        assertReferenceForm(
+                contracts.path("receiveDirectOrders"), true, name);
+        assertReferenceForm(contracts.path("embedded"), referenceForms, name);
+        assertReferenceForm(
+                contracts.path("directOrders"), referenceForms, name);
+        expectedLoads.add(contracts.path("receiveExactOrder")
+                .path("blueId").textValue());
+        expectedLoads.add(contracts.path("receiveDirectOrders")
+                .path("blueId").textValue());
+        if (referenceForms) {
+            expectedLoads.add(contracts.path("embedded")
+                    .path("blueId").textValue());
+            expectedLoads.add(contracts.path("directOrders")
+                    .path("blueId").textValue());
+            long eventNodes = java.util.stream.StreamSupport.stream(
+                            nodes.spliterator(), false)
+                    .filter(value -> RuntimeBlueIds.FIXTURE_EVENT.equals(
+                            value.path("type").path("blueId").textValue()))
+                    .count();
+            assertEquals(1L, eventNodes, name);
+            nodes.fields().forEachRemaining(field -> {
+                if (RuntimeBlueIds.FIXTURE_EVENT.equals(field.getValue()
+                        .path("type").path("blueId").textValue())) {
+                    expectedLoads.add(field.getKey());
+                }
+            });
+        }
+        assertEquals(expectedLoads,
+                new TreeSet<String>(textValues(loads)), name);
+        assertTrue(exactFormIds.containsAll(expectedLoads), name);
+        for (JsonNode document : fixture.path("input")
+                .path("documents")) {
+            assertFalse(exactFormIds.contains(
+                            document.path("blueId").textValue()),
+                    name + " provider exact forms must not be documents");
+        }
+        assertEquals(name.contains("-warm.") ? "warm" : "cold",
+                provider.path("cache").textValue(), name);
+        boolean batched = name.contains("inline-warm")
+                || name.contains("reference-cold");
+        assertEquals(batched ? "batched" : "unbatched",
+                provider.path("batching").textValue(), name);
+    }
+
+    private static void assertReferenceForm(
+            JsonNode value,
+            boolean expectedReference,
+            String name) {
+        boolean actualReference = value.isObject()
+                && value.size() == 1
+                && value.path("blueId").isTextual();
+        assertEquals(expectedReference, actualReference, name);
+    }
+
+    private static List<String> textValues(JsonNode values) {
+        return java.util.stream.StreamSupport.stream(
+                        values.spliterator(), false)
+                .map(JsonNode::textValue)
+                .collect(Collectors.toList());
     }
 
     private static ObjectNode resultingDocument(
@@ -707,7 +1036,10 @@ final class FullLifecycleFixtureExporterTest {
         try (Stream<Path> files = Files.list(sourceRoot())) {
             for (Path source : files
                     .filter(path -> path.getFileName().toString()
-                            .matches("(?:fl-adm|c-evo)-[0-9]{2}.*\\.yaml"))
+                            .matches("(?:(?:fl-adm|c-evo)-[0-9]{2}"
+                                    + "|c-emb-empty-[0-9]{2}"
+                                    + "|c-evt-collection-[0-9]{2})"
+                                    + ".*\\.yaml"))
                     .collect(Collectors.toList())) {
                 Files.copy(source, stagedSources.resolve(
                         source.getFileName().toString()));

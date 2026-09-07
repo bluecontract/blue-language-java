@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Defers reference expansion below selected paths while retaining ordinary
- * merge behavior at those paths.
+ * Marks selected Source paths as exact authored boundaries. The resolution
+ * engine retains those subtrees without reference expansion, inherited
+ * overlay, processor classification, or completed-value validation.
  */
 final class DeferredReferencePathLimits implements ResolutionLimits {
 
@@ -39,14 +40,13 @@ final class DeferredReferencePathLimits implements ResolutionLimits {
         return !isDeferred(potentialPath(pathSegment));
     }
 
-    /** Legacy binary-API spelling delegated to the canonical method. */
     @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return shouldExpandPathSegment(pathSegment, currentNode);
+    public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
+        return true;
     }
 
     @Override
-    public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
+    public boolean retainsEveryAuthoredPath() {
         return true;
     }
 

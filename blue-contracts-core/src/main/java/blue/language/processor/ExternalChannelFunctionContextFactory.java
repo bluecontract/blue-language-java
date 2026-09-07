@@ -49,7 +49,13 @@ final class ExternalChannelFunctionContextFactory {
             EffectiveContractSnapshot owner,
             ExternalChannelDependencyCapture capture,
             boolean eventEvaluation,
-            ExternalChannelDependencySnapshot declaredDependencies) {
+            ExternalChannelDependencySnapshot declaredDependencies,
+            Node exactEvent) {
+        if (eventEvaluation != (exactEvent != null)) {
+            throw new IllegalArgumentException(
+                    "External Channel event context and exact event must "
+                            + "appear together");
+        }
         return new ExternalChannelFunctionContext(
                 owner.scopePath(),
                 owner.key(),
@@ -298,7 +304,8 @@ final class ExternalChannelFunctionContextFactory {
                         return exact;
                     }
                 },
-                runtimeWorkSession);
+                runtimeWorkSession,
+                exactEvent);
     }
 
     private void recordChannelLookup(

@@ -1,0 +1,9 @@
+# Canonical processing SPI: exact additive API review
+
+Final verification of 7cab12ff passed the exclusion-free clean build and reached the exact API migration gate, which rejected one unrecorded additive default method. The complete existing 351 incompatible and 537 additive records matched; no approved record was missing.
+
+The sole addition is ProcessingSnapshotManager.fromCanonicalTransient(FrozenNode, Collection<String>): ResolvedSnapshot, introduced by commit 35de814a. Complete canonical processing values must retain their canonical role through manager decorators; reinterpreting full lists as Source appends duplicates inherited prefixes. The default validates nonnull arguments and throws UnsupportedOperationException. It does not synthesize a Source fallback. LanguageProcessingSnapshotManager and decorators dispatch through the canonical resolver/preserved-path lane. Existing callers/implementors remain binary-compatible. The owning shouldRejectUnsupportedCanonicalRoleWithoutFallingBackToSource regression and the canonical list/decorator matrix already passed the clean build.
+
+The proposed ledger adds exactly this JVM descriptor under a separate stabilization-canonical-processing-input record, linked to this review. Every baseline identity and every previous approval is unchanged. No parser, checker, runtime, fixture, gas expectation, classifier inventory or general acceptance rule changes.
+
+The unchanged actual binary checker rejects the original ledger, accepts the proposed exact pair, rejects an invented missing approval, and rejects a genuinely added unreviewed public Java-8 class. These are proposal checks only; they do not establish release readiness. Apply as a separate auditable evidence change, run the real gate and preflights, and then repeat the required clean/final gate pair on one new exact source snapshot.

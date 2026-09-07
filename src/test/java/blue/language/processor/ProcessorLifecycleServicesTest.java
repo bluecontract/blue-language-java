@@ -5,6 +5,8 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,7 +68,13 @@ final class ProcessorLifecycleServicesTest {
                         marker));
 
         // when
-        ProcessorMarkerStore.collapseInitializationDocuments(root);
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            ProcessorMarkerStore.collapseInitializationDocuments(
+                    root,
+                    new LanguageProcessingSnapshotManager(scope));
+        }
 
         // then
         Node collapsed = root.getContracts().getProperties()

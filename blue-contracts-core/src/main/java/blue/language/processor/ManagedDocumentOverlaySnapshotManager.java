@@ -1,10 +1,14 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
+import blue.language.model.NodePathEditor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;
@@ -22,6 +26,7 @@ final class ManagedDocumentOverlaySnapshotManager
     private final ProcessingSnapshotManager delegate;
     private final Map<String, FrozenNode> exactNodesByBlueId;
     private final Map<String, String> expectedManagedBlueIdsByPath;
+    private final ExactResolutionOverlay exactResolutionOverlay;
 
     ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
@@ -39,15 +44,27 @@ final class ManagedDocumentOverlaySnapshotManager
         this.expectedManagedBlueIdsByPath =
                 Collections.unmodifiableMap(new LinkedHashMap<String, String>(
                         admitted.expectedManagedBlueIdsByPath()));
+        this.exactResolutionOverlay = admitted.exactResolutionOverlay();
     }
 
     private ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
             Map<String, FrozenNode> exactNodesByBlueId,
-            Map<String, String> expectedManagedBlueIdsByPath) {
+            Map<String, String> expectedManagedBlueIdsByPath,
+            ExactResolutionOverlay exactResolutionOverlay) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.exactNodesByBlueId = exactNodesByBlueId;
         this.expectedManagedBlueIdsByPath = expectedManagedBlueIdsByPath;
+        this.exactResolutionOverlay = Objects.requireNonNull(
+                exactResolutionOverlay, "exactResolutionOverlay");
+    }
+
+    @Override
+    public ProcessingSnapshotManager forValueIdentity() {
+        return expectedManagedBlueIdsByPath.isEmpty() ? this
+                : new ManagedDocumentOverlaySnapshotManager(
+                        delegate.forValueIdentity(), exactNodesByBlueId,
+                        Collections.<String, String>emptyMap(), exactResolutionOverlay);
     }
 
     @Override
@@ -59,11 +76,75 @@ final class ManagedDocumentOverlaySnapshotManager
     }
 
     @Override
+    public ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        return delegate.fromCanonicalTransient(canonicalRoot, union(preservedPaths));
+    }
+
+    @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return expectedManagedBlueIdsByPath.isEmpty()
                 ? delegate.fromDocumentTransient(document)
                 : delegate.fromDocumentTransientPreservingPaths(
                         document, expectedManagedBlueIdsByPath.keySet());
+    }
+
+    @Override
+    public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+            Node document) {
+        if (!expectedManagedBlueIdsByPath.isEmpty()) {
+            validateManagedBindings(document);
+        }
+        if (exactNodesByBlueId.isEmpty()) {
+            return delegate.fromDocumentTransientForCanonicalIdentity(
+                    document);
+        }
+        return requireCompleteCanonicalIdentity(
+                delegate.fromDocumentTransientForCanonicalIdentity(
+                        document, exactResolutionOverlay()));
+    }
+
+    @Override
+    public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+            Node document,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        Objects.requireNonNull(
+                exactResolutionOverlay, "exactResolutionOverlay");
+        if (!expectedManagedBlueIdsByPath.isEmpty()) {
+            validateManagedBindings(document);
+        }
+        if (exactNodesByBlueId.isEmpty()) {
+            return delegate.fromDocumentTransientForCanonicalIdentity(
+                    document, exactResolutionOverlay);
+        }
+        return requireCompleteCanonicalIdentity(
+                delegate.fromDocumentTransientForCanonicalIdentity(
+                        document,
+                        exactResolutionOverlay()
+                                .followedBy(exactResolutionOverlay)));
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        return exactNodesByBlueId.isEmpty()
+                ? delegate.resolveTypeDeclarationIdentity(declaration)
+                : delegate.resolveTypeDeclarationIdentity(
+                        declaration, exactResolutionOverlay());
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        Objects.requireNonNull(exactResolutionOverlay, "exactResolutionOverlay");
+        return exactNodesByBlueId.isEmpty()
+                ? delegate.resolveTypeDeclarationIdentity(
+                        declaration, exactResolutionOverlay)
+                : delegate.resolveTypeDeclarationIdentity(
+                        declaration,
+                        exactResolutionOverlay()
+                                .followedBy(exactResolutionOverlay));
     }
 
     @Override
@@ -94,6 +175,12 @@ final class ManagedDocumentOverlaySnapshotManager
         return current != null
                 ? current
                 : delegate.materializeVerifiedExactReference(checked);
+    }
+
+    @Override
+    public TypeEvidenceResolution materializeVerifiedTypeReference(
+            FrozenNode reference) {
+        return delegate.materializeVerifiedTypeReference(reference);
     }
 
     /** Whether one selected Root path remains owned by closure processing. */
@@ -161,7 +248,8 @@ final class ManagedDocumentOverlaySnapshotManager
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.transientSequence(),
                 exactNodesByBlueId,
-                expectedManagedBlueIdsByPath);
+                expectedManagedBlueIdsByPath,
+                exactResolutionOverlay);
     }
 
     @Override
@@ -169,7 +257,8 @@ final class ManagedDocumentOverlaySnapshotManager
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.forkTransientSequence(),
                 exactNodesByBlueId,
-                expectedManagedBlueIdsByPath);
+                expectedManagedBlueIdsByPath,
+                exactResolutionOverlay);
     }
 
     @Override
@@ -225,5 +314,46 @@ final class ManagedDocumentOverlaySnapshotManager
         }
         result.addAll(expectedManagedBlueIdsByPath.keySet());
         return result;
+    }
+
+    private void validateManagedBindings(Node document) {
+        Node checked = Objects.requireNonNull(document, "document");
+        for (Map.Entry<String, String> entry
+                : expectedManagedBlueIdsByPath.entrySet()) {
+            String path = entry.getKey();
+            String expectedBlueId = entry.getValue();
+            Node reference = NodePathEditor.getOrNull(checked, path);
+            if (reference == null || !reference.isReferenceOnly()
+                    || !expectedBlueId.equals(reference.getBlueId())) {
+                throw new InvalidExecutionEvidenceException(
+                        "Canonical identity rebuild requires the exact managed "
+                                + "reference bound at " + path,
+                        ProcessorErrorCategory.InvalidProcessingDocument);
+            }
+            if (!exactNodesByBlueId.containsKey(expectedBlueId)) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "Canonical identity rebuild requires invocation-local "
+                                + "exact content for " + expectedBlueId
+                                + " at " + path,
+                        Collections.singletonList(expectedBlueId));
+            }
+        }
+    }
+
+    private ExactResolutionOverlay exactResolutionOverlay() {
+        return exactResolutionOverlay;
+    }
+
+    private static ResolvedSnapshot requireCompleteCanonicalIdentity(
+            ResolvedSnapshot snapshot) {
+        ResolvedSnapshot checked = Objects.requireNonNull(
+                snapshot, "canonicalIdentitySnapshot");
+        checked.canonicalTypeIdentities().requireCompleteCoverage();
+        if (!checked.hasCanonicalIdentity()) {
+            throw new IllegalStateException(
+                    "Managed canonical identity resolution did not establish "
+                            + "a whole-document identity");
+        }
+        return checked;
     }
 }

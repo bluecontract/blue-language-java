@@ -1,10 +1,9 @@
 package blue.language.processor;
 
-import blue.language.model.wire.BlueLanguageConstants;
-
-import blue.language.model.Node;
-import blue.language.snapshot.FrozenNode;
 import blue.language.identity.BlueIds;
+import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
 
@@ -29,7 +28,9 @@ public final class ExactBlueValue {
                    String blueId,
                    Object admissionOwner) {
         this.value = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
-        this.blueId = Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
+        this.blueId = BlueIds.requireBlueIdOrCyclicMember(
+                blueId,
+                BlueLanguageConstants.OBJECT_BLUE_ID);
         this.admissionOwner = admissionOwner;
     }
 

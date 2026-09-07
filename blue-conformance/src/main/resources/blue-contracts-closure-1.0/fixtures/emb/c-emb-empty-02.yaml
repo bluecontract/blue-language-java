@@ -1,0 +1,160 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-empty-02
+vectors:
+- C-EMB-EMPTY-02
+category: emb
+description: Inline and verified-reference empty collections both remain present and contribute zero occurrences.
+operation: process
+input:
+  root:
+    orders: {}
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths:
+        - /orders
+      emptyOrders:
+        type:
+          blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
+        collectionPath: /orders
+        order: 0
+      mustNotRun:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: emptyOrders
+        order: 0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, none, 1]
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK: {}
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+  variants:
+  - name: inline-cold
+    rootForm: inline
+    cache: cold
+    batching: unbatched
+    rootOverrides:
+      /orders: {}
+  - name: inline-warm
+    rootForm: inline
+    cache: warm
+    batching: batched
+    rootOverrides:
+      /orders: {}
+  - name: reference-cold
+    rootForm: inline
+    cache: cold
+    batching: batched
+    rootOverrides:
+      /orders:
+        blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  - name: reference-warm
+    rootForm: inline
+    cache: warm
+    batching: unbatched
+    rootOverrides:
+      /orders:
+        blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  - name: absent-cold
+    rootForm: inline
+    cache: cold
+    batching: unbatched
+    rootRemovals: [/orders]
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: no-match
+  - actual: result.document.orders
+    op: present
+  - actual: commit.newIntervals.0.scopePath
+    op: absent
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 0
+  - actual: trace.counters.channelCandidateTested
+    op: equals
+    expected: 0
+  - actual: trace.counters.embeddedEventDelivered
+    op: equals
+    expected: 0
+  - actual: variants.inline-cold.result.status
+    op: equals
+    expected: no-match
+  - actual: variants.inline-warm.result.status
+    op: equals
+    expected: no-match
+  - actual: variants.reference-cold.result.status
+    op: equals
+    expected: no-match
+  - actual: variants.reference-warm.result.status
+    op: equals
+    expected: no-match
+  - actual: variants.absent-cold.result.status
+    op: equals
+    expected: no-match
+  - actual: variants.inline-cold.result.document.orders
+    op: present
+  - actual: variants.inline-warm.result.document.orders
+    op: present
+  - actual: variants.reference-cold.result.document.orders
+    op: present
+  - actual: variants.reference-warm.result.document.orders
+    op: present
+  - actual: variants.absent-cold.result.document.orders
+    op: absent
+  - actual: variants.absent-cold.trace.handlerExecutionCount
+    op: equals
+    expected: 0
+  - actual: variants.absent-cold.trace.counters.channelCandidateTested
+    op: equals
+    expected: 0
+  - actual: variants.absent-cold.trace.counters.embeddedEventDelivered
+    op: equals
+    expected: 0
+  - actual: variants.inline-warm.result.documentBlueId
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.documentBlueId
+  - actual: variants.reference-cold.result.documentBlueId
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.documentBlueId
+  - actual: variants.reference-warm.result.documentBlueId
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.documentBlueId
+  - actual: variants.absent-cold.result.documentBlueId
+    op: notEqualsProjection
+    expectedProjection: variants.inline-cold.result.documentBlueId
+  - actual: variants.inline-warm.result.totalGas
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.totalGas
+  - actual: variants.reference-cold.result.totalGas
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.totalGas
+  - actual: variants.reference-warm.result.totalGas
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.result.totalGas
+  - actual: variants.inline-warm.trace.namedEntries
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.trace.namedEntries
+  - actual: variants.reference-cold.trace.namedEntries
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.trace.namedEntries
+  - actual: variants.reference-warm.trace.namedEntries
+    op: equalsProjection
+    expectedProjection: variants.inline-cold.trace.namedEntries
+  - actual: result.events
+    op: sameAcrossVariants
+    variant: all

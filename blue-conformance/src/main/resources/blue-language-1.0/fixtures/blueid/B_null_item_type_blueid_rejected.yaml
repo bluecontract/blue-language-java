@@ -1,0 +1,8 @@
+id: B_null_item_type_blueid_rejected
+category: BlueId
+operation: calculateBlueId
+description: A null itemType BlueId is not valid direct canonical identity input
+expectError: true
+input:
+  itemType:
+    blueId: null

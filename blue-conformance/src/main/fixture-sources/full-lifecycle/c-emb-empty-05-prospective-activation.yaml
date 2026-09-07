@@ -1,0 +1,100 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-emb-empty-05-prospective-activation
+scenario: C-EMB-EMPTY-05
+description: Inactive prospective collection members activate atomically when initialization creates their containing collection with equivalent inline and referenced exact targets; absent and exact-empty declared collections route no work.
+operation: admit-closure
+events: {}
+documents:
+  c-emb-empty-05-root:
+    publicRoot: true
+    document:
+      documentId: c-emb-empty-05-root
+      emptyOrders: {}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          collectionPaths: [/orders, /missingOrders, /emptyOrders]
+        absentCollection:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /missingOrders
+          order: 0
+        mustNotReceiveAbsentCollection:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: absentCollection
+          order: 0
+        emptyCollection:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /emptyOrders
+          order: 1
+        mustNotReceiveEmptyCollection:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: emptyCollection
+          order: 0
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        createOrder:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+  c-emb-empty-05-child:
+    publicRoot: false
+    initialized: true
+    document:
+      documentId: c-emb-empty-05-child
+      state: ready
+occurrences:
+- sourceDocumentId: c-emb-empty-05-root
+  sourcePath: /orders/referenced
+  activationGeneration: 1
+  targetDocumentId: c-emb-empty-05-child
+  active: false
+- sourceDocumentId: c-emb-empty-05-root
+  sourcePath: /orders/inline
+  activationGeneration: 1
+  targetDocumentId: c-emb-empty-05-child
+  active: false
+runtime:
+  initializationHandlers:
+    c-emb-empty-05-root/createOrder:
+      patches:
+      - op: add
+        path: /orders
+        val:
+          referenced: {$documentBlueId: c-emb-empty-05-child}
+          inline: {$documentInline: c-emb-empty-05-child}
+  handlers:
+    c-emb-empty-05-root/mustNotReceiveAbsentCollection: {}
+    c-emb-empty-05-root/mustNotReceiveEmptyCollection: {}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: c-emb-empty-05-root, initialized: true, terminated: false}
+  - {documentId: c-emb-empty-05-child, initialized: true, terminated: false}
+  pointers:
+  - {documentId: c-emb-empty-05-root, pointer: /emptyOrders, value: {}}
+  absentPointers:
+  - {documentId: c-emb-empty-05-root, pointer: /missingOrders}
+  activatedOccurrences:
+  - sourceDocumentId: c-emb-empty-05-root
+    sourcePath: /orders/referenced
+    activationGeneration: 1
+    targetDocumentId: c-emb-empty-05-child
+  - sourceDocumentId: c-emb-empty-05-root
+    sourcePath: /orders/inline
+    activationGeneration: 1
+    targetDocumentId: c-emb-empty-05-child
+  workCounts:
+  - {kind: INITIALIZATION, count: 1}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: EMBEDDED_EVENT, count: 0}
+  publicEvents: []
+  checkpointWrites: 0
+  terminationMarkerCount: 0
+  commitCompanion: present

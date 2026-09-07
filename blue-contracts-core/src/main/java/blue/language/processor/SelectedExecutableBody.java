@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Arrays;
@@ -11,9 +12,11 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
@@ -30,7 +33,12 @@ public final class SelectedExecutableBody {
     private final String field;
     private final String bodyBlueId;
     private final FrozenNode body;
+    private final boolean materializedFromReference;
     private final Function<FrozenNode, FrozenNode> materializer;
+    private final BiFunction<SelectedExecutableBody, List<JsonPatch>,
+            List<JsonPatch>> resolvedPatchAdmission;
+    private final BiFunction<SelectedExecutableBody, Node, Node>
+            resolvedEventAdmission;
     private final BooleanSupplier contextOpen;
     private final long referenceLimit;
     private final Set<String> allowedReferences =
@@ -42,16 +50,26 @@ public final class SelectedExecutableBody {
             String field,
             String bodyBlueId,
             FrozenNode body,
+            boolean materializedFromReference,
             Function<FrozenNode, FrozenNode> materializer,
+            BiFunction<SelectedExecutableBody, List<JsonPatch>,
+                    List<JsonPatch>> resolvedPatchAdmission,
+            BiFunction<SelectedExecutableBody, Node, Node>
+                    resolvedEventAdmission,
             BooleanSupplier contextOpen,
             GasSchedule schedule) {
         this.field = requireText(field, "field");
         this.bodyBlueId =
                 requireText(bodyBlueId, "bodyBlueId");
         this.body = Objects.requireNonNull(body, "body");
+        this.materializedFromReference = materializedFromReference;
         this.materializer =
                 Objects.requireNonNull(
                         materializer, "materializer");
+        this.resolvedPatchAdmission = Objects.requireNonNull(
+                resolvedPatchAdmission, "resolvedPatchAdmission");
+        this.resolvedEventAdmission = Objects.requireNonNull(
+                resolvedEventAdmission, "resolvedEventAdmission");
         this.contextOpen =
                 Objects.requireNonNull(
                         contextOpen, "contextOpen");
@@ -82,6 +100,19 @@ public final class SelectedExecutableBody {
      */
     public String bodyBlueId() {
         return bodyBlueId;
+    }
+
+    /**
+     * Returns whether the selected body was opened from an exact pure
+     * reference and is therefore resolver-completed rather than authored
+     * inline Source.
+     *
+     * @return {@code true} only for a materialized referenced body
+     * @throws IllegalStateException if the owning execution context is closed
+     */
+    public boolean wasMaterializedFromReference() {
+        ensureOpen();
+        return materializedFromReference;
     }
 
     /**
@@ -193,6 +224,58 @@ public final class SelectedExecutableBody {
         return opened;
     }
 
+    /**
+     * Admits one patch produced from this resolver-completed selected body.
+     *
+     * <p>Resolver-expanded type positions are projected back to their exact
+     * Source representation before buffering. This operation is available
+     * only when the selected body itself was opened from a pure reference.</p>
+     *
+     * @param patch resolver-completed patch, or {@code null}
+     * @return admitted Source patch, or {@code null} when no effect is admitted
+     * @throws IllegalArgumentException if this body was authored inline
+     * @throws IllegalStateException if the owning context is closed or exact
+     *         type evidence is unavailable
+     */
+    public JsonPatch applyResolvedPatch(JsonPatch patch) {
+        ensureOpen();
+        if (patch == null) {
+            return null;
+        }
+        List<JsonPatch> accepted = applyResolvedPatches(
+                Collections.singletonList(patch));
+        return accepted.isEmpty() ? null : accepted.get(0);
+    }
+
+    /**
+     * Admits an ordered patch batch produced from this resolver-completed
+     * selected body.
+     *
+     * @param patches resolver-completed ordered patches
+     * @return immutable Source patches accepted by the owning invocation
+     * @throws IllegalArgumentException if this body was authored inline
+     * @throws IllegalStateException if the owning context is closed or exact
+     *         type evidence is unavailable
+     */
+    public List<JsonPatch> applyResolvedPatches(List<JsonPatch> patches) {
+        ensureOpen();
+        return resolvedPatchAdmission.apply(this, patches);
+    }
+
+    /**
+     * Admits an event produced from this resolver-completed selected body.
+     *
+     * @param event resolver-completed application event
+     * @return admitted Source event, or {@code null} when scope work stopped
+     * @throws IllegalArgumentException if this body was authored inline
+     * @throws IllegalStateException if the owning context is closed or exact
+     *         type evidence is unavailable
+     */
+    public Node emitResolvedEvent(Node event) {
+        ensureOpen();
+        return resolvedEventAdmission.apply(this, event);
+    }
+
     private void enforceReferenceLimit() {
         enforceReferenceLimit(
                 allowedReferences.size());
@@ -260,8 +343,9 @@ public final class SelectedExecutableBody {
         if (schema == null) {
             return;
         }
-        if (schema.getBlueId() != null) {
+        if (schema.isReferenceOnly()) {
             references.add(schema.getBlueId());
+            return;
         }
         for (Node nested : Arrays.asList(
                 schema.getRequired(),

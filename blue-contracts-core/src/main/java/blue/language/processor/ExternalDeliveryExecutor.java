@@ -56,6 +56,7 @@ final class ExternalDeliveryExecutor {
                 dispatchBundle,
                 first.handlerChannelKey(),
                 first.payload(),
+                first.payloadBlueId(),
                 first.carriedExactValues())) {
             if (!execution.hasFailure()) {
                 execution.recordCompletedDelivery();

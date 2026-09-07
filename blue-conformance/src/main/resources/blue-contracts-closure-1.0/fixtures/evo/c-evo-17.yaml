@@ -29,17 +29,17 @@ input:
         checkpointDomain: evolution-v1
       requiredWorkflow:
         type:
-          blueId: FE68gr14jPkb9RfHbQH1tHGE4YALJbZvgC6CtdHwYheX
+          blueId: 3awNZ6spv8gmjB9m5Sihj73diGVjVN33e14Vg67zEGFp
         channel: in
         operationId: EVO-UNRELATED-REQUIRED-WORKFLOW
       generalizeAndEmbed:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
       generalization:
         type:
-          blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
+          blueId: EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP
         defaultMode: nearest-valid-ancestor
   event:
     type:
@@ -82,7 +82,7 @@ input:
             path: /contracts/embedded
             val:
               type:
-                blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+                blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
               paths:
               - /child
           - op: remove

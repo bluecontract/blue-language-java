@@ -119,6 +119,10 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("node values conflict")) {
             return BlueLanguageErrorCategory.FixedValueConflict;
         }
+        if (lower.contains("payload kinds conflict")
+                || lower.contains("payload kinds are incompatible")) {
+            return BlueLanguageErrorCategory.TypeCompatibilityViolation;
+        }
         if (lower.contains("not a subtype")
                 || lower.contains("invalid type")
                 || lower.contains("incompatible")

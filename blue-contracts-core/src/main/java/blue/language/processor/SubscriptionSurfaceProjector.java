@@ -26,7 +26,7 @@ final class SubscriptionSurfaceProjector {
             ProcessingSnapshotManager snapshotManager,
             ContractProcessorRegistry registry,
             NodeToObjectConverter converter) {
-        this.rules = new SubscriptionSurfaceRules();
+        this.rules = new SubscriptionSurfaceRules(snapshotManager);
         this.direct = new DirectSubscriptionSurfaceProjector(rules);
         this.effective = contractLoader != null && registry != null
                 ? new EffectiveSubscriptionSurfaceProjector(

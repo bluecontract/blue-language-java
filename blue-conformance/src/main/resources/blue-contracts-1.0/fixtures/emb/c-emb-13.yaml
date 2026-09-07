@@ -9,13 +9,13 @@ input:
   root:
     lessons:
       a:
-        blueId: 3AyAqJu9NXtk5fgp3D1XwZAHgd7jgcDnep4gaTW4kXPS
+        blueId: 7eHy75CgnW6iLUucwRGzMkMnGneBHarZyUMpfxqnhCak
       b:
-        blueId: 3AyAqJu9NXtk5fgp3D1XwZAHgd7jgcDnep4gaTW4kXPS
+        blueId: 7eHy75CgnW6iLUucwRGzMkMnGneBHarZyUMpfxqnhCak
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         collectionPaths:
         - /lessons
   event:
@@ -38,7 +38,7 @@ input:
     mode: exact-node
     semanticDemandsOnly: true
     nodes:
-      3AyAqJu9NXtk5fgp3D1XwZAHgd7jgcDnep4gaTW4kXPS:
+      7eHy75CgnW6iLUucwRGzMkMnGneBHarZyUMpfxqnhCak:
         value: 0
         contracts:
           in:
@@ -51,7 +51,7 @@ input:
             checkpointDomain: shared-channel-v1
           h:
             type:
-              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+              blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
             channel: in
             order: 0
             result:
@@ -71,7 +71,7 @@ expected:
     expected: 1
   - actual: result.document.lessons.b.blueId
     op: equals
-    expected: 3AyAqJu9NXtk5fgp3D1XwZAHgd7jgcDnep4gaTW4kXPS
+    expected: 7eHy75CgnW6iLUucwRGzMkMnGneBHarZyUMpfxqnhCak
   - actual: trace.externalDeliveryOrder
     op: sequenceEquals
     expected:

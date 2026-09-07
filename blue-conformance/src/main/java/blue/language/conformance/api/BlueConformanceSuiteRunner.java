@@ -153,13 +153,18 @@ public final class BlueConformanceSuiteRunner {
         String operation = BlueConformanceFixtureExecution.requireText(
                 spec,
                 BlueConformanceFixtureSupport.FixtureField.OPERATION);
+        List<BlueConformanceFixtureSupport.FixtureEntry> fixtureEntries =
+                BlueConformanceFixturePrimitives.FixtureOperation
+                        .SUITE_ASSERTION.equals(operation)
+                        ? BlueConformanceFixtureExecution.fixtureEntries()
+                        : Collections.emptyList();
         if (BlueConformanceFixtureExecution.expectsTopLevelError(
                 spec, operation)) {
             try {
                 BlueConformanceFixtureExecution.runOperation(
                         spec,
                         operation,
-                        BlueConformanceFixtureExecution.fixtureEntries());
+                        fixtureEntries);
             } catch (RuntimeException expected) {
                 if (spec.hasNonNull(
                         BlueConformanceFixtureSupport.FixtureField
@@ -180,7 +185,7 @@ public final class BlueConformanceSuiteRunner {
         BlueConformanceFixtureExecution.runOperation(
                 spec,
                 operation,
-                BlueConformanceFixtureExecution.fixtureEntries());
+                fixtureEntries);
     }
 
 }

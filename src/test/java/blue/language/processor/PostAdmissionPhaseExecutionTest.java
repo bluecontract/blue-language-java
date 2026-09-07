@@ -258,8 +258,11 @@ final class PostAdmissionPhaseExecutionTest {
         fixture.execution.enqueueApplicationEvent(
                 JsonPointer.ROOT,
                 INCREMENT_HANDLER_KEY,
-                queuedEvent,
-                DirectBlueIdCalculator.calculateBlueId(queuedEvent));
+                ExactEventIdentityEvidence.verify(
+                        fixture.owner.administration().runtimeAccess(),
+                        queuedEvent,
+                        DirectBlueIdCalculator.calculateBlueId(queuedEvent),
+                        null));
         int pendingBefore =
                 fixture.session.eventQueue().pendingOccurrenceCount();
         ProcessingPhaseState executed = stateAt(

@@ -3,6 +3,8 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,8 +66,7 @@ class EffectiveFragmentationCatalogTest {
                         .contains(fixture.programBlueId),
                 "catalog inspection demanded the executable body");
         assertEquals(
-                DirectBlueIdCalculator.calculateBlueId(
-                        fixture.document()),
+                observation.expectedRootBlueId,
                 observation.catalog.rootBlueId());
     }
 
@@ -422,20 +424,20 @@ class EffectiveFragmentationCatalogTest {
                         .contracts(
                                 new Node().blueId(
                                         contractsBlueId));
-        String rootBlueId =
-                DirectBlueIdCalculator.calculateBlueId(
-                        fragmented);
         fixture.content.put(
                 contractsBlueId,
                 exactContracts);
+        String rootBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        fragmented);
         fixture.content.put(
                 rootBlueId,
                 fragmented);
 
         // when
-        String inlineSignature;
-        String fragmentedSignature;
-        String referenceSignature;
+        String inlineSurfaceSignature;
+        String fragmentedSurfaceSignature;
+        String referenceSurfaceSignature;
         String inlineRootBlueId;
         String fragmentedRootBlueId;
         String referenceRootBlueId;
@@ -453,9 +455,9 @@ class EffectiveFragmentationCatalogTest {
                             .administration().effectiveFragmentationCatalog(
                                     new Node().blueId(
                                             rootBlueId));
-            inlineSignature = signature(inlineCatalog);
-            fragmentedSignature = signature(fragmentedCatalog);
-            referenceSignature = signature(referenceCatalog);
+            inlineSurfaceSignature = surfaceSignature(inlineCatalog);
+            fragmentedSurfaceSignature = surfaceSignature(fragmentedCatalog);
+            referenceSurfaceSignature = surfaceSignature(referenceCatalog);
             inlineRootBlueId = inlineCatalog.rootBlueId();
             fragmentedRootBlueId =
                     fragmentedCatalog.rootBlueId();
@@ -467,8 +469,8 @@ class EffectiveFragmentationCatalogTest {
          * A fresh processor starts with the pure Root reference so the same
          * comparison also covers cold-reference then warm-inline order.
          */
-        String coldReferenceSignature;
-        String warmInlineSignature;
+        String coldReferenceSurfaceSignature;
+        String warmInlineSurfaceSignature;
         try (Blue cold = fixture.blue()) {
             EffectiveFragmentationCatalog coldReference =
                     cold.getDocumentProcessor()
@@ -479,21 +481,73 @@ class EffectiveFragmentationCatalogTest {
                     cold.getDocumentProcessor()
                             .administration().effectiveFragmentationCatalog(
                                     inline);
-            coldReferenceSignature = signature(coldReference);
-            warmInlineSignature = signature(warmInline);
+            coldReferenceSurfaceSignature = surfaceSignature(coldReference);
+            warmInlineSurfaceSignature = surfaceSignature(warmInline);
         }
         boolean programRequested =
                 fixture.providerRequests
                         .contains(fixture.programBlueId);
 
         // then
-        assertEquals(inlineSignature, fragmentedSignature);
-        assertEquals(inlineSignature, referenceSignature);
-        assertEquals(inlineRootBlueId, fragmentedRootBlueId);
-        assertEquals(inlineRootBlueId, referenceRootBlueId);
-        assertEquals(rootBlueId, inlineRootBlueId);
-        assertEquals(coldReferenceSignature, warmInlineSignature);
+        assertEquals(inlineSurfaceSignature, fragmentedSurfaceSignature);
+        assertEquals(inlineSurfaceSignature, referenceSurfaceSignature);
+        assertNotEquals(inlineRootBlueId, fragmentedRootBlueId);
+        assertEquals(rootBlueId, fragmentedRootBlueId);
+        assertEquals(rootBlueId, referenceRootBlueId);
+        assertEquals(
+                coldReferenceSurfaceSignature,
+                warmInlineSurfaceSignature);
         assertFalse(programRequested);
+    }
+
+    @Test
+    void shouldReportCanonicalRootIdentityForInlineTypeSource() {
+        // given
+        Fixture fixture = new Fixture();
+        Node rootType = new Node()
+                .name("Catalog Root Type")
+                .type(new Node().blueId(
+                        fixture.scopeTypeBlueId))
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        fixture.content.put(rootTypeBlueId, rootType);
+        Node inlineRoot = fixture.document()
+                .type(rootType.clone())
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        Node referenceRoot = fixture.document()
+                .type(new Node().blueId(rootTypeBlueId))
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+
+        // when
+        String expectedRootBlueId;
+        EffectiveFragmentationCatalog inlineCatalog;
+        EffectiveFragmentationCatalog referenceCatalog;
+        try (Blue blue = fixture.blue()) {
+            expectedRootBlueId =
+                    blue.calculateSourceDocumentBlueId(
+                            referenceRoot.clone());
+            inlineCatalog = blue.getDocumentProcessor()
+                    .administration()
+                    .effectiveFragmentationCatalog(inlineRoot);
+            referenceCatalog = blue.getDocumentProcessor()
+                    .administration()
+                    .effectiveFragmentationCatalog(referenceRoot);
+        }
+
+        // then
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DirectBlueIdCalculator.calculateBlueId(inlineRoot),
+                "direct input must reject an uncanonicalized inline type");
+        assertEquals(expectedRootBlueId, inlineCatalog.rootBlueId());
+        assertEquals(expectedRootBlueId, referenceCatalog.rootBlueId());
     }
 
     @Test
@@ -603,6 +657,9 @@ class EffectiveFragmentationCatalogTest {
                 rootPlan.collectionMemberKeysByDeclaration()
                         .get("/lessons"));
         assertEquals(
+                EmbeddedScopePlanView.CollectionState.PRESENT_COLLECTION,
+                rootPlan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(
                 Arrays.asList(
                         "/lessons/a~0c",
                         "/lessons/a~1b",
@@ -622,6 +679,53 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldDistinguishAbsentAndPresentEmptyCollectionsInPublicPlan() {
+        // given
+        Node embedded = new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        "collectionPaths",
+                        new Node().items(new Node().value("/lessons")));
+        Node contracts = new Node().properties("embedded", embedded);
+        Node absent = Nodes.emptyObject().contracts(contracts.clone());
+        Node presentEmpty = new Node()
+                .properties("lessons", Nodes.emptyObject())
+                .contracts(contracts.clone());
+
+        EmbeddedScopePlanView absentPlan;
+        EmbeddedScopePlanView presentPlan;
+
+        // when
+        try (Blue blue = blue(
+                new LinkedHashMap<String, Node>(),
+                new ArrayList<String>())) {
+            absentPlan = blue.getDocumentProcessor().administration()
+                    .effectiveFragmentationCatalog(absent)
+                    .scopePlansByScope().get("/");
+            presentPlan = blue.getDocumentProcessor().administration()
+                    .effectiveFragmentationCatalog(presentEmpty)
+                    .scopePlansByScope().get("/");
+        }
+
+        // then
+        assertEquals(
+                Collections.emptyList(),
+                absentPlan.collectionMemberKeysByDeclaration()
+                        .get("/lessons"));
+        assertEquals(
+                Collections.emptyList(),
+                presentPlan.collectionMemberKeysByDeclaration()
+                        .get("/lessons"));
+        assertEquals(
+                EmbeddedScopePlanView.CollectionState
+                        .ABSENT_ZERO_OCCURRENCES,
+                absentPlan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedScopePlanView.CollectionState.PRESENT_COLLECTION,
+                presentPlan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
     void shouldDefineChildCatalogScopeFromInheritedProcessEmbeddedPath() {
         // given
         Node inheritedEmbedded =
@@ -637,6 +741,9 @@ class EffectiveFragmentationCatalogTest {
         Node rootType =
                 new Node()
                         .name("Embedded catalog root")
+                        .type(new Node().blueId(
+                                BlueLanguageConstants
+                                        .DICTIONARY_TYPE_BLUE_ID))
                         .contracts(
                                 new Node().properties(
                                         "embedded",
@@ -741,6 +848,165 @@ class EffectiveFragmentationCatalogTest {
             assertFalse(
                     requests.contains(unrelatedBlueId),
                     "catalog inspection demanded unrelated data");
+        }
+    }
+
+    @Test
+    void shouldPreserveRegisteredRequiredRequestDeclarationAcrossSnapshots() {
+        // given
+        Fixture fixture = new Fixture();
+        Node document = fixture.document();
+        Node request = new Node().properties("amount", new Node()
+                .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                .schema(new blue.language.model.Schema().required(true)));
+        document.getContracts().getProperties().get("run")
+                .properties("request", request);
+        // when
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            Node canonical = processor.administration().canonicalizeProcessingSource(document);
+            EffectiveContractSnapshot handler = contract(processor.administration()
+                    .effectiveFragmentationCatalog(canonical), "/", "run");
+            // then
+            assertTrue(handler.headerFields().get("request").property("amount")
+                    .getSchema().getRequiredValue());
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
+                    DirectBlueIdCalculator.calculateBlueId(processor.administration()
+                            .canonicalizeProcessingSource(canonical)));
+            Node resolved = processor.administration().resolveProcessingSource(document);
+            assertTrue(resolved.getContracts().getProperties().get("run")
+                    .getProperties().get("request").getProperties().get("amount")
+                    .getSchema().getRequiredValue());
+            Node invalidFixed = document.clone();
+            invalidFixed.getContracts().getProperties().get("run")
+                    .getProperties().get("request").getProperties().get("amount")
+                    .value("wrong kind");
+            assertThrows(IllegalArgumentException.class, () -> processor.administration()
+                    .canonicalizeProcessingSource(invalidFixed));
+            // Newly inserted child Source is not yet an opened processing scope.
+            Node nested = new Node().properties("children", new Node()
+                    .properties("first", canonical.clone()));
+            for (boolean strict : new boolean[] {false, true}) {
+                DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                        new Node().properties("children", new Node().properties(Collections.emptyMap())),
+                        null, null, processor.scopeIdentitySnapshotManager(), null,
+                        new GasMeter(), processor.registry().exactSourceFieldsByType(), strict);
+                assertTrue(runtime.snapshotFromDocument(nested).resolvedRoot()
+                        .getNode("/children/first/contracts/run/request/amount")
+                        .getSchema().getRequiredValue());
+            }
+            Node ordinaryRequest = new Node().properties("request", request.clone());
+            assertThrows(IllegalArgumentException.class, () -> processor.administration()
+                    .resolveProcessingSource(ordinaryRequest));
+        }
+    }
+
+    @Test
+    void shouldCatalogInactiveNestedDeclarationsWithoutCompletingMatchers() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED)))
+                .properties("request", new Node().properties("amount", new Node()
+                        .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                        .schema(new blue.language.model.Schema().required(true))));
+        Node document = new Node().properties("inactive", child);
+        fixture.content.remove(fixture.programBlueId);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessorAdministration administration =
+                    blue.getDocumentProcessor().administration();
+            Node canonical = administration.canonicalizeProcessingSource(document);
+            fixture.providerRequests.clear();
+            EffectiveFragmentationCatalog catalog =
+                    administration.effectiveFragmentationCatalog(canonical);
+
+            // then
+            assertFalse(catalog.effectiveContractsByScope().containsKey("/inactive"));
+            assertFalse(fixture.providerRequests.contains(fixture.programBlueId));
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
+                    catalog.rootBlueId());
+            blue.language.merge.ResolvedSnapshot sourceSnapshot =
+                    administration.processingSourceSnapshot(document);
+            assertEquals(catalog.rootBlueId(), sourceSnapshot.blueId());
+            assertTrue(sourceSnapshot.resolvedRoot()
+                    .getNode("/inactive/contracts/run/request/amount")
+                    .getSchema().getRequiredValue());
+            assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
+                    canonical.getNode("/inactive/contracts/run/event/type").getBlueId());
+        }
+    }
+
+    @Test
+    void shouldPreserveInactiveMatcherIdentityDuringCanonicalPatchResolution() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED)));
+        Node document = new Node().properties("inactive", child);
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            Node canonical = processor.administration().canonicalizeProcessingSource(document);
+            // when
+            for (boolean strict : new boolean[] {false, true}) {
+                blue.language.merge.ResolvedSnapshot snapshot = strict
+                        ? ExecutableBodyPathCatalog.resolveCanonicalTransientIncludingTypeContracts(
+                                processor.scopeIdentitySnapshotManager(), FrozenNode.fromNode(canonical),
+                                Collections.singleton("/"), processor.registry().exactSourceFieldsByType())
+                        : ExecutableBodyPathCatalog.resolveCanonicalTransient(
+                                processor.scopeIdentitySnapshotManager(), FrozenNode.fromNode(canonical),
+                                Collections.singleton("/"), processor.registry().exactSourceFieldsByType());
+                // then
+                assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical), snapshot.blueId());
+                assertEquals(snapshot.blueId(), processor.administration()
+                        .effectiveFragmentationCatalog(snapshot.canonicalRoot()).rootBlueId());
+                assertNull(snapshot.canonicalRoot()
+                        .getNode("/inactive/contracts/run/event").getProperties());
+            }
+        }
+    }
+
+    @Test
+    void shouldRejectInvalidFixedValuesInInactiveRegisteredDeclarations() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("request", new Node().properties("amount", new Node()
+                        .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                        .schema(new blue.language.model.Schema().required(true))
+                        .value("wrong kind")));
+        Node document = new Node().properties("inactive", child);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            // then
+            assertThrows(IllegalArgumentException.class, () -> blue.getDocumentProcessor()
+                    .administration().effectiveFragmentationCatalog(document));
+        }
+    }
+
+    @Test
+    void shouldRequireCompletedOrdinaryEventsOutsideRegisteredDeclarations() {
+        // given
+        Fixture fixture = new Fixture();
+        Node document = new Node().properties("inactive", new Node()
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED))
+                        .properties("document", new Node()
+                                .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                                .schema(new blue.language.model.Schema().required(true)))));
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            // then
+            assertThrows(IllegalArgumentException.class, () -> blue.getDocumentProcessor()
+                    .administration().effectiveFragmentationCatalog(document));
         }
     }
 
@@ -1035,10 +1301,14 @@ class EffectiveFragmentationCatalogTest {
     private static CatalogObservation observeCatalog(
             Fixture fixture) {
         try (Blue blue = fixture.blue()) {
+            Node document = fixture.document();
+            String expectedRootBlueId =
+                    blue.calculateSourceDocumentBlueId(
+                            document.clone());
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
                             .administration().effectiveFragmentationCatalog(
-                                    fixture.document());
+                                    document);
             EffectiveContractSnapshot handler =
                     contract(catalog, "/", "run");
             return new CatalogObservation(
@@ -1046,7 +1316,8 @@ class EffectiveFragmentationCatalogTest {
                     handler,
                     handler
                             .executableBodySourceDescriptorsByField()
-                            .get("program"));
+                            .get("program"),
+                    expectedRootBlueId);
         }
     }
 
@@ -1054,14 +1325,17 @@ class EffectiveFragmentationCatalogTest {
         private final EffectiveFragmentationCatalog catalog;
         private final EffectiveContractSnapshot handler;
         private final ExecutableBodySourceDescriptor bodySource;
+        private final String expectedRootBlueId;
 
         private CatalogObservation(
                 EffectiveFragmentationCatalog catalog,
                 EffectiveContractSnapshot handler,
-                ExecutableBodySourceDescriptor bodySource) {
+                ExecutableBodySourceDescriptor bodySource,
+                String expectedRootBlueId) {
             this.catalog = catalog;
             this.handler = handler;
             this.bodySource = bodySource;
+            this.expectedRootBlueId = expectedRootBlueId;
         }
     }
 
@@ -1162,6 +1436,12 @@ class EffectiveFragmentationCatalogTest {
         return value.toString();
     }
 
+    private static String surfaceSignature(
+            EffectiveFragmentationCatalog catalog) {
+        String complete = signature(catalog);
+        return complete.substring(complete.indexOf('|') + 1);
+    }
+
     private static Blue blue(
             Map<String, Node> content,
             List<String> requests) {
@@ -1179,6 +1459,11 @@ class EffectiveFragmentationCatalogTest {
     public static final class CatalogHandler
             extends HandlerContract {
         private Node program;
+        private Node request;
+
+        public Node getRequest() { return request; }
+        public void setRequest(Node request) { this.request = request; }
+
         private String label;
 
         public Node getProgram() {

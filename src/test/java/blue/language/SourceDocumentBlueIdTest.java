@@ -14,12 +14,15 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.NodeWireForm;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.NodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
@@ -29,8 +32,128 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SourceDocumentBlueIdTest {
+
+    @Test
+    void shouldGiveInlineAndVerifiedReferenceTypesOneSourceIdentity() {
+        // given
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Actual Type Here\n" +
+                "inherited: fixed");
+        String typeBlueId = nodeProvider.getBlueIdByName(
+                "Actual Type Here");
+        Blue blue = new Blue(nodeProvider);
+        Node inlineSource = YAML_MAPPER.readValue(
+                "name: X\n" +
+                "type:\n" +
+                "  name: Actual Type Here\n" +
+                "  inherited: fixed\n" +
+                "own: kept", Node.class);
+        Node referenceSource = YAML_MAPPER.readValue(
+                "name: X\n" +
+                "type:\n" +
+                "  blueId: " + typeBlueId + "\n" +
+                "own: kept", Node.class);
+        Object inlineBefore = NodeWireForm.get(inlineSource);
+        Object referenceBefore = NodeWireForm.get(referenceSource);
+
+        // when
+        Node inlineResolved = blue.resolve(inlineSource);
+        Node referenceResolved = blue.resolve(referenceSource);
+        Node inlineCanonical = blue.canonicalize(inlineSource);
+        Node referenceCanonical = blue.canonicalize(referenceSource);
+        String inlineBlueId = blue.calculateSourceDocumentBlueId(
+                inlineSource);
+        String referenceBlueId = blue.calculateSourceDocumentBlueId(
+                referenceSource);
+
+        // then
+        assertEquals(
+                resolvedSemanticProjection(referenceResolved),
+                resolvedSemanticProjection(inlineResolved));
+        assertEquals(NodeWireForm.get(referenceCanonical),
+                NodeWireForm.get(inlineCanonical));
+        assertEquals(typeBlueId,
+                inlineCanonical.getType().getBlueId());
+        assertTrue(inlineCanonical.getType().isReferenceOnly());
+        assertFalse(inlineCanonical.getProperties().containsKey(
+                "inherited"));
+        assertEquals("kept",
+                inlineCanonical.getProperties().get("own").getValue());
+        assertEquals(referenceBlueId, inlineBlueId);
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineCanonical),
+                inlineBlueId);
+        assertEquals(inlineBefore, NodeWireForm.get(inlineSource));
+        assertEquals(referenceBefore, NodeWireForm.get(referenceSource));
+    }
+
+    @Test
+    void shouldRequireCompleteTypeEvidenceAndRetryToEagerIdentity() {
+        // given
+        Node type = new Node()
+                .name("Demanded Type")
+                .properties("inherited", new Node().value("fixed"));
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(type);
+        AtomicBoolean evidenceAvailable = new AtomicBoolean(false);
+        NodeProvider delayedProvider = blueId -> evidenceAvailable.get()
+                && typeBlueId.equals(blueId)
+                ? Collections.singletonList(type.clone())
+                : null;
+        Blue retryingBlue = new Blue(delayedProvider);
+        Node source = new Node()
+                .name("X")
+                .type(new Node().blueId(typeBlueId))
+                .properties("own", new Node().value("kept"));
+        BlueOperationLimits noEvidence = BlueOperationLimits.UNLIMITED
+                .withMaxReferenceExpansions(0);
+
+        // when
+        BlueOperationResult<Node> incomplete = retryingBlue.resolveLimited(
+                source, noEvidence);
+
+        // then
+        assertEquals(BlueOperationOutcome.INCOMPLETE,
+                incomplete.outcome());
+        assertTrue(incomplete.outstandingBlueIds().contains(typeBlueId));
+        assertThrows(IllegalStateException.class,
+                incomplete::requireEstablished);
+        assertThrows(IllegalArgumentException.class,
+                () -> retryingBlue.calculateSourceDocumentBlueId(source));
+
+        // Missing evidence becomes available for a complete retry.
+        evidenceAvailable.set(true);
+        BlueOperationResult<Node> retried = retryingBlue.resolveLimited(
+                source,
+                BlueOperationLimits.UNLIMITED
+                        .withMaxReferenceExpansions(1));
+        Node retryCanonical = retryingBlue.canonicalize(source);
+        String retryBlueId = retryingBlue
+                .calculateSourceDocumentBlueId(source);
+        Blue eagerBlue = new Blue(blueId -> typeBlueId.equals(blueId)
+                ? Collections.singletonList(type.clone())
+                : null);
+        Node eagerCanonical = eagerBlue.canonicalize(source);
+        String eagerBlueId = eagerBlue.calculateSourceDocumentBlueId(source);
+
+        // The retry must be exactly the complete eager result.
+        assertEquals(BlueOperationOutcome.ESTABLISHED, retried.outcome());
+        assertEquals(
+                resolvedSemanticProjection(eagerBlue.resolve(source)),
+                resolvedSemanticProjection(retried.requireEstablished()));
+        assertEquals(NodeWireForm.get(eagerCanonical),
+                NodeWireForm.get(retryCanonical));
+        assertEquals(eagerBlueId, retryBlueId);
+    }
+
+    private static Object resolvedSemanticProjection(Node node) {
+        return NodeWireForm.get(
+                NodeToBlueIdInput.stripResolvedBlueIdMetadata(node.clone()));
+    }
 
     @Test
     void shouldCalculateEquivalentSourceDocumentBlueIdForSourceTypedIntegerValueOne() {

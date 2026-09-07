@@ -3,11 +3,14 @@ package blue.language.processor;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.runtime.LanguageProcessing;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;
@@ -61,8 +64,36 @@ final class LanguageProcessingSnapshotManager
     }
 
     @Override
+    public ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        return scope.resolveCanonicalTransient(canonicalRoot, preservedPaths);
+    }
+
+    @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return scope.resolveTransient(document);
+    }
+
+    @Override
+    public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+            Node document,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        return scope.resolveTransientForCanonicalIdentity(
+                document, exactResolutionOverlay);
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        return scope.resolveTypeDeclarationIdentity(declaration);
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        return scope.resolveTypeDeclarationIdentity(
+                declaration, exactResolutionOverlay);
     }
 
     @Override
@@ -100,6 +131,13 @@ final class LanguageProcessingSnapshotManager
                     reason, result.outstandingBlueIds());
         }
         throw new InvalidExecutionEvidenceException(reason);
+    }
+
+    @Override
+    public TypeEvidenceResolution materializeVerifiedTypeReference(
+            FrozenNode reference) {
+        return scope.runtimeAccess()
+                .materializeTypeReferenceForMatching(reference);
     }
 
     @Override

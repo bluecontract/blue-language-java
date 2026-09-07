@@ -114,6 +114,11 @@ final class EmbeddedScopePlanTest {
                 Arrays.asList("lesson-a", "lesson-b"));
         Map<String, List<String>> memberKeys = new LinkedHashMap<>();
         memberKeys.put("/lessons", lessonKeys);
+        Map<String, EmbeddedCollectionState> collectionStates =
+                new LinkedHashMap<>();
+        collectionStates.put(
+                "/lessons",
+                EmbeddedCollectionState.PRESENT_COLLECTION);
         List<EmbeddedConcretePath> concretePaths = new ArrayList<>(
                 Arrays.asList(
                         explicit("/payment", "/payment"),
@@ -128,11 +133,13 @@ final class EmbeddedScopePlanTest {
                 explicitDeclarations,
                 collectionDeclarations,
                 memberKeys,
+                collectionStates,
                 concretePaths);
         explicitDeclarations.add("/delivery");
         collectionDeclarations.clear();
         lessonKeys.add("lesson-c");
         memberKeys.clear();
+        collectionStates.clear();
         concretePaths.clear();
 
         // then
@@ -145,6 +152,9 @@ final class EmbeddedScopePlanTest {
         assertEquals(
                 Arrays.asList("lesson-a", "lesson-b"),
                 plan.collectionMemberKeysByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                plan.collectionStatesByDeclaration().get("/lessons"));
         assertEquals(
                 Arrays.asList("/payment", "/lessons/lesson-a"),
                 plan.concreteChildPaths());
@@ -162,6 +172,8 @@ final class EmbeddedScopePlanTest {
                 plan.collectionDeclarationPaths();
         Map<String, List<String>> memberKeys =
                 plan.collectionMemberKeysByDeclaration();
+        Map<String, EmbeddedCollectionState> collectionStates =
+                plan.collectionStatesByDeclaration();
         List<EmbeddedConcretePath> concretePaths = plan.concretePaths();
         List<String> concreteChildPaths = plan.concreteChildPaths();
         Map<String, EmbeddedPathOrigin> origins =
@@ -180,6 +192,11 @@ final class EmbeddedScopePlanTest {
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> memberKeys.get("/lessons").add("lesson-c"));
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> collectionStates.put(
+                        "/other",
+                        EmbeddedCollectionState.PRESENT_COLLECTION));
         assertThrows(
                 UnsupportedOperationException.class,
                 concretePaths::clear);
@@ -216,6 +233,7 @@ final class EmbeddedScopePlanTest {
                 Collections.singletonList("/payment"),
                 collectionDeclarations,
                 reverseInputMap,
+                presentStates(collectionDeclarations),
                 concretePaths);
 
         // then
@@ -253,6 +271,7 @@ final class EmbeddedScopePlanTest {
                 Collections.singletonMap(
                         "/lessons",
                         Collections.singletonList("lesson/a")),
+                presentStates(Collections.singletonList("/lessons")),
                 Arrays.asList(explicit, collectionMember));
 
         // then
@@ -279,6 +298,7 @@ final class EmbeddedScopePlanTest {
                 Collections.singletonList("/payment"),
                 Arrays.asList("/lessons", "/refunds"),
                 memberKeys,
+                presentStates(Arrays.asList("/lessons", "/refunds")),
                 Arrays.asList(
                         explicit("/payment", "/payment"),
                         collection(
@@ -289,6 +309,17 @@ final class EmbeddedScopePlanTest {
                                 "/refunds/refund-a",
                                 "/refunds",
                                 "refund-a")));
+    }
+
+    private static Map<String, EmbeddedCollectionState> presentStates(
+            List<String> declarations) {
+        Map<String, EmbeddedCollectionState> states = new LinkedHashMap<>();
+        for (String declaration : declarations) {
+            states.put(
+                    declaration,
+                    EmbeddedCollectionState.PRESENT_COLLECTION);
+        }
+        return states;
     }
 
     private static EmbeddedConcretePath explicit(

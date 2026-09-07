@@ -1,0 +1,27 @@
+name: Embedded Collection Event Channel
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: >
+  Processor-managed Channel receiving Embedded Event Delivery occurrences from
+  members of one effective Process Embedded collection in the same scope. By
+  default it matches only member-root source paths. When includeDescendants is
+  true, it also matches nested source paths below each member. Membership is
+  determined by normalized decoded Runtime Pointer segments, not raw string
+  prefixes. The Channel is internal and creates no Timeline provider subscription
+  or checkpoint surface.
+collectionPath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: >
+    Required normalized absolute Runtime Pointer equal to one effective Process
+    Embedded collectionPaths entry in the same scope.
+  schema:
+    required: true
+includeDescendants:
+  type:
+    blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+  description: >
+    Optional. Omitted or false matches only direct member roots; true also matches
+    descendants below each direct member. The collection path itself never matches.
+event:
+  description: Optional exact event matcher using the ordinary embedded-event matcher semantics.

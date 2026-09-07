@@ -2,15 +2,10 @@ package blue.language.processor;
 
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
-import blue.language.identity.BlueIds;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
-import blue.language.processor.model.DocumentUpdateChannel;
-import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.model.LifecycleChannel;
-import blue.language.processor.model.TriggeredEventChannel;
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 
@@ -34,6 +29,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     private final ProcessorInvocationServices owner;
     private final ProcessingGasContext sharedGasContext;
     private final ManagedDocumentStepContinuation continuation;
+    private final ManagedRootSurfaceResolver rootSurfaceResolver;
+    private final ManagedDocumentStepRouteClassifier routeClassifier;
     private boolean closed;
 
     /**
@@ -59,6 +56,12 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         this.sharedGasContext = this.owner.newGasContext();
         this.continuation = Objects.requireNonNull(
                 continuation, "continuation");
+        this.rootSurfaceResolver = new ManagedRootSurfaceResolver(
+                this.owner, this.sharedGasContext);
+        this.routeClassifier = new ManagedDocumentStepRouteClassifier(
+                this.owner,
+                this.sharedGasContext,
+                this.rootSurfaceResolver);
     }
 
     /**
@@ -86,6 +89,12 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         this.sharedGasContext = new ProcessingGasContext(meter);
         this.continuation = Objects.requireNonNull(
                 continuation, "continuation");
+        this.rootSurfaceResolver = new ManagedRootSurfaceResolver(
+                this.owner, this.sharedGasContext);
+        this.routeClassifier = new ManagedDocumentStepRouteClassifier(
+                this.owner,
+                this.sharedGasContext,
+                this.rootSurfaceResolver);
     }
 
     /**
@@ -123,7 +132,9 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 request, "request");
         ensureOpen();
         Node document = admitted.exactDocument();
-        String beforeEffectiveTypeBlueId = effectiveTypeBlueId(document);
+        String beforeEffectiveTypeBlueId = selectedTypeBlueId(
+                document,
+                owner.snapshotManager());
         validateTargetState(admitted, document);
         DocumentProcessingResult invalid =
                 ProcessingInputAdmission.validateDocument(document);
@@ -138,7 +149,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                             : "Invalid managed document-step Root");
         }
 
-        ProcessorMarkerStore.collapseInitializationDocuments(document);
+        ProcessorMarkerStore.collapseInitializationDocuments(
+                document, owner.snapshotManager());
         Node exactPayload = admitted.exactPayload();
         Node processEvent = admitted.workKind()
                 == ManagedDocumentWorkKind.EXTERNAL_DELIVERY
@@ -203,22 +215,44 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 orderedPatches,
                 orderedPatchUpdates,
                 beforeEffectiveTypeBlueId,
-                effectiveTypeBlueId(runtime.document()),
+                resolvedTypeBlueId(runtime),
                 runtime.committedGeneralizationWrites(),
                 gasBefore,
                 gasAfter,
                 !runtime.changedPaths().isEmpty());
     }
 
-    private static String effectiveTypeBlueId(Node document) {
+    private static String selectedTypeBlueId(
+            Node document,
+            ProcessingSnapshotManager snapshotManager) {
         Node type = Objects.requireNonNull(document, "document").getType();
         if (type == null) {
             return null;
         }
-        return type.getBlueId() != null
-                ? BlueIds.requirePlainBlueId(
-                        type.getBlueId(), "/type/blueId")
-                : FrozenNode.fromResolvedNode(type).blueId();
+        return CanonicalIdentityEvidence.sourceTypeBlueId(
+                type,
+                snapshotManager,
+                "Managed document-step selected Root type");
+    }
+
+    private String resolvedTypeBlueId(
+            DocumentProcessingRuntime runtime) {
+        ResolvedSnapshot snapshot = runtime.snapshot();
+        if (snapshot == null) {
+            return selectedTypeBlueId(
+                    runtime.document(),
+                    owner.snapshotManager());
+        }
+        FrozenNode type = snapshot != null
+                ? snapshot.frozenResolvedRoot().getType()
+                : null;
+        if (type == null) {
+            return null;
+        }
+        return CanonicalIdentityEvidence.resolvedTypeBlueId(
+                type,
+                snapshot.canonicalTypeIdentities(),
+                "Managed document-step resolved Root type");
     }
 
     /**
@@ -252,7 +286,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 null,
                 owner.observer(),
                 sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
+                owner.registry().exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         try (GasMeter.AttributionScope ignored =
                      sharedGasContext.withAttribution(
@@ -270,33 +304,15 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
      * enqueueing, draining, or charging them.
      *
      * @param exactDocument exact emitter document state
-     * @param exactEvent exact admitted semantic event
+     * @param exactEvent inseparable admitted event and identity evidence
      * @return immutable routes in channel order/key order
      */
     public List<ManagedDocumentStepRoute> classifyTriggeredEventRoutes(
             Node exactDocument,
-            Node exactEvent) {
+            ExactEventIdentityEvidence exactEvent) {
         ensureOpen();
-        Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
-        List<ManagedDocumentStepRoute> routes =
-                new ArrayList<ManagedDocumentStepRoute>();
-        for (ContractBundle.ChannelBinding binding
-                : bundle.channelsOfType(TriggeredEventChannel.class)) {
-            TriggeredEventChannel channel =
-                    (TriggeredEventChannel) binding.contract();
-            if (channel.getEvent() == null
-                    || owner.matchingService().matches(
-                            event, channel.getEvent())) {
-                routes.add(new ManagedDocumentStepRoute(
-                        ManagedDocumentWorkKind.TRIGGERED_EVENT,
-                        binding.key(),
-                        event,
-                        null,
-                        bundle));
-            }
-        }
-        return Collections.unmodifiableList(routes);
+        return routeClassifier.classifyTriggeredEventRoutes(
+                exactDocument, exactEvent);
     }
 
     /**
@@ -312,20 +328,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactDocument,
             Node exactEvent) {
         ensureOpen();
-        Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
-        List<ManagedDocumentStepRoute> routes =
-                new ArrayList<ManagedDocumentStepRoute>();
-        for (ContractBundle.ChannelBinding binding
-                : bundle.channelsOfType(LifecycleChannel.class)) {
-            routes.add(new ManagedDocumentStepRoute(
-                    ManagedDocumentWorkKind.LIFECYCLE,
-                    binding.key(),
-                    event,
-                    null,
-                    bundle));
-        }
-        return Collections.unmodifiableList(routes);
+        return routeClassifier.classifyLifecycleRoutes(
+                exactDocument, exactEvent);
     }
 
     /**
@@ -340,7 +344,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Map<String, String> expectedBlueIdsByPath) {
         ensureOpen();
         long gasBefore = sharedGasContext.meter().totalGas();
-        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        ManagedRootSurfaceResolver.Surface surface =
+                rootSurfaceResolver.classify(exactDocument);
         FrozenNode resolved = surface.resolvedRoot();
         ContractBundle bundle = surface.bundle();
         Map<String, String> expected = Objects.requireNonNull(
@@ -354,7 +359,13 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         } else {
             EmbeddedScopeDeclaration declaration =
                     bundle.embeddedScopeDeclaration();
-            new EmbeddedScopePlanner().planForOpaqueManagedRoot(
+            ProcessingSnapshotManager manager = owner.snapshotManager();
+            EmbeddedScopePlanner planner = manager != null
+                    ? new EmbeddedScopePlanner(
+                            manager,
+                            surface.canonicalTypeIdentities())
+                    : new EmbeddedScopePlanner();
+            planner.planForOpaqueManagedRoot(
                     resolved,
                     JsonPointer.ROOT,
                     declaration.explicitPaths(),
@@ -385,7 +396,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     projectManagedProcessEmbeddedSurface(Node exactDocument) {
         ensureOpen();
         long gasBefore = sharedGasContext.meter().totalGas();
-        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        ManagedRootSurfaceResolver.Surface surface =
+                rootSurfaceResolver.classify(exactDocument);
         ContractBundle bundle = surface.bundle();
         if (!bundle.hasProcessEmbedded()) {
             if (sharedGasContext.meter().totalGas() != gasBefore) {
@@ -399,8 +411,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 bundle.embeddedScopeDeclaration();
         EmbeddedScopePlanner planner = owner.snapshotManager() != null
                 ? new EmbeddedScopePlanner(
-                        owner.snapshotManager()
-                                ::materializeVerifiedExactReference)
+                        owner.snapshotManager(),
+                        surface.canonicalTypeIdentities())
                 : new EmbeddedScopePlanner();
         EmbeddedScopePlan plan = planner.planForManagedReconciliation(
                 surface.resolvedRoot(),
@@ -409,7 +421,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 declaration.collectionPaths(),
                 owner.gasSchedule());
         EffectiveContractSnapshot embedded =
-                effectiveProcessEmbeddedSnapshot(bundle);
+                rootSurfaceResolver.effectiveProcessEmbeddedSnapshot(bundle);
         FrozenNode explicitContribution = embedded.headerFields().get(
                 ProcessorContractConstants.KEY_PATHS);
         FrozenNode collectionContribution = embedded.headerFields().get(
@@ -498,72 +510,26 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
 
     /**
      * Selects matching Root Embedded Event channels and constructs their exact
-     * adapter wrappers without executing, enqueueing, draining, or charging.
+     * adapter wrappers without executing, enqueueing, or draining. Candidate
+     * and structural path-comparison work is charged to the shared meter.
      *
      * @param exactContainingDocument exact independently managed receiver
      * @param exactSourcePath exact Root-relative contained occurrence path
-     * @param exactEvent exact admitted originating event
-     * @param exactEventBlueId already-admitted identity of {@code exactEvent}
+     * @param exactEvent inseparable originating event and identity evidence
+     * @param attribution complete owning closure classification attribution
      * @return immutable embedded routes in channel order/key order
      */
     public List<ManagedDocumentStepRoute> classifyEmbeddedEventRoutes(
             Node exactContainingDocument,
             String exactSourcePath,
-            Node exactEvent,
-            String exactEventBlueId) {
+            ExactEventIdentityEvidence exactEvent,
+            GasChargeContext attribution) {
         ensureOpen();
-        String sourcePath = ProcessorEngine.normalizeScope(
-                Objects.requireNonNull(exactSourcePath, "exactSourcePath"));
-        if (JsonPointer.ROOT.equals(sourcePath)) {
-            throw new IllegalArgumentException(
-                    "An embedded-event source must be below Root");
-        }
-        Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        String eventBlueId = Objects.requireNonNull(
-                exactEventBlueId, "exactEventBlueId");
-        String computed = CheckpointIdentityCalculator.identity(
-                event, owner.languageRuntimeAccess());
-        if (!eventBlueId.equals(computed)) {
-            throw new InvalidExecutionEvidenceException(
-                    "Embedded event identity does not identify exactEvent",
-                    ProcessorErrorCategory.InvalidProcessingEvent);
-        }
-        String adapterSourcePath = ProcessorEngine.relativizePointer(
-                JsonPointer.ROOT, sourcePath);
-        Node wrapper = new Node()
-                .type(new Node().blueId(
-                        RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY))
-                .properties(
-                        ProcessorContractConstants.KEY_SOURCE_PATH,
-                        new Node().value(adapterSourcePath))
-                .properties(
-                        ProcessorContractConstants.KEY_EVENT,
-                        new Node().blueId(eventBlueId));
-        ContractBundle bundle = classifyRootSurface(
-                exactContainingDocument).bundle();
-        List<ManagedDocumentStepRoute> routes =
-                new ArrayList<ManagedDocumentStepRoute>();
-        for (ContractBundle.ChannelBinding binding
-                : bundle.channelsOfType(EmbeddedNodeChannel.class)) {
-            EmbeddedNodeChannel channel =
-                    (EmbeddedNodeChannel) binding.contract();
-            String configured = channel.getSourcePath();
-            boolean pathMatches = configured == null
-                    || ProcessorEngine.resolvePointer(
-                            JsonPointer.ROOT, configured).equals(sourcePath);
-            boolean eventMatches = channel.getEvent() == null
-                    || owner.matchingService().matches(
-                            event, channel.getEvent());
-            if (pathMatches && eventMatches) {
-                routes.add(new ManagedDocumentStepRoute(
-                        ManagedDocumentWorkKind.EMBEDDED_EVENT,
-                        binding.key(),
-                        wrapper,
-                        event,
-                        bundle));
-            }
-        }
-        return Collections.unmodifiableList(routes);
+        return routeClassifier.classifyEmbeddedEventRoutes(
+                exactContainingDocument,
+                exactSourcePath,
+                exactEvent,
+                attribution);
     }
 
     /**
@@ -578,39 +544,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactDocument,
             DocumentUpdateOccurrence occurrence) {
         ensureOpen();
-        DocumentUpdateOccurrence update = Objects.requireNonNull(
-                occurrence, "occurrence");
-        ContractBundle bundle = update.frozenRootDispatchBundle() != null
-                ? update.frozenRootDispatchBundle()
-                : classifyRootSurface(exactDocument).bundle();
-        DocumentUpdateData data = new DocumentUpdateData(
-                update.path(),
-                update.before(),
-                update.after(),
-                update.op(),
-                update.originScope(),
-                update.recipientChain());
-        Node payload = ProcessorEngine.createDocumentUpdateEvent(
-                data, JsonPointer.ROOT);
-        List<ManagedDocumentStepRoute> routes =
-                new ArrayList<ManagedDocumentStepRoute>();
-        for (ContractBundle.ChannelBinding binding
-                : bundle.channelsOfType(DocumentUpdateChannel.class)) {
-            DocumentUpdateChannel channel =
-                    (DocumentUpdateChannel) binding.contract();
-            if (ProcessorEngine.matchesDocumentUpdate(
-                    JsonPointer.ROOT,
-                    channel.getPath(),
-                    update.path())) {
-                routes.add(new ManagedDocumentStepRoute(
-                        ManagedDocumentWorkKind.DOCUMENT_UPDATE,
-                        binding.key(),
-                        payload,
-                        null,
-                        bundle));
-            }
-        }
-        return Collections.unmodifiableList(routes);
+        return routeClassifier.classifyDocumentUpdateRoutes(
+                exactDocument, occurrence);
     }
 
     /**
@@ -678,14 +613,15 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
      *
      * @param exactRoot exact independently managed Root before local work
      * @param rawChannelKey exact raw External Channel key
-     * @param exactEvent exact externally admitted event
+     * @param exactEvent inseparable externally admitted event and verified
+     *        identity evidence
      * @param attribution exact owning document/work gas attribution
      * @return immutable classification and optional frozen candidate
      */
     public ManagedExternalDeliveryClassification classifyExternalDelivery(
             Node exactRoot,
             String rawChannelKey,
-            Node exactEvent,
+            ExactEventIdentityEvidence exactEvent,
             GasChargeContext attribution) {
         ensureOpen();
         try (GasMeter.AttributionScope ignored =
@@ -882,103 +818,6 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         }
     }
 
-    private RootSurfaceView classifyRootSurface(Node exactDocument) {
-        Node document = Objects.requireNonNull(
-                exactDocument, "exactDocument").clone();
-        DocumentProcessingResult invalid =
-                ProcessingInputAdmission.validateDocument(document);
-        if (invalid != null) {
-            ProcessorDiagnostic diagnostic = invalid.diagnostic();
-            throw new ProcessorFailureException(
-                    diagnostic != null
-                            ? diagnostic.category()
-                            : ProcessorErrorCategory.InvalidProcessingDocument,
-                    diagnostic != null && diagnostic.message() != null
-                            ? diagnostic.message()
-                            : "Invalid managed route-classification document");
-        }
-        ProcessorMarkerStore.collapseInitializationDocuments(document);
-        long gasBefore = sharedGasContext.meter().totalGas();
-        DocumentProcessingRuntime view = new DocumentProcessingRuntime(
-                document,
-                owner.conformanceEngine(),
-                owner.conformancePlannerOverride(),
-                owner.snapshotManager(),
-                owner.observer(),
-                sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
-                owner.strictPlatformInvocation());
-        FrozenNode selected = view.selectedFrozenAt(JsonPointer.ROOT);
-        owner.contractLoader().preflightSelectedContractHeaders(selected);
-        FrozenNode resolved = view.resolvedFrozenAt(JsonPointer.ROOT);
-        FrozenNode recognition = view.contractRecognitionScope(
-                selected, resolved);
-        ContractBundle bundle = owner.contractLoader().load(
-                selected,
-                recognition,
-                JsonPointer.ROOT,
-                owner.observer(),
-                null,
-                null);
-        if (sharedGasContext.meter().totalGas() != gasBefore) {
-            throw new IllegalStateException(
-                    "Route classification must not charge shared gas");
-        }
-        return new RootSurfaceView(selected, resolved, bundle);
-    }
-
-    private EffectiveContractSnapshot effectiveProcessEmbeddedSnapshot(
-            ContractBundle bundle) {
-        EffectiveContractSnapshot found = null;
-        for (EffectiveContractSnapshot snapshot
-                : bundle.effectiveContractSnapshots()) {
-            if (!EffectiveContractSnapshotConstants.Role.PROCESS_EMBEDDED
-                    .equals(snapshot.role())) {
-                continue;
-            }
-            if (found != null) {
-                throw new IllegalStateException(
-                        "Effective Root contains multiple Process Embedded snapshots");
-            }
-            found = snapshot;
-        }
-        if (found == null) {
-            throw new IllegalStateException(
-                    "Effective Process Embedded declaration lacks its exact snapshot");
-        }
-        return found;
-    }
-
-    /** Immutable selected, resolved, and classified view of one exact Root. */
-    private static final class RootSurfaceView {
-        private final FrozenNode selectedRoot;
-        private final FrozenNode resolvedRoot;
-        private final ContractBundle bundle;
-
-        RootSurfaceView(
-                FrozenNode selectedRoot,
-                FrozenNode resolvedRoot,
-                ContractBundle bundle) {
-            this.selectedRoot = Objects.requireNonNull(
-                    selectedRoot, "selectedRoot");
-            this.resolvedRoot = Objects.requireNonNull(
-                    resolvedRoot, "resolvedRoot");
-            this.bundle = Objects.requireNonNull(bundle, "bundle");
-        }
-
-        FrozenNode selectedRoot() {
-            return selectedRoot;
-        }
-
-        FrozenNode resolvedRoot() {
-            return resolvedRoot;
-        }
-
-        ContractBundle bundle() {
-            return bundle;
-        }
-    }
-
     private ManagedDocumentStepContinuation collectingContinuation(
             final List<FrozenJsonPatch> orderedPatches,
             final List<DocumentUpdateOccurrence> orderedPatchUpdates,
@@ -1008,15 +847,14 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             public void onApplicationEvent(
                     String scopePath,
                     String originContractKey,
-                    Node event,
-                    String eventBlueId) {
+                    ExactEventIdentityEvidence exactEvent) {
                 orderedEmittedEvents.add(
-                        Objects.requireNonNull(event, "event").clone());
+                        Objects.requireNonNull(
+                                exactEvent, "exactEvent").event());
                 continuation.onApplicationEvent(
                         scopePath,
                         originContractKey,
-                        event,
-                        eventBlueId);
+                        exactEvent);
             }
 
             @Override
@@ -1107,8 +945,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             public void onApplicationEvent(
                     String scopePath,
                     String originContractKey,
-                    Node event,
-                    String eventBlueId) {
+                    ExactEventIdentityEvidence exactEvent) {
                 throw new DocumentStepRuntimeGapException(
                         DocumentStepRuntimeGapException.Reason
                                 .APPLICATION_EVENT_CONTINUATION_HOOK_REQUIRED,

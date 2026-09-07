@@ -214,6 +214,45 @@ public final class BlueContracts implements AutoCloseable {
     }
 
     /**
+     * Prepares preprocessed processing Source under this runtime's registered
+     * exact-field semantics without initializing or executing the document.
+     *
+     * @param source preprocessed Source, including a verified ordinary Root reference
+     * @return strict canonical processing content
+     * @throws IllegalStateException when this service is closed or evidence is unavailable
+     * @throws IllegalArgumentException when Source or a cyclic-member Root is invalid
+     */
+    public Node canonicalizeProcessingSource(Node source) {
+        return call(() -> processor.administration().canonicalizeProcessingSource(source));
+    }
+
+    /**
+     * Resolves preprocessed processing Source for read-only host projections.
+     * Registered declarations and executable bodies keep their exact field roles;
+     * ordinary document values retain completed-instance validation.
+     *
+     * @param source preprocessed processing Source
+     * @return resolved document with phase-owned fields preserved
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when closed or exact evidence is unavailable
+     */
+    public Node resolveProcessingSource(Node source) {
+        return call(() -> processor.administration().resolveProcessingSource(source));
+    }
+
+    /**
+     * Returns one verified immutable snapshot of processing Source without execution.
+     *
+     * @param source preprocessed processing Source or an exact top-level reference
+     * @return canonical identity and resolved view with registered exact fields preserved
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when this service is closed or evidence is unavailable
+     */
+    public blue.language.merge.ResolvedSnapshot processingSourceSnapshot(Node source) {
+        return call(() -> processor.administration().processingSourceSnapshot(source));
+    }
+
+    /**
      * Returns the configured subscription-surface projection service.
      *
      * @return lifecycle-bound read-only projection service

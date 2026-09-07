@@ -1,0 +1,71 @@
+{
+  "schema": "blue-classifier-implementation-baseline/1.0",
+  "sourcePath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline",
+  "provenanceCommit": "42e407c914c7813f327a0ed62e7599bab06a0ecb",
+  "files": [
+    {
+      "path": "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
+      "sha256": "66a5d2e70757c9426a5ab922bcdafd951c7145ae7dcefab491dc533e95922283"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
+      "sha256": "38c4f46e1731247c25469d7d68f0bfff160b68cfa7ab9094ba81811d9ffccf62"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
+      "sha256": "5c29563118ed6cb704e2b0f17445eb7d17ce8f9ac02f00ac0143dc0d753dd5b3"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
+      "sha256": "0ab691e9295f77da991faf1f392411b6223a4feffb9898ef80c999f73611ee65"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
+      "sha256": "3ce68fa55e89299e4c2e57ccba6db264cc9c3416706b1d29a79b7ab47eb071f1"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
+      "sha256": "eaad1e3a012454b4486b7283275fc6025af2007608ebcfbf4f1c4e9abf107474"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
+      "sha256": "618ee825785f86697ca06e3fb1670609617da58e0548775cc2717aee2d317204"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
+      "sha256": "c14931e3e346f36cf5979aede4ec2c3623318b9b88e13a69801934e65de0cc36"
+    },
+    {
+      "path": "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
+      "sha256": "db33225ee9243fa4bae09572ac40733dffa5e7d90c9b3d446694caf39e33f83c"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
+      "sha256": "81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
+      "sha256": "bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+      "sha256": "55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
+      "sha256": "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java",
+      "sha256": "cfe0e418e87451d7d31f2522d4150514c197cee552f3cc3b0bab8a8f08c3abb2"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
+      "sha256": "b049a54909bc111bf7921a3c4bb5424aea69f580ef389f6bc35bbad03960c302"
+    },
+    {
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java",
+      "sha256": "0ef97244ea90a43bab60e1708010bcca95a76d50517dc81c31aef3c0079509b6"
+    }
+  ]
+}

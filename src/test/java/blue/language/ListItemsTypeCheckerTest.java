@@ -66,10 +66,10 @@ public class ListItemsTypeCheckerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = new Node();
+        Node node = new Node().type(new Node().blueId(
+                nodeProvider.getBlueIdByName("Y")));
         // when
-        merger.merge(node, nodeProvider.fetchByBlueId(
-                nodeProvider.getBlueIdByName("Y")).get(0), ResolutionLimits.NO_LIMITS);
+        node = merger.resolve(node, ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("B", node.getProperties().get("a").getType().getName());
@@ -113,12 +113,12 @@ public class ListItemsTypeCheckerTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         // when
-        Node node = new Node();
+        Node node = new Node().type(new Node().blueId(
+                nodeProvider.getBlueIdByName("Y")));
 
         // then
         assertThrows(IllegalArgumentException.class, () -> {
-            merger.merge(node, nodeProvider.fetchByBlueId(
-                    nodeProvider.getBlueIdByName("Y")).get(0), ResolutionLimits.NO_LIMITS);
+            merger.resolve(node, ResolutionLimits.NO_LIMITS);
         });
     }
 

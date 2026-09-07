@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -17,8 +18,10 @@ class ImmutableJsonPatchTest {
     @Test
     void shouldFreezeValueAndParsePointerOnceAtSequenceBoundary() {
         // given
-        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(new Node());
-        FrozenNode resolved = FrozenNode.fromResolvedNode(new Node());
+        FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(
+                Nodes.emptyObject());
+        FrozenNode resolved = FrozenNode.fromResolvedNode(
+                Nodes.emptyObject());
         Node mutable = new Node().properties("nested", new Node().value("before"));
         RecordingMetrics metrics = new RecordingMetrics();
         ImmutableJsonPatch.PreparationContext context =
@@ -42,7 +45,7 @@ class ImmutableJsonPatchTest {
     @Test
     void shouldReuseFrozenValueWhenCanonicalAndResolvedModesAreTheSame() {
         // given
-        FrozenNode root = FrozenNode.fromResolvedNode(new Node());
+        FrozenNode root = FrozenNode.fromResolvedNode(Nodes.emptyObject());
         RecordingMetrics metrics = new RecordingMetrics();
 
         // when
@@ -78,7 +81,7 @@ class ImmutableJsonPatchTest {
     @Test
     void shouldVerifySequencePointerCacheIsBounded() {
         // given
-        FrozenNode root = FrozenNode.fromResolvedNode(new Node());
+        FrozenNode root = FrozenNode.fromResolvedNode(Nodes.emptyObject());
         ImmutableJsonPatch.PreparationContext context =
                 ImmutableJsonPatch.preparationContext(NoOpProcessingObserver.INSTANCE);
 
@@ -96,8 +99,9 @@ class ImmutableJsonPatchTest {
         // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
         String blueId = DirectBlueIdCalculator.calculateBlueId(materialized);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(new Node());
-        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(new Node());
+        FrozenNode canonicalRoot = FrozenNode.empty();
+        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(
+                Nodes.emptyObject());
 
         // when
         ImmutableJsonPatch materializedPatch = ImmutableJsonPatch.from(

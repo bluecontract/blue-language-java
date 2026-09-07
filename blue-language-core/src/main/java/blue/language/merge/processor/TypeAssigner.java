@@ -1,12 +1,13 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
 
-import static blue.language.provider.Types.isSubtype;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /**
  * Applies a source declared type only when it is equal to or more specific than
@@ -21,13 +22,42 @@ public class TypeAssigner implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Node targetType = target.getType();
         Node sourceType = source.getType();
         if (targetType == null)
             target.type(sourceType);
         else if (sourceType != null) {
-            boolean isSubtype = isSubtype(sourceType, targetType, nodeProvider);
+            boolean isSubtype = EffectiveTypeChecks.isSubtype(
+                    sourceType,
+                    targetType,
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities);
+            /*
+             * Primitive inference contributes an exact released core type to
+             * a value before an inherited, more-specific declaration is
+             * applied. This is merge compatibility, not reversed subtype
+             * semantics: require the source to be an exact core reference and
+             * prove that the retained target derives from it.
+             */
+            if (!isSubtype
+                    && isExactCoreReference(sourceType)) {
+                boolean inheritedSubtype = EffectiveTypeChecks.isSubtype(
+                        targetType,
+                        sourceType,
+                        nodeProvider,
+                        nodeResolver,
+                        typeIdentities);
+                if (inheritedSubtype) {
+                    return; // Primitive syntax supplies payload, not a wider declared type.
+                }
+            }
             if (!isSubtype) {
                 String errorMessage = String.format("The source type '%s' is not a subtype of the target type '%s'.",
                         NodeWireForm.get(sourceType), NodeWireForm.get(targetType));
@@ -35,5 +65,11 @@ public class TypeAssigner implements MergingProcessor {
             }
             target.type(sourceType);
         }
+    }
+
+    private static boolean isExactCoreReference(Node type) {
+        return type != null
+                && type.isReferenceOnly()
+                && CORE_TYPE_BLUE_IDS.contains(type.getBlueId());
     }
 }

@@ -22,8 +22,11 @@ import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE_TYPE;
  * Reads or writes structural children of a mutable node graph by RFC 6901
  * pointer.
  *
- * <p>Writes create missing object/list containers and grow lists with empty
- * nodes. Writing the root delegates to {@link Node#replaceWith(Node)}.</p>
+ * <p>Writes create missing object/list containers and grow sparse lists with
+ * exact {@code {"$empty": true}} placeholders. A later write below a padded
+ * position replaces that placeholder with the object or list container
+ * required by the remaining path. Writing the root delegates to
+ * {@link Node#replaceWith(Node)}.</p>
  */
 public final class NodePathEditor {
 
@@ -65,8 +68,12 @@ public final class NodePathEditor {
         }
 
         Node parent = root;
+        promotePlaceholder(parent, segments.get(0));
         for (int i = 0; i < segments.size() - 1; i++) {
-            parent = childAtOrCreate(parent, segments.get(i));
+            parent = childAtOrCreate(
+                    parent,
+                    segments.get(i),
+                    segments.get(i + 1));
         }
         setChild(parent, segments.get(segments.size() - 1), value);
     }
@@ -114,14 +121,32 @@ public final class NodePathEditor {
         return node.getProperties() != null ? node.getProperties().get(segment) : null;
     }
 
-    private static Node childAtOrCreate(Node node, String segment) {
+    private static Node childAtOrCreate(
+            Node node,
+            String segment,
+            String nextSegment) {
         Node child = childAtOrNull(node, segment);
-        if (child != null) {
-            return child;
+        if (child == null) {
+            child = intermediateContainer(nextSegment);
+            setChild(node, segment, child);
+        } else {
+            promotePlaceholder(child, nextSegment);
         }
-        child = new Node();
-        setChild(node, segment, child);
         return child;
+    }
+
+    private static void promotePlaceholder(Node node, String childSegment) {
+        if (Nodes.isEmptyPlaceholder(node)) {
+            node.replaceWith(intermediateContainer(childSegment));
+        }
+    }
+
+    private static Node intermediateContainer(String childSegment) {
+        if (JsonPointer.isArrayIndexSegment(childSegment)
+                && !ARRAY_APPEND_TOKEN.equals(childSegment)) {
+            return new Node().items(new ArrayList<>());
+        }
+        return Nodes.emptyObject();
     }
 
     private static void setChild(Node node, String segment, Node value) {
@@ -158,7 +183,7 @@ public final class NodePathEditor {
                 node.items(items);
             }
             while (items.size() <= index) {
-                items.add(new Node());
+                items.add(Nodes.emptyPlaceholder());
             }
             items.set(index, value);
             return;

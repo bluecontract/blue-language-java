@@ -68,6 +68,125 @@ public class Nodes {
     }
 
     /**
+     * Tests whether a parsed Source node is the literal {@code null} value.
+     *
+     * <p>Source null is an authoring control, not semantic Blue content. The
+     * mandatory preprocessing pipeline consumes it before resolution or
+     * identity calculation. Its inline marker deliberately distinguishes it
+     * from both a temporary fieldless builder and an exact empty object.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} only for the Source-null wrapper
+     */
+    public static boolean isSourceNullLiteral(Node node) {
+        return node != null
+                && node.isInlineValue()
+                && isEmptyNode(node);
+    }
+
+    /**
+     * Tests whether a node is only an unfinished mutable-builder shell.
+     *
+     * <p>A fieldless builder has neither Source-null provenance nor the
+     * non-null empty properties map that represents the exact object value
+     * {@code {}}. It may be useful while assembling a graph, but it is not
+     * semantic Blue content and must not cross serialization or identity
+     * boundaries.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} only for a bare fieldless mutable builder
+     */
+    public static boolean isBareFieldlessBuilder(Node node) {
+        return node != null
+                && !node.isInlineValue()
+                && isEmptyNode(node);
+    }
+
+    /**
+     * Tests whether a node is the exact object payload {@code {}}.
+     *
+     * <p>An empty, non-null properties map records the presence of the object
+     * payload. Metadata-only and temporary fieldless nodes therefore do not
+     * satisfy this predicate.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} only for an exact metadata-free empty object
+     */
+    public static boolean isExactEmptyObject(Node node) {
+        return node != null
+                && node.getProperties() != null
+                && node.getProperties().isEmpty()
+                && hasFieldsAndMayHaveFields(
+                        node,
+                        EnumSet.of(NodeField.PROPERTIES),
+                        EnumSet.noneOf(NodeField.class));
+    }
+
+    /**
+     * Reports whether an object payload is present, including an exact empty
+     * object but excluding the temporary Source-null entries consumed by
+     * preprocessing.
+     *
+     * @param node node to inspect
+     * @return {@code true} when the node carries object payload semantics
+     */
+    public static boolean hasObjectPayload(Node node) {
+        if (node == null || node.getProperties() == null) {
+            return false;
+        }
+        if (node.getProperties().isEmpty()) {
+            return true;
+        }
+        for (Node child : node.getProperties().values()) {
+            if (!isSourceNullLiteral(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Tests whether a node has a schema-enum scalar identity shape.
+     *
+     * <p>Schema enum members may be scalar values, explicitly typed scalar
+     * values, or pure value references. Object/list payloads and metadata
+     * unrelated to scalar identity are not enum values.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} when the node is valid schema-enum scalar content
+     */
+    public static boolean isSchemaEnumValue(Node node) {
+        if (node == null) {
+            return false;
+        }
+        if (node.isReferenceOnly()) {
+            return true;
+        }
+        Object value = node.getRawValue();
+        return isSchemaScalarValue(value)
+                && hasFieldsAndMayHaveFields(
+                        node,
+                        EnumSet.of(NodeField.VALUE),
+                        EnumSet.of(NodeField.TYPE));
+    }
+
+    private static boolean isSchemaScalarValue(Object value) {
+        return value instanceof String
+                || value instanceof Boolean
+                || value instanceof BigInteger
+                || value instanceof BigDecimal;
+    }
+
+    /**
+     * Creates the exact empty-object value {@code {}}.
+     *
+     * @return a new mutable exact empty object
+     */
+    public static Node emptyObject() {
+        return new Node().properties(new java.util.LinkedHashMap<>());
+    }
+
+    /**
      * Creates the exact {@code {"$empty": true}} list placeholder shape.
      *
      * @return new canonical empty-list placeholder

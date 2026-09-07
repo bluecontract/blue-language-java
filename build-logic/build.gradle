@@ -25,6 +25,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation gradleTestKit()
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Offline TestKit fixtures reuse the resolved JUnit jars, including compile annotations.
+    testRuntimeOnly 'org.apiguardian:apiguardian-api:1.1.2'
 }
 
 gradlePlugin {

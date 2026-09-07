@@ -7,14 +7,8 @@ import static blue.language.conformance.contracts.ContractsFixtureScriptedEnviro
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.api.BlueCachePolicy;
-import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
-import blue.language.provider.NodeProvider;
-import blue.language.registry.BootstrapProvider;
-import blue.language.provider.SequentialNodeProvider;
-import blue.language.provider.VerifiedNodeProvider;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -46,12 +40,12 @@ import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.VerifiedExecutionEvidence;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.identity.BlueIds;
 import blue.language.model.NodeWireForm;
 import blue.language.codec.jackson.UncheckedObjectMapper;
@@ -110,8 +104,11 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                         "input.root").deepCopy();
         applyBuilders(declaredRoot, input.path(ContractsFixtureConstants.Field.BUILDERS));
         promoteMixedFixtureScalarToObject(declaredRoot);
+        Map<String, Node> providerNodes = verifyProviderNodes(
+                input.path(ContractsFixtureConstants.Field.PROVIDER));
         if (preinitializeInternalCycle) {
-            installExactPreinitializedMarker(declaredRoot);
+            installExactPreinitializedMarker(
+                    declaredRoot, providerNodes);
         }
         installRuntimeContracts(
                 declaredRoot,
@@ -120,24 +117,6 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         FixtureGeneralization generalization =
                 FixtureGeneralization.create(
                         declaredRoot, input.path(ContractsFixtureConstants.Field.RUNTIME));
-        ObjectNode rootJson = declaredRoot;
-        if (previousRoot != null) {
-            rootJson = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.valueToTree(
-                    NodeWireForm.get(previousRoot));
-            materializeRetryContracts(rootJson, declaredRoot);
-        }
-        if (variant != null) {
-            applyVariant(rootJson, variant);
-        }
-        Node event = readNode(input.get(ContractsFixtureConstants.Field.EVENT));
-        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
-        Node checkpointSubjectOverride =
-                variant != null && variant.has("checkpointSubject")
-                        ? rawCheckpointSubject(
-                        variant.get("checkpointSubject"))
-                        : null;
-
-        Map<String, Node> providerNodes = verifyProviderNodes(input.path(ContractsFixtureConstants.Field.PROVIDER));
         if (generalization != null) {
             for (Map.Entry<String, Node> entry :
                     generalization.nodesByBlueId.entrySet()) {
@@ -147,10 +126,46 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                         entry.getValue());
             }
         }
+        ObjectNode rootJson = declaredRoot;
+        if (previousRoot != null) {
+            rootJson = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                    NodeWireForm.get(previousRoot));
+            materializeRetryContracts(
+                    rootJson, declaredRoot, providerNodes);
+        }
+        if (variant != null) {
+            applyVariant(rootJson, variant);
+        }
+        Node event = readNode(input.get(ContractsFixtureConstants.Field.EVENT));
+        Node checkpointSubjectOverride =
+                variant != null && variant.has("checkpointSubject")
+                        ? rawCheckpointSubject(
+                        variant.get("checkpointSubject"))
+                        : null;
+
+        FixtureSourceIdentityResolver.Identity eventIdentity =
+                sourceIdentity(event, providerNodes, false);
+        String eventBlueId = eventIdentity.blueId();
+        Node canonicalEvent = eventIdentity.canonicalInput();
+        FixtureSourceIdentityResolver.Identity checkpointSubjectIdentity =
+                checkpointSubjectOverride != null
+                        ? sourceIdentity(
+                                checkpointSubjectOverride,
+                                providerNodes,
+                                false)
+                        : null;
         JsonNode feeder = input.path(ContractsFixtureConstants.Field.FEEDER);
         List<DerivedDelivery> deliveries = deriveDeliveries(
                 rootJson, input.path(ContractsFixtureConstants.Field.EVENT), feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT),
-                eventBlueId, checkpointSubjectOverride, providerNodes,
+                eventBlueId,
+                canonicalEvent,
+                checkpointSubjectIdentity != null
+                        ? checkpointSubjectIdentity.blueId()
+                        : null,
+                checkpointSubjectIdentity != null
+                        ? checkpointSubjectIdentity.canonicalInput()
+                        : null,
+                providerNodes,
                 !requiresExecutionEvidence);
         normalizeDeclaredCheckpointDomains(
                 rootJson,
@@ -161,26 +176,33 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                 && variant.path(ContractsFixtureConstants.Field.SAME_EVENT).asBoolean(false)))) {
             seedVariantCheckpoints(rootJson, deliveries);
         }
+        for (DerivedDelivery delivery : deliveries) {
+            putDerivedProviderNode(
+                    providerNodes,
+                    delivery.checkpointDomainBlueId,
+                    delivery.checkpointDomainNode);
+            if (!delivery.checkpointSubjectNode.isReferenceOnly()) {
+                putDerivedProviderNode(
+                        providerNodes,
+                        delivery.snapshot.checkpointSubjectBlueId(),
+                        delivery.checkpointSubjectNode);
+            }
+        }
         Node materializedRoot = readNode(rootJson);
-        String inlineRootBlueId =
-                DirectBlueIdCalculator.calculateBlueId(
-                        materializedRoot);
+        FixtureSourceIdentityResolver.Identity rootIdentity =
+                sourceIdentity(materializedRoot, providerNodes, true);
+        String inlineRootBlueId = rootIdentity.blueId();
         String rootBlueId = inlineRootBlueId;
-        Node exactProviderRoot = materializedRoot;
+        Node exactProviderRoot = rootIdentity.canonicalInput();
         if (referenceBackedRootForm(rootForm)) {
-            Node canonicalReference =
-                    canonicalReferenceRoot(
-                            materializedRoot,
-                            providerNodes);
             rootBlueId =
                     DirectBlueIdCalculator.calculateBlueId(
-                            canonicalReference);
+                            exactProviderRoot);
             if (!inlineRootBlueId.equals(rootBlueId)) {
                 throw new IllegalStateException(
                         "Preprocessing changed the exact Root identity "
                                 + "between inline and reference forms");
             }
-            exactProviderRoot = canonicalReference;
         }
         if (!"inline".equals(rootForm)) {
             putDerivedProviderNode(
@@ -189,16 +211,6 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         Node root = referenceBackedRootForm(rootForm)
                 ? new Node().blueId(rootBlueId)
                 : materializedRoot;
-        for (DerivedDelivery delivery : deliveries) {
-            putDerivedProviderNode(
-                    providerNodes,
-                    delivery.checkpointDomainBlueId,
-                    delivery.checkpointDomainNode);
-            putDerivedProviderNode(
-                    providerNodes,
-                    delivery.snapshot.checkpointSubjectBlueId(),
-                    delivery.checkpointSubjectNode);
-        }
 
         long managed = requiredLong(feeder, "managedRootRevision");
         long indexed = requiredLong(feeder, "indexedRootRevision");
@@ -296,32 +308,6 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                 rootForm,
                 cacheMode,
                 batchingMode);
-    }
-
-    Node canonicalReferenceRoot(
-            Node sourceRoot,
-            Map<String, Node> providerNodes) {
-        Map<String, Node> exactNodes =
-                new LinkedHashMap<>(registry.nodesByBlueId);
-        exactNodes.putAll(providerNodes);
-        BlueLanguageRuntime canonicalizer = languageRuntime(blueId -> {
-            Node exact = exactNodes.get(blueId);
-            return exact == null
-                    ? null
-                    : Collections.singletonList(exact.clone());
-        });
-        try {
-            /*
-             * Provider content is exact canonical Source, not the completed
-             * resolved value. Full resolution here would bake inherited
-             * executable-body structure into the reference representation and
-             * make an otherwise identical inline/reference pair diverge.
-             */
-            return canonicalizer.preprocessing().preprocess(
-                    sourceRoot.clone());
-        } finally {
-            canonicalizer.close();
-        }
     }
 
     ObjectNode effectiveIntervalRoot(
@@ -443,8 +429,10 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
      * necessary both for canonical preselection and for the fresh processor's
      * provider cache.
      */
-    static void materializeRetryContracts(JsonNode current,
-                                                  JsonNode declared) {
+    final void materializeRetryContracts(
+            JsonNode current,
+            JsonNode declared,
+            Map<String, Node> providerNodes) {
         if (current == null || declared == null
                 || !current.isObject() || !declared.isObject()) {
             return;
@@ -485,7 +473,8 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                 }
                 String reference = value.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
                 if (reference.equals(
-                        DirectBlueIdCalculator.calculateBlueId(readNode(exact)))) {
+                        fixtureContractSourceSnapshot(
+                                readNode(exact), providerNodes).blueId())) {
                     ((ObjectNode) currentContracts).set(
                             key, exact.deepCopy());
                 }
@@ -504,7 +493,7 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     && declaredChild != null
                     && declaredChild.isObject()) {
                 materializeRetryContracts(
-                        entry.getValue(), declaredChild);
+                        entry.getValue(), declaredChild, providerNodes);
             }
         }
     }
@@ -630,7 +619,8 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
     fixtureChannelDependencies(
             ObjectNode scope,
             String ownerKey,
-            JsonNode ownerContract) {
+            JsonNode ownerContract,
+            Map<String, Node> providerNodes) {
         String mode =
                 ownerContract.path(
                         ContractsFixtureConstants.DependencyField.MODE)
@@ -658,7 +648,8 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     dependency =
                     fixtureChannelEntry(
                             dependencyKey,
-                            contracts.get(dependencyKey));
+                            contracts.get(dependencyKey),
+                            providerNodes);
             if (dependency == null) {
                 throw new IllegalArgumentException(
                         "Exact Channel dependency is missing or not a "
@@ -702,7 +693,8 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     channel =
                     fixtureChannelEntry(
                             rawKey,
-                            contracts.get(rawKey));
+                            contracts.get(rawKey),
+                            providerNodes);
             if (channel != null) {
                 channels.add(channel);
             }
@@ -751,8 +743,9 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         return false;
     }
 
-    static void installExactPreinitializedMarker(
-            ObjectNode root) {
+    final void installExactPreinitializedMarker(
+            ObjectNode root,
+            Map<String, Node> providerNodes) {
         ObjectNode contracts = objectField(
                 root, ProcessorContractConstants.KEY_CONTRACTS, true);
         if (contracts.has(
@@ -760,8 +753,8 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
             return;
         }
         String preInitializationBlueId =
-                DirectBlueIdCalculator.calculateBlueId(
-                        readNode(root));
+                sourceIdentity(
+                        readNode(root), providerNodes, true).blueId();
         ObjectNode initialized =
                 contracts.putObject(
                         ProcessorContractConstants
@@ -777,16 +770,27 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
     ExternalChannelDependencySnapshot.ChannelEntry
     fixtureChannelEntry(
             String key,
-            JsonNode contract) {
+            JsonNode contract,
+            Map<String, Node> providerNodes) {
         if (key == null
                 || contract == null
                 || !contract.isObject()) {
             return null;
         }
-        String typeBlueId =
-                contract.path(BlueLanguageConstants.OBJECT_TYPE)
-                        .path(BlueLanguageConstants.OBJECT_BLUE_ID)
-                        .asText(null);
+        Node exactContract = readNode(contract);
+        if (deferUnknownContractCapabilityToRuntime(exactContract)) {
+            return null;
+        }
+        ResolvedSnapshot contractSnapshot =
+                fixtureContractSourceSnapshot(
+                        exactContract, providerNodes);
+        Node effectiveContract = contractSnapshot.resolvedRoot();
+        Node effectiveType = effectiveContract.getType();
+        if (effectiveType == null) {
+            return null;
+        }
+        String typeBlueId = contractSnapshot.canonicalTypeIdentities()
+                .requireCanonicalTypeBlueId(effectiveType);
         String role;
         if (registry.isSubtype(
                 typeBlueId,
@@ -801,14 +805,18 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         } else {
             return null;
         }
-        Node exactContract = readNode(contract);
-        String contribution =
-                DirectBlueIdCalculator.calculateBlueId(
-                        exactContract);
-        Node effectiveContract =
-                registry.resolve(exactContract.clone());
+        String contribution = contractSnapshot.blueId();
+        restoreExactSourceHeaderFields(
+                contractSnapshot.canonicalRoot(),
+                effectiveContract,
+                registry.exactSourceFieldsByType().get(typeBlueId));
         Node header = new Node().type(
                 new Node().blueId(typeBlueId));
+        List<String> executableBodyFields =
+                registry.executableBodyFieldsByType().get(typeBlueId);
+        Set<String> executable = executableBodyFields != null
+                ? new LinkedHashSet<>(executableBodyFields)
+                : Collections.<String>emptySet();
         if (effectiveContract.getProperties() != null) {
             List<String> names =
                     new ArrayList<>(
@@ -819,12 +827,14 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     ExternalOrderKey
                             ::compareTextCodePoints);
             for (String name : names) {
-                header.properties(
-                        name,
-                        effectiveContract
-                                .getProperties()
-                                .get(name)
-                                .clone());
+                if (!executable.contains(name)) {
+                    header.properties(
+                            name,
+                            effectiveContract
+                                    .getProperties()
+                                    .get(name)
+                                    .clone());
+                }
             }
         }
         List<String> deterministicDependencies =
@@ -842,9 +852,13 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     effectiveContract.getProperties()
                             .get(ContractsFixtureConstants.Field.EVENT);
             deterministicDependencies.add(
-                    FrozenNode.fromResolvedNode(event)
-                            .blueId());
+                    sourceIdentity(event, providerNodes, false).blueId());
         }
+        FixtureResolvedSourceProjection.project(
+                header,
+                contractSnapshot.canonicalTypeIdentities());
+        NodeToBlueIdInput.stripResolvedBlueIdMetadata(header);
+        String sourceHeaderIdentity = FrozenNode.fromNode(header).blueId();
         return new ExternalChannelDependencySnapshot.ChannelEntry(
                 key,
                 contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0),
@@ -853,8 +867,34 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                 Collections.singletonList(
                         contribution),
                 deterministicDependencies,
-                FrozenNode.fromResolvedNode(header)
-                        .blueId());
+                sourceHeaderIdentity);
+    }
+
+    private static void restoreExactSourceHeaderFields(
+            Node exactContract,
+            Node effectiveContract,
+            List<String> exactSourceFields) {
+        if (exactSourceFields == null || exactSourceFields.isEmpty()) {
+            return;
+        }
+        Map<String, Node> exactProperties =
+                exactContract.getProperties() != null
+                        ? exactContract.getProperties()
+                        : Collections.<String, Node>emptyMap();
+        Map<String, Node> effectiveProperties =
+                effectiveContract.getProperties() != null
+                        ? new LinkedHashMap<>(
+                        effectiveContract.getProperties())
+                        : new LinkedHashMap<String, Node>();
+        for (String field : exactSourceFields) {
+            Node exact = exactProperties.get(field);
+            if (exact != null) {
+                effectiveProperties.put(field, exact.clone());
+            } else {
+                effectiveProperties.remove(field);
+            }
+        }
+        effectiveContract.properties(effectiveProperties);
     }
 
     static JsonNode firstNonRootDeliveryHint(

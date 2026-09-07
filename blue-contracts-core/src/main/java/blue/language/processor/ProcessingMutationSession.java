@@ -220,7 +220,7 @@ final class ProcessingMutationSession {
 
     void validateProcessEmbeddedTraversalWithoutResolution(String path) {
         ImmutablePatchPlanner.forFrozen(
-                runtime.canonicalRootWithoutResolution())
+                runtime.selectedRootWithoutResolution())
                 .validateProcessEmbeddedTraversalPath(path);
     }
 
@@ -310,7 +310,7 @@ final class ProcessingMutationSession {
                         runtime.strictPlatformInvocation,
                         runtime.executableBodyFieldsByType);
         FrozenNode workingCanonical =
-                runtime.canonicalRootWithoutResolution();
+                runtime.selectedRootWithoutResolution();
         FrozenNode workingResolved =
                 runtime.resolvedRootWithoutResolution();
         FrozenNode workingIdentityCanonical = null;
@@ -353,18 +353,6 @@ final class ProcessingMutationSession {
                                     input.op(),
                                     path.pointer());
             canonicalPlanner.validateMutationPath(path);
-            FrozenNode expandedCanonical = pathAccess
-                    .materializePatchAncestors(
-                            workingCanonical,
-                            Collections.singletonList(path.pointer()));
-            if (expandedCanonical != workingCanonical) {
-                ResolvedSnapshot expanded = resolvePreflightCanonical(
-                        evidenceManager, expandedCanonical);
-                workingCanonical = expanded.frozenCanonicalRoot();
-                workingResolved = expanded.frozenResolvedRoot();
-                canonicalPlanner = ImmutablePatchPlanner.forFrozen(
-                        workingCanonical);
-            }
             ImmutablePatchPlanner resolvedPlanner =
                     ImmutablePatchPlanner.forFrozen(workingResolved);
             if (!path.isRoot()
@@ -373,6 +361,20 @@ final class ProcessingMutationSession {
                         "Final parent does not exist for patch path: "
                                 + path.pointer());
             }
+            FrozenNode expandedCanonical = pathAccess
+                    .materializePatchAncestors(
+                            workingCanonical,
+                            Collections.singletonList(path.pointer()));
+            if (expandedCanonical != workingCanonical) {
+                ResolvedSnapshot expanded = resolvePreflightCanonical(
+                        evidenceManager, expandedCanonical);
+                workingCanonical = expanded.frozenSourceRoot();
+                workingResolved = expanded.frozenResolvedRoot();
+                canonicalPlanner = ImmutablePatchPlanner.forFrozen(
+                        workingCanonical);
+            }
+            resolvedPlanner =
+                    ImmutablePatchPlanner.forFrozen(workingResolved);
             if (canProjectStrictIdentity) {
                 workingIdentityCanonical = pathAccess
                         .materializePatchAncestors(
@@ -635,7 +637,7 @@ final class ProcessingMutationSession {
 
     private void validateMutationPathWithoutResolution(String path) {
         ImmutablePatchPlanner.forFrozen(
-                runtime.canonicalRootWithoutResolution())
+                runtime.selectedRootWithoutResolution())
                 .validateMutationPath(path);
     }
 
@@ -652,9 +654,11 @@ final class ProcessingMutationSession {
         ResolvedSnapshot current = runtime.snapshot();
         return current != null
                 && preview.isBasedOn(
-                        current.frozenCanonicalRoot(),
+                        runtime.selectedRootWithoutResolution(),
                         current.frozenResolvedRoot(),
-                        current.isResolutionComplete());
+                        current.isResolutionComplete(),
+                        runtime.selectedDocumentBacked
+                                || current.isSourceBacked());
     }
 
     private List<DocumentUpdateData> commitMeasured(

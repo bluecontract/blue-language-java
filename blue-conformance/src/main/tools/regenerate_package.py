@@ -5,11 +5,14 @@ The repository stores the release ``conformance/contracts`` subtree rather
 than a complete specification release.  This entry point stages that subtree
 with the checked-in specifications and this vendored tool closure, runs the
 canonical release generator/refiner, and only then compares, stages, or
-publishes the resource package.
+publishes the resource package.  A separate full-release staging mode retains
+the exact generated shell containing specifications, reference, tools,
+manifests, and the Contracts package.
 
 With no output mode the command is read-only ``--check``.  ``--stage-output``
-writes a candidate package to a separate directory.  ``--write`` is the only
-mode allowed to modify ``--package-root``.
+writes a candidate resource package, and ``--stage-release-output`` writes the
+complete release shell, to a new or empty external directory.  ``--write`` is
+the only mode allowed to modify ``--package-root``.
 """
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Callable, Iterable
 
 # Keep the checked-in tool directory cache-free even when callers do not set
 # PYTHONDONTWRITEBYTECODE in their shell.
@@ -27,7 +31,19 @@ sys.dont_write_bytecode = True
 
 import yaml
 
-from package_hygiene import release_inventory_files
+from build_release_archive import (
+    require_complete_release_root,
+    verify_checksum_manifest,
+)
+from implementation_baseline import (
+    ImplementationBaselineError,
+    require_implementation_baseline_files,
+)
+from package_hygiene import (
+    copy_regular_file,
+    copy_regular_tree,
+    release_inventory_files,
+)
 from release_regenerate_package import regenerate_generated_surfaces
 
 
@@ -41,26 +57,15 @@ LANGUAGE_SPECIFICATION = Path(
     "blue-language-core/src/main/resources/specifications/"
     "blue-language-specification-1.0.md"
 )
-BASELINE_SOURCE_PATHS = (
-    "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-    "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java",
+CANONICAL_ORDINARY_FIXTURES = Path(
+    "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures"
 )
-
-
+CANONICAL_RUNTIME_REGISTRY = Path(
+    "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0"
+)
+CANONICAL_JAVA_TEMPLATES = Path(
+    "blue-conformance/src/main/templates/java-templates"
+)
 class RegenerationFailure(RuntimeError):
     """Raised when a candidate cannot be produced or verified safely."""
 
@@ -87,23 +92,51 @@ def compare_packages(left: Path, right: Path) -> list[str]:
 
 
 def run(command: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
-    result = subprocess.run(
-        command,
-        cwd=cwd,
-        env=environment,
-        text=True,
-        capture_output=True,
-    )
+    # Some nested generators invoke Gradle. A daemon can retain an inherited
+    # PIPE after the immediate child exits, causing communicate() to wait for
+    # EOF forever. Capture through a regular file so completion is tied only
+    # to the process we launched while preserving complete diagnostics.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            env=environment,
+            text=True,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
+        output.seek(0)
+        combined = output.read()
     if result.returncode != 0:
         raise RegenerationFailure(
             f"command failed ({' '.join(command)}):\n"
-            f"{result.stdout}\n{result.stderr}"
+            f"{combined}"
         )
 
 
 def copy_file(source: Path, target: Path) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
+    try:
+        copy_regular_file(source, target)
+    except (OSError, ValueError) as exc:
+        raise RegenerationFailure(str(exc)) from exc
+
+
+def copy_tree(
+    source: Path,
+    target: Path,
+    *,
+    dirs_exist_ok: bool = False,
+    ignore: Callable[[str, list[str]], set[str]] | None = None,
+) -> None:
+    try:
+        copy_regular_tree(
+            source,
+            target,
+            dirs_exist_ok=dirs_exist_ok,
+            ignore=ignore,
+        )
+    except (OSError, ValueError) as exc:
+        raise RegenerationFailure(str(exc)) from exc
 
 
 def stage_release_shell(
@@ -120,8 +153,25 @@ def stage_release_shell(
         repository_root / LANGUAGE_SPECIFICATION,
         release_root / "reference/blue-language-specification-1.0.md",
     )
-    shutil.copytree(package_root, release_root / "conformance/contracts")
-    shutil.copytree(
+    copy_tree(package_root, release_root / "conformance/contracts")
+    # The closure release is the published superset of the ordinary fixture
+    # package and the production runtime registry.  Refresh those mirrors from
+    # their canonical repository locations before any generated surface reads
+    # them, while retaining closure-only fixtures, gas microfixtures and the
+    # conformance-only ScriptedOperation adapter.
+    copy_tree(
+        repository_root / CANONICAL_ORDINARY_FIXTURES,
+        release_root / "conformance/contracts/fixtures",
+        dirs_exist_ok=True,
+    )
+    copy_tree(
+        repository_root / CANONICAL_RUNTIME_REGISTRY,
+        release_root / "conformance/contracts/registry",
+        dirs_exist_ok=True,
+    )
+    copy_tree(repository_root / CANONICAL_JAVA_TEMPLATES,
+              release_root / "java-templates")
+    copy_tree(
         TOOLS_ROOT,
         release_root / "tools",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
@@ -146,7 +196,7 @@ def run_full_lifecycle_generator(
             "expected identities or semantic output"
         )
     staged_sources = release_root / "fixture-sources/full-lifecycle"
-    shutil.copytree(fixture_source_root, staged_sources)
+    copy_tree(fixture_source_root, staged_sources)
     run(
         [
             sys.executable,
@@ -236,6 +286,11 @@ def regenerate(
         repository_root,
         environment,
     )
+    # The lifecycle exporter may add or remove fixture files. Rebuild the
+    # candidate inventory before the normative runtime walks it; otherwise a
+    # stale pre-export manifest can silently omit newly generated fixtures
+    # from receipt execution and only fail at the final package-count gate.
+    run(manifest_command, cwd=release_root.parent, environment=environment)
     run_managed_transition_receipt_rebind(
         release_root,
         repository_root,
@@ -261,11 +316,11 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
     vectors = load_mapping(package_root / "fixtures/vector-coverage.yaml")
     release = load_mapping(package_root / "release-manifest.yaml")
     expected_fixture_counts = {
-        "ordinaryFixtureCount": 183,
-        "closureFixtureCount": 93,
-        "totalExecutableFixtureCount": 276,
-        "vectorCount": 168,
-        "ordinaryVectorCount": 114,
+        "ordinaryFixtureCount": 197,
+        "closureFixtureCount": 98,
+        "totalExecutableFixtureCount": 295,
+        "vectorCount": 182,
+        "ordinaryVectorCount": 128,
         "closureVectorCount": 54,
     }
     for field, expected in expected_fixture_counts.items():
@@ -276,8 +331,8 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
                 f"expected {expected}"
             )
     expected_vector_counts = {
-        "vectorCount": 168,
-        "ordinaryVectorCount": 114,
+        "vectorCount": 182,
+        "ordinaryVectorCount": 128,
         "closureVectorCount": 54,
     }
     for field, expected in expected_vector_counts.items():
@@ -323,13 +378,13 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
         raise RegenerationFailure(
             "release manifest has no fixturePackage binding"
         )
-    if fixture_binding.get("vectorCount") != 168:
+    if fixture_binding.get("vectorCount") != 182:
         raise RegenerationFailure(
-            "release fixture-package vectorCount is not 168"
+            "release fixture-package vectorCount is not 182"
         )
-    if fixture_binding.get("fixtureCount") != 276:
+    if fixture_binding.get("fixtureCount") != 295:
         raise RegenerationFailure(
-            "release fixture-package fixtureCount is not 276"
+            "release fixture-package fixtureCount is not 295"
         )
 
 
@@ -392,16 +447,124 @@ def publish(candidate: Path, destination: Path) -> None:
         )
 
 
-def copy_stage(candidate: Path, destination: Path) -> None:
+def require_stage_destination(
+    destination: Path,
+    forbidden_roots: Iterable[Path],
+) -> Path:
+    """Require a new/empty destination disjoint from every source tree."""
+    destination = destination.expanduser().absolute()
+    if destination.is_symlink():
+        raise RegenerationFailure(
+            f"stage output must not be a symlink: {destination}"
+        )
+    resolved_destination = destination.resolve(strict=False)
+    for source_root in forbidden_roots:
+        resolved_source = source_root.expanduser().resolve()
+        if (
+            resolved_destination == resolved_source
+            or resolved_source in resolved_destination.parents
+            or resolved_destination in resolved_source.parents
+        ):
+            raise RegenerationFailure(
+                "stage output must be outside every source tree: "
+                f"output={destination}, source={resolved_source}"
+            )
     if destination.exists():
         if not destination.is_dir() or any(destination.iterdir()):
             raise RegenerationFailure(
                 "stage output must be nonexistent or an empty directory: "
                 f"{destination}"
             )
-    else:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(candidate, destination, dirs_exist_ok=True)
+    return destination
+
+
+def copy_stage(
+    candidate: Path,
+    destination: Path,
+    *,
+    forbidden_roots: Iterable[Path] = (),
+    validator: Callable[[Path], None] | None = None,
+) -> Path:
+    """Atomically retain one candidate in a safe external directory."""
+    candidate = candidate.expanduser().resolve()
+    destination = require_stage_destination(
+        destination, (candidate, *tuple(forbidden_roots))
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(
+        prefix=f".{destination.name}.stage-",
+        dir=destination.parent,
+    ))
+    try:
+        copy_tree(candidate, temporary, dirs_exist_ok=True)
+        if validator is not None:
+            validator(temporary)
+        if destination.exists():
+            # The preflight requires this directory to be empty. Recheck at
+            # publication so concurrent content is never removed.
+            if (
+                destination.is_symlink()
+                or not destination.is_dir()
+                or any(destination.iterdir())
+            ):
+                raise RegenerationFailure(
+                    "stage output changed after validation: "
+                    f"{destination}"
+                )
+            destination.rmdir()
+        os.replace(temporary, destination)
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+    return destination
+
+
+def copy_complete_release_stage(
+    release_root: Path,
+    candidate_package: Path,
+    destination: Path,
+    *,
+    forbidden_roots: Iterable[Path] = (),
+) -> Path:
+    """Retain the exact complete shell containing the generated candidate."""
+    try:
+        release_root = require_complete_release_root(release_root)
+        verify_checksum_manifest(release_root)
+    except ValueError as exc:
+        raise RegenerationFailure(str(exc)) from exc
+    candidate_package = candidate_package.expanduser().resolve()
+    source_contracts = release_root / "conformance/contracts"
+    source_differences = compare_packages(source_contracts, candidate_package)
+    if source_differences:
+        raise RegenerationFailure(
+            "complete release shell does not contain the validated candidate: "
+            f"{source_differences[:20]}"
+        )
+
+    def validate_copy(staged: Path) -> None:
+        try:
+            require_complete_release_root(staged)
+            verify_checksum_manifest(staged)
+        except ValueError as exc:
+            raise RegenerationFailure(str(exc)) from exc
+        release_differences = compare_packages(release_root, staged)
+        candidate_differences = compare_packages(
+            candidate_package, staged / "conformance/contracts"
+        )
+        if release_differences or candidate_differences:
+            raise RegenerationFailure(
+                "staged complete release is not byte-equivalent to its "
+                "validated candidate: "
+                f"release={release_differences[:20]}, "
+                f"contracts={candidate_differences[:20]}"
+            )
+
+    return copy_stage(
+        release_root,
+        destination,
+        forbidden_roots=forbidden_roots,
+        validator=validate_copy,
+    )
 
 
 def validate_inputs(
@@ -409,6 +572,7 @@ def validate_inputs(
     repository_root: Path,
     fixture_source_root: Path | None,
 ) -> None:
+    validate_lifecycle_inputs(package_root, repository_root, fixture_source_root)
     required_package = (
         "fixtures/manifest.yaml",
         "registry/manifest.yaml",
@@ -427,7 +591,6 @@ def validate_inputs(
     required_sources = (
         str(CONTRACTS_SPECIFICATION),
         str(LANGUAGE_SPECIFICATION),
-        *BASELINE_SOURCE_PATHS,
     )
     missing_sources = [
         relative
@@ -437,6 +600,25 @@ def validate_inputs(
     if missing_sources:
         raise RegenerationFailure(
             f"repository root lacks release source inputs: {missing_sources}"
+        )
+    try:
+        require_implementation_baseline_files(repository_root)
+    except ImplementationBaselineError as exc:
+        raise RegenerationFailure(str(exc)) from exc
+    required_directories = (
+        CANONICAL_ORDINARY_FIXTURES,
+        CANONICAL_RUNTIME_REGISTRY,
+        CANONICAL_JAVA_TEMPLATES,
+    )
+    missing_directories = [
+        str(relative)
+        for relative in required_directories
+        if not (repository_root / relative).is_dir()
+    ]
+    if missing_directories:
+        raise RegenerationFailure(
+            "repository root lacks canonical release input directories: "
+            f"{missing_directories}"
         )
     if fixture_source_root is not None and not fixture_source_root.is_dir():
         raise RegenerationFailure(
@@ -460,8 +642,35 @@ def validate_inputs(
         )
 
 
+def validate_lifecycle_inputs(package_root: Path, repository_root: Path,
+                              fixture_source_root: Path | None) -> None:
+    """Reject incomplete exporter configuration before staging or launching Java."""
+    closure = package_root / "fixtures/closure"
+    lifecycle_present = any(closure.glob("fl-adm-*.yaml"))
+    if lifecycle_present and fixture_source_root is None:
+        raise RegenerationFailure(
+            "Package contains full-lifecycle fixtures; --fixture-source-root is required. "
+            "Use --validate-inputs-only to check configuration without regeneration.")
+    if fixture_source_root is None:
+        return
+    canonical = repository_root / "blue-conformance/src/main/fixture-sources/full-lifecycle"
+    required = {path.name for path in canonical.glob("*.yaml")}
+    if not required or "source-schema.yaml" not in required:
+        raise RegenerationFailure(f"Canonical lifecycle source inventory is missing: {canonical}")
+    missing = sorted(name for name in required if not (fixture_source_root / name).is_file())
+    if missing:
+        raise RegenerationFailure(f"Incomplete --fixture-source-root; missing lifecycle inputs: {missing}")
+    for name in sorted(required):
+        value = yaml.safe_load((fixture_source_root / name).read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise RegenerationFailure(f"Lifecycle source must be a YAML mapping: {name}")
+    # Full source shape and semantics remain the Java exporter's responsibility.
+
+
 def main() -> None:
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--validate-inputs-only", action="store_true",
+                        help="Check complete generator inputs only; no staging, Java or regeneration")
     parser.add_argument(
         "--package-root",
         type=Path,
@@ -495,11 +704,21 @@ def main() -> None:
         help="Write the generated candidate package to a separate directory",
     )
     mode.add_argument(
+        "--stage-release-output",
+        type=Path,
+        help=(
+            "Write the complete generated release shell to a separate "
+            "directory"
+        ),
+    )
+    mode.add_argument(
         "--write",
         action="store_true",
         help="Publish the generated candidate into --package-root",
     )
     args = parser.parse_args()
+    if args.validate_inputs_only and (args.write or args.stage_output or args.stage_release_output):
+        parser.error("--validate-inputs-only cannot be combined with an output mode")
 
     package_root = args.package_root.expanduser().resolve()
     repository_root = args.repository_root.expanduser().resolve()
@@ -509,6 +728,9 @@ def main() -> None:
         else args.fixture_source_root.expanduser().resolve()
     )
     validate_inputs(package_root, repository_root, fixture_source_root)
+    if args.validate_inputs_only:
+        print("PACKAGE_GENERATOR_INPUTS_OK; no generation or semantic certification")
+        return
 
     with tempfile.TemporaryDirectory(
         prefix="blue-contracts-resource-regenerate-"
@@ -519,9 +741,20 @@ def main() -> None:
         candidate = release_root / "conformance/contracts"
         differences = compare_packages(package_root, candidate)
         if args.stage_output is not None:
-            output = args.stage_output.expanduser().resolve()
-            copy_stage(candidate, output)
+            output = copy_stage(
+                candidate,
+                args.stage_output,
+                forbidden_roots=(repository_root, package_root),
+            )
             print(f"PACKAGE_REGENERATION_STAGED {output}")
+        elif args.stage_release_output is not None:
+            output = copy_complete_release_stage(
+                release_root,
+                candidate,
+                args.stage_release_output,
+                forbidden_roots=(repository_root, package_root),
+            )
+            print(f"RELEASE_REGENERATION_STAGED {output}")
         elif args.write:
             publish(candidate, package_root)
             print("PACKAGE_REGENERATED_AND_VALIDATED")

@@ -25,11 +25,20 @@ public final class EmbeddedScopePlanView {
         COLLECTION_MEMBER
     }
 
+    /** Successful projection state of one collection declaration. */
+    public enum CollectionState {
+        /** The declared path was absent and contributed zero occurrences. */
+        ABSENT_ZERO_OCCURRENCES,
+        /** The declared path selected a present, verified object collection. */
+        PRESENT_COLLECTION
+    }
+
     private final String scopePath;
     private final List<String> explicitDeclarationPaths;
     private final List<String> collectionDeclarationPaths;
     private final Map<String, List<String>>
             collectionMemberKeysByDeclaration;
+    private final Map<String, CollectionState> collectionStatesByDeclaration;
     private final List<String> concreteChildPaths;
     private final Map<String, Origin> originsByConcretePath;
 
@@ -38,6 +47,7 @@ public final class EmbeddedScopePlanView {
             List<String> explicitDeclarationPaths,
             List<String> collectionDeclarationPaths,
             Map<String, List<String>> collectionMemberKeysByDeclaration,
+            Map<String, CollectionState> collectionStatesByDeclaration,
             List<String> concreteChildPaths,
             Map<String, Origin> originsByConcretePath) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
@@ -48,6 +58,19 @@ public final class EmbeddedScopePlanView {
         this.collectionMemberKeysByDeclaration = immutableLists(
                 collectionMemberKeysByDeclaration,
                 "collectionMemberKeysByDeclaration");
+        this.collectionStatesByDeclaration = immutableMap(
+                collectionStatesByDeclaration,
+                "collectionStatesByDeclaration");
+        java.util.LinkedHashSet<String> declarations =
+                new java.util.LinkedHashSet<>(
+                        this.collectionDeclarationPaths);
+        if (!declarations.equals(
+                this.collectionMemberKeysByDeclaration.keySet())
+                || !declarations.equals(
+                        this.collectionStatesByDeclaration.keySet())) {
+            throw new IllegalArgumentException(
+                    "Collection projections must match collection declarations");
+        }
         this.concreteChildPaths = immutableList(
                 concreteChildPaths, "concreteChildPaths");
         this.originsByConcretePath = Collections.unmodifiableMap(
@@ -72,11 +95,22 @@ public final class EmbeddedScopePlanView {
                             ? Origin.EXPLICIT
                             : Origin.COLLECTION_MEMBER);
         }
+        Map<String, CollectionState> states = new LinkedHashMap<>();
+        for (Map.Entry<String, EmbeddedCollectionState> entry
+                : plan.collectionStatesByDeclaration().entrySet()) {
+            states.put(
+                    entry.getKey(),
+                    entry.getValue()
+                            == EmbeddedCollectionState.PRESENT_COLLECTION
+                            ? CollectionState.PRESENT_COLLECTION
+                            : CollectionState.ABSENT_ZERO_OCCURRENCES);
+        }
         return new EmbeddedScopePlanView(
                 plan.scopePath(),
                 plan.explicitDeclarationPaths(),
                 plan.collectionDeclarationPaths(),
                 plan.collectionMemberKeysByDeclaration(),
+                states,
                 plan.concreteChildPaths(),
                 origins);
     }
@@ -87,6 +121,7 @@ public final class EmbeddedScopePlanView {
                 Collections.<String>emptyList(),
                 Collections.<String>emptyList(),
                 Collections.<String, List<String>>emptyMap(),
+                Collections.<String, CollectionState>emptyMap(),
                 Collections.<String>emptyList(),
                 Collections.<String, Origin>emptyMap());
     }
@@ -129,6 +164,18 @@ public final class EmbeddedScopePlanView {
     }
 
     /**
+     * Returns whether every collection declaration was absent or present.
+     *
+     * <p>Both an absent collection and a present empty collection have no
+     * member keys; this map preserves that semantic distinction.</p>
+     *
+     * @return immutable declaration-to-state map
+     */
+    public Map<String, CollectionState> collectionStatesByDeclaration() {
+        return collectionStatesByDeclaration;
+    }
+
+    /**
      * Returns combined absolute concrete child paths in canonical order.
      *
      * @return immutable concrete child path list
@@ -166,6 +213,19 @@ public final class EmbeddedScopePlanView {
             copy.put(
                     Objects.requireNonNull(entry.getKey(), label + " key"),
                     immutableList(entry.getValue(), label + " value"));
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static <T> Map<String, T> immutableMap(
+            Map<String, T> source,
+            String label) {
+        Objects.requireNonNull(source, label);
+        Map<String, T> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, T> entry : source.entrySet()) {
+            copy.put(
+                    Objects.requireNonNull(entry.getKey(), label + " key"),
+                    Objects.requireNonNull(entry.getValue(), label + " value"));
         }
         return Collections.unmodifiableMap(copy);
     }

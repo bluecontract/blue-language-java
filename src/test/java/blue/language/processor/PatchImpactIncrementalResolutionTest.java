@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalMergingProcessorCapability;
@@ -10,8 +11,10 @@ import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
@@ -24,6 +27,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
@@ -278,7 +282,11 @@ class PatchImpactIncrementalResolutionTest {
     void shouldVerifyTypeContributionOnChangedPathUsesOneExplicitFullFallbackAndMatchesOracle() {
         // given
         Fixture fixture = Fixture.withFixedStatusSubtype();
-        ResolvedSnapshot base = fixture.snapshot();
+        Node document = fixture.snapshot().canonicalRoot();
+        document.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
+        ResolvedSnapshot base = fixture.blue.resolveToSnapshot(document);
         RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
@@ -498,11 +506,53 @@ class PatchImpactIncrementalResolutionTest {
         // then
         assertEquals(1L, metrics.snapshot().counter("incrementalSnapshotResolutions"));
         assertEquals(0L, metrics.snapshot().counter("fullSnapshotFallbacks"));
+        assertEquals("confirmed", oracle.snapshot().resolvedRoot()
+                .getAsText("/wrapperObservedStatus"));
+        assertEquals("draft", incremental.snapshot().resolvedRoot()
+                .getAsText("/wrapperObservedStatus"));
+        assertEquals("confirmed", oracle.snapshot().resolvedRoot()
+                .getAsText("/status"));
+        assertEquals("confirmed", incremental.snapshot().resolvedRoot()
+                .getAsText("/status"));
+        assertEquals("draft", base.resolvedRoot().getAsText("/status"));
         assertNotEquals(wrappedBlue.nodeToJson(oracle.snapshot().resolvedRoot()),
                 wrappedBlue.nodeToJson(incremental.snapshot().resolvedRoot()),
-                "Language trusts request-aware capabilities and does not run an expensive dishonesty oracle");
+                "The Source oracle performs the advertised custom merge, while the dishonest "
+                        + "incremental capability omits its dependent side effect");
     }
 
+
+    @Test
+    void shouldRejectMismatchedCanonicalEvidenceAfterCustomSourceResolution() {
+        // given
+        Fixture fixture = Fixture.withBasicStatusTypeContribution();
+        DishonestWrapper wrapper = new DishonestWrapper(fixture.blue.getMergingProcessor());
+        Blue wrappedBlue = new Blue(fixture.provider, wrapper);
+        ResolvedSnapshot base = snapshot(wrappedBlue, fixture);
+        Node canonical = base.canonicalRoot();
+        canonical.properties("status", canonical.getProperties().get("status")
+                .clone().value("confirmed"));
+        String inputBefore = wrappedBlue.nodeToJson(canonical);
+        FullOracleSnapshotManager manager = new FullOracleSnapshotManager(wrappedBlue, false);
+        DocumentProcessingRuntime oracle = new DocumentProcessingRuntime(
+                base, wrappedBlue.conformanceEngine(), manager);
+        oracle.applyPatch("/", JsonPatch.replace("/status", new Node().value("confirmed")));
+        ResolvedSnapshot fullyResolved = oracle.snapshot();
+
+        // when
+        IllegalStateException mismatch = FailureCapture.captureFailure(
+                () -> ResolvedSnapshot.withCanonicalTypeIdentities(
+                        FrozenNode.fromNode(canonical),
+                        fullyResolved.frozenResolvedRoot(),
+                        fullyResolved.canonicalTypeIdentities()));
+
+        // then
+        assertNotNull(mismatch, "Custom resolution must not certify a different canonical value");
+        assertTrue(mismatch.getMessage().contains("Canonical and resolved roots do not match"));
+        assertEquals(inputBefore, wrappedBlue.nodeToJson(canonical));
+        assertEquals("draft", base.resolvedRoot().getAsText("/status"));
+        assertEquals("draft", base.resolvedRoot().getAsText("/wrapperObservedStatus"));
+    }
 
     @Test
     void shouldVerifyImpactModelCarriesTypedBoundaryAndDependencyEvidence() {
@@ -641,7 +691,7 @@ class PatchImpactIncrementalResolutionTest {
                     .type(reference(parentId))
                     .properties("status", new Node().value("draft")));
             String draftId = provider.getBlueIdByName("Draft Document");
-            return new Fixture(provider, new Blue(provider), draftId, parentId);
+            return new Fixture(provider, ProcessorTestSupport.blue(provider), draftId, parentId);
         }
 
         private static Fixture withBasicStatusTypeContribution() {
@@ -676,7 +726,7 @@ class PatchImpactIncrementalResolutionTest {
             return blue.resolveToSnapshot(new Node()
                     .type(reference(documentTypeId))
                     .properties("status", new Node().value("draft"))
-                    .contracts(new Node()));
+                    .contracts(Nodes.emptyObject()));
         }
 
         private ResolvedSnapshot snapshotWithNonEmptyContracts() {
@@ -735,6 +785,14 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot, java.util.Collection<String> preservedPaths) {
+            // This independent oracle deliberately performs complete resolution.
+            fullResolutions++;
+            return blue.loadSnapshot(canonicalRoot.toNode());
+        }
+
+        @Override
         public boolean supportsIncrementalValueResolution() {
             return incrementalCapability;
         }
@@ -756,16 +814,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
@@ -779,8 +841,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
     }
 
@@ -798,16 +865,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
@@ -821,8 +892,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
 
         @Override
@@ -853,16 +929,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
             if (target.getProperties() != null
                     && target.getProperties().get("status") != null
                     && target.getProperties().get("status").getValue() != null) {
@@ -882,8 +962,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
 
         @Override

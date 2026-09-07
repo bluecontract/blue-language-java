@@ -4,6 +4,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetProperty;
@@ -46,7 +47,7 @@ final class ProcessorProcessEventContextTest {
     void shouldVerifyExplicitInitializeHasNoProcessEventForDocumentAndSnapshotExecutions() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
 
         // when
         ResolvedSnapshot snapshot = snapshot(document);
@@ -58,13 +59,13 @@ final class ProcessorProcessEventContextTest {
                 documentExecution.createContext(
                         "/",
                         ContractBundle.empty(),
-                        new Node(),
+                        Nodes.emptyObject(),
                         false);
         ProcessorExecutionContext snapshotContext =
                 snapshotExecution.createContext(
                         "/",
                         ContractBundle.empty(),
-                        new Node(),
+                        Nodes.emptyObject(),
                         false);
         boolean documentHasProcessEvent =
                 documentContext.hasProcessEvent();
@@ -315,7 +316,7 @@ final class ProcessorProcessEventContextTest {
         CountDownLatch readAttempts = new CountDownLatch(CONCURRENT_READER_COUNT);
         ProcessorInvocationState execution = new ProcessorInvocationState(
                 DocumentProcessor.builder().observer(metrics).build(),
-                snapshot(new Node()),
+                snapshot(Nodes.emptyObject()),
                 processEvent("concurrent-root"),
                 source -> {
                     freezerCalls.incrementAndGet();
@@ -323,7 +324,7 @@ final class ProcessorProcessEventContextTest {
                     throw expected;
                 });
         ProcessorExecutionContext context = execution.createContext(
-                "/", ContractBundle.empty(), new Node(), false);
+                "/", ContractBundle.empty(), Nodes.emptyObject(), false);
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_READER_COUNT);
         List<Future<FrozenNode>> reads = new ArrayList<>();
 

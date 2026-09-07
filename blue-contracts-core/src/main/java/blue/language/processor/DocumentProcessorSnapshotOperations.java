@@ -43,31 +43,39 @@ final class DocumentProcessorSnapshotOperations {
                      lifecycle.openRead(processor.registry())) {
             support.requireSnapshotManager();
             support.requireProcessableEvent(event);
-            Node canonicalRoot =
+            Node selectedRoot =
                     support.requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    canonicalRoot)) {
+                    selectedRoot)) {
                 return ProcessorEngine.processDocument(
                         processor, snapshot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            snapshot,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = support.admission()
                     .materializeTopLevel(
                             event, PROCESSING_EVENT_LABEL)
                     .node();
             VerifiedExecutionEvidence evidence =
                     support.deriveExternalDeliveryEvidence(
-                            canonicalRoot, admittedEvent);
+                            selectedRoot,
+                            admittedEvent,
+                            sourceIdentities);
             return ProcessorEngine.processDocument(
                     processor, snapshot, admittedEvent, evidence);
         } catch (SubscriptionSurfaceInvalidException exception) {
             return support.subscriptionSurfaceInvalidResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         } catch (PortableLimitExceededException exception) {
             return support.portableLimitResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidExternalDeliveryResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         }
     }
 
@@ -82,33 +90,41 @@ final class DocumentProcessorSnapshotOperations {
                      lifecycle.openRead(processor.registry())) {
             support.requireSnapshotManager();
             support.requireProcessableEvent(event);
-            Node canonicalRoot =
+            Node selectedRoot =
                     support.requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    canonicalRoot)) {
+                    selectedRoot)) {
                 return ProcessorEngine.processDocument(
                         processor, snapshot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            snapshot,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = support.admission()
                     .materializeTopLevel(
                             event, PROCESSING_EVENT_LABEL)
                     .node();
-            evidence.revalidate(
-                    canonicalRoot,
+            evidence.revalidateEstablished(
+                    selectedRoot,
                     admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier());
             return ProcessorEngine.processDocument(
                     processor, snapshot, admittedEvent, evidence);
         } catch (SubscriptionSurfaceInvalidException exception) {
             return support.subscriptionSurfaceInvalidResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         } catch (PortableLimitExceededException exception) {
             return support.portableLimitResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidExternalDeliveryResult(
-                    snapshot.canonicalRoot(), exception);
+                    snapshot.sourceRoot(), exception);
         }
     }
 
@@ -123,22 +139,30 @@ final class DocumentProcessorSnapshotOperations {
                      lifecycle.openRead(processor.registry())) {
             support.requireSnapshotManager();
             support.requireProcessableEvent(event);
-            Node canonicalRoot =
+            Node selectedRoot =
                     support.requireProcessableSnapshotRoot(snapshot);
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            snapshot,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    canonicalRoot)) {
+                    selectedRoot)) {
                 evidence.revalidateBinding(
-                        canonicalRoot,
-                        event,
+                        sourceIdentities.rootBlueId(),
+                        sourceIdentities.eventBlueId(),
                         processor.runtimeRegistryIdentity());
             } else {
                 event = support.admission()
                         .materializeTopLevel(
                                 event, PROCESSING_EVENT_LABEL)
                         .node();
-                evidence.revalidate(
-                        canonicalRoot,
+                evidence.revalidateEstablished(
+                        selectedRoot,
                         event,
+                        sourceIdentities.rootBlueId(),
+                        sourceIdentities.eventBlueId(),
                         processor.runtimeRegistryIdentity(),
                         processor.deliveryEvidenceVerifier());
             }
@@ -152,12 +176,12 @@ final class DocumentProcessorSnapshotOperations {
             return support.platformFailure(
                     evidence,
                     support.subscriptionSurfaceInvalidResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         } catch (PortableLimitExceededException exception) {
             return support.platformFailure(
                     evidence,
                     support.portableLimitResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         }
     }
 
@@ -170,32 +194,40 @@ final class DocumentProcessorSnapshotOperations {
                      lifecycle.openRead(processor.registry())) {
             support.requireSnapshotManager();
             support.requireProcessableEvent(event);
-            Node canonicalRoot =
+            Node selectedRoot =
                     support.requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    canonicalRoot)) {
+                    selectedRoot)) {
                 return ProcessorEngine.processDocumentWithTrace(
                         processor, snapshot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            snapshot,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = support.admission()
                     .materializeTopLevel(
                             event, PROCESSING_EVENT_LABEL)
                     .node();
             VerifiedExecutionEvidence evidence =
                     support.deriveExternalDeliveryEvidence(
-                            canonicalRoot, admittedEvent);
+                            selectedRoot,
+                            admittedEvent,
+                            sourceIdentities);
             return ProcessorEngine.processDocumentWithTrace(
                     processor, snapshot, admittedEvent, evidence);
         } catch (SubscriptionSurfaceInvalidException exception) {
             return failureTrace(
                     snapshot,
                     support.subscriptionSurfaceInvalidResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         } catch (PortableLimitExceededException exception) {
             return failureTrace(
                     snapshot,
                     support.portableLimitResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidTrace(snapshot, exception);
         }
@@ -212,20 +244,28 @@ final class DocumentProcessorSnapshotOperations {
                      lifecycle.openRead(processor.registry())) {
             support.requireSnapshotManager();
             support.requireProcessableEvent(event);
-            Node canonicalRoot =
+            Node selectedRoot =
                     support.requireProcessableSnapshotRoot(snapshot);
             if (ProcessorEngine.hasDirectRootTerminationEntry(
-                    canonicalRoot)) {
+                    selectedRoot)) {
                 return ProcessorEngine.processDocumentWithTrace(
                         processor, snapshot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            snapshot,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = support.admission()
                     .materializeTopLevel(
                             event, PROCESSING_EVENT_LABEL)
                     .node();
-            evidence.revalidate(
-                    canonicalRoot,
+            evidence.revalidateEstablished(
+                    selectedRoot,
                     admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier());
             return ProcessorEngine.processDocumentWithTrace(
@@ -234,12 +274,12 @@ final class DocumentProcessorSnapshotOperations {
             return failureTrace(
                     snapshot,
                     support.subscriptionSurfaceInvalidResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         } catch (PortableLimitExceededException exception) {
             return failureTrace(
                     snapshot,
                     support.portableLimitResult(
-                            snapshot.canonicalRoot(), exception));
+                            snapshot.sourceRoot(), exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidTrace(snapshot, exception);
         }
@@ -260,7 +300,7 @@ final class DocumentProcessorSnapshotOperations {
         return failureTrace(
                 snapshot,
                 support.invalidExternalDeliveryResult(
-                        snapshot.canonicalRoot(), exception));
+                        snapshot.sourceRoot(), exception));
     }
 
     private ProcessingDebugResult failureTrace(

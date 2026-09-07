@@ -23,11 +23,13 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +37,7 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,6 +68,21 @@ class RootSchemaPayloadKindTest {
 
         // then
         assertNull(failure);
+    }
+
+    @Test
+    void shouldAllowExactEmptyDictionaryRootWhenMinFieldsIsZero() {
+        // given
+        Blue blue = new Blue();
+        Node root = dictionaryRoot(new Schema().minFields(0))
+                .properties(new LinkedHashMap<>());
+
+        // when
+        Node resolved = blue.resolve(root);
+
+        // then
+        assertNotNull(resolved.getProperties());
+        assertTrue(resolved.getProperties().isEmpty());
     }
 
     @Test
@@ -171,7 +189,7 @@ class RootSchemaPayloadKindTest {
     }
 
     @Test
-    void shouldRejectRequiredEmptyDictionaryChildAsMissing() {
+    void shouldAcceptRequiredExactEmptyDictionaryChild() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node type = new Node().name("Required Dictionary Holder")
@@ -181,16 +199,17 @@ class RootSchemaPayloadKindTest {
         provider.addSingleNodes(type);
         String typeId = provider.getBlueIdByName("Required Dictionary Holder");
         Node instance = new Node().type(reference(typeId))
-                .properties("required", new Node());
+                .properties("required", Nodes.emptyObject());
         Blue blue = new Blue(provider);
 
         // when
-        Throwable failure = captureFailure(
-                () -> blue.resolve(instance));
+        Node resolved = blue.resolve(instance);
 
         // then
-        assertSchemaFailure(failure, "/required");
-        assertTrue(failure.getMessage().contains("Required node"), failure.getMessage());
+        assertNotNull(resolved.getProperties().get("required")
+                .getProperties());
+        assertTrue(resolved.getProperties().get("required")
+                .getProperties().isEmpty());
     }
 
     @Test

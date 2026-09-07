@@ -11,8 +11,9 @@ import java.util.*;
  * selecting converters for their declared generic item type.
  *
  * <p>When an interface or abstract collection cannot be instantiated, the
- * converter falls back to an {@link ArrayList}. Null elements become Java null
- * values or primitive defaults for primitive arrays.</p>
+ * converter falls back to an {@link ArrayList}. Canonical empty placeholders
+ * become Java null values or primitive defaults for primitive arrays; raw
+ * Java-null list members are rejected at the semantic boundary.</p>
  */
 public class CollectionConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
@@ -52,7 +53,22 @@ public class CollectionConverter implements Converter<Object> {
 
     @Override
     public Object convert(Node node, Type targetType) {
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "collection mapping",
+                () -> convertValidated(node, targetType));
+    }
+
+    private Object convertValidated(Node node, Type targetType) {
         if (node == null) {
+            return null;
+        }
+
+        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
+                node,
+                targetType,
+                "collection mapping");
+        if (payloadKind == MappingPayload.Kind.NONE) {
             return null;
         }
 
@@ -67,10 +83,6 @@ public class CollectionConverter implements Converter<Object> {
     }
 
     private Object convertToCollection(Node node, Type targetType, Class<?> rawType) {
-        if (node == null || Nodes.isEmptyNode(node)) {
-            return null;
-        }
-
         if (rawType.isArray()) {
             return convertToArray(node, getComponentType(targetType));
         }
@@ -88,20 +100,28 @@ public class CollectionConverter implements Converter<Object> {
 
         Type itemType = getItemType(targetType);
 
-        for (Node item : node.getItems()) {
-            if (item == null) {
-                result.add(null);
-            } else {
-                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
-                Object convertedItem;
-                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                    convertedItem = itemConverter.convert(item, resolvedClass);
+        for (int index = 0; index < node.getItems().size(); index++) {
+            Node item = node.getItems().get(index);
+            try {
+                if (item == null || Nodes.isEmptyPlaceholder(item)) {
+                    result.add(null);
                 } else {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                    convertedItem = itemConverter.convert(item, itemType);
+                    Class<?> resolvedClass = converterFactory.resolveClass(
+                            item, typeClassResolver);
+                    Object convertedItem;
+                    if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                        convertedItem = itemConverter.convert(item, resolvedClass);
+                    } else {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                        convertedItem = itemConverter.convert(item, itemType);
+                    }
+                    result.add(convertedItem);
                 }
-                result.add(convertedItem);
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "collection item [" + index + "]",
+                        e);
             }
         }
 
@@ -148,18 +168,26 @@ public class CollectionConverter implements Converter<Object> {
         if (node.getItems() == null) {
             return result;
         }
-        for (Node item : node.getItems()) {
-            if (item == null) {
-                result.add(null);
-            } else {
-                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
-                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                    result.add(itemConverter.convert(item, resolvedClass));
+        for (int index = 0; index < node.getItems().size(); index++) {
+            Node item = node.getItems().get(index);
+            try {
+                if (item == null || Nodes.isEmptyPlaceholder(item)) {
+                    result.add(null);
                 } else {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                    result.add(itemConverter.convert(item, itemType));
+                    Class<?> resolvedClass = converterFactory.resolveClass(
+                            item, typeClassResolver);
+                    if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                        result.add(itemConverter.convert(item, resolvedClass));
+                    } else {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                        result.add(itemConverter.convert(item, itemType));
+                    }
                 }
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "array item [" + index + "]",
+                        e);
             }
         }
         return result;

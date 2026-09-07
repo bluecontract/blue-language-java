@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.runtime.LanguageRuntimeAccess;
 
@@ -166,6 +166,10 @@ public final class IndexedDeliveryEvaluator {
                 eventOrderKey, "eventOrderKey");
         final List<SubscriptionDelta.Entry> activeIntervals =
                 canonicalActiveIntervals(completeActiveIntervals);
+        final List<String> activeScopePaths = new ArrayList<>();
+        for (SubscriptionDelta.Entry interval : activeIntervals) {
+            activeScopePaths.add(interval.scopePath());
+        }
         final List<ExternalSubscriptionOccurrenceKey> candidateKeys =
                 orderedCandidateOccurrenceKeys != null
                         ? immutableCandidateKeys(
@@ -174,8 +178,6 @@ public final class IndexedDeliveryEvaluator {
 
         try (DocumentProcessorLifecycle.ReadScope ignored =
                      lifecycle.openRead(processor.registry())) {
-            final String eventBlueId =
-                    DirectBlueIdCalculator.calculateBlueId(exactEvent);
             final ProcessingSnapshotManager snapshotManager =
                     processor.snapshotManager();
             final LanguageRuntimeAccess languageRuntime =
@@ -186,16 +188,18 @@ public final class IndexedDeliveryEvaluator {
                         SNAPSHOT_GENERATION_EXPIRED);
             }
             requireReleasedGasSchedule();
+            final DocumentProcessorProcessingSupport.SourceIdentityBinding identities =
+                    new DocumentProcessorProcessingSupport(processor)
+                            .sourceIdentities(exactRoot, exactEvent,
+                                    languageRuntime, snapshotManager);
+            final String rootBlueId = identities.rootBlueId();
+            final String eventBlueId = identities.eventBlueId();
             ProcessingInputAdmission admission =
                     new ProcessingInputAdmission(snapshotManager, true);
             ProcessingInputAdmission.AdmittedNode admittedRoot =
                     admission.materializeTopLevel(
                             exactRoot,
                             ProcessingInputAdmission.PROCESSING_ROOT_LABEL);
-            List<String> activeScopePaths = new ArrayList<>();
-            for (SubscriptionDelta.Entry interval : activeIntervals) {
-                activeScopePaths.add(interval.scopePath());
-            }
             final Node evaluationRoot = admission.materializeScopePaths(
                     admittedRoot, activeScopePaths).node();
             final Node evaluationEvent = admission.materializeTopLevel(
@@ -227,6 +231,7 @@ public final class IndexedDeliveryEvaluator {
                     preselectionVerifier.evaluate(
                             evaluationRoot,
                             evaluationEvent,
+                            eventBlueId,
                             rootRevision,
                             exactOrder,
                             activeIntervals,
@@ -251,8 +256,8 @@ public final class IndexedDeliveryEvaluator {
             }
             ExternalDeliveryPlan plan = planBuilder.build()
                     .withVerifiedBinding(
-                            evaluationRoot,
-                            evaluationEvent,
+                            rootBlueId,
+                            eventBlueId,
                             processor.runtimeRegistryIdentity());
             VerifiedExecutionEvidence evidence =
                     plan.verifiedBinding();
@@ -271,6 +276,7 @@ public final class IndexedDeliveryEvaluator {
                     preselectionVerifier.evaluate(
                             evaluationRoot,
                             evaluationEvent,
+                            eventBlueId,
                             rootRevision,
                             exactOrder,
                             activeIntervals,
@@ -303,6 +309,12 @@ public final class IndexedDeliveryEvaluator {
             final LanguageRuntimeAccess languageRuntime,
             final ProcessingSnapshotManager snapshotManager,
             final ProcessingGasContext gasContext) {
+        final Node event = Objects.requireNonNull(
+                exactEvent, "exactEvent");
+        final String exactEventBlueId =
+                BlueIds.requireBlueIdOrCyclicMember(
+                        eventBlueId,
+                        "indexed delivery event");
         Objects.requireNonNull(gasContext, "gasContext");
         return new ExternalPreselectionVerifier
                 .RuntimeWorkSessionFactory() {
@@ -312,10 +324,8 @@ public final class IndexedDeliveryEvaluator {
                         .newAdmissionRuntimeWorkSession(
                                 languageRuntime,
                                 snapshotManager);
-                if (session.hasSemanticOutputBoundary()) {
-                    session.carryExactInput(
-                            exactEvent, eventBlueId);
-                }
+                session.carryExactInput(
+                        event, exactEventBlueId);
                 return session;
             }
         };
@@ -427,4 +437,5 @@ public final class IndexedDeliveryEvaluator {
                     RELEASED_GAS_SCHEDULE_REQUIRED);
         }
     }
+
 }

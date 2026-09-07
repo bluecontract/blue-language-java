@@ -1,0 +1,108 @@
+diff --git a/blue-conformance/src/main/resources/language/1.0/spec.md b/blue-conformance/src/main/resources/language/1.0/spec.md
+index eec5c7a4..4c0401c1 100644
+--- a/blue-conformance/src/main/resources/language/1.0/spec.md
++++ b/blue-conformance/src/main/resources/language/1.0/spec.md
+@@ -1181,0 +1182,2 @@ where `MASTER` is the plain BlueId of the ordered cyclic set list and `index` is
++> **Task D proposal, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
++
+@@ -1194,0 +1197,21 @@ A type is an **overlay source**, not a class declaration.
++### 8.1.1 Definition preparation and completed-value certification (proposed normative)
++
++Any node MAY be prepared as a definition without supplying a sample payload at every constrained path. Definition preparation MUST validate schema vocabulary and keyword shapes, known type/kind compatibility, fixed-value invariants, supported contradictions (including an empty effective enum), and constraints evaluable against supplied or inherited fixed payloads. It MUST retain every constraint whose instance payload is not yet supplied. Successful preparation MUST NOT certify a completed instance.
++
++For example, this definition requires no circular reference to its own future BlueId and MUST be preparable without a `value`:
++
++```yaml
++name: Gender
++type: Text
++schema:
++  enum: [female, male]
++```
++
++After exact import/reference binding, specializations supplying Text `female` or `male` satisfy this enum; another Text value or an incompatible scalar kind fails. A definition `name: Foo` with `bar: {type: Integer}` remains valid, but a supplied nonnumeric Text payload at `bar` MUST NOT be certified as an Integer instance.
++
++The operation goal is out-of-band. It MUST NOT depend on `name`, inline/reference spelling, expansion, or collapse; it MUST NOT become a YAML flag or identity-bearing metadata. A concrete supplied scalar, list, or object payload is checked against its effective constraints during definition preparation as well as completed-value validation. In this candidate, an explicitly supplied list or object that fails a lower bound is rejected even when a future specialization could extend it; authors defer that obligation by omitting the payload. Required declaration-only descendants remain deferred during preparation.
++
++Completed-value certification MUST enforce retained obligations once all required contributions are available. Missing provider content or uncovered paths MUST NOT yield a complete valid certificate. Type metadata probes use definition preparation; matching is a separate, demand-driven operation and is not whole-value certification.
++
++The complete Source identity pipeline and author-facing minimization use definition preparation. They MUST establish all identity dependencies and preserve all deferred obligations, but their success MUST NOT be presented as completed-value certification. For content accepted by both goals, Canonical Identity Input and BlueId MUST be identical. Exact direct BlueId calculation and exact provider verification remain unchanged.
++
+@@ -1472,0 +1496,8 @@ Null-valued fields removed as absence do not count. A present empty-object child
++### 9.2.5 Deferred constraints and semantic presence (proposed normative)
++
++A missing payload is not by itself an invalid definition, and is not by itself a valid completed instance. During definition preparation, declaration-only paths retain `required` and payload-dependent obligations. Known incompatible declared kinds, malformed keyword values, contradictory supported bounds, empty enums, and invalid fixed payloads MUST still fail. Where no effective primitive kind is established, applicability remains an obligation; implementations MUST NOT invent a kind or sample value.
++
++During completed-value certification the root exists, so root `required` is trivially satisfied; this does not supply a scalar or list payload for another keyword. A root containing only metadata can therefore satisfy `required`, while the same payload-free root with an effective `enum` or `minLength` fails completed-value validation. These results apply equally to inline and referenced type bodies.
++
++An absent optional child and its required descendants remain inactive until the existing semantic-presence rules establish that child. An authored type-only child is not a supplied scalar. Exact empty objects, empty lists, supplied payloads, and fixed inherited subtrees preserve their existing presence behavior. Preparing a definition MUST NOT create dummy children or values to satisfy any obligation. Definition context applies to ordinary child and `contracts` declaration paths and to item/key/value type metadata; it does not authorize treating a completed runtime value as a declaration merely because it lacks `value`.
++
+@@ -1581 +1612,5 @@ enum: [v1, v2, ...]
+-Enumeration values are scalar Blue values. They MAY be authored as bare scalars when unambiguous, or as explicit scalar nodes with `type` and `value` when type disambiguation is required, for example for large integers represented as quoted canonical decimal text. Equality is by parsed scalar value, effective scalar type, and canonical JSON value semantics, not by textual rendering.
++Enumeration entries are scalar Blue restrictions. They MAY be authored as bare scalars when unambiguous, or as explicit scalar nodes with `type` and `value` when type disambiguation is required, for example for large integers represented as quoted canonical decimal text. **Proposed amendment:** an entry with declared scalar domain `E` and canonical payload `p` accepts a value with equal canonical primitive payload whose effective declared type is `E` or a verified subtype of `E`. A bare entry uses its inferred core scalar domain. An explicit custom entry retains its custom-domain restriction; unrelated custom types do not satisfy one another merely because they share a primitive ancestor or name. This membership operation MUST NOT rewrite the candidate's declared type or exact scalar identity.
++
++Membership requires canonical scalar payload comparison with the established primitive kind. Integer and Double remain disjoint; arbitrary Integer values MUST NOT be compared through floating-point conversion. Quoted numeric Text remains Text unless the explicit scalar type and canonical payload rules establish an Integer or Double. A custom name resembling a core type is not type evidence. Missing demanded ancestry or reference evidence MUST fail to establish the operation, never broaden the enum.
++
++A pure value-reference enum entry denotes one exact scalar identity, not a subtype domain. A full labeled or schema-bearing node's exact BlueId MUST NOT be substituted for its scalar identity. Verification of a demanded referenced entry remains exact.
+@@ -1602 +1637 @@ There is no separate `const` keyword. A fixed value in a type enforces a constan
+-`enum` is a set of allowed scalar identities. Authoring order is not semantic.
++**Proposed amendment:** `enum` is a union of scalar-domain restrictions (and any exact-reference singletons). Authoring order is not semantic. Normalization of the entry representation remains by exact typed scalar identity, separate from constraint membership.
+@@ -1605,0 +1641,2 @@ During schema validation, schema merge, and canonicalization, each enum entry MU
++Exact-only duplicate removal intentionally retains differently typed entries even when one domain subsumes another. For example, Text `female` plus custom Gender `female` retains both entries; normalization MUST NOT discard the explicit custom identity or fetch ancestry merely to remove a semantically dominated entry. Thus equivalent acceptance sets need not have identical source identities when their explicit enum restriction sets differ. This distinction leaves exact scalar content identities unchanged.
++
+@@ -1641 +1678 @@ When schemas accumulate along the type chain, implementations MUST merge keyword
+-| `enum` | normalize both sides under §9.8.1, then intersect by typed scalar identity; canonical effective enum is duplicate-free and sorted under §9.8.1 | empty intersection |
++| `enum` | **proposed:** normalize both sides under §9.8.1; intersect pairs with equal canonical primitive payload by retaining the narrower comparable scalar domain; unrelated domains contribute no member. An exact-reference singleton survives only when its verified scalar satisfies the other restriction. Normalize the resulting exact entry set under §9.8.1 | empty intersection, including during definition preparation |
+diff --git a/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md b/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
+index eec5c7a4..4c0401c1 100644
+--- a/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
++++ b/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md
+@@ -1181,0 +1182,2 @@ where `MASTER` is the plain BlueId of the ordered cyclic set list and `index` is
++> **Task D proposal, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
++
+@@ -1194,0 +1197,21 @@ A type is an **overlay source**, not a class declaration.
++### 8.1.1 Definition preparation and completed-value certification (proposed normative)
++
++Any node MAY be prepared as a definition without supplying a sample payload at every constrained path. Definition preparation MUST validate schema vocabulary and keyword shapes, known type/kind compatibility, fixed-value invariants, supported contradictions (including an empty effective enum), and constraints evaluable against supplied or inherited fixed payloads. It MUST retain every constraint whose instance payload is not yet supplied. Successful preparation MUST NOT certify a completed instance.
++
++For example, this definition requires no circular reference to its own future BlueId and MUST be preparable without a `value`:
++
++```yaml
++name: Gender
++type: Text
++schema:
++  enum: [female, male]
++```
++
++After exact import/reference binding, specializations supplying Text `female` or `male` satisfy this enum; another Text value or an incompatible scalar kind fails. A definition `name: Foo` with `bar: {type: Integer}` remains valid, but a supplied nonnumeric Text payload at `bar` MUST NOT be certified as an Integer instance.
++
++The operation goal is out-of-band. It MUST NOT depend on `name`, inline/reference spelling, expansion, or collapse; it MUST NOT become a YAML flag or identity-bearing metadata. A concrete supplied scalar, list, or object payload is checked against its effective constraints during definition preparation as well as completed-value validation. In this candidate, an explicitly supplied list or object that fails a lower bound is rejected even when a future specialization could extend it; authors defer that obligation by omitting the payload. Required declaration-only descendants remain deferred during preparation.
++
++Completed-value certification MUST enforce retained obligations once all required contributions are available. Missing provider content or uncovered paths MUST NOT yield a complete valid certificate. Type metadata probes use definition preparation; matching is a separate, demand-driven operation and is not whole-value certification.
++
++The complete Source identity pipeline and author-facing minimization use definition preparation. They MUST establish all identity dependencies and preserve all deferred obligations, but their success MUST NOT be presented as completed-value certification. For content accepted by both goals, Canonical Identity Input and BlueId MUST be identical. Exact direct BlueId calculation and exact provider verification remain unchanged.
++
+@@ -1472,0 +1496,8 @@ Null-valued fields removed as absence do not count. A present empty-object child
++### 9.2.5 Deferred constraints and semantic presence (proposed normative)
++
++A missing payload is not by itself an invalid definition, and is not by itself a valid completed instance. During definition preparation, declaration-only paths retain `required` and payload-dependent obligations. Known incompatible declared kinds, malformed keyword values, contradictory supported bounds, empty enums, and invalid fixed payloads MUST still fail. Where no effective primitive kind is established, applicability remains an obligation; implementations MUST NOT invent a kind or sample value.
++
++During completed-value certification the root exists, so root `required` is trivially satisfied; this does not supply a scalar or list payload for another keyword. A root containing only metadata can therefore satisfy `required`, while the same payload-free root with an effective `enum` or `minLength` fails completed-value validation. These results apply equally to inline and referenced type bodies.
++
++An absent optional child and its required descendants remain inactive until the existing semantic-presence rules establish that child. An authored type-only child is not a supplied scalar. Exact empty objects, empty lists, supplied payloads, and fixed inherited subtrees preserve their existing presence behavior. Preparing a definition MUST NOT create dummy children or values to satisfy any obligation. Definition context applies to ordinary child and `contracts` declaration paths and to item/key/value type metadata; it does not authorize treating a completed runtime value as a declaration merely because it lacks `value`.
++
+@@ -1581 +1612,5 @@ enum: [v1, v2, ...]
+-Enumeration values are scalar Blue values. They MAY be authored as bare scalars when unambiguous, or as explicit scalar nodes with `type` and `value` when type disambiguation is required, for example for large integers represented as quoted canonical decimal text. Equality is by parsed scalar value, effective scalar type, and canonical JSON value semantics, not by textual rendering.
++Enumeration entries are scalar Blue restrictions. They MAY be authored as bare scalars when unambiguous, or as explicit scalar nodes with `type` and `value` when type disambiguation is required, for example for large integers represented as quoted canonical decimal text. **Proposed amendment:** an entry with declared scalar domain `E` and canonical payload `p` accepts a value with equal canonical primitive payload whose effective declared type is `E` or a verified subtype of `E`. A bare entry uses its inferred core scalar domain. An explicit custom entry retains its custom-domain restriction; unrelated custom types do not satisfy one another merely because they share a primitive ancestor or name. This membership operation MUST NOT rewrite the candidate's declared type or exact scalar identity.
++
++Membership requires canonical scalar payload comparison with the established primitive kind. Integer and Double remain disjoint; arbitrary Integer values MUST NOT be compared through floating-point conversion. Quoted numeric Text remains Text unless the explicit scalar type and canonical payload rules establish an Integer or Double. A custom name resembling a core type is not type evidence. Missing demanded ancestry or reference evidence MUST fail to establish the operation, never broaden the enum.
++
++A pure value-reference enum entry denotes one exact scalar identity, not a subtype domain. A full labeled or schema-bearing node's exact BlueId MUST NOT be substituted for its scalar identity. Verification of a demanded referenced entry remains exact.
+@@ -1602 +1637 @@ There is no separate `const` keyword. A fixed value in a type enforces a constan
+-`enum` is a set of allowed scalar identities. Authoring order is not semantic.
++**Proposed amendment:** `enum` is a union of scalar-domain restrictions (and any exact-reference singletons). Authoring order is not semantic. Normalization of the entry representation remains by exact typed scalar identity, separate from constraint membership.
+@@ -1605,0 +1641,2 @@ During schema validation, schema merge, and canonicalization, each enum entry MU
++Exact-only duplicate removal intentionally retains differently typed entries even when one domain subsumes another. For example, Text `female` plus custom Gender `female` retains both entries; normalization MUST NOT discard the explicit custom identity or fetch ancestry merely to remove a semantically dominated entry. Thus equivalent acceptance sets need not have identical source identities when their explicit enum restriction sets differ. This distinction leaves exact scalar content identities unchanged.
++
+@@ -1641 +1678 @@ When schemas accumulate along the type chain, implementations MUST merge keyword
+-| `enum` | normalize both sides under §9.8.1, then intersect by typed scalar identity; canonical effective enum is duplicate-free and sorted under §9.8.1 | empty intersection |
++| `enum` | **proposed:** normalize both sides under §9.8.1; intersect pairs with equal canonical primitive payload by retaining the narrower comparable scalar domain; unrelated domains contribute no member. An exact-reference singleton survives only when its verified scalar satisfies the other restriction. Normalize the resulting exact entry set under §9.8.1 | empty intersection, including during definition preparation |

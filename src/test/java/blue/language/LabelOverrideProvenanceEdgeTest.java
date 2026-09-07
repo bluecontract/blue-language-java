@@ -429,10 +429,10 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void shouldFixedItemTypePreventsPlainAndPositionedRelabeling() {
+    void shouldAppendPlainItemWhileFixedInheritedPositionRejectsRelabeling() {
         // given
-        BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocs(String.join("\n",
+        Blue blue = new Blue();
+        Node holderType = blue.yamlToNode(String.join("\n",
                 "name: Fixed ItemType Holder",
                 "entries:",
                 "  type: List",
@@ -440,26 +440,27 @@ class LabelOverrideProvenanceEdgeTest {
                 "    fixed: value",
                 "  items:",
                 "    - name: Generic Item"));
-        String holderId = provider.getBlueIdByName("Fixed ItemType Holder");
-        Blue blue = new Blue(provider);
         Node plain = blue.yamlToNode(String.join("\n",
-                "type:",
-                "  blueId: " + holderId,
                 "entries:",
                 "  items:",
-                "    - name: Illegal Plain Item"));
+                "    - name: Appended Item"))
+                .type(holderType.clone());
         Node positioned = blue.yamlToNode(String.join("\n",
-                "type:",
-                "  blueId: " + holderId,
                 "entries:",
                 "  items:",
                 "    - $pos: 0",
-                "      name: Illegal Positioned Item"));
+                "      name: Illegal Positioned Item"))
+                .type(holderType.clone());
         // when
 
         // then
 
-        assertFixedValueConflict(() -> blue.resolve(plain));
+        Node resolved = blue.resolve(plain);
+        assertEquals(2, resolved.getAsNode("/entries").getItems().size());
+        assertEquals("Generic Item", resolved.getAsNode("/entries/0").getName());
+        assertEquals("value", resolved.getAsText("/entries/0/fixed"));
+        assertEquals("Appended Item", resolved.getAsNode("/entries/1").getName());
+        assertEquals("value", resolved.getAsText("/entries/1/fixed"));
         assertFixedValueConflict(() -> blue.resolve(positioned));
     }
 

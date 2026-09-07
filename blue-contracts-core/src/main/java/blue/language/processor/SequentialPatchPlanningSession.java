@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
@@ -24,7 +25,9 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
     private final ConformanceEngine conformanceEngine;
     private FrozenNode canonicalRoot;
     private FrozenNode resolvedRoot;
+    private CanonicalTypeIdentityLookup canonicalTypeIdentities;
     private boolean resolutionComplete;
+    private boolean sourceBacked;
     private boolean metricsStarted;
 
     SequentialPatchPlanningSession(String originScope,
@@ -50,14 +53,12 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         Objects.requireNonNull(planning, "planning");
         this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
         this.conformanceEngine = conformanceEngine;
-        this.canonicalRoot = planning.baseSnapshot() != null
-                ? planning.baseSnapshot().frozenCanonicalRoot()
-                : planning.canonicalPlanner().root();
-        this.resolvedRoot = planning.baseSnapshot() != null
-                ? planning.baseSnapshot().frozenResolvedRoot()
-                : planning.resolvedPlanner().root();
+        this.canonicalRoot = planning.canonicalPlanner().root();
+        this.resolvedRoot = planning.resolvedPlanner().root();
+        this.canonicalTypeIdentities = planning.canonicalTypeIdentities();
         this.resolutionComplete =
                 planning.isResolutionComplete();
+        this.sourceBacked = planning.isSourceBacked();
         this.planningEngine = new PatchPlanningEngine(originScope,
                 planning,
                 conformanceEngine,
@@ -112,9 +113,12 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         FrozenNode baseCanonical = canonicalRoot;
         FrozenNode baseResolved = resolvedRoot;
         boolean baseResolutionComplete = resolutionComplete;
+        boolean baseSourceBacked = sourceBacked;
         BatchPatchResult result = planningEngine.planSequentialStep(baseCanonical,
                 baseResolved,
                 baseResolutionComplete,
+                canonicalTypeIdentities,
+                sourceBacked,
                 Objects.requireNonNull(patch, "patch"));
         ProcessingObservations.record(metrics,
                 ProcessingMetricId.PATCHES_PREPARED, 1L);
@@ -126,26 +130,31 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                 result.conformanceNanos());
         canonicalRoot = result.canonicalRoot();
         resolvedRoot = result.resolvedRoot();
+        canonicalTypeIdentities = result.canonicalTypeIdentities();
         resolutionComplete =
                 result.isResolutionComplete();
+        sourceBacked = result.isSourceBacked();
         return new PlannedStep(originScope,
                 result.requestedPatches().get(0),
                 baseCanonical,
                 baseResolved,
                 baseResolutionComplete,
+                baseSourceBacked,
                 result);
-    }
-
-    void rebase(FrozenNode actualCanonicalRoot, FrozenNode actualResolvedRoot) {
-        rebase(actualCanonicalRoot, actualResolvedRoot, resolutionComplete);
     }
 
     void rebase(FrozenNode actualCanonicalRoot,
                 FrozenNode actualResolvedRoot,
-                boolean actualResolutionComplete) {
+                boolean actualResolutionComplete,
+                CanonicalTypeIdentityLookup actualCanonicalTypeIdentities,
+                boolean actualSourceBacked) {
         canonicalRoot = Objects.requireNonNull(actualCanonicalRoot, "actualCanonicalRoot");
         resolvedRoot = Objects.requireNonNull(actualResolvedRoot, "actualResolvedRoot");
+        canonicalTypeIdentities = Objects.requireNonNull(
+                actualCanonicalTypeIdentities,
+                "actualCanonicalTypeIdentities");
         resolutionComplete = actualResolutionComplete;
+        sourceBacked = actualSourceBacked;
     }
 
     FrozenNode canonicalRoot() {
@@ -156,8 +165,16 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         return resolvedRoot;
     }
 
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities;
+    }
+
     boolean isResolutionComplete() {
         return resolutionComplete;
+    }
+
+    boolean isSourceBacked() {
+        return sourceBacked;
     }
 
     boolean isBasedOn(FrozenNode actualCanonicalRoot, FrozenNode actualResolvedRoot) {
@@ -169,6 +186,16 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                       boolean actualResolutionComplete) {
         return resolutionComplete == actualResolutionComplete
                 && isBasedOn(actualCanonicalRoot, actualResolvedRoot);
+    }
+
+    boolean isBasedOn(FrozenNode actualCanonicalRoot,
+                      FrozenNode actualResolvedRoot,
+                      boolean actualResolutionComplete,
+                      boolean actualSourceBacked) {
+        return sourceBacked == actualSourceBacked
+                && isBasedOn(actualCanonicalRoot,
+                        actualResolvedRoot,
+                        actualResolutionComplete);
     }
 
     static boolean sameRoots(FrozenNode expectedCanonicalRoot,
@@ -187,10 +214,20 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         }
         return sameFreezeMode(expectedCanonicalRoot, actualCanonicalRoot)
                 && sameFreezeMode(expectedResolvedRoot, actualResolvedRoot)
-                && expectedCanonicalRoot.blueId().equals(actualCanonicalRoot.blueId())
-                && expectedCanonicalRoot.sameResolvedStructure(actualCanonicalRoot)
-                && expectedResolvedRoot.blueId().equals(actualResolvedRoot.blueId())
-                && expectedResolvedRoot.sameResolvedStructure(actualResolvedRoot);
+                && sameSnapshotLane(
+                        expectedCanonicalRoot, actualCanonicalRoot)
+                && sameSnapshotLane(
+                        expectedResolvedRoot, actualResolvedRoot);
+    }
+
+    private static boolean sameSnapshotLane(
+            FrozenNode left,
+            FrozenNode right) {
+        if (!left.sameResolvedStructure(right)) {
+            return false;
+        }
+        return !left.isStrictCanonical()
+                || left.blueId().equals(right.blueId());
     }
 
     private static boolean sameFreezeMode(FrozenNode left, FrozenNode right) {
@@ -204,6 +241,7 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
         private final FrozenNode baseCanonical;
         private final FrozenNode baseResolved;
         private final boolean baseResolutionComplete;
+        private final boolean baseSourceBacked;
         private final BatchPatchResult result;
 
         private PlannedStep(String originScope,
@@ -211,12 +249,14 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
                             FrozenNode baseCanonical,
                             FrozenNode baseResolved,
                             boolean baseResolutionComplete,
+                            boolean baseSourceBacked,
                             BatchPatchResult result) {
             this.originScope = originScope;
             this.patch = patch;
             this.baseCanonical = baseCanonical;
             this.baseResolved = baseResolved;
             this.baseResolutionComplete = baseResolutionComplete;
+            this.baseSourceBacked = baseSourceBacked;
             this.result = result;
         }
 
@@ -238,6 +278,10 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
 
         boolean isBaseResolutionComplete() {
             return baseResolutionComplete;
+        }
+
+        boolean isBaseSourceBacked() {
+            return baseSourceBacked;
         }
 
         BatchPatchResult result() {

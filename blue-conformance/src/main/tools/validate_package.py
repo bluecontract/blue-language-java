@@ -45,25 +45,38 @@ from blue_identity import (  # noqa: E402
     direct_blue_id,
 )
 from gas_reference import gas_trace_identity  # noqa: E402
+from implementation_baseline import (  # noqa: E402
+    CYCLIC_FINALIZER,
+    CYCLIC_PROOF_VERIFIER,
+    IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+    source_paths_for_role,
+)
 from runtime_surface_projection import (  # noqa: E402
     project_runtime_surface,
 )
 from package_hygiene import release_inventory_files  # noqa: E402
-PROCESS_EMBEDDED = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+from release_provenance import (  # noqa: E402
+    SourceArchiveProvenanceError,
+    source_archive_provenance,
+)
+PROCESS_EMBEDDED = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 SAFE_INTEGER_MAX = 2**53 - 1
 SCRIPTED_EXTERNAL = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
-SCRIPTED_HANDLER = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
+SCRIPTED_HANDLER = "9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8"
 TRIGGERED_EVENT_CHANNEL = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
 EMBEDDED_NODE_CHANNEL = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 LIFECYCLE_EVENT_CHANNEL = "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo"
 DOCUMENT_UPDATE_CHANNEL = "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An"
+EMBEDDED_COLLECTION_EVENT_CHANNEL = "FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg"
 SUBSCRIPTION_CHANNEL_TYPES = {
     SCRIPTED_EXTERNAL,
     DOCUMENT_UPDATE_CHANNEL,
     TRIGGERED_EVENT_CHANNEL,
     EMBEDDED_NODE_CHANNEL,
+    EMBEDDED_COLLECTION_EVENT_CHANNEL,
     LIFECYCLE_EVENT_CHANNEL,
 }
+LOWERCASE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FULL_LIFECYCLE_FIXTURE_NAMES = {
     "fl-adm-01-root-patch-event.yaml",
     "fl-adm-02-duplicate-equal-events.yaml",
@@ -176,6 +189,38 @@ _REGISTRY_BLUE_IDS: dict[str, str] | None = None
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValidationFailure(message)
+
+
+def is_lowercase_sha256(value: Any) -> bool:
+    """Return whether ``value`` is one canonical, unprefixed SHA-256 digest."""
+    return (
+        isinstance(value, str)
+        and LOWERCASE_SHA256_RE.fullmatch(value) is not None
+    )
+
+
+def validate_input_implementation_baseline(
+    value: Any,
+) -> dict[str, dict[str, str]]:
+    """Validate the release's exact closed source inventory and digests."""
+    require(
+        isinstance(value, list)
+        and all(
+            isinstance(entry, dict)
+            and set(entry) == {"path", "sha256"}
+            and isinstance(entry["path"], str)
+            and is_lowercase_sha256(entry["sha256"])
+            for entry in value
+        ),
+        "input implementation baseline must be a closed path/hash array",
+    )
+    baseline_paths = tuple(entry["path"] for entry in value)
+    require(
+        baseline_paths == IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+        "input implementation baseline must exactly match the authoritative "
+        "sorted ownership inventory",
+    )
+    return {entry["path"]: entry for entry in value}
 
 
 NFC_ORDER_TOKEN_FIELDS = {
@@ -1311,6 +1356,7 @@ def validate_direct_marker_transition(
     fixture: dict[str, Any] | None = None,
     initialization_marker_writes: dict[str, dict[str, Any]] | None = None,
 ) -> None:
+    reconstructed_markers = reconstruct_event_only_acyclic_markers(path, fixture)
     for document_id in sorted(before_documents):
         before = before_markers[document_id]
         after = after_markers[document_id]
@@ -1360,7 +1406,8 @@ def validate_direct_marker_transition(
                 marker_blue_id == invocation_input_blue_id
                 or marker_blue_id == terminal_batch_entry_blue_id
                 or marker_blue_id == rebound_batch_entry_blue_id
-                or marker_blue_id == intermediate_batch_entry_blue_id,
+                or marker_blue_id == intermediate_batch_entry_blue_id
+                or marker_blue_id == reconstructed_markers.get(document_id),
                 f"initialized marker does not reference the exact invocation-input "
                 f"or proven component-batch-entry document in "
                 f"{path.name}: {document_id}",
@@ -1658,7 +1705,7 @@ def intermediate_cyclic_component_batch_entry_blue_id(
         or initialization_enqueues[0].get("logicalPath")
         != f"work/{initialization['ordinal']}"
         or initialization_enqueues[0].get("reason")
-        != f"work.{initialization['ordinal']}.enqueue"
+        != f"work.{initialization['ordinal']}.initialization-enqueue"
     ):
         return None
     initialization_enqueue_sequence = initialization_enqueues[0]["sequence"]
@@ -1870,6 +1917,106 @@ def intermediate_cyclic_component_batch_entry_blue_id(
             continue
         final_batch_proofs.append(finalization)
     return marker_blue_id if len(final_batch_proofs) == 1 else None
+
+
+def reconstruct_event_only_acyclic_markers(
+    path: Path, fixture: dict[str, Any] | None,
+) -> dict[str, str]:
+    """Replay all marker/rebind state changes for an event-only acyclic closure.
+
+    No business mutation is admitted by this independent proof. Every managed
+    input, initialization enqueue, marker, exact child path and complete final
+    document participates. Existing general marker proofs remain unchanged.
+    """
+    if fixture is None:
+        return {}
+    expected = fixture["expected"]
+    if (expected.get("status") != "success" or expected.get("checkpointWrites") != []
+            or expected.get("tentativeFinalizations") != []
+            or expected.get("rejectedWorkOccurrence") is not None):
+        return {}
+    runtime = fixture_runtime(path, fixture)
+    for bucket in ("handlers", "initializationHandlers"):
+        for result in runtime.get(bucket, {}).values():
+            if not isinstance(result, dict) or set(result) - {"events"}:
+                return {}
+    documents = fixture["input"]["documents"]
+    occurrences = fixture["input"]["occurrences"]
+    if any(not row["active"] or row["pendingHistoricalEpoch"] is not None
+           for row in occurrences):
+        return {}
+    bodies = {key: json.loads(json.dumps(record["document"]))
+              for key, record in documents.items()}
+    outgoing: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in occurrences:
+        outgoing[row["sourceDocumentId"]].append(row)
+        exact_value = pointer_get(bodies[row["sourceDocumentId"]], row["sourcePath"])
+        exact_id = pure_blue_reference(exact_value) or direct_blue_id(exact_value)
+        if exact_id != row["expectedTargetBlueId"]:
+            return {}
+    identities: dict[str, str] = {}
+    visiting: set[str] = set()
+    def rebuild(key: str) -> str:
+        if key in identities:
+            return identities[key]
+        require(key not in visiting, f"event-only marker proof contains a cycle in {path.name}")
+        visiting.add(key)
+        for row in outgoing[key]:
+            child_id = rebuild(row["targetDocumentId"])
+            prior_value = pointer_get(bodies[key], row["sourcePath"])
+            prior_id = pure_blue_reference(prior_value) or direct_blue_id(prior_value)
+            if prior_id != child_id:
+                bodies[key] = replace_existing_pointer_value(path, bodies[key], row["sourcePath"],
+                                                            {"blueId": child_id}, "marker-reconstruction")
+        visiting.remove(key)
+        identities[key] = direct_blue_id(bodies[key])
+        return identities[key]
+    try:
+        for key in sorted(bodies): rebuild(key)
+    except ValidationFailure:
+        return {}
+    if any(identities[key] != record["blueId"] for key, record in documents.items()):
+        return {}
+    trace = expected_gas_trace(path, expected)
+    markers = [row for row in trace if row["counter"] == "processorMarkerWritten"]
+    if len(markers) != len(documents) or {row.get("documentId") for row in markers} != set(documents):
+        return {}
+    entries: dict[str, str] = {}
+    marker_sequences: dict[str, int] = {}
+    for marker in markers:
+        key = marker["documentId"]
+        works = [work for work in expected["workTrace"]
+                 if work["kind"] == "INITIALIZATION" and work["targetDocumentId"] == key]
+        if len(works) != 1 or "initialized" in bodies[key].get("contracts", {}):
+            return {}
+        work = works[0]
+        enqueues = [row for row in trace if row["counter"] == "closureWorkOccurrenceEnqueued"
+                    and row.get("workOccurrenceId") == work["workIdentity"]
+                    and row.get("documentId") == key
+                    and row.get("reason") == f"work.{work['ordinal']}.initialization-enqueue"]
+        own_work_ids = {item["workIdentity"] for item in expected["workTrace"]
+                        if item["targetDocumentId"] == key}
+        own_sequences = [row["sequence"] for row in trace if row.get("workOccurrenceId") in own_work_ids]
+        if (len(enqueues) != 1 or marker.get("reason") != f"initialization-batch.marker.{key}"
+                or marker.get("quantity") != 1 or marker.get("workOccurrenceId") is not None
+                or not own_sequences or max(own_sequences) >= marker["sequence"]
+                or any(marker_sequences.get(row["targetDocumentId"], marker["sequence"])
+                       >= enqueues[0]["sequence"] for row in outgoing[key])):
+            return {}
+        entries[key] = identities[key]
+        bodies[key].setdefault("contracts", {})["initialized"] = {
+            "type": {"blueId": registry_blue_id("ProcessingInitializedMarker")},
+            "document": {"blueId": identities[key]},
+        }
+        marker_sequences[key] = marker["sequence"]
+        identities.clear()
+        for document_id in sorted(bodies): rebuild(document_id)
+    after = result_documents(expected)
+    if set(after) != set(documents) or any(
+            bodies[key] != after[key]["document"] or identities[key] != after[key]["blueId"]
+            for key in documents):
+        return {}
+    return entries
 
 
 def stable_rebound_component_batch_entry_blue_id(
@@ -2533,15 +2680,26 @@ def validate_intermediate_cyclic_marker_transition_self_check() -> None:
             )
         except ValidationFailure:
             return None
-        return intermediate_cyclic_component_batch_entry_blue_id(
-            path, "b", before, after, evidence, fixture, writes
-        )
+        try:
+            return intermediate_cyclic_component_batch_entry_blue_id(
+                path, "b", before, after, evidence, fixture, writes
+            )
+        except ValidationFailure:
+            return None
 
     require(
         admitted(expected) == marker_blue_id,
         "C-CLO-08 intermediate cyclic marker proof was not admitted",
     )
     rejected: list[tuple[str, dict[str, Any]]] = []
+
+    wrong_reason = clone()
+    gas_row(wrong_reason, "work.1.finalization.finalization-boundary")["reason"] = "wrong.finalization-boundary"
+    rejected.append(("incorrect finalization charge reason", wrong_reason))
+
+    wrong_oracle_bytes = clone()
+    wrong_oracle_bytes["tentativeFinalizations"][0]["canonicalBytes"] += 1
+    rejected.append(("incorrect oracle stage canonical bytes", wrong_oracle_bytes))
 
     missing_marker = clone()
     missing_marker["gasTrace"] = [
@@ -2559,14 +2717,11 @@ def validate_intermediate_cyclic_marker_transition_self_check() -> None:
     malformed_marker["gasTrace"].append(duplicate)
     rejected.append(("malformed duplicate marker write", malformed_marker))
 
-    final_prefix = (
-        "initialization-batch."
-        "transition-1-cycle-after-initialization-batch."
-    )
+    final_prefix = "initialization-batch."
     for label, reason, changes in (
         (
             "incorrect initialization enqueue binding",
-            "work.2.enqueue",
+            "work.2.initialization-enqueue",
             {"logicalPath": "work/99", "contractKey": "wrong"},
         ),
         ("malformed finalization boundary", final_prefix + "finalization-boundary", {"quantity": 2}),
@@ -2589,8 +2744,8 @@ def validate_intermediate_cyclic_marker_transition_self_check() -> None:
     stale_entry["tentativeFinalizations"][1]["boundary"][
         "afterWorkOrdinal"
     ] = 4
-    initialization_enqueue = gas_row(stale_entry, "work.2.enqueue")
-    initialization_enqueue.update(reason="work.3.enqueue", logicalPath="work/3")
+    initialization_enqueue = gas_row(stale_entry, "work.2.initialization-enqueue")
+    initialization_enqueue.update(reason="work.3.initialization-enqueue", logicalPath="work/3")
     insert_gas(
         stale_entry,
         72,
@@ -2650,8 +2805,9 @@ def contracts_at_scope(document: Any, scope_path: str) -> dict[str, Any]:
     return contracts
 
 
-def active_declared_path(document: dict[str, Any], source_path: str) -> bool:
-    contracts = document.get("contracts", {})
+def active_declared_path(document: dict[str, Any], source_path: str,
+                         provider_nodes: dict[str, Any] | None = None) -> bool:
+    contracts = exact_contract_declarations(document, provider_nodes)
     if not isinstance(contracts, dict):
         return False
     for value in contracts.values():
@@ -2691,6 +2847,7 @@ def validate_process_embedded_declaration_coverage(
     occurrences: list[dict[str, Any]],
     *,
     suspended_demand_sites: set[tuple[str, str]] | None = None,
+    provider_nodes: dict[str, Any] | None = None,
 ) -> None:
     """Prove that declarations and managed occurrence rows cover each other.
 
@@ -2729,7 +2886,7 @@ def validate_process_embedded_declaration_coverage(
 
     for document_id, record in documents.items():
         document = record["document"]
-        contracts = document.get("contracts", {}) if isinstance(document, dict) else {}
+        contracts = exact_contract_declarations(document, provider_nodes)
         if not isinstance(contracts, dict):
             continue
         concrete_owners: dict[str, str] = {}
@@ -2867,16 +3024,40 @@ def validate_process_embedded_declaration_coverage(
 
             for collection_path in collection_paths:
                 owner = f"{contract_key}.collectionPaths"
-                try:
-                    collection = pointer_get(document, collection_path)
-                except KeyError as exc:
-                    raise ValidationFailure(
-                        f"Process Embedded collection is absent in {path.name}: "
-                        f"{document_id}{collection_path}"
-                    ) from exc
+                collection = document
+                collection_absent = False
+                for segment in pointer_segments(collection_path):
+                    require(
+                        isinstance(collection, dict)
+                        and set(collection) != {"blueId"},
+                        f"Process Embedded collection path lacks complete object "
+                        f"evidence in {path.name}: {document_id}{collection_path}",
+                    )
+                    if segment not in collection:
+                        collection_absent = True
+                        break
+                    collection = collection[segment]
+                if collection_absent:
+                    # Section 12: proven absence has zero active occurrences.
+                    # Inspect every reserved row; do not synthesize a collection
+                    # or confuse unavailable reference content with absence.
+                    collection_segments = pointer_segments(collection_path)
+                    for (source_id, source_path), rows in rows_by_path.items():
+                        if source_id != document_id:
+                            continue
+                        segments = pointer_segments(source_path)
+                        if strict_prefix(collection_segments, segments):
+                            require(
+                                len(segments) == len(collection_segments) + 1
+                                and rows[0].get("active") is False,
+                                f"absent Process Embedded collection has an active "
+                                f"or non-direct reservation in {path.name}: "
+                                f"{document_id}{source_path}",
+                            )
+                    continue
                 require(
                     isinstance(collection, dict)
-                    and pure_blue_reference(collection) is None,
+                    and set(collection) != {"blueId"},
                     f"Process Embedded collection is not an established object in "
                     f"{path.name}: {document_id}{collection_path}",
                 )
@@ -3070,8 +3251,10 @@ def validate_admission_input_membership(
     """Prove ADMIT input membership from immutable input graph facts.
 
     Every uninitialized input document is an ADMIT seed under §7.10.  An
-    already-initialized non-Root member still needs a real active edge.  A
-    resource demand is not occurrence evidence and cannot invent membership.
+    already-initialized non-Root member needs an active edge or exact retained
+    prospective binding evidence. The latter retains an input record without
+    adding an active graph edge, delivery recipient or initialization trigger.
+    A resource demand cannot invent that evidence.
     """
     document_ids = set(documents)
     require(
@@ -3107,11 +3290,30 @@ def validate_admission_input_membership(
             continue
         reached.add(document_id)
         pending.extend(sorted(neighbors[document_id] - reached, reverse=True))
+    # Section 2.1 includes exact inactive prospective rows in the closed
+    # invocation. Their target records are retained evidence, not active SCC
+    # membership. Require a source in the admitted graph and recheck the
+    # binding identity and exact target; never infer membership from a demand.
+    retained_targets: set[str] = set()
+    for occurrence in occurrences:
+        if occurrence.get("active") is not False:
+            continue
+        if occurrence["sourceDocumentId"] not in reached:
+            continue
+        target = occurrence["targetDocumentId"]
+        require(target in documents, f"prospective target absent in {path.name}")
+        validate_occurrence_identity(path, occurrence)
+        if occurrence["pendingHistoricalEpoch"] is None:
+            require(
+                occurrence["expectedTargetBlueId"] == documents[target]["blueId"],
+                f"prospective target identity mismatch in {path.name}: {target}",
+            )
+        retained_targets.add(target)
     require(
-        reached == document_ids,
+        reached | retained_targets == document_ids,
         f"admission contains an initialized non-Root document with "
-        f"no actual active membership edge in {path.name}: "
-        f"unreachable={sorted(document_ids - reached)}",
+        f"no active membership or verified prospective evidence in {path.name}: "
+        f"unreachable={sorted(document_ids - reached - retained_targets)}",
     )
 
 
@@ -3352,14 +3554,36 @@ def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[
         contract_evolution == {f"C-EVO-{i:02d}" for i in range(1, 24)},
         "contract-evolution vectors must be exactly C-EVO-01..23",
     )
-    require(len(actual) == 168, "final vector count must be 168")
+    embedded_empty = set(
+        v for v in actual if v.startswith("C-EMB-EMPTY-")
+    )
+    require(
+        embedded_empty == {f"C-EMB-EMPTY-{i:02d}" for i in range(1, 6)},
+        "empty embedded-object vectors must be exactly C-EMB-EMPTY-01..05",
+    )
+    parent_updates = set(
+        v for v in actual if v.startswith("C-UPD-PARENT-")
+    )
+    require(
+        parent_updates == {f"C-UPD-PARENT-{i:02d}" for i in range(1, 3)},
+        "parent-update vectors must be exactly C-UPD-PARENT-01..02",
+    )
+    collection_events = set(
+        v for v in actual if v.startswith("C-EVT-COLLECTION-")
+    )
+    require(
+        collection_events
+        == {f"C-EVT-COLLECTION-{i:02d}" for i in range(1, 8)},
+        "collection-event vectors must be exactly C-EVT-COLLECTION-01..07",
+    )
+    require(len(actual) == 182, "final vector count must be 182")
     require(
         len([vector for vector in actual if is_closure_vector(vector)]) == 54,
         "final closure vector count must be 54",
     )
     require(
-        len([vector for vector in actual if not is_closure_vector(vector)]) == 114,
-        "final ordinary vector count must be 114",
+        len([vector for vector in actual if not is_closure_vector(vector)]) == 128,
+        "final ordinary vector count must be 128",
     )
     return actual
 
@@ -4446,12 +4670,14 @@ def validate_occurrence_set(
     *,
     allow_invalid: bool,
     suspended_demand_sites: set[tuple[str, str]] | None = None,
+    provider_nodes: dict[str, Any] | None = None,
 ) -> int:
     validate_process_embedded_declaration_coverage(
         path,
         documents,
         occurrences,
         suspended_demand_sites=suspended_demand_sites,
+        provider_nodes=provider_nodes,
     )
     occurrence_order = [
         (row["occurrenceIdentity"], row["bindingIdentity"])
@@ -4506,7 +4732,7 @@ def validate_occurrence_set(
             checked += 1
             continue
         require(
-            active_declared_path(source_document, occurrence["sourcePath"]),
+            active_declared_path(source_document, occurrence["sourcePath"], provider_nodes),
             f"active occurrence path is not declared Process Embedded in "
             f"{path.name}: {source_id}{occurrence['sourcePath']}",
         )
@@ -5078,17 +5304,38 @@ def finalization_gas_reason(
     finalization: dict[str, Any],
     prefix: str,
 ) -> str:
-    if fixture.get("oracle") is None:
-        return (
-            f"{prefix}.finalization.finalization-boundary"
-            if finalization["boundary"]["kind"] == "WORK"
-            else f"{prefix}.finalization-boundary"
+    if fixture.get("oracle") is not None:
+        # The exact oracle transition authenticates identity evidence. Runtime
+        # gas reasons bind execution boundaries, independently of fixture labels.
+        stage_name = finalization_stage_name(path, fixture, finalization["ordinal"])
+        _route, stages = fixture_oracle_stages(path, fixture)
+        stage = select_oracle_stage(path, stages, stage_name, finalization["memberBlueIds"])
+        oracle = cyclic_set_oracle(stage["sourceDocumentsWithThisReferences"])
+        document_ids = [item["documentId"] for item in stage["sourceDocumentsWithThisReferences"]]
+        require(
+            finalization["masterBlueId"] == oracle.master_blue_id
+            and finalization["memberBlueIds"] == dict(zip(
+                document_ids, oracle.member_ids_in_source_order(), strict=True))
+            and finalization["canonicalBytes"] == cyclic_canonical_limit_bytes(oracle),
+            f"finalization gas boundary has invalid exact oracle stage in {path.name}: {stage_name}",
         )
-    return (
-        f"{prefix}."
-        f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
-        f"finalization-boundary"
-    )
+    kind = finalization["boundary"]["kind"]
+    component_prefix = f"{prefix}.finalization" if kind == "WORK" else prefix
+    if kind == "CHECKPOINT_SETTLEMENT":
+        # The retained checkpoint vectors contain one settlement round. Exact
+        # member sets below reject ambiguous repeated components in that round.
+        component_prefix += ".0"
+    group = [item for item in fixture["expected"]["tentativeFinalizations"]
+             if item["boundary"] == finalization["boundary"]]
+    member_sets = [tuple(sorted(item["memberBlueIds"])) for item in group]
+    require(len(set(member_sets)) == len(member_sets),
+            f"ambiguous repeated finalization component at one boundary in {path.name}")
+    if len(group) > 1:
+        ordinals = [item["ordinal"] for item in group]
+        require(finalization["ordinal"] in ordinals,
+                f"finalization ordinal is absent from its boundary in {path.name}")
+        component_prefix += f".component.{ordinals.index(finalization['ordinal'])}"
+    return f"{component_prefix}.finalization-boundary"
 
 
 def validate_tentative_finalizations(
@@ -5393,11 +5640,34 @@ def derive_graph_changes(
     return changes
 
 
-def root_subscription_channels(document: Any) -> dict[str, Any]:
+def exact_contract_declarations(document: Any, provider_nodes: dict[str, Any] | None = None) -> dict[str, Any]:
+    if not isinstance(document, dict):
+        return {}
+    contracts = document.get("contracts", {})
+    if provider_nodes is not None:
+        contracts = exact_contract_source(contracts, provider_nodes)
+    require(isinstance(contracts, dict), "contract declarations must be an object")
+    return {key: exact_contract_source(value, provider_nodes) if provider_nodes is not None else value
+            for key, value in contracts.items()}
+
+
+def exact_contract_source(value: Any, provider_nodes: dict[str, Any]) -> Any:
+    reference = pure_blue_reference(value)
+    if reference is None:
+        return value
+    require(reference in provider_nodes, f"contract source is unavailable: {reference}")
+    source = provider_nodes[reference]
+    require(direct_blue_id(source) == reference, f"contract source identity mismatch: {reference}")
+    return source
+
+
+def root_subscription_channels(document: Any, provider_nodes: dict[str, Any] | None = None) -> dict[str, Any]:
     if not isinstance(document, dict) or not isinstance(document.get("contracts"), dict):
         return {}
     result: dict[str, Any] = {}
     for key, contract in document["contracts"].items():
+        if provider_nodes is not None:
+            contract = exact_contract_source(contract, provider_nodes)
         if isinstance(contract, dict) and type_blue_id(contract) in SUBSCRIPTION_CHANNEL_TYPES:
             result[key] = contract
     return result
@@ -5410,12 +5680,13 @@ def validate_subscription_channel_types_self_check() -> None:
         "update": {"type": {"blueId": DOCUMENT_UPDATE_CHANNEL}},
         "triggered": {"type": {"blueId": TRIGGERED_EVENT_CHANNEL}},
         "embedded": {"type": {"blueId": EMBEDDED_NODE_CHANNEL}},
+        "collection": {"type": {"blueId": EMBEDDED_COLLECTION_EVENT_CHANNEL}},
         "lifecycle": {"type": {"blueId": LIFECYCLE_EVENT_CHANNEL}},
         "application": {"type": {"blueId": "11111111111111111111111111111111"}},
     }
     require(
         set(root_subscription_channels({"contracts": contracts}))
-        == {"scripted", "update", "triggered", "embedded", "lifecycle"},
+        == {"scripted", "update", "triggered", "embedded", "collection", "lifecycle"},
         "subscription-channel type-set self-check failed",
     )
     before_document = {
@@ -5506,21 +5777,32 @@ def derive_subscription_deltas(
     after_documents: dict[str, Any],
     before_graph_generation: int,
     after_graph_generation: int,
+    provider_nodes: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    channel_orders: dict[tuple[str, str], int] = {}
     before_states: dict[tuple[str, str], dict[str, Any]] = {}
     after_states: dict[tuple[str, str], dict[str, Any]] = {}
     for document_id, record in before_documents.items():
-        for key, contract in root_subscription_channels(record["document"]).items():
+        for key, contract in root_subscription_channels(record["document"], provider_nodes).items():
+            raw_order = contract.get("order", 0)
+            order = raw_order.get("value", 0) if isinstance(raw_order, dict) else raw_order
+            require(isinstance(order, int) and not isinstance(order, bool), "subscription order must be an integer")
+            channel_orders[(document_id, key)] = order
             before_states[(document_id, key)] = subscription_state(
                 document_id, record, key, contract, before_graph_generation
             )
     for document_id, record in after_documents.items():
-        for key, contract in root_subscription_channels(record["document"]).items():
+        for key, contract in root_subscription_channels(record["document"], provider_nodes).items():
+            raw_order = contract.get("order", 0)
+            order = raw_order.get("value", 0) if isinstance(raw_order, dict) else raw_order
+            require(isinstance(order, int) and not isinstance(order, bool), "subscription order must be an integer")
+            channel_orders[(document_id, key)] = order
             after_states[(document_id, key)] = subscription_state(
                 document_id, record, key, contract, after_graph_generation
             )
     deltas: list[dict[str, Any]] = []
-    for document_id, key in sorted(set(before_states) | set(after_states)):
+    for document_id, key in sorted(set(before_states) | set(after_states),
+                                   key=lambda pair: (pair[0], channel_orders[pair], pair[1])):
         old = before_states.get((document_id, key))
         new = after_states.get((document_id, key))
         if old == new:
@@ -6013,6 +6295,7 @@ def validate_runtime_reserved_occurrence_patches(
 def validate_channels_and_handlers(path: Path, data: dict[str, Any]) -> tuple[int, int]:
     documents = data["input"]["documents"]
     runtime = fixture_runtime(path, data)
+    provider_nodes = data.get("provider", {}).get("nodes", {})
     channels = 0
     handlers = 0
     for delivery in data["input"].get("directDeliveries", []):
@@ -6022,7 +6305,7 @@ def validate_channels_and_handlers(path: Path, data: dict[str, Any]) -> tuple[in
             f"direct delivery in {path.name}",
         )
         contracts = contracts_at_scope(documents[delivery["targetDocumentId"]]["document"], delivery["scopePath"])
-        contract = contracts.get(delivery["channelKey"])
+        contract = exact_contract_source(contracts.get(delivery["channelKey"]), provider_nodes)
         require(type_blue_id(contract) == SCRIPTED_EXTERNAL, f"direct delivery does not target ScriptedExternalChannel in {path.name}: {delivery}")
         runtime_logical_key = (
             contract.get("logicalDeliveryKey")
@@ -6046,7 +6329,7 @@ def validate_channels_and_handlers(path: Path, data: dict[str, Any]) -> tuple[in
             document_id, key = qualified.split("/", 1)
             require(document_id in documents, f"runtime handler document missing in {path.name}: {qualified}")
             contracts = documents[document_id]["document"].get("contracts", {})
-            contract = contracts.get(key)
+            contract = exact_contract_source(contracts.get(key), provider_nodes)
             require(type_blue_id(contract) == SCRIPTED_HANDLER, f"runtime handler is not a ScriptedHandler in {path.name}: {qualified}")
             channel_key = contract.get("channel")
             require(isinstance(channel_key, str) and channel_key in contracts, f"runtime Handler channel missing in {path.name}: {qualified}")
@@ -6563,7 +6846,20 @@ def validate_fixture_harness(
         set(required) <= set(provider["expectedLoads"]),
         f"provider does not record a load for every required BlueId in {path.name}",
     )
-
+    physical_fields = {"cache", "batching"}
+    if physical_fields & set(provider):
+        require(
+            physical_fields <= set(provider),
+            f"provider physical mode is incomplete in {path.name}",
+        )
+        require(
+            len(nodes) >= 2 and len(provider["expectedLoads"]) >= 2,
+            f"provider physical mode is not load-bearing in {path.name}",
+        )
+        require(
+            set(provider["expectedLoads"]) <= set(nodes),
+            f"provider physical expectedLoads are not exact backing nodes in {path.name}",
+        )
     locality = fixture["locality"]
     require(
         locality["expectedUnrelatedDocumentsOpened"]
@@ -7039,6 +7335,39 @@ def validate_work_trace(
                 f"work {work_item['ordinal']}",
             )
             source_identity = matching_sources[0]
+        elif work_item["kind"] == "INITIALIZATION":
+            target = work_item["targetDocumentId"]
+            incoming = [row for row in fixture_input["occurrences"]
+                        if row["targetDocumentId"] == target]
+            incident = [row for row in fixture_input["occurrences"]
+                        if target in (row["sourceDocumentId"], row["targetDocumentId"])]
+            dormant = (bool(incoming)
+                       and all(row["active"] is False and row["pendingHistoricalEpoch"] is None
+                               for row in incident)
+                       and not fixture_input["documents"][target]["publicRoot"]
+                       and not any(delivery["targetDocumentId"] == target
+                                   for delivery, _ in ordered_direct))
+            source_identity = fixture_input["cause"]["causeIdentity"]
+            if dormant:
+                enqueues = [entry for entry in trace
+                            if entry["counter"] == "closureWorkOccurrenceEnqueued"
+                            and entry.get("workOccurrenceId") == work_item["workIdentity"]
+                            and entry.get("documentId") == target
+                            and entry.get("reason") == f"work.{work_item['ordinal']}.initialization-enqueue"]
+                require(len(enqueues) == 1,
+                        f"dynamic initialization lacks exact enqueue in {path.name}: {target}")
+                parents = {row["sourceDocumentId"] for row in incoming}
+                causes = {entry["workOccurrenceId"] for entry in trace
+                          if entry["counter"] == "managedOccurrenceBindingVerified"
+                          and entry.get("documentId") in parents
+                          and entry["sequence"] < enqueues[0]["sequence"]
+                          and entry.get("workOccurrenceId") in valid_work_ids
+                          and entry.get("reason") == "work."
+                              + str(work_by_identity[entry["workOccurrenceId"]]["ordinal"])
+                              + ".topology-change"}
+                require(len(causes) == 1,
+                        f"dynamic initialization lacks one proven activation cause in {path.name}: {target}")
+                source_identity = next(iter(causes))
         elif work_item["kind"] == "LIFECYCLE":
             termination_enqueues = [
                 entry
@@ -7101,7 +7430,13 @@ def validate_work_trace(
                 )
                 source_identity = causal_work["workIdentity"]
             else:
-                source_identity = fixture_input["cause"]["causeIdentity"]
+                initialization = [item for item in all_work
+                                  if item["kind"] == "INITIALIZATION"
+                                  and item["targetDocumentId"] == work_item["targetDocumentId"]
+                                  and item["workIdentity"] in valid_work_ids]
+                require(len(initialization) == 1,
+                        f"lifecycle lacks one proven initialization in {path.name}")
+                source_identity = initialization[0]["sourceOccurrenceIdentity"]
         else:
             source_identity = fixture_input["cause"]["causeIdentity"]
         require(
@@ -7519,15 +7854,11 @@ def validate_gas_result(
                 "afterWorkOrdinal": work_item["ordinal"],
             }:
                 continue
-            if fixture.get("oracle") is None:
-                work_finalization_prefixes.append(
-                    f"work.{work_item['ordinal']}.finalization."
-                )
-            else:
-                work_finalization_prefixes.append(
-                    f"work.{work_item['ordinal']}."
-                    f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
-                )
+            work_finalization_prefixes.append(
+                finalization_gas_reason(path, fixture, finalization,
+                                        f"work.{work_item['ordinal']}")
+                .removesuffix("finalization-boundary")
+            )
         finalization_entries_for_work = [
             entry
             for entry in trace
@@ -7760,8 +8091,8 @@ def validate_gas_result(
                 and receipt["afterPresent"] is False
                 and entry.get("reason")
                 == (
-                    "checkpoint-settlement.cleanup."
-                    f"{owner_key[0]}.{owner_key[1]}"
+                    "checkpoint-settlement.0.cleanup."
+                    f"{ordinal}"
                 ),
                 f"orphan checkpoint cleanup is not an exact REMOVE in "
                 f"{path.name}: {owner_key}",
@@ -8280,6 +8611,19 @@ def validate_commit_companion(
     )
 
 
+def validate_managed_receipt_original_cause_self_check() -> None:
+    path = CLOSURE / "c-clo-23-01-a5-to-a6.yaml"
+    fixture = load_yaml(path)
+    validate_managed_transition_receipts(path, fixture["input"], fixture["expected"])
+    wrong = json.loads(json.dumps(fixture["expected"]))
+    wrong["managedTransitionReceipts"][0]["originalCauseIdentity"] = fixture["input"]["cause"]["causeIdentity"]
+    try:
+        validate_managed_transition_receipts(path, fixture["input"], wrong)
+    except ValidationFailure:
+        return
+    raise ValidationFailure("managed receipt accepted wrapper identity as original source cause")
+
+
 def validate_managed_transition_receipts(
     path: Path,
     fixture_input: dict[str, Any],
@@ -8315,7 +8659,9 @@ def validate_managed_transition_receipts(
             receipt["sourceInvocationIdentity"]
             == expected["invocationIdentity"]
             and receipt["originalCauseIdentity"]
-            == fixture_input["cause"]["causeIdentity"]
+            == (fixture_input["cause"]["originalSourceCauseIdentity"]
+                if fixture_input["cause"]["kind"] == "managed-revision"
+                else fixture_input["cause"]["causeIdentity"])
             and receipt["beforeBlueId"] == result_document["beforeBlueId"]
             and receipt["afterBlueId"] == result_document["afterBlueId"],
             f"managed-transition receipt source/state mismatch in {path.name}: "
@@ -8597,6 +8943,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         fixture_input["components"],
         allow_invalid=False,
         suspended_demand_sites=suspended_demand_sites,
+        provider_nodes=data.get("provider", {}).get("nodes", {}),
     )
     if data["operation"] == "admit-closure":
         validate_admission_input_membership(
@@ -8755,6 +9102,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         output_occurrences,
         expected["resultingComponents"],
         allow_invalid=False,
+        provider_nodes=data.get("provider", {}).get("nodes", {}),
     )
     validate_occurrence_transition_law(
         path,
@@ -8834,6 +9182,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         output_documents,
         fixture_input["graphGeneration"],
         expected["graphGeneration"],
+        data.get("provider", {}).get("nodes", {}),
     )
     require(
         expected["subscriptionDeltas"] == subscription_deltas,
@@ -9544,21 +9893,10 @@ def validate_manifests() -> dict[str, Any]:
     require(release["specificationDocument"]["sha256"] == sha256_file(SPEC), "spec hash mismatch in release manifest")
     language = release["languageDependency"]
     require(language["specificationSha256"] == sha256_file(LANG_SPEC), "Language spec hash mismatch")
-    baseline_by_path = {entry["path"]: entry for entry in language.get("inputImplementationBaseline", [])}
-    finalizer_paths = [
-        "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-    ]
-    verifier_paths = [
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-    ]
-    require(all(path in baseline_by_path for path in finalizer_paths), "cyclic finalizer baseline source missing")
-    require(all(path in baseline_by_path for path in verifier_paths), "cyclic proof verifier baseline source missing")
+    baseline = language.get("inputImplementationBaseline")
+    baseline_by_path = validate_input_implementation_baseline(baseline)
+    finalizer_paths = source_paths_for_role(CYCLIC_FINALIZER)
+    verifier_paths = source_paths_for_role(CYCLIC_PROOF_VERIFIER)
     expected_finalizer = domain_identity(
         "blue-language-cyclic-set-finalizer-baseline/1.0",
         {"languageSpecificationSha256": sha256_file(LANG_SPEC), "files": [baseline_by_path[path] for path in finalizer_paths]},
@@ -9576,6 +9914,10 @@ def validate_manifests() -> dict[str, Any]:
     require(release["fixturePackage"]["vectorCount"] == fixtures["vectorCount"], "fixture vector-count binding mismatch")
     require(release["fixturePackage"]["fixtureCount"] == fixtures["totalExecutableFixtureCount"], "fixture count binding mismatch")
     require(release["oraclePackage"]["packageIdentity"] == oracles["packageIdentity"], "oracle binding mismatch")
+    require(
+        "sourceArchiveBaseline" not in release,
+        "source archive provenance must not participate in release identity",
+    )
     package = verify_manifest(PACKAGE_MANIFEST, "packageIdentity")
     verify_listed_files(ROOT, package["files"])
     require(package["contractsReleaseIdentity"] == release["releaseIdentity"], "package/release binding mismatch")
@@ -9594,17 +9936,37 @@ def checksum_manifest_inventory(root: Path = ROOT) -> set[str]:
 def validate_checksum_manifest() -> None:
     path = ROOT / "MANIFEST.sha256"
     require(path.is_file(), "MANIFEST.sha256 missing")
-    listed: set[str] = set()
-    for line in path.read_text().splitlines():
-        if not line:
-            continue
-        digest, rel = line.split("  ", 1)
+    try:
+        text = path.read_bytes().decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ValidationFailure("checksum manifest is not strict UTF-8") from exc
+    require("\r" not in text, "checksum manifest must use LF line endings")
+    require(text.endswith("\n"), "checksum manifest must end with LF")
+    lines = text.splitlines()
+    require(all(lines), "checksum manifest contains a blank line")
+    expected = [
+        target.relative_to(ROOT).as_posix()
+        for target in release_inventory_files(
+            ROOT, {"MANIFEST.sha256", "validation-output.json"}
+        )
+    ]
+    listed: list[str] = []
+    for line in lines:
+        parts = line.split("  ", 1)
+        require(len(parts) == 2, "malformed checksum manifest line")
+        digest, rel = parts
+        require(is_lowercase_sha256(digest), f"malformed checksum digest: {rel}")
+        require(bool(rel) and "  " not in rel, "malformed checksum manifest path")
+        require(rel in expected, f"unexpected checksum manifest path: {rel}")
         target = ROOT / rel
         require(target.is_file(), f"checksum manifest target missing: {rel}")
         require(sha256_file(target) == digest, f"checksum mismatch: {rel}")
-        listed.add(rel)
-    expected = checksum_manifest_inventory()
-    require(listed == expected, f"checksum manifest inventory mismatch: missing={sorted(expected-listed)[:5]} extra={sorted(listed-expected)[:5]}")
+        listed.append(rel)
+    require(
+        listed == expected,
+        "checksum manifest inventory/order mismatch: "
+        f"expected={expected[:5]} actual={listed[:5]}",
+    )
 
 
 def run_command(command: list[str], cwd: Path | None = None) -> str:
@@ -9639,18 +10001,17 @@ def validate_java_templates() -> dict[str, Any]:
     return {"sourceFiles": len(sources), "contractsMain": contracts_output, "coordinationMain": coordination_output, "separateDocumentMain": separate_document_output}
 
 
-def validate_source_archive(source: Path | None, expected: str) -> dict[str, Any]:
-    if source is None:
-        return {"provided": False, "expectedSha256": expected}
-    require(source.is_file(), f"source archive not found: {source}")
-    actual = sha256_file(source)
-    require(actual == expected, f"source archive hash mismatch: expected {expected}, got {actual}")
-    return {"provided": True, "suppliedName": source.name, "sha256": actual}
-
-
 def main() -> None:
     parser = ArgumentParser()
-    parser.add_argument("--source", type=Path, default=None, help="Optional original spec source archive; verified by content hash, not filename")
+    parser.add_argument(
+        "--source",
+        type=Path,
+        default=None,
+        help=(
+            "Optional source archive recorded by filename and content hash in "
+            "the non-semantic validation receipt"
+        ),
+    )
     parser.add_argument("--write-output", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
@@ -9668,17 +10029,18 @@ def main() -> None:
     validate_rollback_marker_prefix_self_check()
     validate_rejected_work_marker_causality_self_check()
     validate_needs_resources_demand_self_check()
+    validate_managed_receipt_original_cause_self_check()
     validate_static_package_laws()
     progress("manifests")
     manifests = validate_manifests()
     progress("checksums")
     validate_checksum_manifest()
     ordinary, closure = fixture_files()
-    require(len(ordinary) == 183, "final ordinary fixture count must be 183")
-    require(len(closure) == 93, "final closure fixture count must be 93")
+    require(len(ordinary) == 197, "final ordinary fixture count must be 197")
+    require(len(closure) == 98, "final closure fixture count must be 98")
     require(
-        len(ordinary) + len(closure) == 276,
-        "final Contracts fixture count must be 276",
+        len(ordinary) + len(closure) == 295,
+        "final Contracts fixture count must be 295",
     )
     actual_full_lifecycle_names = {
         path.name
@@ -9732,8 +10094,11 @@ def main() -> None:
     require(reference["status"] == "SEMANTIC_REFERENCE_VALID", "semantic reference scenarios failed")
     progress("Java templates")
     java = validate_java_templates()
-    progress("source archive")
-    source = validate_source_archive(args.source, manifests["release"]["sourceArchiveBaseline"]["expectedSha256"])
+    progress("source archive provenance")
+    try:
+        source = source_archive_provenance(args.source)
+    except SourceArchiveProvenanceError as exc:
+        raise ValidationFailure(str(exc)) from exc
 
     result = {
         "status": "PACKAGE_VALID",

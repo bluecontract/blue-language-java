@@ -1,0 +1,22 @@
+id: F_empty_object_reference_cache_parity
+category: LimitedExpansion
+operation: compareExpansionStrategies
+description: cold and warm verified-provider state establish the same exact empty-object child and parent identity
+source:
+  x:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+limits:
+  demandedPaths: [/x]
+provider:
+- requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  node: {}
+variants:
+- name: cold
+  physicallyPrefetchedBlueIds: []
+- name: warm
+  physicallyPrefetchedBlueIds:
+  - 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+expectedOutcome: Established
+expectedValue: {}
+expectedSameSemanticCoverage: true
+expectedSameNodeBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE

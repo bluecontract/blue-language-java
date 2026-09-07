@@ -22,6 +22,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Language 1.0 treats materialization and cache state as out-of-band. There is
@@ -96,6 +99,22 @@ class SelectedProcessingStateCacheIsolationFailFirstTest {
         assertEquals(
                 Collections.nCopies(expandedDocuments.size(), expandedDocuments.get(0)),
                 expandedDocuments);
+        assertTrue(collapsedFirst.isSourceBacked());
+        assertTrue(inlineSecond.isSourceBacked());
+        assertTrue(inlineFirstSnapshot.isSourceBacked());
+        assertTrue(collapsedSecond.isSourceBacked());
+        assertTrue(collapsedFirst.sourceRoot()
+                .getAsNode("/subject").isReferenceOnly());
+        assertFalse(inlineSecond.sourceRoot()
+                .getAsNode("/subject").isReferenceOnly());
+        assertFalse(inlineFirstSnapshot.sourceRoot()
+                .getAsNode("/subject").isReferenceOnly());
+        assertTrue(collapsedSecond.sourceRoot()
+                .getAsNode("/subject").isReferenceOnly());
+        assertNotNull(collapsedFirst.verifiedReferenceResolution());
+        assertNotNull(inlineSecond.verifiedReferenceResolution());
+        assertNotNull(inlineFirstSnapshot.verifiedReferenceResolution());
+        assertNotNull(collapsedSecond.verifiedReferenceResolution());
     }
 
     @Test

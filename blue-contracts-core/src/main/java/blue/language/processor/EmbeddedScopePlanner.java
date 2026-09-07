@@ -1,6 +1,7 @@
 package blue.language.processor;
 
-import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Builds the immutable, deterministic immediate-child plan for one effective
@@ -32,11 +34,14 @@ import java.util.Set;
  */
 final class EmbeddedScopePlanner {
 
-    private final ExactReferenceMaterializer referenceMaterializer;
+    private final EmbeddedScopeValueResolver valueResolver;
 
     /** Creates a planner that suspends when verified reference content is needed. */
     EmbeddedScopePlanner() {
-        this(null);
+        this(
+                null,
+                EmbeddedScopeValueResolver::unavailableTypeEvidence,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /**
@@ -47,7 +52,65 @@ final class EmbeddedScopePlanner {
      */
     EmbeddedScopePlanner(
             ExactReferenceMaterializer referenceMaterializer) {
-        this.referenceMaterializer = referenceMaterializer;
+        this(
+                referenceMaterializer,
+                EmbeddedScopeValueResolver::unavailableTypeEvidence,
+                CanonicalTypeIdentityLookup.incomplete());
+    }
+
+    /**
+     * Creates a planner bound atomically to one snapshot manager and the
+     * canonical type identities of the exact effective scope being planned.
+     */
+    EmbeddedScopePlanner(
+            ProcessingSnapshotManager snapshotManager,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                Objects.requireNonNull(snapshotManager, "snapshotManager")
+                        ::materializeVerifiedExactReference,
+                reference -> EmbeddedScopeValueResolver
+                        .materializeVerifiedTypeEvidence(
+                                snapshotManager, reference),
+                canonicalTypeIdentities);
+    }
+
+    /**
+     * Creates a planner with a caller-specific exact-content boundary and
+     * type evidence supplied by the same invocation's snapshot manager.
+     */
+    EmbeddedScopePlanner(
+            ExactReferenceMaterializer referenceMaterializer,
+            ProcessingSnapshotManager snapshotManager,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                referenceMaterializer,
+                reference -> EmbeddedScopeValueResolver
+                        .materializeVerifiedTypeEvidence(
+                        Objects.requireNonNull(
+                                snapshotManager, "snapshotManager"),
+                        reference),
+                canonicalTypeIdentities);
+    }
+
+    /**
+     * Creates a planner confined to one resolver invocation's verified type
+     * materialization and canonical identity evidence.
+     *
+     * @param referenceMaterializer exact content materializer, or
+     *         {@code null} to suspend
+     * @param verifiedTypeMaterializer verified exact type materializer
+     * @param canonicalTypeIdentities resolver-issued identities for completed
+     *         inline types already present in the effective scope
+     */
+    EmbeddedScopePlanner(
+            ExactReferenceMaterializer referenceMaterializer,
+            Function<FrozenNode, TypeEvidenceResolution>
+                    verifiedTypeMaterializer,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this.valueResolver = new EmbeddedScopeValueResolver(
+                referenceMaterializer,
+                verifiedTypeMaterializer,
+                canonicalTypeIdentities);
     }
 
     /** Builds an unmetered plan after defensively freezing a mutable scope. */
@@ -326,18 +389,22 @@ final class EmbeddedScopePlanner {
 
         List<EmbeddedConcretePath> concrete = new ArrayList<>();
         for (String declaration : explicitDeclarations) {
-            FrozenNode target = select(
-                    effectiveScope,
-                    declaration,
-                    DeclarationKind.EXPLICIT,
-                    normalizedScope);
-            if (target == null) {
+            EmbeddedScopeValueResolver.SelectedValue selected =
+                    valueResolver.select(
+                            effectiveScope,
+                            declaration,
+                            DeclarationKind.EXPLICIT.invalidPathCategory(),
+                            normalizedScope,
+                            schedule);
+            if (!valueResolver.isSemanticallyPresent(
+                    selected.node(), selected.presentByReference())) {
                 continue;
             }
+            FrozenNode target = selected.node();
             String absolutePath = PointerUtils.resolvePointer(
                     normalizedScope, declaration);
             if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
-                requireOpaqueManagedTarget(
+                valueResolver.requireOpaqueManagedTarget(
                         target,
                         absolutePath,
                         expectedManagedBlueIdsByPath,
@@ -347,15 +414,19 @@ final class EmbeddedScopePlanner {
                     || targetPolicy
                     == TargetPolicy.MANAGED_RECONCILIATION)) {
                 if (targetPolicy == TargetPolicy.REVISION_BOUND) {
-                    rejectCyclicMember(
+                    valueResolver.rejectCyclicMember(
                             target, normalizedScope, declaration, null);
                 }
             } else {
-                target = materialize(
+                target = valueResolver.materialize(
                         target, normalizedScope, declaration);
             }
             if (!target.isReferenceOnly()
-                    && !isScopeObjectCompatible(target)) {
+                    && !valueResolver.isSelectedScopeRootObject(
+                            target,
+                            declaration,
+                            normalizedScope,
+                            schedule)) {
                 throw invalid(
                         ProcessorErrorCategory.EmbeddedScopeNotObject,
                         "Process Embedded path must select an object: "
@@ -371,20 +442,20 @@ final class EmbeddedScopePlanner {
 
         Map<String, List<String>> memberKeysByDeclaration =
                 new LinkedHashMap<>();
-        Map<String, String> collectionDeclarationByIdentity =
+        Map<String, EmbeddedCollectionState> statesByDeclaration =
                 new LinkedHashMap<>();
         for (String declaration : collectionDeclarations) {
-            List<String> memberKeys = projectCollection(
+            CollectionProjection projection = projectCollection(
                     effectiveScope,
                     declaration,
                     normalizedScope,
                     schedule,
                     meter,
                     concrete,
-                    collectionDeclarationByIdentity,
                     targetPolicy,
                     expectedManagedBlueIdsByPath);
-            memberKeysByDeclaration.put(declaration, memberKeys);
+            memberKeysByDeclaration.put(declaration, projection.memberKeys);
+            statesByDeclaration.put(declaration, projection.state);
         }
 
         requireLimit(
@@ -414,6 +485,7 @@ final class EmbeddedScopePlanner {
                 explicitDeclarations,
                 collectionDeclarations,
                 memberKeysByDeclaration,
+                statesByDeclaration,
                 orderedConcrete);
     }
 
@@ -497,40 +569,40 @@ final class EmbeddedScopePlanner {
         return normalized;
     }
 
-    private List<String> projectCollection(
+    private CollectionProjection projectCollection(
             FrozenNode scope,
             String declaration,
             String scopePath,
             GasSchedule schedule,
             GasMeter meter,
             List<EmbeddedConcretePath> concrete,
-            Map<String, String> collectionDeclarationByIdentity,
             TargetPolicy targetPolicy,
             Map<String, String> expectedManagedBlueIdsByPath) {
-        FrozenNode collection = select(
-                scope,
-                declaration,
-                DeclarationKind.COLLECTION,
-                scopePath);
-        if (collection == null) {
-            return Collections.emptyList();
+        EmbeddedScopeValueResolver.SelectedValue selected =
+                valueResolver.select(
+                        scope,
+                        declaration,
+                        DeclarationKind.COLLECTION.invalidPathCategory(),
+                        scopePath,
+                        schedule);
+        if (!valueResolver.isSemanticallyPresent(
+                selected.node(), selected.presentByReference())) {
+            return CollectionProjection.absent();
         }
-        collection = materialize(collection, scopePath, declaration);
-        if (!isCollectionObject(collection)) {
+        FrozenNode collection = selected.node();
+        collection = valueResolver.materialize(
+                collection, scopePath, declaration);
+        if (!valueResolver.isCollectionObject(
+                collection,
+                declaration,
+                scopePath,
+                schedule)) {
             throw invalid(
                     ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
                     "Embedded collection must be an object: " + declaration,
                     scopePath);
         }
         String collectionIdentity = collection.blueId();
-        String previousDeclaration = collectionDeclarationByIdentity.put(
-                collectionIdentity, declaration);
-        if (previousDeclaration != null) {
-            throw overlap(
-                    "Graph-equivalent collection declarations: "
-                            + previousDeclaration + " and " + declaration,
-                    scopePath);
-        }
         Map<String, FrozenNode> properties = collection.getProperties();
         List<String> keys = properties != null
                 ? new ArrayList<>(properties.keySet())
@@ -555,6 +627,7 @@ final class EmbeddedScopePlanner {
                         routeContext(scopePath, declaration))
                 : Collections.unmodifiableList(keys);
 
+        List<String> presentKeys = new ArrayList<>();
         for (String key : orderedKeys) {
             requireLimit(
                     GasScheduleConstants.PortableLimit
@@ -564,14 +637,30 @@ final class EmbeddedScopePlanner {
             FrozenNode member = properties.get(key);
             String generatedDeclaration =
                     PointerUtils.appendPointer(declaration, key);
+            boolean presentByReference = member != null
+                    && member.getReferenceBlueId() != null;
+            if (!valueResolver.isSemanticallyPresent(
+                    member, presentByReference)) {
+                continue;
+            }
+            presentKeys.add(key);
             String absolutePath = PointerUtils.resolvePointer(
                     scopePath, generatedDeclaration);
             if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
-                requireOpaqueManagedTarget(
+                valueResolver.requireOpaqueManagedTarget(
                         member,
                         absolutePath,
                         expectedManagedBlueIdsByPath,
                         scopePath);
+                if (!member.isReferenceOnly()
+                        && !valueResolver.isSelectedScopeRootObject(
+                                member,
+                                generatedDeclaration,
+                                scopePath,
+                                schedule)) {
+                    throw invalidCollectionMember(
+                            declaration, key, scopePath);
+                }
             } else if (targetPolicy
                     == TargetPolicy.MANAGED_RECONCILIATION
                     && member != null
@@ -581,17 +670,17 @@ final class EmbeddedScopePlanner {
                  * This planner needs only the already-open container's keys.
                  */
             } else {
-                rejectCyclicMember(member, scopePath, declaration, key);
-                member = materialize(member, scopePath,
+                valueResolver.rejectCyclicMember(
+                        member, scopePath, declaration, key);
+                member = valueResolver.materialize(member, scopePath,
                         generatedDeclaration);
-                if (!isScopeObjectCompatible(member)) {
-                    throw invalid(
-                            ProcessorErrorCategory
-                                    .EmbeddedCollectionMemberMustBeObject,
-                            "Embedded collection member must be an object: "
-                                    + declaration + "/"
-                                    + PointerUtils.escapeSegment(key),
-                            scopePath);
+                if (!valueResolver.isSelectedScopeRootObject(
+                        member,
+                        generatedDeclaration,
+                        scopePath,
+                        schedule)) {
+                    throw invalidCollectionMember(
+                            declaration, key, scopePath);
                 }
             }
             validateGeneratedPath(
@@ -602,57 +691,19 @@ final class EmbeddedScopePlanner {
                     declaration,
                     key));
         }
-        return Collections.unmodifiableList(new ArrayList<>(orderedKeys));
+        return CollectionProjection.present(presentKeys);
     }
 
-    private void requireOpaqueManagedTarget(
-            FrozenNode target,
-            String absolutePath,
-            Map<String, String> expectedManagedBlueIdsByPath,
+    private SubscriptionSurfaceInvalidException invalidCollectionMember(
+            String declaration,
+            String key,
             String scopePath) {
-        String expectedBlueId = expectedManagedBlueIdsByPath.get(
-                absolutePath);
-        if (expectedBlueId == null) {
-            throw invalid(
-                    ProcessorErrorCategory.SubscriptionSurfaceInvalid,
-                    "Process Embedded selected a child without managed "
-                            + "occurrence evidence: " + absolutePath,
-                    scopePath);
-        }
-        if (target == null) {
-            throw invalid(
-                    ProcessorErrorCategory.InvalidProcessingDocument,
-                    "Managed embedded occurrence is absent at "
-                            + absolutePath,
-                    scopePath);
-        }
-        if (!target.isReferenceOnly()
-                && BlueIds.hasCyclicMemberSeparator(expectedBlueId)) {
-            throw new InvalidExecutionEvidenceException(
-                    "Materialized cyclic managed content requires complete "
-                            + "owning cyclic-set proof at " + absolutePath,
-                    ProcessorErrorCategory.InvalidProcessingDocument);
-        }
-        String actualBlueId = target.isReferenceOnly()
-                ? target.getReferenceBlueId()
-                : target.blueId();
-        try {
-            BlueIds.requireBlueIdOrCyclicMember(
-                    actualBlueId,
-                    "managed embedded occurrence");
-        } catch (IllegalArgumentException invalidIdentity) {
-            throw new InvalidExecutionEvidenceException(
-                    "Invalid managed embedded identity at " + absolutePath,
-                    ProcessorErrorCategory.InvalidProcessingDocument);
-        }
-        if (!expectedBlueId.equals(actualBlueId)) {
-            throw new InvalidExecutionEvidenceException(
-                    "Managed embedded reference disagrees with admitted "
-                            + "occurrence evidence at " + absolutePath
-                            + ": expected " + expectedBlueId
-                            + " but found " + actualBlueId,
-                    ProcessorErrorCategory.InvalidProcessingDocument);
-        }
+        return invalid(
+                ProcessorErrorCategory.EmbeddedCollectionMemberMustBeObject,
+                "Embedded collection member must be an object: "
+                        + declaration + "/"
+                        + PointerUtils.escapeSegment(key),
+                scopePath);
     }
 
     private void validateGeneratedPath(
@@ -676,87 +727,6 @@ final class EmbeddedScopePlanner {
             meter.chargeEmbeddedPathSegmentsValidated(
                     scopePath, logicalPath, segments.size());
         }
-    }
-
-    private FrozenNode select(
-            FrozenNode scope,
-            String declaration,
-            DeclarationKind kind,
-            String scopePath) {
-        FrozenNode current = scope;
-        for (String segment : JsonPointer.split(declaration)) {
-            current = materialize(current, scopePath, declaration);
-            if (current.hasItems() || current.getValue() != null
-                    || current.isPreviousOnly()) {
-                throw invalid(
-                        kind.invalidPathCategory(),
-                        "Process Embedded declaration cannot traverse a non-object: "
-                                + declaration,
-                        scopePath);
-            }
-            current = current.property(segment);
-            if (current == null) {
-                return null;
-            }
-        }
-        return current;
-    }
-
-    private FrozenNode materialize(
-            FrozenNode node,
-            String scopePath,
-            String logicalPath) {
-        if (node == null || !node.isReferenceOnly()) {
-            return node;
-        }
-        rejectCyclicMember(node, scopePath, logicalPath, null);
-        String blueId = node.getReferenceBlueId();
-        if (referenceMaterializer == null) {
-            throw new ExecutionEvidenceUnavailableException(
-                    "Verified exact content is required for embedded path "
-                            + logicalPath,
-                    Collections.singletonList(blueId));
-        }
-        FrozenNode materialized = referenceMaterializer.materialize(node);
-        if (materialized == null || materialized.isReferenceOnly()) {
-            throw new InvalidExecutionEvidenceException(
-                    "Verified exact content was not found for embedded path "
-                            + logicalPath,
-                    ProcessorErrorCategory.InvalidProcessingDocument);
-        }
-        return materialized;
-    }
-
-    private void rejectCyclicMember(
-            FrozenNode node,
-            String scopePath,
-            String declaration,
-            String memberKey) {
-        if (node == null || !node.isReferenceOnly()) {
-            return;
-        }
-        String blueId = node.getReferenceBlueId();
-        if (!BlueIds.hasCyclicMemberSeparator(blueId)) {
-            return;
-        }
-        try {
-            BlueIds.requireBlueIdOrCyclicMember(
-                    blueId, "embedded collection member");
-        } catch (IllegalArgumentException invalidIdentity) {
-            throw new InvalidExecutionEvidenceException(
-                    "Invalid cyclic-member identity at embedded path "
-                            + declaration,
-                    ProcessorErrorCategory.InvalidProcessingDocument);
-        }
-        String suffix = memberKey != null
-                ? "/" + PointerUtils.escapeSegment(memberKey)
-                : "";
-        throw invalid(
-                ProcessorErrorCategory
-                        .CyclicSetEmbeddedBoundaryUnsupported,
-                "Process Embedded cannot cross cyclic-set member boundary: "
-                        + declaration + suffix,
-                scopePath);
     }
 
     /** Rejects duplicate and ancestor-related concrete paths in bounded time. */
@@ -786,27 +756,30 @@ final class EmbeddedScopePlanner {
                 context);
     }
 
-    private boolean isCollectionObject(FrozenNode node) {
-        return node != null
-                && node.getValue() == null
-                && !node.hasItems()
-                && !node.isReferenceOnly()
-                && !node.isPreviousOnly();
-    }
+    private static final class CollectionProjection {
+        private final EmbeddedCollectionState state;
+        private final List<String> memberKeys;
 
-    /**
-     * A processing scope may carry a scalar payload when it also carries a
-     * direct Contracts envelope. A bare scalar remains a non-object collection
-     * member, while the envelope keeps values such as {@code value: 0} plus
-     * local Channels processable as one owned occurrence.
-     */
-    private boolean isScopeObjectCompatible(FrozenNode node) {
-        return node != null
-                && !node.hasItems()
-                && !node.isReferenceOnly()
-                && !node.isPreviousOnly()
-                && (node.getValue() == null
-                        || node.getContracts() != null);
+        private CollectionProjection(
+                EmbeddedCollectionState state,
+                List<String> memberKeys) {
+            this.state = Objects.requireNonNull(state, "state");
+            this.memberKeys = Collections.unmodifiableList(
+                    new ArrayList<>(Objects.requireNonNull(
+                            memberKeys, "memberKeys")));
+        }
+
+        private static CollectionProjection absent() {
+            return new CollectionProjection(
+                    EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                    Collections.<String>emptyList());
+        }
+
+        private static CollectionProjection present(List<String> memberKeys) {
+            return new CollectionProjection(
+                    EmbeddedCollectionState.PRESENT_COLLECTION,
+                    memberKeys);
+        }
     }
 
     private boolean isSelector(String segment) {

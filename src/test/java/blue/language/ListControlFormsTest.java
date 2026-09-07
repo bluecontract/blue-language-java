@@ -25,6 +25,7 @@ import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_A
 import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -235,7 +236,7 @@ class ListControlFormsTest {
     }
 
     @Test
-    void shouldAcceptContiguousPositionsForPositionalListWithoutInheritedItems() {
+    void shouldRejectContiguousPositionsForPositionalListWithoutInheritedItems() {
         // given
         Node node = YAML_MAPPER.readValue(
                 "type:\n" +
@@ -248,13 +249,8 @@ class ListControlFormsTest {
                 "  - C", Node.class);
 
         // when
-        Node resolved = new Blue().resolve(node);
-
-        // then
-        assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
-                resolved.getItems().get(0).getValue(),
-                resolved.getItems().get(1).getValue(),
-                resolved.getItems().get(2).getValue()));
+        // then: no source position can target a missing inherited prefix.
+        assertThrows(IllegalArgumentException.class, () -> new Blue().resolve(node));
     }
 
     @Test
@@ -543,7 +539,9 @@ class ListControlFormsTest {
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
         // then
-        assertEquals(null, resolved.getItems().get(0).getValue());
+        // The inherited Text constraint requires verified materialization;
+        // the exact reference identity remains the original source identity.
+        assertEquals("R", resolved.getItems().get(0).getValue());
         assertEquals(referenceBlueId, resolved.getItems().get(0).getBlueId());
     }
 

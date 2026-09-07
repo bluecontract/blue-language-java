@@ -470,7 +470,9 @@ final class EvidenceDeliveryOrchestrator {
                     ? bundle.effectiveContractSnapshot(handlerChannelKey)
                     : null;
             ChannelMemberSnapshot finalTarget = target != null
-                    ? ChannelMemberSnapshot.from(target)
+                    ? ChannelMemberSnapshot.from(
+                            target,
+                            bundle.canonicalTypeIdentities())
                     : null;
             if (bundle == null
                     || bundle.channelBinding(handlerChannelKey) == null
@@ -570,10 +572,14 @@ final class EvidenceDeliveryOrchestrator {
                             currentScope,
                             null,
                             true);
+            ResolvedScopeView classification = Objects.requireNonNull(
+                    execution.classificationScopeAt(currentScope),
+                    "classificationScope");
             bundle = EmbeddedScopeEntryPlans.attach(
                     runtime,
                     currentScope,
-                    execution.classificationResolvedAt(currentScope),
+                    classification.resolved(),
+                    classification.canonicalTypeIdentities(),
                     bundle);
             EffectiveContractSnapshot embeddedSnapshot = null;
             for (EffectiveContractSnapshot snapshot

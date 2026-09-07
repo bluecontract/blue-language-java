@@ -46,7 +46,7 @@ class PatchSequenceRandomizedDifferentialTest {
         List<JsonPatch> patches = randomizedValidPatches(count, seed);
         FrozenNode initialRoot = FrozenNode.fromResolvedNode(initial.clone());
         SequentialPatchPlanningSession session = new SequentialPatchPlanningSession("/",
-                DocumentProcessingRuntime.workingPlanningContext(
+                PatchPlanningContextFactory.create(
                         initialRoot, initialRoot, false, null),
                 null,
                 null,

@@ -78,7 +78,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.EXPECTED_SOURCE_IDS;
 import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.SOURCE_SCHEMA;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.DIRECT;
@@ -100,59 +99,6 @@ final class FullLifecycleFixtureSourceValidator {
     private FullLifecycleFixtureSourceValidator() {
     }
 
-static Map<String, String> expectedSourceIds() {
-    LinkedHashMap<String, String> values =
-            new LinkedHashMap<String, String>();
-    values.put("fl-adm-01-root-patch-event.yaml",
-            "fl-adm-01-root-patch-event");
-    values.put("fl-adm-02-duplicate-equal-events.yaml",
-            "fl-adm-02-duplicate-equal-events");
-    values.put("fl-adm-03-non-public-containing-route.yaml",
-            "fl-adm-03-non-public-containing-route");
-    values.put("fl-adm-04-document-update-continuation.yaml",
-            "fl-adm-04-document-update-continuation");
-    values.put("fl-adm-05-graceful-termination.yaml",
-            "fl-adm-05-graceful-termination");
-    values.put("fl-adm-06-canonical-order-representation-parity.yaml",
-            "fl-adm-06-order-representation");
-    values.put("fl-adm-07-finite-cyclic-route.yaml",
-            "fl-adm-07-finite-cyclic-route");
-    values.put("fl-adm-08-infinite-cycle-gas-retry.yaml",
-            "fl-adm-08-infinite-cycle-gas-retry");
-    values.put("fl-adm-09-late-member-rollback.yaml",
-            "fl-adm-09-late-member-rollback");
-    values.put("fl-adm-10-unknown-occurrence.yaml",
-            "fl-adm-10-unknown-occurrence");
-    values.put("c-evo-18-missing-exact-node.yaml",
-            "c-evo-18-missing-exact-node");
-    values.put("c-evo-19-missing-occurrence-evidence.yaml",
-            "c-evo-19-missing-occurrence-evidence");
-    values.put("c-evo-20-canonical-demand-order.yaml",
-            "c-evo-20-canonical-demand-order");
-    values.put("c-evo-21-retry-determinism.yaml",
-            "c-evo-21-retry-determinism");
-    values.put("c-evo-22-low-gas-expanded-evidence.yaml",
-            "c-evo-22-low-gas-expanded-evidence");
-    values.put("c-evo-23-automatic-explicit-retry-parity.yaml",
-            "c-evo-23-automatic-explicit-retry-parity");
-    return Collections.unmodifiableMap(values);
-}
-
-static void validateSourceFamily(Path sourceFile, JsonNode value) {
-    String fileName = sourceFile.getFileName().toString();
-    String expectedId = EXPECTED_SOURCE_IDS.get(fileName);
-    require(expectedId != null,
-            "unexpected full-lifecycle source file " + fileName);
-    ObjectNode source = requiredObject(value, "source");
-    require(expectedId.equals(text(source, "id")),
-            fileName + " must declare id " + expectedId);
-    String expectedScenario = fileName.startsWith("c-evo-")
-            ? "C-EVO-" + fileName.substring(6, 8)
-            : "FL-ADM-" + fileName.substring(7, 9);
-    require(expectedScenario.equals(text(source, "scenario")),
-            fileName + " must declare scenario " + expectedScenario);
-}
-
 static void validateSourceEnvelope(JsonNode value) {
     ObjectNode source = requiredObject(value, "source");
     validateStrictSourceSchema(source);
@@ -162,10 +108,15 @@ static void validateSourceEnvelope(JsonNode value) {
     require("admit-closure".equals(text(source, "operation")),
             "full-lifecycle source operation must be admit-closure");
     require(text(source, "id").matches(
-                    "(?:fl-adm|c-evo)-[0-9]{2}(?:-[a-z0-9-]+)?"),
+                    "(?:(?:fl-adm|c-evo)-[0-9]{2}"
+                            + "|c-emb-empty-[0-9]{2}"
+                            + "|c-evt-collection-[0-9]{2})"
+                            + "(?:-[a-z0-9-]+)?"),
             "invalid full-lifecycle source id");
     require(text(source, "scenario").matches(
-                    "(?:FL-ADM|C-EVO)-[0-9]{2}"),
+                    "(?:(?:FL-ADM|C-EVO)-[0-9]{2}"
+                            + "|C-EMB-EMPTY-[0-9]{2}"
+                            + "|C-EVT-COLLECTION-[0-9]{2})"),
             "invalid full-lifecycle scenario");
     require(!text(source, "description").isEmpty(),
             "source description must not be empty");
@@ -235,8 +186,11 @@ private static void validateStrictSourceSchema(ObjectNode source) {
         validateObjectShape(wrapper,
                 "documents." + field.getKey(),
                 fields("publicRoot", "document"),
-                fields("publicRoot", "document"));
+                fields("publicRoot", "initialized", "document"));
         requiredBoolean(wrapper, "publicRoot");
+        if (wrapper.has("initialized")) {
+            requiredBoolean(wrapper, "initialized");
+        }
     }
 
     validateOccurrenceSchema(array(source, "occurrences"), "occurrences");
@@ -364,8 +318,9 @@ private static void validateCasesSchema(ArrayNode cases) {
         String label = "cases[" + index + "]";
         validateObjectShape(value, label, fields("suffix"),
                 fields("suffix", "inputOrder", "representation",
-                        "repeatOf", "occurrences", "expect",
-                        "parityWith", "parityProjections"));
+                        "exactForms", "providerMode", "repeatOf",
+                        "occurrences", "expect", "parityWith",
+                        "parityProjections"));
         require(text(value, "suffix").matches(
                         "[a-z0-9][a-z0-9-]*"),
                 label + ".suffix is invalid");
@@ -384,6 +339,49 @@ private static void validateCasesSchema(ArrayNode cases) {
             require(fields("pure-reference", "inline").contains(
                             text(representation, "form")),
                     label + ".representation.form is invalid");
+        }
+        if (value.has("providerMode")) {
+            ObjectNode providerMode = object(value, "providerMode");
+            validateObjectShape(providerMode,
+                    label + ".providerMode",
+                    fields("cache", "batching"),
+                    fields("cache", "batching"));
+            require(fields("warm", "cold").contains(
+                            text(providerMode, "cache")),
+                    label + ".providerMode.cache is invalid");
+            require(fields("batched", "unbatched").contains(
+                            text(providerMode, "batching")),
+                    label + ".providerMode.batching is invalid");
+            require(value.has("exactForms"),
+                    label + ".providerMode requires exactForms");
+        }
+        if (value.has("exactForms")) {
+            int requiredLoads = 0;
+            LinkedHashSet<String> locations = new LinkedHashSet<String>();
+            ArrayNode exactForms = array(value, "exactForms");
+            require(exactForms.size() > 0,
+                    label + ".exactForms must not be empty");
+            for (int formIndex = 0;
+                 formIndex < exactForms.size(); formIndex++) {
+                ObjectNode form = requiredObject(exactForms.get(formIndex),
+                        label + ".exactForms[" + formIndex + "]");
+                validateObjectShape(form, label + ".exactForms",
+                        fields("documentId", "path", "form"),
+                        fields("documentId", "path", "form"));
+                text(form, "documentId");
+                text(form, "path");
+                require(locations.add(text(form, "documentId")
+                                + "\u0000" + text(form, "path")),
+                        label + ".exactForms paths must be unique");
+                String wireForm = text(form, "form");
+                require(fields("pure-reference", "inline")
+                                .contains(wireForm),
+                        label + ".exactForms.form is invalid");
+                requiredLoads += "pure-reference".equals(wireForm) ? 1 : 0;
+            }
+            require(!value.has("providerMode") || requiredLoads >= 2,
+                    label + ".providerMode requires at least two "
+                            + "pure-reference exact forms");
         }
         if (value.has("repeatOf")) {
             text(value, "repeatOf");
@@ -440,6 +438,7 @@ private static void validateExpectSchema(ObjectNode expect) {
                     "rollbackToInput", "documents", "pointers",
                     "absentPointers", "workCounts",
                     "workContainsInOrder", "workKindsExact",
+                    "activatedOccurrences",
                     "publicEvents", "distinctEventOccurrenceIdentities",
                     "eventOccurrenceOrdinals",
                     "deliverySourceOccurrenceOrdinals",
@@ -461,6 +460,8 @@ private static void validateExpectSchema(ObjectNode expect) {
     validatePointerExpectations(
             optionalArray(expect, "absentPointers"), false);
     validateWorkCounts(optionalArray(expect, "workCounts"));
+    validateOccurrenceActivations(optionalArray(
+            expect, "activatedOccurrences"));
     Set<String> workKinds = fields("INITIALIZATION", "LIFECYCLE",
             "TRIGGERED_EVENT", "EMBEDDED_EVENT", "DOCUMENT_UPDATE");
     validateEnumArray(expect, "workContainsInOrder", workKinds, false);
@@ -489,6 +490,27 @@ private static void validateExpectSchema(ObjectNode expect) {
                     "workTrace", "finalizations", "rejectionEvidence",
                     "resourceDemands", "attempt"),
             true);
+}
+
+private static void validateOccurrenceActivations(ArrayNode values) {
+    for (int index = 0; index < values.size(); index++) {
+        ObjectNode value = requiredObject(values.get(index),
+                "expect.activatedOccurrences[" + index + "]");
+        String label = "expect.activatedOccurrences[" + index + "]";
+        validateObjectShape(value, label,
+                fields("sourceDocumentId", "sourcePath",
+                        "activationGeneration", "targetDocumentId"),
+                fields("sourceDocumentId", "sourcePath",
+                        "activationGeneration", "targetDocumentId"));
+        text(value, "sourceDocumentId");
+        String pointer = text(value, "sourcePath");
+        require(pointer.matches(
+                        "^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$"),
+                label + ".sourcePath is not a valid JSON Pointer");
+        require(requiredLong(value, "activationGeneration") >= 1L,
+                label + ".activationGeneration must be at least 1");
+        text(value, "targetDocumentId");
+    }
 }
 
 private static void validateDocumentExpectations(ArrayNode values) {
@@ -631,6 +653,18 @@ private static void validateAuthoredReferences(ObjectNode source) {
             array(source, "occurrences"),
             object(source, "expect"));
     for (JsonNode caseValue : cases(source)) {
+        if (caseValue != null && caseValue.has("representation")) {
+            require(documentIds.contains(text(
+                            object(caseValue, "representation"),
+                            "documentId")),
+                    "case representation references unknown document");
+        }
+        if (caseValue != null && caseValue.has("exactForms")) {
+            for (JsonNode form : array(caseValue, "exactForms")) {
+                require(documentIds.contains(text(form, "documentId")),
+                        "case exactForms references unknown document");
+            }
+        }
         if (caseValue != null
                 && (caseValue.has("occurrences")
                 || caseValue.has("expect"))) {
@@ -660,10 +694,19 @@ private static void validateAuthoredReferences(
                 "occurrence activationGeneration must be positive");
     }
     for (String field : Arrays.asList(
-            "documents", "pointers", "absentPointers")) {
+            "documents", "pointers", "absentPointers",
+            "activatedOccurrences")) {
         for (JsonNode item : optionalArray(expect, field)) {
-            require(documentIds.contains(text(item, "documentId")),
-                    field + " expectation references unknown document");
+            if ("activatedOccurrences".equals(field)) {
+                require(documentIds.contains(text(
+                                item, "sourceDocumentId"))
+                                && documentIds.contains(text(
+                                item, "targetDocumentId")),
+                        field + " expectation references unknown document");
+            } else {
+                require(documentIds.contains(text(item, "documentId")),
+                        field + " expectation references unknown document");
+            }
         }
     }
     for (JsonNode item : optionalArray(expect, "publicEvents")) {

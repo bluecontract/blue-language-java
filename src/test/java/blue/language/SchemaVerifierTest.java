@@ -10,6 +10,8 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
@@ -18,7 +20,9 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.*;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +30,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
@@ -89,9 +94,17 @@ public class SchemaVerifierTest {
 
         // when
         Throwable acceptedFailure = captureFailure(
-                () -> verifier.validateCompleted(describedText, true, "/mode"));
+                () -> verifier.validateCompleted(
+                        describedText,
+                        true,
+                        "/mode",
+                        noInlineTypeIdentities()));
         Throwable rejectedFailure = captureFailure(
-                () -> verifier.validateCompleted(wrongEffectiveType, true, "/mode"));
+                () -> verifier.validateCompleted(
+                        wrongEffectiveType,
+                        true,
+                        "/mode",
+                        noInlineTypeIdentities()));
 
         // then
         assertNull(acceptedFailure);
@@ -410,7 +423,7 @@ public class SchemaVerifierTest {
     public void shouldAcceptMinItems() throws Exception {
         // given
         schema.minItems(2);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Node resolved = merger.resolve(node);
@@ -423,7 +436,7 @@ public class SchemaVerifierTest {
     public void shouldRejectMinItems() throws Exception {
         // given
         schema.minItems(3);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Throwable failure = captureFailure(() -> merger.resolve(node));
@@ -436,7 +449,7 @@ public class SchemaVerifierTest {
     public void shouldAcceptMaxItems() throws Exception {
         // given
         schema.maxItems(3);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Node resolved = merger.resolve(node);
@@ -449,7 +462,7 @@ public class SchemaVerifierTest {
     public void shouldRejectMaxItems() throws Exception {
         // given
         schema.maxItems(1);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Throwable failure = captureFailure(() -> merger.resolve(node));
@@ -479,6 +492,65 @@ public class SchemaVerifierTest {
 
         // when
         Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
+    }
+
+    @Test
+    public void shouldRejectInlineAndReferenceFormsOfSameUniqueItem() {
+        // given
+        Node itemType = new Node().name("Canonical item type");
+        String itemTypeBlueId = calculateBlueId(itemType);
+        FrozenNode completedItemType = FrozenNode.fromResolvedNode(itemType);
+        Node target = new Node()
+                .schema(new Schema().uniqueItems(true))
+                .items(
+                        new Node()
+                                .type(itemType.clone())
+                                .value("same"),
+                        new Node()
+                                .type(new Node().blueId(itemTypeBlueId))
+                                .value("same"));
+        CanonicalTypeIdentityLookup identities =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType) {
+                        String blueId = requireCanonicalTypeBlueId(
+                                completedType);
+                        return Optional.of(completedType.isReferenceOnly()
+                                ? CanonicalTypeIdentityEvidence
+                                .referenceSource(blueId)
+                                : CanonicalTypeIdentityEvidence
+                                .identityOnly(blueId));
+                    }
+
+                    @Override
+                    public String requireCanonicalTypeBlueId(
+                            Node completedType) {
+                        if (completedType.isReferenceOnly()) {
+                            return completedType.getBlueId();
+                        }
+                        if (completedItemType.sameResolvedStructure(
+                                FrozenNode.fromResolvedNode(completedType))) {
+                            return itemTypeBlueId;
+                        }
+                        throw new IllegalStateException(
+                                "Unexpected completed type");
+                    }
+                };
+
+        // when
+        Throwable failure = captureFailure(
+                () -> new SchemaVerifier().validateCompleted(
+                        target, true, "/items", identities));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
@@ -617,7 +689,12 @@ public class SchemaVerifierTest {
                 new Node().value("1"))));
 
         // when
-        new SchemaPropagator().process(target, source, blueId -> null, null);
+        new SchemaPropagator().process(
+                target,
+                source,
+                blueId -> null,
+                null,
+                noInlineTypeIdentities());
 
         // then
         assertEquals(2, target.getSchema().getEnum().size());
@@ -693,10 +770,48 @@ public class SchemaVerifierTest {
     }
 
     private void propagateAndVerify(Node target, Node source) {
-        new SchemaPropagator().process(target, source, blueId -> null, null);
+        CanonicalTypeIdentityLookup typeIdentities =
+                noInlineTypeIdentities();
+        new SchemaPropagator().process(
+                target,
+                source,
+                blueId -> null,
+                null,
+                typeIdentities);
         SchemaVerifier verifier = new SchemaVerifier();
-        verifier.postProcess(target, source, blueId -> null, null);
-        verifier.validateCompleted(target, true, "/");
+        verifier.postProcess(
+                target,
+                source,
+                blueId -> null,
+                null,
+                typeIdentities);
+        verifier.validateCompleted(
+                target,
+                true,
+                "/",
+                noInlineTypeIdentities());
+    }
+
+    private CanonicalTypeIdentityLookup noInlineTypeIdentities() {
+        return new CanonicalTypeIdentityLookup() {
+            @Override
+            public boolean hasCompleteCoverage() {
+                return true;
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(Node completedType) {
+                throw new IllegalStateException(
+                        "Test did not register an inline effective type");
+            }
+
+            @Override
+            public String requireCanonicalTypeBlueId(Node completedType) {
+                throw new IllegalStateException(
+                        "Test did not register an inline effective type");
+            }
+        };
     }
 
 }

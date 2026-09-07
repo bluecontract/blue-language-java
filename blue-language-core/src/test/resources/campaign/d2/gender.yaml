@@ -1,0 +1,4 @@
+name: Gender
+type: Text
+schema:
+  enum: [female, male]

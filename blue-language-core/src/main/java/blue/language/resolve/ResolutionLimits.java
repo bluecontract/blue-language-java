@@ -1,5 +1,6 @@
 package blue.language.resolve;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 
 import java.util.Collection;
@@ -72,8 +73,9 @@ public interface ResolutionLimits {
     }
 
     /**
-     * Defers reference expansion below the supplied paths while preserving
-     * ordinary merge behavior there.
+     * Defers semantic interpretation below the supplied authored paths.
+     * At each boundary the exact Source subtree replaces inherited content;
+     * references are not expanded and merge processors are not invoked.
      *
      * @param paths paths below which references remain deferred
      * @return new invocation-scoped limits
@@ -97,7 +99,30 @@ public interface ResolutionLimits {
                 Collections.unmodifiableSet(new LinkedHashSet<>(
                         Objects.requireNonNull(
                                 ignoredProperties,
-                                "ignoredProperties"))));
+                                "ignoredProperties"))),
+                CanonicalTypeIdentityLookup.incomplete());
+    }
+
+    /**
+     * Suppresses selected properties for reference and inline representations
+     * of one exact canonical type.
+     *
+     * @param typeBlueId exact canonical type identity
+     * @param ignoredProperties properties whose expansion is suppressed
+     * @param typeIdentities authoritative resolver-issued type evidence
+     * @return new invocation-scoped limits
+     */
+    static ResolutionLimits filteringPropertiesForType(
+            String typeBlueId,
+            Set<String> ignoredProperties,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return new TypeSpecificPropertyFilter(
+                Objects.requireNonNull(typeBlueId, "typeBlueId"),
+                Collections.unmodifiableSet(new LinkedHashSet<>(
+                        Objects.requireNonNull(
+                                ignoredProperties,
+                                "ignoredProperties"))),
+                Objects.requireNonNull(typeIdentities, "typeIdentities"));
     }
 
     /**
@@ -122,27 +147,7 @@ public interface ResolutionLimits {
      * @param currentNode node at the current traversal position
      * @return whether expansion is allowed
      */
-    default boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {
-        return shouldExtendPathSegment(pathSegment, currentNode);
-    }
-
-    /**
-     * Compatibility name for {@link #shouldExpandPathSegment(String, Node)}.
-     *
-     * @param pathSegment candidate path segment
-     * @param currentNode node at the current traversal position
-     * @return whether expansion is allowed
-     * <p>Implementations must override this method or its canonical
-     * counterpart. The reciprocal defaults allow both existing 1.x
-     * implementations and new expansion-named implementations to work.</p>
-     *
-     * <p>New code should implement and call
-     * {@link #shouldExpandPathSegment(String, Node)}. This descriptor is
-     * retained only for the frozen 1.x binary API.</p>
-     */
-    default boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return shouldExpandPathSegment(pathSegment, currentNode);
-    }
+    boolean shouldExpandPathSegment(String pathSegment, Node currentNode);
 
     /**
      * Tests whether merging may enter a segment.
@@ -163,6 +168,20 @@ public interface ResolutionLimits {
     default boolean shouldReconstructList(Node currentNode, List<Node> items) {
         return true;
     }
+
+    /**
+     * Reports whether the policy retains every authored path in the returned
+     * graph, even when reference expansion is deliberately deferred.
+     *
+     * <p>A source-structure-preserving resolution may certify canonical type
+     * identity coverage for its returned projection when every unexpanded
+     * type terminal is an exact pure reference. Path filters that omit nodes
+     * must return {@code false}; otherwise canonical reconstruction could
+     * silently certify a graph that no longer represents the whole source.</p>
+     *
+     * @return {@code true} only when no authored path can be omitted
+     */
+    boolean retainsEveryAuthoredPath();
 
     /**
      * Records entry when no current-node context is available.

@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-model
-# entryCount: 313
+# entryCount: 317
 field blue.language.model.NodeWireForm$Strategy#OFFICIAL descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.NodeWireForm$Strategy#SIMPLE descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.Nodes$NodeField#BLUE descriptor=Lblue/language/model/Nodes$NodeField; access=public,static,final,enum signature=- constant=-
@@ -34,7 +34,7 @@ field blue.language.model.wire.BlueLanguageConstants#CORE_TYPE_BLUE_IDS descript
 field blue.language.model.wire.BlueLanguageConstants#CORE_TYPE_BLUE_ID_TO_NAME_MAP descriptor=Ljava/util/Map; access=public,static,final signature=Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; constant=-
 field blue.language.model.wire.BlueLanguageConstants#CORE_TYPE_NAME_TO_BLUE_ID_MAP descriptor=Ljava/util/Map; access=public,static,final signature=Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; constant=-
 field blue.language.model.wire.BlueLanguageConstants#DICTIONARY_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Dictionary"
-field blue.language.model.wire.BlueLanguageConstants#DICTIONARY_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG"
+field blue.language.model.wire.BlueLanguageConstants#DICTIONARY_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
 field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Double"
 field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ"
 field blue.language.model.wire.BlueLanguageConstants#INTEGER_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Integer"
@@ -49,7 +49,7 @@ field blue.language.model.wire.BlueLanguageConstants#LIST_CONTROL_REPLACE descri
 field blue.language.model.wire.BlueLanguageConstants#LIST_MERGE_POLICY_APPEND_ONLY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="append-only"
 field blue.language.model.wire.BlueLanguageConstants#LIST_MERGE_POLICY_POSITIONAL descriptor=Ljava/lang/String; access=public,static,final signature=- constant="positional"
 field blue.language.model.wire.BlueLanguageConstants#LIST_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="List"
-field blue.language.model.wire.BlueLanguageConstants#LIST_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF"
+field blue.language.model.wire.BlueLanguageConstants#LIST_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
 field blue.language.model.wire.BlueLanguageConstants#OBJECT_BLUE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue"
 field blue.language.model.wire.BlueLanguageConstants#OBJECT_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blueId"
 field blue.language.model.wire.BlueLanguageConstants#OBJECT_CONTRACTS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="contracts"
@@ -169,13 +169,17 @@ method blue.language.model.NodeWireForm$Strategy#values descriptor=()[Lblue/lang
 method blue.language.model.Nodes#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.model.Nodes#booleanNode descriptor=(Ljava/lang/Boolean;)Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.model.Nodes#doubleNode descriptor=(Ljava/math/BigDecimal;)Lblue/language/model/Node; access=public,static signature=- throws=-
+method blue.language.model.Nodes#emptyObject descriptor=()Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.model.Nodes#emptyPlaceholder descriptor=()Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.model.Nodes#hasBlueIdOnly descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
 method blue.language.model.Nodes#hasFieldsAndMayHaveFields descriptor=(Lblue/language/model/Node;Ljava/util/Set;Ljava/util/Set;)Z access=public,static signature=(Lblue/language/model/Node;Ljava/util/Set<Lblue/language/model/Nodes$NodeField;>;Ljava/util/Set<Lblue/language/model/Nodes$NodeField;>;)Z throws=-
 method blue.language.model.Nodes#hasItemsOnly descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
+method blue.language.model.Nodes#hasObjectPayload descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
 method blue.language.model.Nodes#integerNode descriptor=(Ljava/math/BigInteger;)Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.model.Nodes#isEmptyNode descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
 method blue.language.model.Nodes#isEmptyPlaceholder descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
+method blue.language.model.Nodes#isExactEmptyObject descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
+method blue.language.model.Nodes#isSourceNullLiteral descriptor=(Lblue/language/model/Node;)Z access=public,static signature=- throws=-
 method blue.language.model.Nodes#textNode descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.model.Nodes#validateEmptyPlaceholder descriptor=(Lblue/language/model/Node;Ljava/lang/String;)V access=public,static signature=- throws=-
 method blue.language.model.Nodes$NodeField#valueOf descriptor=(Ljava/lang/String;)Lblue/language/model/Nodes$NodeField; access=public,static signature=- throws=-

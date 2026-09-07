@@ -1,8 +1,9 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,8 +31,10 @@ public final class VerifiedExecutionEvidence {
     private final Set<String> requiredExactNodeBlueIds;
 
     private VerifiedExecutionEvidence(Builder builder) {
-        this.rootBlueId = requireText(builder.rootBlueId, "rootBlueId");
-        this.eventBlueId = requireText(builder.eventBlueId, "eventBlueId");
+        this.rootBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                builder.rootBlueId, "rootBlueId");
+        this.eventBlueId = BlueIds.requireBlueIdOrCyclicMember(
+                builder.eventBlueId, "eventBlueId");
         if (builder.managedRootRevision < 0L || builder.indexedRootRevision < 0L) {
             throw new IllegalArgumentException("Root revisions must be non-negative");
         }
@@ -76,7 +79,7 @@ public final class VerifiedExecutionEvidence {
     /**
      * Returns the exact Root identity bound by this evidence.
      *
-     * @return non-empty Root BlueId
+     * @return canonical plain or cyclic-member Root BlueId
      */
     public String rootBlueId() {
         return rootBlueId;
@@ -85,7 +88,7 @@ public final class VerifiedExecutionEvidence {
     /**
      * Returns the exact event identity bound by this evidence.
      *
-     * @return non-empty event BlueId
+     * @return canonical plain or cyclic-member event BlueId
      */
     public String eventBlueId() {
         return eventBlueId;
@@ -192,8 +195,10 @@ public final class VerifiedExecutionEvidence {
     /**
      * Revalidates binding to the exact semantic inputs.
      *
-     * @param root exact Root to verify
-     * @param event exact event to verify
+     * @param root exact Root to verify environmentally
+     * @param event exact event to verify environmentally
+     * @param languageRuntime active Language runtime that establishes both
+     *        Source identities
      * @param expectedRuntimeRegistryIdentity expected registry identity, or
      *        {@code null} to skip that comparison
      * @throws NullPointerException if {@code root} or {@code event} is
@@ -201,9 +206,14 @@ public final class VerifiedExecutionEvidence {
      * @throws InvalidExecutionEvidenceException if any identity or revision
      *         binding is invalid
      */
-    public void revalidate(Node root, Node event, String expectedRuntimeRegistryIdentity) {
-        revalidate(root,
+    public void revalidate(Node root,
+                           Node event,
+                           LanguageRuntimeAccess languageRuntime,
+                           String expectedRuntimeRegistryIdentity) {
+        revalidate(
+                root,
                 event,
+                languageRuntime,
                 expectedRuntimeRegistryIdentity,
                 RootExternalDeliveryEvidenceVerifier.INSTANCE);
     }
@@ -213,6 +223,8 @@ public final class VerifiedExecutionEvidence {
      *
      * @param root exact Root to verify
      * @param event exact event to verify
+     * @param languageRuntime active Language runtime that establishes both
+     *        Source identities
      * @param expectedRuntimeRegistryIdentity expected registry identity, or
      *        {@code null}
      * @param deliveryVerifier non-null environmental evidence verifier
@@ -223,32 +235,62 @@ public final class VerifiedExecutionEvidence {
      */
     public void revalidate(Node root,
                            Node event,
+                           LanguageRuntimeAccess languageRuntime,
                            String expectedRuntimeRegistryIdentity,
                            ExternalDeliveryEvidenceVerifier deliveryVerifier) {
-        revalidateBinding(root, event, expectedRuntimeRegistryIdentity);
+        LanguageRuntimeAccess runtime = Objects.requireNonNull(
+                languageRuntime, "languageRuntime");
+        revalidateEstablished(
+                root,
+                event,
+                runtime.calculateSourceDocumentBlueId(root),
+                runtime.calculateSourceDocumentBlueId(event),
+                expectedRuntimeRegistryIdentity,
+                deliveryVerifier);
+    }
+
+    void revalidateEstablished(Node root,
+                               Node event,
+                               String actualRootBlueId,
+                               String actualEventBlueId,
+                               String expectedRuntimeRegistryIdentity,
+                               ExternalDeliveryEvidenceVerifier
+                                       deliveryVerifier) {
+        revalidateBinding(
+                actualRootBlueId,
+                actualEventBlueId,
+                expectedRuntimeRegistryIdentity);
         Objects.requireNonNull(deliveryVerifier, "deliveryVerifier")
                 .verify(root, event, this);
     }
 
     void revalidateDerived(Node root,
                            Node event,
+                           String actualRootBlueId,
+                           String actualEventBlueId,
                            String expectedRuntimeRegistryIdentity,
                            ExternalDeliveryEvidenceVerifier deliveryVerifier,
                            ExternalDeliveryPlan derivedPlan) {
-        revalidateBinding(root, event, expectedRuntimeRegistryIdentity);
+        revalidateBinding(
+                actualRootBlueId,
+                actualEventBlueId,
+                expectedRuntimeRegistryIdentity);
         Objects.requireNonNull(deliveryVerifier, "deliveryVerifier")
                 .verifyDerived(root, event, this,
                         Objects.requireNonNull(derivedPlan, "derivedPlan"));
     }
 
-    void revalidateBinding(Node root,
-                           Node event,
+    void revalidateBinding(String actualRootBlueId,
+                           String actualEventBlueId,
                            String expectedRuntimeRegistryIdentity) {
-        Objects.requireNonNull(root, "root");
-        Objects.requireNonNull(event, "event");
-        String actualRoot = DirectBlueIdCalculator.calculateBlueId(root);
-        String actualEvent = DirectBlueIdCalculator.calculateBlueId(event);
-        if (!rootBlueId.equals(actualRoot) || !eventBlueId.equals(actualEvent)) {
+        String canonicalRootBlueId =
+                BlueIds.requireBlueIdOrCyclicMember(
+                        actualRootBlueId, "actualRootBlueId");
+        String canonicalEventBlueId =
+                BlueIds.requireBlueIdOrCyclicMember(
+                        actualEventBlueId, "actualEventBlueId");
+        if (!rootBlueId.equals(canonicalRootBlueId)
+                || !eventBlueId.equals(canonicalEventBlueId)) {
             throw new InvalidExecutionEvidenceException(
                     "Execution evidence does not bind to the exact Root and event");
         }
@@ -422,26 +464,30 @@ public final class VerifiedExecutionEvidence {
         /**
          * Adds one exact identity available to execution.
          *
-         * @param blueId non-empty available BlueId
+         * @param blueId canonical plain or cyclic-member available BlueId
          * @return this builder
-         * @throws IllegalArgumentException if {@code blueId} is empty or
-         *         {@code null}
+         * @throws IllegalArgumentException if {@code blueId} is not a
+         *         canonical plain or cyclic-member BlueId
          */
         public Builder availableExactNode(String blueId) {
-            availableExactNodeBlueIds.add(requireText(blueId, "available exact BlueId"));
+            availableExactNodeBlueIds.add(
+                    BlueIds.requireBlueIdOrCyclicMember(
+                            blueId, "available exact BlueId"));
             return this;
         }
 
         /**
          * Adds one exact identity required by execution.
          *
-         * @param blueId non-empty required BlueId
+         * @param blueId canonical plain or cyclic-member required BlueId
          * @return this builder
-         * @throws IllegalArgumentException if {@code blueId} is empty or
-         *         {@code null}
+         * @throws IllegalArgumentException if {@code blueId} is not a
+         *         canonical plain or cyclic-member BlueId
          */
         public Builder requiredExactNode(String blueId) {
-            requiredExactNodeBlueIds.add(requireText(blueId, "required exact BlueId"));
+            requiredExactNodeBlueIds.add(
+                    BlueIds.requireBlueIdOrCyclicMember(
+                            blueId, "required exact BlueId"));
             return this;
         }
 

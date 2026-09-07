@@ -1,6 +1,6 @@
 id: R_schema_integer_multiple_of_lcm_merge
 category: Schema
-operation: resolve
+operation: resolveDefinition
 description: inherited and instance integer multipleOf constraints merge deterministically
   using LCM
 source:

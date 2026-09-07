@@ -90,7 +90,7 @@ class BlueConformanceReportTest {
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 reportedIdentity);
         assertEquals(
-                "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
+                "sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695",
                 reportedIdentity);
         assertEquals("blue-language-1.0-final-implementation-baseline",
                 BlueConformanceReport.BLUE_SPEC_SOURCE);
@@ -409,7 +409,7 @@ class BlueConformanceReportTest {
         try (Stream<Path> paths = Files.walk(fixtureSourceRoot)) {
             fixtureFiles = paths
                     .filter(Files::isRegularFile)
-                    .filter(path -> !"manifest.yaml".equals(path.getFileName().toString()))
+                    .filter(path -> !path.equals(fixtureSourceRoot.resolve("manifest.yaml")))
                     .map(fixtureSourceRoot::relativize)
                     .map(path -> path.toString().replace('\\', '/'))
                     .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -424,7 +424,7 @@ class BlueConformanceReportTest {
         assertTrue(manifestIsPackaged);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 manifest.get("packageIdentity").asText());
-        assertEquals(153, manifest.get("behaviorFixtureCount").asInt());
+        assertEquals(185, manifest.get("behaviorFixtureCount").asInt());
         assertTrue(manifestViolations.isEmpty(),
                 manifestViolations.toString());
         assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
@@ -445,11 +445,11 @@ class BlueConformanceReportTest {
         // then
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 encoded.get("fixturePackageIdentity"));
-        assertEquals("sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
+        assertEquals("sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321",
                 encoded.get("registryPackageIdentity"));
-        assertEquals(153, encoded.get("fixtureCount"));
-        assertEquals(153, results.size());
-        assertEquals(153, results.stream()
+        assertEquals(185, encoded.get("fixtureCount"));
+        assertEquals(185, results.size());
+        assertEquals(185, results.stream()
                 .map(result -> result.get("id"))
                 .collect(Collectors.toSet()).size());
         assertTrue(results.stream().allMatch(result ->

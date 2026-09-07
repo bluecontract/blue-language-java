@@ -14,6 +14,7 @@ public final class DocumentStepInput {
     private final ClosureWorkOccurrence work;
     private final ManagedDocumentSnapshot targetDocument;
     private final Node exactPayload;
+    private final String matchingEventBlueId;
     private final Node occurrenceEvent;
     private final FrozenJsonPatch processorPatch;
     private final TentativeResolutionContext resolutionContext;
@@ -25,6 +26,8 @@ public final class DocumentStepInput {
      * @param work exact accepted work occurrence
      * @param targetDocument latest exact target state
      * @param exactPayload exact work payload
+     * @param matchingEventBlueId admitted identity of the semantic value that
+     *        handlers match, or {@code null} for non-handler work
      * @param resolutionContext freshly reconstructed private resolver view
      */
     public DocumentStepInput(
@@ -32,8 +35,10 @@ public final class DocumentStepInput {
             ClosureWorkOccurrence work,
             ManagedDocumentSnapshot targetDocument,
             Node exactPayload,
+            String matchingEventBlueId,
             TentativeResolutionContext resolutionContext) {
         this(stepOrdinal, work, targetDocument, exactPayload,
+                matchingEventBlueId,
                 null, null, resolutionContext);
     }
 
@@ -44,6 +49,8 @@ public final class DocumentStepInput {
      * @param work exact accepted work occurrence
      * @param targetDocument latest exact target state
      * @param exactPayload exact work payload or adapter wrapper
+     * @param matchingEventBlueId admitted identity of the semantic value that
+     *        handlers match, or {@code null} for non-handler work
      * @param occurrenceEvent originating semantic event for embedded work,
      *        otherwise {@code null}
      * @param processorPatch exact patch for containing-reference work,
@@ -55,6 +62,7 @@ public final class DocumentStepInput {
             ClosureWorkOccurrence work,
             ManagedDocumentSnapshot targetDocument,
             Node exactPayload,
+            String matchingEventBlueId,
             Node occurrenceEvent,
             FrozenJsonPatch processorPatch,
             TentativeResolutionContext resolutionContext) {
@@ -65,6 +73,11 @@ public final class DocumentStepInput {
                 targetDocument, "targetDocument");
         this.exactPayload = Objects.requireNonNull(
                 exactPayload, "exactPayload").clone();
+        this.matchingEventBlueId = matchingEventBlueId == null
+                ? null
+                : ClosureValueSupport.requireBlueId(
+                        matchingEventBlueId,
+                        "matchingEventBlueId");
         this.occurrenceEvent = occurrenceEvent != null
                 ? occurrenceEvent.clone()
                 : null;
@@ -111,6 +124,14 @@ public final class DocumentStepInput {
     public Node exactPayload() { return exactPayload.clone(); }
 
     /**
+     * Returns the admission-proved identity used for handler matching.
+     *
+     * @return exact identity, including a cyclic-member identity, or
+     *         {@code null} for work that invokes no handler
+     */
+    public String matchingEventBlueId() { return matchingEventBlueId; }
+
+    /**
      * Returns the originating event behind an embedded adapter payload.
      *
      * @return defensive event copy, or {@code null} for other work kinds
@@ -148,6 +169,11 @@ public final class DocumentStepInput {
         boolean embedded = work.kind() == WorkKind.EMBEDDED_EVENT;
         boolean containing = work.kind()
                 == WorkKind.CONTAINING_REFERENCE_UPDATE;
+        boolean handlerDelivery = work.kind() == WorkKind.EXTERNAL_DELIVERY
+                || work.kind() == WorkKind.DOCUMENT_UPDATE
+                || work.kind() == WorkKind.TRIGGERED_EVENT
+                || work.kind() == WorkKind.EMBEDDED_EVENT
+                || work.kind() == WorkKind.LIFECYCLE;
         if (embedded != (occurrenceEvent != null)) {
             throw new IllegalArgumentException(
                     "Only embedded-event work requires occurrenceEvent");
@@ -155,6 +181,11 @@ public final class DocumentStepInput {
         if (containing != (processorPatch != null)) {
             throw new IllegalArgumentException(
                     "Only containing-reference work requires processorPatch");
+        }
+        if (handlerDelivery != (matchingEventBlueId != null)) {
+            throw new IllegalArgumentException(
+                    "Handler work requires matchingEventBlueId and "
+                            + "non-handler work forbids it");
         }
     }
 }

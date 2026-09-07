@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
@@ -33,7 +34,6 @@ final class EffectiveSubscriptionSurfaceProjector {
     private final NodeToObjectConverter converter;
     private final SubscriptionSurfaceRules rules;
     private final EmbeddedSubscriptionRouteProjector routes;
-    private final EmbeddedScopePlanner embeddedPlanner;
 
     EffectiveSubscriptionSurfaceProjector(
             ContractLoader contractLoader,
@@ -48,10 +48,6 @@ final class EffectiveSubscriptionSurfaceProjector {
         this.converter = converter;
         this.rules = Objects.requireNonNull(rules, "rules");
         this.routes = new EmbeddedSubscriptionRouteProjector(rules);
-        this.embeddedPlanner = snapshotManager != null
-                ? new EmbeddedScopePlanner(
-                        snapshotManager::materializeVerifiedExactReference)
-                : new EmbeddedScopePlanner();
     }
 
     /** Projects only occurrences whose effective dependencies changed. */
@@ -279,6 +275,12 @@ final class EffectiveSubscriptionSurfaceProjector {
                             ? validationContext.entryEmbeddedScopePlan(
                                     scopePath)
                             : null;
+                    EmbeddedScopePlanner embeddedPlanner =
+                            snapshotManager != null
+                                    ? new EmbeddedScopePlanner(
+                                            snapshotManager,
+                                            scope.canonicalTypeIdentities)
+                                    : new EmbeddedScopePlanner();
                     embeddedRoutes = routes.projectScope(
                             scope.effective,
                             bundle.embeddedScopeDeclaration(),
@@ -379,20 +381,21 @@ final class EffectiveSubscriptionSurfaceProjector {
         Node channelNode = frozen.toNode();
         rules.requireObjectLimits(
                 channelNode, schedule, scopePath, contract.key());
-        RuntimeWorkSession authoritative =
-                validationContext.newRuntimeWorkSession();
-        RuntimeWorkSession comparison = authoritative.diagnosticTwin();
-        final ExternalChannelFunctionResolver.Header first;
-        final ExternalChannelFunctionResolver.Header second;
+        RuntimeWorkSession authoritative = null;
+        RuntimeWorkSession comparison = null;
+        ExternalChannelFunctionResolver.Header first = null;
+        Throwable failure = null;
+        boolean evidenceUnavailable = false;
         try {
+            authoritative = validationContext.newRuntimeWorkSession();
+            comparison = authoritative.diagnosticTwin();
             first = resolveHeader(bundle, contract, authoritative);
-            second = resolveHeader(bundle, contract, comparison);
+            ExternalChannelFunctionResolver.Header second =
+                    resolveHeader(bundle, contract, comparison);
             if (!first.sameResult(second)
                     || !sameRuntimeTrace(
                             authoritative.stagedTrace(),
                             comparison.stagedTrace())) {
-                authoritative.failDeterministically();
-                comparison.suspend();
                 throw rules.invalid(
                         "External Channel subscription functions are not "
                                 + "deterministic over an immutable snapshot",
@@ -402,25 +405,37 @@ final class EffectiveSubscriptionSurfaceProjector {
             authoritative.complete();
             comparison.suspend();
         } catch (ExecutionEvidenceUnavailableException unavailable) {
-            suspendIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw unavailable;
-        } catch (RuntimeException | Error failure) {
-            failIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw failure;
+            failure = unavailable;
+            evidenceUnavailable = true;
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
+        } finally {
+            if (failure != null) {
+                failure = evidenceUnavailable
+                        ? RuntimeWorkSession.suspendIfOpenPreserving(
+                                authoritative, failure)
+                        : RuntimeWorkSession.failIfOpenPreserving(
+                                authoritative, failure);
+                failure = RuntimeWorkSession.suspendIfOpenPreserving(
+                        comparison, failure);
+            }
+            failure = RuntimeWorkSession.closePreserving(comparison, failure);
+            failure = RuntimeWorkSession.closePreserving(authoritative, failure);
         }
+        RuntimeWorkSession.rethrow(failure);
+        ExternalChannelFunctionResolver.Header resolved =
+                Objects.requireNonNull(first, "resolvedHeader");
         validateSubscriptionKeys(
-                first.channelKeys(), schedule, scopePath, contract.key());
+                resolved.channelKeys(), schedule, scopePath, contract.key());
         return new SubscriptionDelta.Entry(
                 scopePath,
                 contract.key(),
                 contract.effectiveTypeBlueId(),
                 contract.sourceContributionNodeBlueIds(),
                 contract.order(),
-                first.channelKeys(),
-                first.checkpointDomainBlueId(),
-                first.dependencies(),
+                resolved.channelKeys(),
+                resolved.checkpointDomainBlueId(),
+                resolved.dependencies(),
                 null,
                 null,
                 null);
@@ -541,7 +556,7 @@ final class EffectiveSubscriptionSurfaceProjector {
                     ? ExecutableBodyPathCatalog
                             .resolveCanonicalTransientIncludingTypeContracts(
                                     snapshotManager,
-                                    FrozenNode.fromNode(root),
+                                    FrozenNode.fromSourceNode(root),
                                     ExecutableBodyPathCatalog
                                             .authoredNodePaths(root),
                                     registry.executableBodyFieldsByType())
@@ -557,9 +572,12 @@ final class EffectiveSubscriptionSurfaceProjector {
             Node selected;
             Node effective;
             if (snapshot != null) {
-                selected = JsonPointer.ROOT.equals(normalized)
-                        ? snapshot.canonicalRoot()
-                        : snapshot.canonicalNodeAt(normalized);
+                if (JsonPointer.ROOT.equals(normalized)) {
+                    selected = snapshot.sourceRoot();
+                } else {
+                    FrozenNode source = snapshot.sourceAt(normalized);
+                    selected = source != null ? source.toNode() : null;
+                }
                 effective = JsonPointer.ROOT.equals(normalized)
                         ? snapshot.resolvedRoot()
                         : snapshot.resolvedNodeAt(normalized);
@@ -583,9 +601,17 @@ final class EffectiveSubscriptionSurfaceProjector {
                 bundle = contractLoader.load(
                         selectedFrozen,
                         effectiveFrozen,
-                        normalized);
+                        normalized,
+                        CanonicalTypeIdentityLookup.incomplete());
             }
-            ScopeView created = new ScopeView(selected, effective, bundle);
+            CanonicalTypeIdentityLookup typeIdentities = snapshot != null
+                    ? snapshot.canonicalTypeIdentities()
+                    : CanonicalTypeIdentityLookup.incomplete();
+            ScopeView created = new ScopeView(
+                    selected,
+                    effective,
+                    bundle,
+                    typeIdentities);
             scopes.put(normalized, created);
             return created;
         }
@@ -614,14 +640,18 @@ final class EffectiveSubscriptionSurfaceProjector {
                             snapshotManager,
                             selected,
                             "Legacy embedded child projection");
-            Node effective = materialized.toNode();
+            ResolvedSnapshot openedSnapshot = snapshotManager
+                    .fromDocumentTransient(materialized.toNode());
+            Node effective = openedSnapshot.resolvedRoot();
             ScopeView opened = new ScopeView(
                     child.selected,
                     effective,
                     contractLoader.load(
                             materialized,
-                            materialized,
-                            normalized));
+                            openedSnapshot.frozenResolvedRoot(),
+                            normalized,
+                            openedSnapshot.canonicalTypeIdentities()),
+                    openedSnapshot.canonicalTypeIdentities());
             scopes.put(normalized, opened);
             return opened;
         }
@@ -632,14 +662,18 @@ final class EffectiveSubscriptionSurfaceProjector {
         private final Node selected;
         private final Node effective;
         private final ContractBundle bundle;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
         private ScopeView(
                 Node selected,
                 Node effective,
-                ContractBundle bundle) {
+                ContractBundle bundle,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
             this.selected = selected;
             this.effective = effective;
             this.bundle = Objects.requireNonNull(bundle, "bundle");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
     }
 }

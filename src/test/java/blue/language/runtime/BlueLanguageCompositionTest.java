@@ -21,6 +21,7 @@ import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -184,7 +185,7 @@ final class BlueLanguageCompositionTest {
     }
 
     @Test
-    void shouldMatchLegacyDeferredSnapshotSemanticsAndProviderDemand() {
+    void shouldMatchDeferredSnapshotSemanticsAndProviderDemand() {
         // given
         Node deferredContent = new Node().properties(
                 "body", new Node().value("deferred"));
@@ -249,6 +250,196 @@ final class BlueLanguageCompositionTest {
         assertTrue(legacyOrdinaryDemands.get() > 0);
         assertEquals(legacyOrdinaryDemands.get(),
                 focusedOrdinaryDemands.get());
+    }
+
+    @Test
+    void shouldKeepPureReferenceColdAcrossConfiguredAndIsolatedProcessingScopes() {
+        // given
+        Node deferredContent = new Node().properties(
+                "program", new Node().value("must stay cold"));
+        String deferredBlueId =
+                DirectBlueIdCalculator.calculateBlueId(deferredContent);
+        Node ordinaryType = new Node().properties(
+                "inherited", new Node().value("resolved"));
+        String ordinaryBlueId =
+                DirectBlueIdCalculator.calculateBlueId(ordinaryType);
+        Node source = new Node()
+                .properties("selected", new Node().blueId(deferredBlueId))
+                .properties("ordinary", new Node().type(
+                        new Node().blueId(ordinaryBlueId)));
+        AtomicInteger configuredOrdinaryDemands = new AtomicInteger();
+        AtomicInteger isolatedOrdinaryDemands = new AtomicInteger();
+        AtomicInteger configuredDeferredDemands = new AtomicInteger();
+        AtomicInteger isolatedDeferredDemands = new AtomicInteger();
+        NodeProvider configuredProvider = verificationProvider(
+                deferredBlueId,
+                deferredContent,
+                configuredDeferredDemands,
+                ordinaryBlueId,
+                ordinaryType,
+                configuredOrdinaryDemands);
+        NodeProvider isolatedProvider = verificationProvider(
+                deferredBlueId,
+                deferredContent,
+                isolatedDeferredDemands,
+                ordinaryBlueId,
+                ordinaryType,
+                isolatedOrdinaryDemands);
+
+        // when
+        ResolvedSnapshot configured;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(configuredProvider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            configured = scope.resolvePreservingPaths(
+                    source, Collections.singleton("/selected"));
+        }
+        ResolvedSnapshot isolated;
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope = language.processing()
+                     .openScope(isolatedProvider)) {
+            isolated = scope.resolvePreservingPaths(
+                    source, Collections.singleton("/selected"));
+        }
+
+        // then
+        assertDeferredPureReferenceSnapshot(
+                source, deferredBlueId, configured);
+        assertDeferredPureReferenceSnapshot(
+                source, deferredBlueId, isolated);
+        assertTrue(configuredOrdinaryDemands.get() > 0);
+        assertTrue(isolatedOrdinaryDemands.get() > 0);
+        assertEquals(0, configuredDeferredDemands.get());
+        assertEquals(0, isolatedDeferredDemands.get());
+    }
+
+    @Test
+    void shouldCanonicalizePreservedPureReferenceWithoutOpeningIt() {
+        // given
+        Node unavailable = new Node().name("Unavailable preserved content");
+        String unavailableBlueId =
+                DirectBlueIdCalculator.calculateBlueId(unavailable);
+        Node source = new Node().properties(
+                "selected", new Node().blueId(unavailableBlueId));
+
+        // when
+        ResolvedSnapshot snapshot;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(ignored -> null)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            snapshot = scope.resolvePreservingPaths(
+                    source,
+                    Collections.singleton("/selected"));
+        }
+
+        // then
+        assertFalse(snapshot.isResolutionComplete());
+        assertTrue(snapshot.canonicalTypeIdentities()
+                .hasCompleteCoverage());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(source),
+                snapshot.blueId());
+        assertEquals(
+                unavailableBlueId,
+                snapshot.resolvedNodeAt("/selected").getBlueId());
+    }
+
+    @Test
+    void shouldRejectWholeIdentityUntilPreservedInlineTypeEvidenceIsComplete() {
+        // given
+        Node inlineType = new Node()
+                .name("Deferred inline type")
+                .properties("inherited", new Node().value("from-type"));
+        Node source = new Node().properties(
+                "selected",
+                new Node()
+                        .type(inlineType)
+                        .properties("local", new Node().value("authored")));
+
+        // when
+        ResolvedSnapshot limited;
+        ResolvedSnapshot retried;
+        ResolvedSnapshot eager;
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            limited = scope.resolvePreservingPaths(
+                    source,
+                    Collections.singleton("/selected"));
+            retried = scope.resolveTransient(source);
+        }
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            eager = scope.resolveTransient(source);
+        }
+
+        // then
+        assertFalse(limited.isResolutionComplete());
+        assertFalse(limited.hasCanonicalIdentity());
+        assertFalse(limited.canonicalTypeIdentities()
+                .hasCompleteCoverage());
+        assertEquals(
+                "Deferred inline type",
+                limited.sourceRoot()
+                        .getProperties()
+                        .get("selected")
+                        .getType()
+                        .getName());
+        assertThrows(IllegalStateException.class, limited::canonicalRoot);
+        assertThrows(IllegalStateException.class, limited::blueId);
+        assertTrue(retried.isResolutionComplete());
+        assertTrue(retried.hasCanonicalIdentity());
+        assertEquals(eager.blueId(), retried.blueId());
+        assertTrue(eager.frozenCanonicalRoot().sameResolvedStructure(
+                retried.frozenCanonicalRoot()));
+        assertNull(source.getProperties().get("selected")
+                .getType().getBlueId());
+    }
+
+    private static NodeProvider verificationProvider(
+            String deferredBlueId,
+            Node deferredContent,
+            AtomicInteger deferredDemands,
+            String ordinaryBlueId,
+            Node ordinaryType,
+            AtomicInteger ordinaryDemands) {
+        return requested -> {
+            if (deferredBlueId.equals(requested)) {
+                deferredDemands.incrementAndGet();
+                return Collections.singletonList(deferredContent.clone());
+            }
+            if (ordinaryBlueId.equals(requested)) {
+                ordinaryDemands.incrementAndGet();
+                return Collections.singletonList(ordinaryType.clone());
+            }
+            return null;
+        };
+    }
+
+    private static void assertDeferredPureReferenceSnapshot(
+            Node source,
+            String deferredBlueId,
+            ResolvedSnapshot snapshot) {
+        assertFalse(snapshot.isResolutionComplete());
+        assertTrue(snapshot.canonicalTypeIdentities()
+                .hasCompleteCoverage());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(source),
+                snapshot.blueId());
+        assertEquals(
+                deferredBlueId,
+                snapshot.canonicalNodeAt("/selected").getBlueId());
+        assertEquals(
+                deferredBlueId,
+                snapshot.resolvedNodeAt("/selected").getBlueId());
+        assertEquals(
+                "resolved",
+                snapshot.resolvedNodeAt("/ordinary/inherited").getValue());
     }
 
     private static java.util.List<Node> fixtureContent(

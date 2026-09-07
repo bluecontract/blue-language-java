@@ -4,11 +4,14 @@ import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ManagedCheckpointBatchCleanupContextFactory;
 import blue.language.processor.ManagedCheckpointCandidate;
@@ -70,6 +73,7 @@ final class ClosureExecutionSession
     private final ExecutionMode executionMode;
     private final ClosureExecutionRecorder recorder;
     private final ManagedDocumentStepProcessor stepProcessor;
+    private final ExactEventIdentityEvidence externalEventIdentityEvidence;
     private final ComponentFinalizationKernel finalizer =
             new ComponentFinalizationKernel();
     private final ProcessEmbeddedSurfaceReconciler
@@ -170,26 +174,37 @@ final class ClosureExecutionSession
             DocumentProcessor owner,
             ClosureInvocationInput input,
             ClosureExecutionRecorder recorder,
-            ExecutionMode executionMode) {
-        this(
-                owner,
-                input,
-                recorder,
-                executionMode,
-                Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
-    }
-
-    ClosureExecutionSession(
-            DocumentProcessor owner,
-            ClosureInvocationInput input,
-            ClosureExecutionRecorder recorder,
             ExecutionMode executionMode,
+            ExactEventIdentityEvidence externalEventIdentityEvidence,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
         this.input = Objects.requireNonNull(input, "input");
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
+        boolean externalProcessing = executionMode == ExecutionMode.PROCESSING
+                && input.cause().kind() == ProcessingCause.Kind.EXTERNAL;
+        if (externalProcessing) {
+            this.externalEventIdentityEvidence = Objects.requireNonNull(
+                    externalEventIdentityEvidence,
+                    "externalEventIdentityEvidence");
+            ExternalEventCause cause = (ExternalEventCause) input.cause();
+            if (!cause.eventBlueId().equals(
+                            externalEventIdentityEvidence.eventBlueId())
+                    || !FrozenNode.fromResolvedNode(cause.event())
+                    .sameResolvedStructure(
+                            externalEventIdentityEvidence.frozenEvent())) {
+                throw new IllegalArgumentException(
+                        "External event identity evidence does not match the "
+                                + "verified invocation cause");
+            }
+        } else {
+            if (externalEventIdentityEvidence != null) {
+                throw new IllegalArgumentException(
+                        "External event identity evidence is valid only for "
+                                + "external processing");
+            }
+            this.externalEventIdentityEvidence = null;
+        }
         this.currentSnapshot = input.snapshot();
         this.currentBindings = new ArrayList<ManagedOccurrenceBinding>(
                 currentSnapshot.occurrences());
@@ -245,10 +260,10 @@ final class ClosureExecutionSession
             executeAdmissionCause((AdmissionCause) input.cause());
         } else if (input.cause().kind()
                 == ProcessingCause.Kind.EXTERNAL) {
-            executeExternalCause((ExternalEventCause) input.cause());
+            executeExternalCause();
         } else {
-            executeManagedRevisionCause(
-                    (ManagedRevisionCause) input.cause());
+            executeManagedHistoryStep(
+                    (ManagedHistoryStep) input.cause());
         }
 
         completePendingTerminations();
@@ -280,7 +295,12 @@ final class ClosureExecutionSession
             for (DocumentId documentId : component) {
                 ManagedDocumentSnapshot document = currentSnapshot
                         .managedDocument(documentId);
-                if (!document.initialized()) {
+                if (!document.initialized()
+                        && !ManagedDocumentInitializationEligibility
+                                .isDormantProspectiveOnlyTarget(
+                                        document,
+                                        currentBindings,
+                                        input.directDeliveries())) {
                     pendingInitializationCauses.put(
                             documentId, causeIdentity);
                 }
@@ -289,11 +309,14 @@ final class ClosureExecutionSession
         runPendingInitializationBatch();
     }
 
-    private void executeExternalCause(ExternalEventCause cause) {
+    private void executeExternalCause() {
+        ExactEventIdentityEvidence eventEvidence = Objects.requireNonNull(
+                externalEventIdentityEvidence,
+                "externalEventIdentityEvidence");
         List<ClosureWorkOccurrence> directSeeds =
                 ClosureDirectSeedPlanner.plan(
                         input.invocationIdentity(),
-                        cause.eventBlueId(),
+                        eventEvidence.eventBlueId(),
                         currentSnapshot.components(),
                         input.directDeliveries());
         requireWorkOccurrenceCount(directSeeds.size());
@@ -320,7 +343,7 @@ final class ClosureExecutionSession
                     stepProcessor.classifyExternalDelivery(
                             latestBodies.get(delivery.targetDocumentId()),
                             delivery.channelKey(),
-                            cause.event(),
+                            eventEvidence,
                             workContext(seed,
                                     "direct-admission."
                                             + delivery.rawOccurrenceOrder()
@@ -359,8 +382,8 @@ final class ClosureExecutionSession
         drainCausalWork();
     }
 
-    private void executeManagedRevisionCause(
-            ManagedRevisionCause cause) {
+    private void executeManagedHistoryStep(
+            ManagedHistoryStep cause) {
         requireWorkOccurrenceCount(1L);
         ManagedOccurrenceBinding target = managedRevisionTarget(cause);
         ManagedDocumentSnapshot source = currentSnapshot.managedDocument(
@@ -371,7 +394,7 @@ final class ClosureExecutionSession
                 0L,
                 WorkKind.CONTAINING_REFERENCE_UPDATE,
                 source.documentId(),
-                "managed-revision",
+                cause instanceof ManagedRepresentationCause ? "managed-representation" : "managed-revision",
                 null,
                 null,
                 scopeIdentity,
@@ -417,7 +440,7 @@ final class ClosureExecutionSession
     }
 
     private void deliverManagedRevisionEvents(
-            ManagedRevisionCause cause) {
+            ManagedHistoryStep cause) {
         if (!cause.sourceTransitionReceipt().isPresent()) {
             return;
         }
@@ -429,11 +452,11 @@ final class ClosureExecutionSession
                 : receipt.emittedRootEvents()) {
             eventQueue.addLast(new EmittedOccurrence(
                     event.occurrenceOrdinal(),
-                    event.eventBlueId(),
                     event.occurrenceIdentity(),
                     event.sourceDocumentId(),
-                    event.exactEvent(),
-                    Collections.singletonList(target),
+                    event.exactEventIdentityEvidence(),
+                    Collections.singletonList(
+                            FrozenContainingEventTarget.direct(target)),
                     null,
                     true));
             charge(
@@ -451,7 +474,7 @@ final class ClosureExecutionSession
     }
 
     private ManagedOccurrenceBinding managedRevisionTarget(
-            ManagedRevisionCause cause) {
+            ManagedHistoryStep cause) {
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (binding.occurrenceIdentity().equals(
                     cause.targetOccurrenceIdentity())) {
@@ -479,7 +502,9 @@ final class ClosureExecutionSession
                     || (input.cause().kind()
                                     != ProcessingCause.Kind.EXTERNAL
                             && input.cause().kind()
-                                    != ProcessingCause.Kind.MANAGED_REVISION)) {
+                                    != ProcessingCause.Kind.MANAGED_REVISION
+                            && input.cause().kind()
+                                    != ProcessingCause.Kind.MANAGED_REPRESENTATION)) {
                 throw new ClosureCapabilityGapException(
                         "PROCESS_CAUSE_UNSUPPORTED",
                         "The concrete engine accepts external or one managed "
@@ -491,8 +516,7 @@ final class ClosureExecutionSession
                         "EXTERNAL_DIRECT_DELIVERY_REQUIRED",
                         "The first concrete engine lane requires one accepted direct delivery");
             }
-            if (input.cause().kind()
-                            == ProcessingCause.Kind.MANAGED_REVISION
+            if (input.cause() instanceof ManagedHistoryStep
                     && !input.directDeliveries().isEmpty()) {
                 throw new IllegalArgumentException(
                         "Managed revision must not carry direct deliveries");
@@ -509,8 +533,11 @@ final class ClosureExecutionSession
             }
             if (executionMode == ExecutionMode.PROCESSING
                     && !document.initialized()
-                    && !isInactiveProspectiveTarget(
-                            document.documentId())) {
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    document,
+                                    input.snapshot().occurrences(),
+                                    input.directDeliveries())) {
                 throw new ClosureCapabilityGapException(
                         "INITIALIZATION_BATCH_REQUIRED",
                         "A PROCESS_CLOSURE input may retain an uninitialized "
@@ -523,33 +550,9 @@ final class ClosureExecutionSession
     private boolean isRetainedManagedRevisionSource(
             DocumentId documentId) {
         return executionMode == ExecutionMode.PROCESSING
-                && input.cause() instanceof ManagedRevisionCause
-                && ((ManagedRevisionCause) input.cause())
+                && input.cause() instanceof ManagedHistoryStep
+                && ((ManagedHistoryStep) input.cause())
                         .childDocumentId().equals(documentId);
-    }
-
-    private boolean isInactiveProspectiveTarget(DocumentId documentId) {
-        boolean prospective = false;
-        for (ManagedOccurrenceBinding binding
-                : input.snapshot().occurrences()) {
-            if (!binding.targetDocumentId().equals(documentId)) {
-                continue;
-            }
-            if (binding.active()
-                    || binding.pendingHistoricalEpoch() != null) {
-                return false;
-            }
-            prospective = true;
-        }
-        if (!prospective) {
-            return false;
-        }
-        for (DirectLogicalDelivery delivery : input.directDeliveries()) {
-            if (delivery.targetDocumentId().equals(documentId)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private ComponentFinalizationResult verifyCurrentFinalization() {
@@ -599,7 +602,13 @@ final class ClosureExecutionSession
                     && !initializedDocuments.contains(
                             document.documentId())
                     && !terminatedDocuments.contains(
-                            document.documentId())) {
+                            document.documentId())
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    currentSnapshot.managedDocument(
+                                            document.documentId()),
+                                    currentBindings,
+                                    input.directDeliveries())) {
                 throw new InvalidExecutionEvidenceException(
                         "Expected managed occurrence activation did not "
                                 + "initialize prospective document "
@@ -673,6 +682,11 @@ final class ClosureExecutionSession
                 // re-encoding alone is also not owned work. Every actual
                 // managed step, including a no-op, records transition evidence
                 // and still receives settlement here.
+                continue;
+            }
+            if (terminatedDocuments.contains(document.documentId())) {
+                // Termination completed in this invocation cuts off later
+                // checkpoint Direct Writes, while its lifecycle still commits.
                 continue;
             }
             String targetManagedScopeIdentity = IDENTITIES
@@ -904,6 +918,7 @@ final class ClosureExecutionSession
                 work,
                 target,
                 pending.exactPayload,
+                pending.matchingEventBlueId,
                 pending.occurrenceEvent,
                 pending.processorPatch,
                 TentativeResolutionContext.from(
@@ -1266,9 +1281,15 @@ final class ClosureExecutionSession
             return false;
         }
         if (executionMode == ExecutionMode.ADMISSION) {
-            ManagedDocumentSnapshot admitted = input.snapshot()
+            ManagedDocumentSnapshot admitted = currentSnapshot
                     .managedDocument(documentId);
-            return admitted != null && !admitted.initialized();
+            return admitted != null
+                    && !admitted.initialized()
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    admitted,
+                                    currentBindings,
+                                    input.directDeliveries());
         }
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (binding.active()
@@ -1411,7 +1432,7 @@ final class ClosureExecutionSession
             Node body = latestBodies.get(documentId).clone();
             Node contracts = body.getContracts();
             if (contracts == null) {
-                contracts = new Node();
+                contracts = Nodes.emptyObject();
                 body.contracts(contracts);
             }
             if (contracts.getProperties() != null
@@ -1481,14 +1502,14 @@ final class ClosureExecutionSession
 
     private void chargeManagedRevisionReceiptPatch(
             ClosureWorkOccurrence work) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || managedRevisionReceiptReconciled
                 || work.kind()
                         != WorkKind.CONTAINING_REFERENCE_UPDATE) {
             return;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         if (!work.sourceOccurrenceIdentity().equals(
                 revision.causeIdentity())) {
             return;
@@ -1516,12 +1537,14 @@ final class ClosureExecutionSession
 
     private boolean shouldActivateManagedRevision(
             ClosureWorkOccurrence work) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || managedRevisionActivationCompleted) {
             return false;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
+        if (revision instanceof ManagedRepresentationCause
+                && !((ManagedRepresentationCause) revision).terminalPositionReached()) return false;
         return work.kind() == WorkKind.CONTAINING_REFERENCE_UPDATE
                 && work.sourceOccurrenceIdentity().equals(
                         revision.causeIdentity())
@@ -1531,8 +1554,8 @@ final class ClosureExecutionSession
 
     private List<FinalizationUpdate> activateManagedRevision(
             ClosureWorkOccurrence work) {
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         ManagedOccurrenceBinding target = managedRevisionTarget(revision);
         ManagedDocumentSnapshot child = currentSnapshot.managedDocument(
                 revision.childDocumentId());
@@ -1572,12 +1595,14 @@ final class ClosureExecutionSession
     public void onApplicationEvent(
             String scopePath,
             String originContractKey,
-            Node event,
-            String eventBlueId) {
+            ExactEventIdentityEvidence exactEventEvidence) {
         requireRoot(scopePath);
         ActiveFrame frame = activeFrame();
         frame.applicationEventCount++;
-        Node exactEvent = Objects.requireNonNull(event, "event").clone();
+        ExactEventIdentityEvidence evidence = Objects.requireNonNull(
+                exactEventEvidence, "exactEventEvidence");
+        Node exactEvent = evidence.event();
+        String eventBlueId = evidence.eventBlueId();
         long eventOrdinal = nextEventOrdinal++;
         String occurrenceIdentity = IDENTITIES.eventOccurrenceIdentity(
                 input.invocationIdentity(), eventOrdinal, eventBlueId);
@@ -1592,8 +1617,7 @@ final class ClosureExecutionSession
                 eventOrdinal,
                 emitter.documentId(),
                 occurrenceIdentity,
-                eventBlueId,
-                exactEvent,
+                evidence,
                 emitter.publicRoot()));
         if (emitter.publicRoot()) {
             publicEvents.add(new PublicEventOccurrence(
@@ -1601,8 +1625,7 @@ final class ClosureExecutionSession
                     eventOrdinal,
                     emitter.documentId(),
                     occurrenceIdentity,
-                    eventBlueId,
-                    exactEvent));
+                    evidence));
             charge("processor", "rootEventRecorded", 1L,
                     frame.context("event." + eventOrdinal
                             + ".public-record"));
@@ -1610,11 +1633,10 @@ final class ClosureExecutionSession
 
         eventQueue.addLast(new EmittedOccurrence(
                 eventOrdinal,
-                eventBlueId,
                 occurrenceIdentity,
                 emitter.documentId(),
-                exactEvent,
-                activeContainingOccurrences(emitter.documentId())));
+                evidence,
+                activeContainingEventTargets(emitter.documentId())));
         charge("processor", "internalEventEnqueued", 1L,
                 frame.context("event." + eventOrdinal + ".enqueue"));
     }
@@ -1625,11 +1647,6 @@ final class ClosureExecutionSession
             String cause,
             String reason) {
         requireRoot(scopePath);
-        if (executionMode != ExecutionMode.ADMISSION) {
-            throw new ClosureCapabilityGapException(
-                    "LIFECYCLE_TERMINATION_REQUIRED",
-                    "Termination requires the lifecycle and marker batch lane");
-        }
         ActiveFrame frame = activeFrame();
         DocumentId documentId = frame.work.targetDocumentId();
         if (terminatingDocuments.contains(documentId)
@@ -1780,7 +1797,7 @@ final class ClosureExecutionSession
         Node body = latestBodies.get(termination.documentId).clone();
         Node contracts = body.getContracts();
         if (contracts == null) {
-            contracts = new Node();
+            contracts = Nodes.emptyObject();
             body.contracts(contracts);
         }
         if (contracts.getProperties() != null
@@ -1929,25 +1946,26 @@ final class ClosureExecutionSession
             if (!unavailableForOrdinaryDelivery(source.documentId())) {
                 for (ManagedDocumentStepRoute route
                         : stepProcessor.classifyTriggeredEventRoutes(
-                                source.document(), occurrence.event)) {
+                                source.document(),
+                                occurrence.exactEventEvidence)) {
                     routes.add(new RouteTarget(
                             source.documentId(), route));
                 }
             }
         }
-        for (ManagedOccurrenceBinding frozen
+        for (FrozenContainingEventTarget frozen
                 : occurrence.containingTargets) {
             if (occurrence.imported) {
                 requireManagedRevisionEventTarget(
-                        (ManagedRevisionCause) input.cause(),
-                        frozen,
+                        (ManagedHistoryStep) input.cause(),
+                        frozen.directBinding(),
                         occurrence);
             } else {
                 revalidateFrozenEventTarget(
                         occurrence.sourceDocumentId, frozen);
             }
             ManagedDocumentSnapshot containing = requireEventDocument(
-                    frozen.sourceDocumentId(),
+                    frozen.receivingDocumentId(),
                     "frozen containing target");
             if (unavailableForOrdinaryDelivery(
                     containing.documentId())) {
@@ -1957,8 +1975,9 @@ final class ClosureExecutionSession
                     : stepProcessor.classifyEmbeddedEventRoutes(
                             containing.document(),
                             frozen.sourcePath(),
-                            occurrence.event,
-                            occurrence.eventBlueId)) {
+                            occurrence.exactEventEvidence,
+                            embeddedRouteClassificationContext(
+                                    containing, frozen, occurrence))) {
                 routes.add(new RouteTarget(
                         containing.documentId(), route));
             }
@@ -1966,14 +1985,31 @@ final class ClosureExecutionSession
         return Collections.unmodifiableList(routes);
     }
 
+    private GasChargeContext embeddedRouteClassificationContext(
+            ManagedDocumentSnapshot containing,
+            FrozenContainingEventTarget target,
+            EmittedOccurrence occurrence) {
+        return GasChargeContext.closure(
+                containing.documentId().value(),
+                "/",
+                Long.valueOf(0L),
+                Long.valueOf(containing.componentGeneration()),
+                null,
+                null,
+                null,
+                "event." + occurrence.ordinal
+                        + ".embedded-route."
+                        + target.attributionIdentity());
+    }
+
     private void requireManagedRevisionEventTarget(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen) {
         requireManagedRevisionEventTarget(revision, frozen, null);
     }
 
     private void requireManagedRevisionEventTarget(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen,
             EmittedOccurrence importedEvent) {
         verifyFrozenEventBinding(frozen);
@@ -2061,7 +2097,7 @@ final class ClosureExecutionSession
     }
 
     private boolean exactManagedRevisionRetirementSuccessor(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen,
             ManagedOccurrenceBinding successor) {
         verifyFrozenEventBinding(successor);
@@ -2093,7 +2129,7 @@ final class ClosureExecutionSession
 
     private boolean isExactManagedRevisionReceiptEvent(
             EmittedOccurrence occurrence,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         if (!occurrence.imported
                 || !revision.sourceTransitionReceipt().isPresent()) {
             return false;
@@ -2117,7 +2153,7 @@ final class ClosureExecutionSession
     }
 
     private boolean sameManagedLocalRepresentation(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedDocumentSnapshot authoritative) {
         Node retained = revision.afterDocument();
         Node current = authoritative.document();
@@ -2237,6 +2273,24 @@ final class ClosureExecutionSession
         // A later generation proves retirement/re-add continuity only.  Its
         // target never replaces the target frozen by this event occurrence.
         verifyFrozenEventBinding(successor);
+    }
+
+    private void revalidateFrozenEventTarget(
+            DocumentId eventSourceDocumentId,
+            FrozenContainingEventTarget frozen) {
+        DocumentId expectedTarget = Objects.requireNonNull(
+                eventSourceDocumentId, "eventSourceDocumentId");
+        List<ManagedOccurrenceBinding> lineage = frozen.lineage();
+        for (int index = lineage.size() - 1; index >= 0; index--) {
+            ManagedOccurrenceBinding edge = lineage.get(index);
+            revalidateFrozenEventTarget(expectedTarget, edge);
+            expectedTarget = edge.sourceDocumentId();
+        }
+        if (!expectedTarget.equals(frozen.receivingDocumentId())) {
+            throw eventBindingFailure(
+                    "Frozen containing-event lineage does not end at receiver "
+                            + frozen.receivingDocumentId());
+        }
     }
 
     private void verifyFrozenEventBinding(
@@ -2594,7 +2648,7 @@ final class ClosureExecutionSession
                 owner,
                 owner.targetDocumentId(),
                 false,
-                input.cause() instanceof ManagedRevisionCause
+                input.cause() instanceof ManagedHistoryStep
                         ? "managed-revision.topology-change"
                         : "work." + owner.ordinal()
                                 + ".topology-change");
@@ -2632,7 +2686,7 @@ final class ClosureExecutionSession
     private void chargeManagedRevisionAncestorRewrites(
             ClosureWorkOccurrence owner,
             List<FinalizationUpdate> updates) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || activateManagedRevision) {
             return;
         }
@@ -2694,9 +2748,9 @@ final class ClosureExecutionSession
                     sourceBodies.get(binding.sourceDocumentId()),
                     binding.sourcePath());
             boolean selectedActivation = activateManagedRevision
-                    && input.cause() instanceof ManagedRevisionCause
+                    && input.cause() instanceof ManagedHistoryStep
                     && binding.occurrenceIdentity().equals(
-                            ((ManagedRevisionCause) input.cause())
+                            ((ManagedHistoryStep) input.cause())
                                     .targetOccurrenceIdentity());
             if (!sameNode(before, staged) || selectedActivation) {
                 reconcilesHistoricalRow = true;
@@ -2711,15 +2765,16 @@ final class ClosureExecutionSession
             return true;
         }
 
+        // The historical-target exception is about this document's complete
+        // finalizer-only delta, including an indirect containing reference.
+        // Requiring a direct edge to the consumer would create a new target
+        // epoch for every catch-up step and prevent Phase D from completing.
         Node explained = sourceBodies.get(documentId).clone();
         boolean reencodedCurrentSource = false;
         for (ManagedOccurrenceBinding binding
                 : bindingsBeforeFinalization) {
             if (!binding.active()
-                    || !binding.sourceDocumentId().equals(documentId)
-                    || (!deliversImportedSourceReceipt
-                            && !binding.targetDocumentId().equals(
-                                    owner.targetDocumentId()))) {
+                    || !binding.sourceDocumentId().equals(documentId)) {
                 continue;
             }
             Node before = NodePathEditor.getOrNull(
@@ -2743,14 +2798,14 @@ final class ClosureExecutionSession
     private boolean isImportedManagedRevisionSourceReceiptBoundary(
             DocumentId documentId,
             ClosureWorkOccurrence owner) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || !managedRevisionActivationCompleted
                 || importedManagedEventDeliveryDepth <= 0
                 || owner.kind() != WorkKind.EMBEDDED_EVENT) {
             return false;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         return documentId.equals(revision.childDocumentId())
                 && !documentId.equals(owner.targetDocumentId())
                 && isExactManagedRevisionReceiptEvent(owner, revision);
@@ -2886,9 +2941,9 @@ final class ClosureExecutionSession
                 currentSnapshot.managedDocuments();
         ArrayList<ManagedOccurrenceBinding> working =
                 new ArrayList<ManagedOccurrenceBinding>();
-        ManagedRevisionCause revision = input.cause()
-                instanceof ManagedRevisionCause
-                ? (ManagedRevisionCause) input.cause()
+        ManagedHistoryStep revision = input.cause()
+                instanceof ManagedHistoryStep
+                ? (ManagedHistoryStep) input.cause()
                 : null;
         boolean receiptEventReclassification = false;
         for (ManagedOccurrenceBinding binding : currentBindings) {
@@ -2967,7 +3022,7 @@ final class ClosureExecutionSession
 
     private ManagedOccurrenceBinding managedRevisionReceiptEventRetirement(
             ManagedOccurrenceBinding binding,
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ClosureWorkOccurrence owner) {
         if (owner == null
                 || owner.kind() != WorkKind.EMBEDDED_EVENT
@@ -3034,7 +3089,7 @@ final class ClosureExecutionSession
 
     private boolean isExactManagedRevisionReceiptEvent(
             ClosureWorkOccurrence owner,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         if (!revision.sourceTransitionReceipt().isPresent()
                 || owner.eventBlueId() == null
                 || owner.occurrenceOrdinal() == null) {
@@ -3143,15 +3198,13 @@ final class ClosureExecutionSession
             }
             ManagedOccurrenceBinding before = replacement.get(match);
             if (!before.active()
-                    || before.targetDocumentId().equals(
-                            resolution.targetDocumentId())
                     || currentSnapshot.managedDocument(
                             resolution.targetDocumentId()) == null
                     || before.activationGeneration()
                             == ClosureValueSupport.MAX_SAFE_INTEGER) {
                 throw new IllegalArgumentException(
                         "Managed occurrence resolution is not an active "
-                                + "different-lineage historical retarget");
+                                + "historical reference replacement");
             }
             ManagedOccurrenceBinding after =
                     ManagedOccurrenceBinding.derived(
@@ -3306,7 +3359,7 @@ final class ClosureExecutionSession
 
     private ManagedOccurrenceBinding reconcileManagedRevision(
             ManagedOccurrenceBinding binding,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         Node value = NodePathEditor.getOrNull(
                 latestBodies.get(binding.sourceDocumentId()),
                 binding.sourcePath());
@@ -3343,6 +3396,12 @@ final class ClosureExecutionSession
                 installedBlueId,
                 caughtUp,
                 caughtUp ? null : Long.valueOf(revision.toEpoch()));
+        if (!caughtUp && revision instanceof ManagedRepresentationCause) {
+            ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
+            reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(
+                    representation.transition().anchorReceiptIdentity(), representation.transition().positionIdentity(),
+                    representation.targetPositionIdentity(), representation.nextRevisionReceiptIdentity()));
+        }
         if (!binding.occurrenceIdentity().equals(
                 reconciled.occurrenceIdentity())) {
             throw new IllegalStateException(
@@ -3506,7 +3565,7 @@ final class ClosureExecutionSession
                 continue;
             }
             boolean managedRevisionWork = input.cause()
-                    instanceof ManagedRevisionCause
+                    instanceof ManagedHistoryStep
                     && boundary.kind()
                             == TentativeFinalization.Boundary.Kind.WORK;
             if (managedRevisionWork) {
@@ -3602,43 +3661,23 @@ final class ClosureExecutionSession
         }
     }
 
-    private List<ManagedOccurrenceBinding> activeContainingOccurrences(
+    private List<FrozenContainingEventTarget> activeContainingEventTargets(
             DocumentId targetDocumentId) {
-        ArrayList<ManagedOccurrenceBinding> result =
-                new ArrayList<ManagedOccurrenceBinding>();
-        for (ManagedOccurrenceBinding binding : currentBindings) {
-            if (binding.active()
-                    && binding.targetDocumentId().equals(
-                            targetDocumentId)) {
-                result.add(binding);
-            }
-        }
-        Collections.sort(result,
-                new Comparator<ManagedOccurrenceBinding>() {
-                    @Override
-                    public int compare(
-                            ManagedOccurrenceBinding left,
-                            ManagedOccurrenceBinding right) {
-                        int order = left.sourceDocumentId().compareTo(
-                                right.sourceDocumentId());
-                        if (order != 0) {
-                            return order;
-                        }
-                        order = ClosureValueSupport.comparePortableText(
-                                left.sourcePath(), right.sourcePath());
-                        if (order != 0) {
-                            return order;
-                        }
-                        order = Long.compare(
-                                left.activationGeneration(),
-                                right.activationGeneration());
-                        return order != 0 ? order
-                                : ClosureValueSupport.comparePortableText(
-                                        left.occurrenceIdentity(),
-                                        right.occurrenceIdentity());
-                    }
-                });
-        return result;
+        return ContainingEventTargetPlanner.freeze(
+                targetDocumentId,
+                currentBindings,
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .PARTICIPATING_SCOPES_PER_EVENT),
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .RUNTIME_POINTER_SEGMENTS),
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .RUNTIME_POINTER_UTF8_BYTES));
     }
 
     private String transitionIdentity(
@@ -3810,6 +3849,7 @@ final class ClosureExecutionSession
     private static final class PendingWork {
         private final ClosureWorkOccurrence work;
         private final Node exactPayload;
+        private final String matchingEventBlueId;
         private final Node occurrenceEvent;
         private final FrozenJsonPatch processorPatch;
         private final ManagedCheckpointCandidate checkpointCandidate;
@@ -3843,6 +3883,11 @@ final class ClosureExecutionSession
             this.work = Objects.requireNonNull(work, "work");
             this.exactPayload = Objects.requireNonNull(
                     exactPayload, "exactPayload").clone();
+            this.matchingEventBlueId = selectedRoute != null
+                    ? selectedRoute.matchingEventBlueId()
+                    : checkpointCandidate != null
+                    ? checkpointCandidate.payloadBlueId()
+                    : null;
             this.occurrenceEvent = occurrenceEvent == null
                     ? null : occurrenceEvent.clone();
             this.processorPatch = processorPatch;
@@ -3959,23 +4004,22 @@ final class ClosureExecutionSession
         private final String occurrenceIdentity;
         private final DocumentId sourceDocumentId;
         private final Node event;
-        private final List<ManagedOccurrenceBinding> containingTargets;
+        private final ExactEventIdentityEvidence exactEventEvidence;
+        private final List<FrozenContainingEventTarget> containingTargets;
         private final ActiveFrame capturedBy;
         private final boolean imported;
 
         private EmittedOccurrence(
                 long ordinal,
-                String eventBlueId,
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
-                Node event,
-                List<ManagedOccurrenceBinding> containingTargets) {
+                ExactEventIdentityEvidence exactEventEvidence,
+                List<FrozenContainingEventTarget> containingTargets) {
             this(
                     ordinal,
-                    eventBlueId,
                     occurrenceIdentity,
                     sourceDocumentId,
-                    event,
+                    exactEventEvidence,
                     containingTargets,
                     activeFrame(),
                     false);
@@ -3983,23 +4027,23 @@ final class ClosureExecutionSession
 
         private EmittedOccurrence(
                 long ordinal,
-                String eventBlueId,
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
-                Node event,
-                List<ManagedOccurrenceBinding> containingTargets,
+                ExactEventIdentityEvidence exactEventEvidence,
+                List<FrozenContainingEventTarget> containingTargets,
                 ActiveFrame capturedBy,
                 boolean imported) {
             this.ordinal = ordinal;
-            this.eventBlueId = Objects.requireNonNull(
-                    eventBlueId, "eventBlueId");
+            this.exactEventEvidence = Objects.requireNonNull(
+                    exactEventEvidence, "exactEventEvidence");
+            this.eventBlueId = this.exactEventEvidence.eventBlueId();
             this.occurrenceIdentity = Objects.requireNonNull(
                     occurrenceIdentity, "occurrenceIdentity");
             this.sourceDocumentId = Objects.requireNonNull(
                     sourceDocumentId, "sourceDocumentId");
-            this.event = Objects.requireNonNull(event, "event").clone();
+            this.event = this.exactEventEvidence.event();
             this.containingTargets = Collections.unmodifiableList(
-                    new ArrayList<ManagedOccurrenceBinding>(
+                    new ArrayList<FrozenContainingEventTarget>(
                             Objects.requireNonNull(
                                     containingTargets,
                                     "containingTargets")));

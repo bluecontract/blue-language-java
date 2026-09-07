@@ -49,6 +49,12 @@ final class DocumentProcessorNodeOperations {
                 return support.processAdmitted(
                         admission, admittedRoot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = admission.materializeTopLevel(
                     event, PROCESSING_EVENT_LABEL).node();
             ExternalDeliveryPlan plan =
@@ -58,7 +64,10 @@ final class DocumentProcessorNodeOperations {
                     admission, admittedRoot, plan.deliveries());
             VerifiedExecutionEvidence evidence =
                     support.bindAndVerifyDerived(
-                            admittedRoot.node(), admittedEvent, plan);
+                            admittedRoot.node(),
+                            admittedEvent,
+                            sourceIdentities,
+                            plan);
             return support.processAdmitted(
                     admission,
                     admittedRoot,
@@ -93,15 +102,23 @@ final class DocumentProcessorNodeOperations {
                 return support.processAdmitted(
                         admission, admittedRoot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = admission.materializeTopLevel(
                     event, PROCESSING_EVENT_LABEL).node();
             admittedRoot = support.admitDeliveryScopes(
                     admission,
                     admittedRoot,
                     evidence.deliveries());
-            evidence.revalidate(
+            evidence.revalidateEstablished(
                     admittedRoot.node(),
                     admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier());
             return support.processAdmitted(
@@ -132,11 +149,17 @@ final class DocumentProcessorNodeOperations {
             ProcessingInputAdmission.AdmittedNode admittedRoot =
                     admission.materializeTopLevel(
                             document, PROCESSING_ROOT_LABEL);
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             if (ProcessorEngine.hasDirectRootTerminationEntry(
                     admittedRoot.node())) {
                 evidence.revalidateBinding(
-                        admittedRoot.node(),
-                        event,
+                        sourceIdentities.rootBlueId(),
+                        sourceIdentities.eventBlueId(),
                         processor.runtimeRegistryIdentity());
             } else {
                 Node admittedEvent = admission.materializeTopLevel(
@@ -145,9 +168,11 @@ final class DocumentProcessorNodeOperations {
                         admission,
                         admittedRoot,
                         evidence.deliveries());
-                evidence.revalidate(
+                evidence.revalidateEstablished(
                         admittedRoot.node(),
                         admittedEvent,
+                        sourceIdentities.rootBlueId(),
+                        sourceIdentities.eventBlueId(),
                         processor.runtimeRegistryIdentity(),
                         processor.deliveryEvidenceVerifier());
                 event = admittedEvent;
@@ -187,6 +212,12 @@ final class DocumentProcessorNodeOperations {
                     support.admission(services);
             admission.requireProcessableTopLevel(
                     event, PROCESSING_EVENT_LABEL);
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            services.languageRuntimeAccess(),
+                            services.snapshotManager());
             ProcessingInputAdmission.AdmittedNode admittedRoot =
                     admission.materializeTopLevel(
                             document, PROCESSING_ROOT_LABEL);
@@ -201,6 +232,7 @@ final class DocumentProcessorNodeOperations {
                     admittedEvent,
                     plan,
                     evidence,
+                    sourceIdentities,
                     services);
             return support.platformResult(
                     support.processAdmittedWithTrace(
@@ -237,6 +269,12 @@ final class DocumentProcessorNodeOperations {
                 return support.processAdmittedWithTrace(
                         admission, admittedRoot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = admission.materializeTopLevel(
                     event, PROCESSING_EVENT_LABEL).node();
             ExternalDeliveryPlan plan =
@@ -246,7 +284,10 @@ final class DocumentProcessorNodeOperations {
                     admission, admittedRoot, plan.deliveries());
             VerifiedExecutionEvidence evidence =
                     support.bindAndVerifyDerived(
-                            admittedRoot.node(), admittedEvent, plan);
+                            admittedRoot.node(),
+                            admittedEvent,
+                            sourceIdentities,
+                            plan);
             return support.processAdmittedWithTrace(
                     admission,
                     admittedRoot,
@@ -287,15 +328,23 @@ final class DocumentProcessorNodeOperations {
                 return support.processAdmittedWithTrace(
                         admission, admittedRoot, event, null);
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = admission.materializeTopLevel(
                     event, PROCESSING_EVENT_LABEL).node();
             admittedRoot = support.admitDeliveryScopes(
                     admission,
                     admittedRoot,
                     evidence.deliveries());
-            evidence.revalidate(
+            evidence.revalidateEstablished(
                     admittedRoot.node(),
                     admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier());
             return support.processAdmittedWithTrace(
@@ -337,14 +386,20 @@ final class DocumentProcessorNodeOperations {
                                 event,
                                 null));
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             Node admittedEvent = admission.materializeTopLevel(
                     event, PROCESSING_EVENT_LABEL).node();
             ExternalDeliveryPlan plan =
                     support.deriveExternalDeliveryPlan(
                             admittedRoot.node(), admittedEvent);
             VerifiedExecutionEvidence evidence = plan.bind(
-                    admittedRoot.node(),
-                    admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity());
             return support.completeAttempt(
                     document,
@@ -352,6 +407,7 @@ final class DocumentProcessorNodeOperations {
                     admittedRoot,
                     admittedEvent,
                     evidence,
+                    sourceIdentities,
                     plan);
         } catch (ExecutionEvidenceUnavailableException exception) {
             return support.needsResources(exception);
@@ -386,10 +442,16 @@ final class DocumentProcessorNodeOperations {
                                 event,
                                 null));
             }
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities = support.sourceIdentities(
+                            document,
+                            event,
+                            processor.languageRuntimeAccess(),
+                            processor.snapshotManager());
             try {
                 evidence.revalidateBinding(
-                        document,
-                        event,
+                        sourceIdentities.rootBlueId(),
+                        sourceIdentities.eventBlueId(),
                         processor.runtimeRegistryIdentity());
             } catch (InvalidExecutionEvidenceException exception) {
                 return support.invalidAttempt(document, exception);
@@ -399,7 +461,11 @@ final class DocumentProcessorNodeOperations {
             if (!missing.isEmpty()) {
                 return ProcessAttemptResult.needsResources(missing);
             }
-            return completeExplicitAttempt(document, event, evidence);
+            return completeExplicitAttempt(
+                    document,
+                    event,
+                    evidence,
+                    sourceIdentities);
         } catch (SubscriptionSurfaceInvalidException exception) {
             return ProcessAttemptResult.complete(
                     support.subscriptionSurfaceInvalidResult(
@@ -424,7 +490,9 @@ final class DocumentProcessorNodeOperations {
     private ProcessAttemptResult completeExplicitAttempt(
             Node document,
             Node event,
-            VerifiedExecutionEvidence evidence) {
+            VerifiedExecutionEvidence evidence,
+            DocumentProcessorProcessingSupport.SourceIdentityBinding
+                    sourceIdentities) {
         try {
             ProcessingInputAdmission admission = support.admission();
             ProcessingInputAdmission.AdmittedNode admittedRoot =
@@ -445,9 +513,11 @@ final class DocumentProcessorNodeOperations {
                     admission,
                     admittedRoot,
                     evidence.deliveries());
-            evidence.revalidate(
+            evidence.revalidateEstablished(
                     admittedRoot.node(),
                     admittedEvent,
+                    sourceIdentities.rootBlueId(),
+                    sourceIdentities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier());
             return ProcessAttemptResult.complete(

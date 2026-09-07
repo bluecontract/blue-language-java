@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
@@ -219,6 +220,9 @@ final class ScopeExecutor {
                 ? request.exactPayload()
                 : selectedRoute.exactPayload();
         Objects.requireNonNull(exactPayload, "exactPayload");
+        String matchingEventBlueId = selectedRoute == null
+                ? request.matchingEventBlueId()
+                : selectedRoute.matchingEventBlueId();
         ContractBundle.ChannelBinding channel = requireStepChannel(
                 dispatchBundle, channelKey);
         requireStepChannelRole(kind, channel);
@@ -230,20 +234,23 @@ final class ScopeExecutor {
             runtime.chargeLifecycleDelivery();
         }
         if (kind == ManagedDocumentWorkKind.EMBEDDED_EVENT) {
+            Node occurrenceEvent = selectedRoute == null
+                    ? request.occurrenceEvent()
+                    : selectedRoute.occurrenceEvent();
             channelRunner.runHandlers(
                     JsonPointer.ROOT,
                     dispatchBundle,
                     channel.key(),
                     exactPayload,
-                    selectedRoute == null
-                            ? request.occurrenceEvent()
-                            : selectedRoute.occurrenceEvent());
+                    occurrenceEvent,
+                    matchingEventBlueId);
         } else {
             channelRunner.runHandlers(
                     JsonPointer.ROOT,
                     dispatchBundle,
                     channel.key(),
                     exactPayload,
+                    matchingEventBlueId,
                     kind == ManagedDocumentWorkKind.LIFECYCLE);
         }
     }
@@ -254,7 +261,10 @@ final class ScopeExecutor {
         if (request.workKind() != selectedRoute.workKind()
                 || !Objects.equals(
                         request.channelKey(),
-                        selectedRoute.channelKey())) {
+                        selectedRoute.channelKey())
+                || !Objects.equals(
+                        request.matchingEventBlueId(),
+                        selectedRoute.matchingEventBlueId())) {
             throw new InvalidExecutionEvidenceException(
                     "Selected managed route disagrees with accepted routed work",
                     ProcessorErrorCategory.InvalidContractBinding);
@@ -303,7 +313,8 @@ final class ScopeExecutor {
                 valid = contract instanceof TriggeredEventChannel;
                 break;
             case EMBEDDED_EVENT:
-                valid = contract instanceof EmbeddedNodeChannel;
+                valid = contract instanceof EmbeddedNodeChannel
+                        || contract instanceof EmbeddedCollectionEventChannel;
                 break;
             case LIFECYCLE:
                 valid = contract instanceof LifecycleChannel;
@@ -369,21 +380,21 @@ final class ScopeExecutor {
         while (true) {
             ProcessingObserver metrics = owner.observer();
             long resolvedStart = System.nanoTime();
-            FrozenNode scopeNode;
+            ResolvedScopeView scopeView;
             try {
-                scopeNode = runtime.resolvedFrozenAt(normalizedScope);
+                scopeView = runtime.scopeViewAt(normalizedScope);
             } finally {
                 ProcessingObservations.record(
                         metrics,
                         ProcessingMetricId.BUNDLE_SCOPE_RESOLVED_LOOKUP_NANOS,
                         System.nanoTime() - resolvedStart);
             }
-            if (scopeNode == null) {
+            if (scopeView == null || scopeView.resolved() == null) {
                 return;
             }
 
             bundle = frameFactory.load(
-                    scopeNode,
+                    scopeView,
                     normalizedScope,
                     metrics);
             participation.participate(normalizedScope, bundle);

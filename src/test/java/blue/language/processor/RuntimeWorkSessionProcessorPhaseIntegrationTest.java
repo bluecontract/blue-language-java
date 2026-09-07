@@ -151,6 +151,29 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
     }
 
     @Test
+    void shouldCloseHandlerMatchSessionWhenRegisteredMatcherFails() {
+        // given
+        SessionRecorder recorder = new SessionRecorder();
+        RuntimeException matchFailure =
+                new IllegalStateException("hosted handler match failed");
+
+        // when
+        ProcessorPhaseRun run = executeProcessorScenario(
+                recorder, matchFailure);
+
+        // then
+        assertEquals(
+                ProcessorStatus.RUNTIME_FATAL,
+                run.debug.processResult().status(),
+                diagnostic(run.debug.processResult()));
+        assertTrue(diagnostic(run.debug.processResult()).contains(
+                matchFailure.getMessage()));
+        assertTrue(
+                recorder.allSessionsClosed(),
+                "failed handler matching must close every supplied session");
+    }
+
+    @Test
     void shouldMergeNestedRuntimeLedgersOnceInCanonicalNamespaceOrder() {
         // given
         SessionRecorder recorder = new SessionRecorder();
@@ -188,10 +211,16 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
 
     private static ProcessorPhaseRun executeProcessorScenario(
             SessionRecorder recorder) {
+        return executeProcessorScenario(recorder, null);
+    }
+
+    private static ProcessorPhaseRun executeProcessorScenario(
+            SessionRecorder recorder,
+            RuntimeException matchFailure) {
         PhaseChannelProcessor channelProcessor =
                 new PhaseChannelProcessor(recorder);
         PhaseHandlerProcessor handlerProcessor =
-                new PhaseHandlerProcessor(recorder);
+                new PhaseHandlerProcessor(recorder, matchFailure);
         try (DocumentProcessor owner =
                      DocumentProcessor.builder()
                              .registerContractProcessor(
@@ -507,10 +536,13 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
             implements HandlerProcessor<PhaseHandler> {
 
         private final SessionRecorder recorder;
+        private final RuntimeException matchFailure;
 
         private PhaseHandlerProcessor(
-                SessionRecorder recorder) {
+                SessionRecorder recorder,
+                RuntimeException matchFailure) {
             this.recorder = recorder;
+            this.matchFailure = matchFailure;
         }
 
         @Override
@@ -534,6 +566,9 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
                 HandlerMatchContext context) {
             recorder.chargeNestedMatch(
                     context.runtimeWorkSession());
+            if (matchFailure != null) {
+                throw matchFailure;
+            }
             return true;
         }
 

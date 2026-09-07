@@ -355,7 +355,7 @@ Every program under [`examples/src/main/java`](examples/src/main/java) has a
 The repository contains the exact Language and Contracts specifications and
 the complete frozen conformance corpus required by the build. No sibling
 repository or external specification checkout is required. The conformance
-resources bind **153 Language fixtures** and **276 Contracts fixtures**, exact
+resources bind **182 Language fixtures** and **295 Contracts fixtures**, exact
 specification/package identities, Java 8 bytecode, API baselines, Javadocs,
 runnable examples, benchmark smoke runs, package/module cycles,
 fragmented/locality assertions, and reproducible binary/source artifacts.

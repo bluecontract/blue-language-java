@@ -113,7 +113,6 @@ Operational host metrics are non-semantic: they do not affect BlueIds, portable 
 | `INCREMENTAL_MERGER_CAPABILITY_REQUESTS` | `incrementalMergerCapabilityRequests` | `COUNTER_DELTA` | — |
 | `INCREMENTAL_SNAPSHOT_RESOLUTIONS` | `incrementalSnapshotResolutions` | `COUNTER_DELTA` | — |
 | `INITIALIZATION_DOCUMENT_ID_CANONICAL_MATERIALIZATIONS` | `initializationDocumentIdCanonicalMaterializations` | `COUNTER_DELTA` | — |
-| `INITIALIZATION_DOCUMENT_ID_CONTENT_BLUE_ID_CALCULATIONS` | `initializationDocumentIdContentBlueIdCalculations` | `COUNTER_DELTA` | — |
 | `INITIALIZATION_DOCUMENT_ID_FROZEN_UNCHECKED_CALCULATIONS` | `initializationDocumentIdFrozenUncheckedCalculations` | `COUNTER_DELTA` | — |
 | `INITIALIZATION_DOCUMENT_ID_NODE_MATERIALIZATIONS` | `initializationDocumentIdNodeMaterializations` | `COUNTER_DELTA` | — |
 | `INITIALIZATION_DOCUMENT_ID_UNCHECKED_CALCULATIONS` | `initializationDocumentIdUncheckedCalculations` | `COUNTER_DELTA` | — |
@@ -190,4 +189,4 @@ Operational host metrics are non-semantic: they do not affect BlueIds, portable 
 | `TRIGGERED_EVENT_ROUTING_NANOS` | `triggeredEventRoutingNanos` | `COUNTER_DELTA` | — |
 | `TRIGGERED_EVENTS_ROUTED` | `triggeredEventsRouted` | `COUNTER_DELTA` | — |
 
-Total closed metric ids: **181**.
+Total closed metric ids: **180**.

@@ -62,7 +62,7 @@ public final class BlueIdInputNormalizer {
                     "Root null is not valid BlueId input.");
         }
         if (input instanceof Map) {
-            return cleanMap(castMap(input), true);
+            return cleanMap(castMap(input), true, false);
         }
         if (input instanceof List) {
             return cleanList(castList(input));
@@ -106,8 +106,7 @@ public final class BlueIdInputNormalizer {
             return null;
         }
         if (value instanceof Map) {
-            Map<String, Object> cleaned = cleanMap(castMap(value), false);
-            return cleaned.isEmpty() ? null : cleaned;
+            return cleanMap(castMap(value), false, false);
         }
         if (value instanceof List) {
             return cleanList(castList(value));
@@ -125,15 +124,7 @@ public final class BlueIdInputNormalizer {
             if (map.containsKey(LIST_CONTROL_EMPTY)) {
                 validateEmptyPlaceholder(map);
             }
-            if (map.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Direct BlueId input must use { \"$empty\": true } for empty object list placeholders.");
-            }
-            Map<String, Object> cleaned = cleanMap(map, false);
-            if (cleaned.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Direct BlueId input must use { \"$empty\": true } for empty object list placeholders.");
-            }
+            Map<String, Object> cleaned = cleanMap(map, false, true);
             return cleaned;
         }
         if (value instanceof List) {
@@ -144,16 +135,17 @@ public final class BlueIdInputNormalizer {
 
     private Map<String, Object> cleanMap(
             Map<String, Object> map,
-            boolean root) {
-        if (map.containsKey(LIST_CONTROL_POS)) {
+            boolean root,
+            boolean listElement) {
+        if (listElement && map.containsKey(LIST_CONTROL_POS)) {
             throw new IllegalArgumentException(
                     "\"$pos\" overlays are not valid direct BlueId input.");
         }
-        if (map.containsKey(LIST_CONTROL_REPLACE)) {
+        if (listElement && map.containsKey(LIST_CONTROL_REPLACE)) {
             throw new IllegalArgumentException(
                     "\"$replace\" overlays are not valid direct BlueId input.");
         }
-        if (map.containsKey(LIST_CONTROL_PREVIOUS)
+        if (listElement && map.containsKey(LIST_CONTROL_PREVIOUS)
                 && !isPreviousControl(map)) {
             throw new IllegalArgumentException(
                     "\"$previous\" must have shape { blueId: <PrevListBlueId> } and appear only as the first list item.");

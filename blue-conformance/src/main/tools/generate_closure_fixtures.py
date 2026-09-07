@@ -24,15 +24,15 @@ from blue_identity import (  # noqa: E402
 )
 from gas_reference import gas_trace_identity  # noqa: E402
 
-PE = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+PE = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 SEC = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
-SH = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
+SH = "9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8"
 TEC = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
 ENC = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 FE = "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX"
 INITIALIZED_MARKER = "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
 TERMINATED_MARKER = "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v"
-CHECKPOINT_MARKER = "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR"
+CHECKPOINT_MARKER = "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
 
 FIXTURE_DIR = ROOT / "conformance/contracts/fixtures/closure"
 ORACLE_DIR = ROOT / "conformance/contracts/oracles"
@@ -772,8 +772,11 @@ def generate() -> None:
     dump(FIXTURE_DIR/"c-clo-17-limit-above-bound.yaml",base_fixture("c-clo-17-limit-above-bound",["C-CLO-17"],"limits","admit-closure","The first member count above the exact configured bound is rejected before member execution.","static-and-self-cycle.yaml",limit_over,over_expected))
 
     # Locality.
-    loc_input=deepcopy(admit_input);loc_input["unrelatedDocumentCount"]=1000;loc_input["requestedProviderNodes"]=simple_ids
-    loc_expected=deepcopy(admit_expected);loc_expected["providerLoads"]=list(simple_ids);loc_expected["unrelatedDocumentsOpened"]=0
+    # Both cyclic members are exact invocation documents, so admitting this
+    # closure must not fetch them again through the external node provider.
+    # Locality is witnessed by the closed unrelated-document counter instead.
+    loc_input=deepcopy(admit_input);loc_input["unrelatedDocumentCount"]=1000
+    loc_expected=deepcopy(admit_expected);loc_expected["unrelatedDocumentsOpened"]=0
     dump(FIXTURE_DIR/"c-clo-18-locality-1000-unrelated.yaml",base_fixture("c-clo-18-locality-1000-unrelated",["C-CLO-18"],"locality","admit-closure","A two-member cyclic component among 1,000 unrelated documents opens only the exact component and required containing spine.","static-and-self-cycle.yaml",loc_input,loc_expected))
 
     # Public events under outer root and late rollback (structural exact scenario).

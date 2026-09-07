@@ -3,6 +3,8 @@ package blue.language.matching;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.NodeToBlueIdInput;
 import blue.language.resolve.ResolutionLimits;
@@ -63,15 +65,36 @@ public class NodeTypeMatcher {
         }
 
         try {
-            Node targetPatternNode = runtime.preprocessForMatching(
-                    targetType.clone());
-            ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
-            FrozenNode resolvedNode = FrozenNode.fromResolvedNode(resolveForMatching(node, matchingLimits));
-            FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
-            return matcherFor(globalLimits).matchesType(resolvedNode, targetPattern);
+            return matchesTypeOrThrow(node, targetType, globalLimits);
         } catch (RuntimeException ex) {
             return false;
         }
+    }
+
+    /**
+     * Matches exact authored content while propagating unavailable or invalid
+     * provider evidence to a hosted caller. Resolution remains target-driven.
+     *
+     * @param node canonical authored candidate
+     * @param targetType authored type or shape pattern
+     * @param globalLimits caller resolution limits, or null for no extra limit
+     * @return whether the established candidate satisfies the pattern
+     * @throws RuntimeException when candidate or required evidence is invalid or unavailable
+     */
+    public boolean matchesTypeOrThrow(Node node, Node targetType,
+                                      ResolutionLimits globalLimits) {
+        if (targetType == null) return true;
+        if (node == null) return false;
+        Node targetPatternNode = runtime.preprocessForMatching(
+                targetType.clone());
+        ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
+        MatchingCandidate resolved = resolveForMatching(
+                node, matchingLimits);
+        FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
+        return matcherFor(
+                globalLimits,
+                resolved.canonicalTypeIdentities)
+                .matchesType(resolved.node, targetPattern);
     }
 
     /**
@@ -97,10 +120,17 @@ public class NodeTypeMatcher {
         if (snapshot == null) {
             return false;
         }
-        return matchesResolvedType(snapshot.resolvedAt(pointer), resolvedTargetType);
+        FrozenNode resolved = snapshot.resolvedAt(pointer);
+        return new FrozenTypeMatcher(
+                runtime,
+                true,
+                snapshot.canonicalTypeIdentities())
+                .matchesType(resolved, resolvedTargetType);
     }
 
-    private Node resolveForMatching(Node node, ResolutionLimits limits) {
+    private MatchingCandidate resolveForMatching(
+            Node node,
+            ResolutionLimits limits) {
         /*
          * Mutable compatibility callers may supply a verified materialization
          * produced by a provider or snapshot. Its attached identity is
@@ -111,89 +141,102 @@ public class NodeTypeMatcher {
         Node original = runtime.preprocessForMatching(sourceProjection);
         Node expanded = original.clone();
         runtime.expandForMatching(expanded, limits);
-        Node resolved = runtime.resolveForMatching(expanded, limits);
-        restoreMissingStructure(resolved, expanded);
-        return resolved;
+        TypeEvidenceResolution resolution = Objects.requireNonNull(
+                runtime.resolveTypeEvidenceForMatching(expanded, limits),
+                "matching resolution");
+        return new MatchingCandidate(
+                resolution.resolvedRoot(),
+                resolution.canonicalTypeIdentities());
     }
 
     private ResolutionLimits matchingLimits(ResolutionLimits globalLimits, Node targetPattern) {
         ResolutionLimits effectiveGlobalLimits = globalLimits != null ? globalLimits : ResolutionLimits.NO_LIMITS;
-        return ResolutionLimits.allOf(effectiveGlobalLimits, new TargetPatternLimits(targetPattern));
+        ResolutionLimits demandedPaths = ResolutionLimits.allOf(
+                effectiveGlobalLimits,
+                new TargetPatternLimits(targetPattern));
+        return new SourcePreservingMatchingLimits(demandedPaths);
     }
 
-    private FrozenTypeMatcher matcherFor(ResolutionLimits globalLimits) {
-        if (globalLimits == null || globalLimits == ResolutionLimits.NO_LIMITS) {
-            return frozenMatcher;
-        }
-        return new FrozenTypeMatcher(runtime, false);
+    private FrozenTypeMatcher matcherFor(
+            ResolutionLimits globalLimits,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        boolean resolveCandidateReferences = globalLimits == null
+                || globalLimits == ResolutionLimits.NO_LIMITS;
+        return new FrozenTypeMatcher(
+                runtime,
+                resolveCandidateReferences,
+                canonicalTypeIdentities);
     }
 
-    private void restoreMissingStructure(Node target, Node source) {
-        if (target == null || source == null) {
-            return;
-        }
+    private static final class MatchingCandidate {
+        private final FrozenNode node;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
-        restoreItems(target, source);
-        restoreProperties(target, source);
-
-        if (target.getBlueId() == null && source.getBlueId() != null) {
-            target.blueId(source.getBlueId());
-        }
-        if (target.getValue() == null && source.getValue() != null) {
-            target.value(source.getValue());
-        }
-    }
-
-    private void restoreItems(Node target, Node source) {
-        List<Node> sourceItems = source.getItems();
-        if (sourceItems == null) {
-            return;
-        }
-        List<Node> targetItems = target.getItems();
-        if (targetItems == null || targetItems.isEmpty()) {
-            target.items(cloneItems(sourceItems));
-            return;
-        }
-        int commonSize = Math.min(targetItems.size(), sourceItems.size());
-        for (int i = 0; i < commonSize; i++) {
-            restoreMissingStructure(targetItems.get(i), sourceItems.get(i));
+        private MatchingCandidate(
+                FrozenNode node,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+            this.node = Objects.requireNonNull(node, "node");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities,
+                    "canonicalTypeIdentities");
         }
     }
 
-    private List<Node> cloneItems(List<Node> items) {
-        java.util.ArrayList<Node> cloned = new java.util.ArrayList<>(items.size());
-        for (Node item : items) {
-            cloned.add(item.clone());
-        }
-        return cloned;
-    }
+    /**
+     * Retains every authored branch as exact Source while allowing expansion
+     * only where both the caller and target pattern demand it.
+     *
+     * <p>Resolution therefore produces valid semantic Blue content even when
+     * the target selects no candidate path. An unselected branch is cloned at
+     * the resolver's existing cold boundary; it is never fetched,
+     * interpreted, or confused with the exact empty-object value
+     * {@code {}}.</p>
+     */
+    private static final class SourcePreservingMatchingLimits
+            implements ResolutionLimits {
+        private final ResolutionLimits demandedPaths;
 
-    private void restoreProperties(Node target, Node source) {
-        Map<String, Node> sourceProperties = source.getProperties();
-        if (sourceProperties == null) {
-            return;
+        private SourcePreservingMatchingLimits(
+                ResolutionLimits demandedPaths) {
+            this.demandedPaths = Objects.requireNonNull(
+                    demandedPaths, "demandedPaths");
         }
-        Map<String, Node> targetProperties = target.getProperties();
-        if (targetProperties == null) {
-            target.properties(cloneProperties(sourceProperties));
-            return;
-        }
-        for (Map.Entry<String, Node> entry : sourceProperties.entrySet()) {
-            Node targetChild = targetProperties.get(entry.getKey());
-            if (targetChild == null) {
-                targetProperties.put(entry.getKey(), entry.getValue().clone());
-            } else {
-                restoreMissingStructure(targetChild, entry.getValue());
-            }
-        }
-    }
 
-    private Map<String, Node> cloneProperties(Map<String, Node> properties) {
-        java.util.LinkedHashMap<String, Node> cloned = new java.util.LinkedHashMap<>();
-        for (Map.Entry<String, Node> entry : properties.entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue().clone());
+        @Override
+        public boolean shouldExpandPathSegment(
+                String pathSegment, Node currentNode) {
+            return demandedPaths.shouldExpandPathSegment(
+                    pathSegment, currentNode);
         }
-        return cloned;
+
+        @Override
+        public boolean shouldMergePathSegment(
+                String pathSegment, Node currentNode) {
+            return true;
+        }
+
+        @Override
+        public boolean shouldReconstructList(
+                Node currentNode, List<Node> items) {
+            return demandedPaths.shouldReconstructList(
+                    currentNode, items);
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return true;
+        }
+
+        @Override
+        public void enterPathSegment(
+                String pathSegment, Node currentNode) {
+            demandedPaths.enterPathSegment(pathSegment, currentNode);
+        }
+
+        @Override
+        public void exitPathSegment() {
+            demandedPaths.exitPathSegment();
+        }
     }
 
     private static final class TargetPatternLimits implements ResolutionLimits {
@@ -220,12 +263,6 @@ public class NodeTypeMatcher {
                     && !currentNode.getBlueId().equals(targetAtPath.node.getBlueId());
         }
 
-        /** Legacy binary-API spelling delegated to the canonical method. */
-        @Override
-        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-            return shouldExpandPathSegment(pathSegment, currentNode);
-        }
-
         @Override
         public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
             return targetAtForMerge(candidatePath(pathSegment)) != null;
@@ -241,6 +278,11 @@ public class NodeTypeMatcher {
             return targetItems != null
                     && targetItems.size() > items.size()
                     && shouldAttemptBundleReconstruction(items, targetItems);
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return false;
         }
 
         @Override

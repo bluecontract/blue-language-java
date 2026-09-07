@@ -2,14 +2,14 @@ name: Contract Execution Result
 description: Normalized result of one selected Channel or Handler runtime. The processor applies runtime ledger, patches, emitted events, and termination under the Contracts 1.0 atomic invocation rules.
 patches:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   itemType:
     blueId: 5UihWoxkyiUbv9TZk7HcHsa82sz2R3ex1WifQQpKtHpP
 events:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
 runtimeLedger:
   type:
-    blueId: EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2
+    blueId: D8eB7VDLhpQJmcf1UYtHF9ShTdZoW5xYGKWSgs4f4Jqh
 termination:
   description: Optional one-time termination request.

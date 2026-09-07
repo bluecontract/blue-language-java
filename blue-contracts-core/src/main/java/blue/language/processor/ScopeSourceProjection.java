@@ -1,12 +1,13 @@
 package blue.language.processor;
 
-import blue.language.model.Node;
-import blue.language.snapshot.FrozenNode;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.CanonicalIdentityInputBuilder;
-import blue.language.model.wire.JsonPointer;
+import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.JsonPointer;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +57,7 @@ final class ScopeSourceProjection {
         Node selectedContribution = selectedScopeContribution != null
                 ? selectedScopeContribution.toNode()
                 : null;
-        FrozenNode canonicalFragment = captured.canonicalAt(normalizedScope);
+        FrozenNode sourceFragment = captured.sourceAt(normalizedScope);
 
         // Prefer the actually selected Phase 1 contribution. For Node-backed
         // processing this is already a real Source-equivalent subtree and is
@@ -68,7 +69,8 @@ final class ScopeSourceProjection {
                 : null;
         if (standaloneSource != null) {
             makeStandaloneRoot(standaloneSource, selectedContribution,
-                    canonicalFragment, capturedResolvedScope);
+                    sourceFragment, capturedResolvedScope,
+                    captured.canonicalTypeIdentities());
         }
 
         ResolvedSnapshot projected = null;
@@ -93,22 +95,23 @@ final class ScopeSourceProjection {
         }
 
         if (projected == null) {
-            // A ResolvedSnapshot exposes Canonical Identity Input, which §13.2
-            // does not require to be valid Source overlay syntax (final inherited
-            // lists are the important example). Start from captured canonical
-            // provenance, augment the parent-supplied root context, and derive
-            // the desired standalone canonical overlay. Convert only final
-            // inherited lists back to valid Source controls; never use the
-            // general author-facing resolved-view minimizer as an identity
-            // reconstruction oracle.
-            Node canonicalSeed = canonicalFragment != null
-                    ? canonicalFragment.toNode()
+            // Start from the captured exact input lane, augment the
+            // parent-supplied root context, and derive the desired standalone
+            // canonical overlay. Convert only final inherited lists back to
+            // valid Source controls; never use the general author-facing
+            // resolved-view minimizer as an identity reconstruction oracle.
+            Node sourceSeed = sourceFragment != null
+                    ? sourceFragment.toNode()
                     : new Node();
-            makeStandaloneRoot(canonicalSeed, selectedContribution,
-                    canonicalFragment, capturedResolvedScope);
-            Node desiredStandaloneCanonical =
-                    new CanonicalIdentityInputBuilder().build(
-                            capturedResolvedScope.toNode(), canonicalSeed);
+            makeStandaloneRoot(sourceSeed, selectedContribution,
+                    sourceFragment, capturedResolvedScope,
+                    captured.canonicalTypeIdentities());
+            Node desiredStandaloneCanonical = CanonicalIdentityEvidence
+                    .projectResolvedGraph(
+                            capturedResolvedScope.toNode(),
+                            sourceSeed,
+                            captured.canonicalTypeIdentities())
+                    .toNode();
             standaloneSource = sourceifyCanonicalFinalLists(
                     desiredStandaloneCanonical,
                     capturedResolvedScope.toNode(),
@@ -116,7 +119,8 @@ final class ScopeSourceProjection {
                             ? capturedResolvedScope.getType().toNode()
                             : null);
             makeStandaloneRoot(standaloneSource, selectedContribution,
-                    canonicalFragment, capturedResolvedScope);
+                    sourceFragment, capturedResolvedScope,
+                    captured.canonicalTypeIdentities());
             try {
                 projected = Objects.requireNonNull(
                         manager.fromDocumentTransient(standaloneSource.clone()),
@@ -149,76 +153,110 @@ final class ScopeSourceProjection {
         }
         return new ScopeSourceProjection(
                 normalizedScope,
-                FrozenNode.fromResolvedNode(standaloneSource),
+                FrozenNode.fromSourceNode(standaloneSource),
                 projected);
     }
 
     private static void makeStandaloneRoot(Node standaloneSource,
                                            Node selectedContribution,
-                                           FrozenNode canonicalFragment,
-                                           FrozenNode capturedResolvedScope) {
+                                           FrozenNode sourceFragment,
+                                           FrozenNode capturedResolvedScope,
+                                           CanonicalTypeIdentityLookup
+                                                   typeIdentities) {
         if (standaloneSource.isReferenceOnly()) {
             return;
         }
 
-        Node canonical = canonicalFragment != null ? canonicalFragment.toNode() : null;
-        if (canonical != null && canonical.isReferenceOnly()) {
-            standaloneSource.replaceWith(canonical);
+        Node source = sourceFragment != null ? sourceFragment.toNode() : null;
+        if (source != null && source.isReferenceOnly()) {
+            standaloneSource.replaceWith(source);
             return;
         }
 
         Node effectiveType = capturedResolvedScope.getType() != null
                 ? capturedResolvedScope.getType().toNode()
                 : null;
-        if ((standaloneSource.getType() == null
-                || Nodes.isEmptyNode(standaloneSource.getType()))
+        Node selectedType = standaloneSource.getType();
+        boolean mixedBlueIdMetadata = selectedType != null
+                && selectedType.getBlueId() != null
+                && !selectedType.isReferenceOnly();
+        if ((selectedType == null
+                || Nodes.isEmptyNode(selectedType)
+                || mixedBlueIdMetadata)
                 && effectiveType != null) {
-            standaloneSource.type(referenceOrInline(effectiveType));
+            standaloneSource.type(sourceType(
+                    effectiveType,
+                    Objects.requireNonNull(
+                            typeIdentities, "typeIdentities")));
         }
 
         String selectedName = selectedContribution != null
                 ? selectedContribution.getName()
                 : null;
-        String canonicalName = canonical != null ? canonical.getName() : null;
+        String sourceName = source != null ? source.getName() : null;
         if (standaloneSource.getName() == null) {
             standaloneSource.name(selectedName != null
                     ? selectedName
-                    : canonicalName != null ? canonicalName : capturedResolvedScope.getName());
+                    : sourceName != null ? sourceName : capturedResolvedScope.getName());
         }
         String selectedDescription = selectedContribution != null
                 ? selectedContribution.getDescription()
                 : null;
-        String canonicalDescription = canonical != null ? canonical.getDescription() : null;
+        String sourceDescription = source != null
+                ? source.getDescription()
+                : null;
         if (standaloneSource.getDescription() == null) {
             standaloneSource.description(selectedDescription != null
                     ? selectedDescription
-                    : canonicalDescription != null
-                    ? canonicalDescription
+                    : sourceDescription != null
+                    ? sourceDescription
                     : capturedResolvedScope.getDescription());
         }
 
+        Node capturedContracts = capturedResolvedScope.getContracts() != null
+                ? capturedResolvedScope.getContracts().toNode()
+                : null;
         Node selectedContracts = selectedContribution != null
                 ? selectedContribution.getContracts()
                 : null;
-        if (selectedContracts != null
-                && Nodes.isEmptyNode(selectedContracts)
-                && standaloneSource.getContracts() == null) {
-            standaloneSource.contracts(new Node());
-        }
-        if (capturedResolvedScope.getContracts() != null
-                && Nodes.isEmptyNode(capturedResolvedScope.getContracts().toNode())
-                && standaloneSource.getContracts() == null) {
-            // Empty contracts are hash-neutral but observable in the selected
-            // resolved scope. Retain them so the projection proof compares the
-            // complete structural view rather than a cleaned approximation.
-            standaloneSource.contracts(new Node());
+        Node sourceContracts = source != null ? source.getContracts() : null;
+        boolean observableEmptyContracts =
+                Nodes.isExactEmptyObject(selectedContracts)
+                || Nodes.isExactEmptyObject(sourceContracts)
+                || Nodes.isExactEmptyObject(capturedContracts);
+        Node standaloneContracts = standaloneSource.getContracts();
+        if (observableEmptyContracts
+                && (standaloneContracts == null
+                || Nodes.isBareFieldlessBuilder(standaloneContracts))) {
+            // An explicitly present empty contracts object is observable in
+            // the selected resolved scope. Retain its exact object shape so
+            // the projection proof compares the complete structural view.
+            standaloneSource.contracts(Nodes.emptyObject());
         }
     }
 
-    private static Node referenceOrInline(Node effectiveType) {
-        return effectiveType.getBlueId() != null
-                ? new Node().blueId(effectiveType.getBlueId())
-                : effectiveType.clone();
+    private static Node sourceType(
+            Node effectiveType,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        CanonicalTypeIdentityEvidence evidence = typeIdentities
+                .findCanonicalTypeIdentityEvidence(
+                        Objects.requireNonNull(
+                                effectiveType, "effectiveType"))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Standalone scope projection requires canonical "
+                                + "effective-type identity evidence"));
+        if (effectiveType.isReferenceOnly()
+                || evidence.hasReferenceSource()) {
+            return new Node().blueId(evidence.blueId());
+        }
+        Node authoredInline = evidence.authoredTypeSource();
+        if (authoredInline == null) {
+            throw new IllegalStateException(
+                    "Standalone scope projection cannot reconstruct an "
+                            + "inline effective type without authored Source "
+                            + "evidence");
+        }
+        return authoredInline;
     }
 
     private static boolean sameCompletedResolvedStructure(FrozenNode left,

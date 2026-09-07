@@ -1,6 +1,8 @@
 package blue.language.resolve;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
 
@@ -20,15 +22,22 @@ public final class MinimizedOverlayBuilder {
     }
 
     /**
-     * Returns a new minimized author-facing overlay.
+     * Returns a minimized overlay for a resolved subtree whose canonical type
+     * evidence was issued by the same complete resolution.
      *
-     * @param resolvedNode completed resolved node to reconstruct
-     * @return new minimized overlay
-     * @throws NullPointerException if {@code resolvedNode} is {@code null}
+     * @param resolvedNode immutable completed subtree
+     * @param typeIdentities resolver-issued effective-type evidence
+     * @return mutable minimized author-facing overlay
+     * @throws NullPointerException if an argument is null
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable
      */
-    public Node build(Node resolvedNode) {
+    public Node build(
+            FrozenNode resolvedNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Objects.requireNonNull(resolvedNode, "resolvedNode");
-        return new MinimizedOverlayReconstructor()
-                .reconstruct(resolvedNode);
+        return new MinimizedOverlayReconstructor(
+                Objects.requireNonNull(typeIdentities, "typeIdentities"))
+                .reconstruct(resolvedNode.toNode());
     }
 }

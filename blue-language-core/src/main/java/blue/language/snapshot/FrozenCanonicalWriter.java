@@ -9,6 +9,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.SchemaEnumCanonicalizer;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -302,6 +303,10 @@ public final class FrozenCanonicalWriter {
     private static void writeSchema(Schema schema,
                                     CanonicalByteSink sink,
                                     Mode mode) {
+        if (schema.isReferenceOnly()) {
+            writeReference(schema.getBlueId(), sink);
+            return;
+        }
         List<String> keys = new ArrayList<>();
         if (schema.getRequired() != null && schema.getRequiredValue() != null) keys.add(KEY_REQUIRED);
         if (schema.getMinLength() != null && schema.getMinLength().getValue() != null) keys.add(KEY_MIN_LENGTH);
@@ -395,13 +400,33 @@ public final class FrozenCanonicalWriter {
     static boolean isPlainScalar(Node node) {
         return node != null && node.getValue() != null
                 && node.getName() == null && node.getDescription() == null
-                && node.getType() == null && node.getItemType() == null
+                && isImplicitScalarType(node.getType(), node.getValue())
+                && node.getItemType() == null
                 && node.getKeyType() == null && node.getValueType() == null
                 && node.getItems() == null && node.getProperties() == null
                 && node.getContracts() == null && node.getBlueId() == null
                 && node.getSchema() == null && node.getMergePolicy() == null
                 && node.getPreviousBlueId() == null && node.getPosition() == null
                 && node.getBlue() == null;
+    }
+
+    private static boolean isImplicitScalarType(
+            Node type, Object value) {
+        if (type == null) {
+            return true;
+        }
+        if (!type.isReferenceOnly()) {
+            return false;
+        }
+        String blueId = type.getBlueId();
+        return (value instanceof Boolean
+                && BOOLEAN_TYPE_BLUE_ID.equals(blueId))
+                || (value instanceof BigInteger
+                && INTEGER_TYPE_BLUE_ID.equals(blueId))
+                || (value instanceof BigDecimal
+                && DOUBLE_TYPE_BLUE_ID.equals(blueId))
+                || (value instanceof String
+                && TEXT_TYPE_BLUE_ID.equals(blueId));
     }
 
     private static void writeReference(String blueId, CanonicalByteSink sink) {

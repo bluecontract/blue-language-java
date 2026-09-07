@@ -1,5 +1,7 @@
 package blue.language.identity;
 
+import blue.language.model.Node;
+import blue.language.model.Nodes;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -123,6 +125,57 @@ class ListBlueIdFoldTest {
 
         // then
         assertEquals(inlineListBlueId, referenceListBlueId);
+    }
+
+    @Test
+    void shouldFoldExactEmptyObjectAndItsPureReferenceIdentically() {
+        // given
+        Node emptyObject = Nodes.emptyObject();
+        String emptyObjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(emptyObject);
+        List<Node> inline = Arrays.asList(
+                new Node().value("A"),
+                emptyObject,
+                new Node().value("B"));
+        List<Node> referenced = Arrays.asList(
+                new Node().value("A"),
+                new Node().blueId(emptyObjectBlueId),
+                new Node().value("B"));
+
+        // when
+        String inlineBlueId =
+                DirectBlueIdCalculator.calculateBlueId(inline);
+        String referencedBlueId =
+                DirectBlueIdCalculator.calculateBlueId(referenced);
+
+        // then
+        assertEquals(inlineBlueId, referencedBlueId);
+    }
+
+    @Test
+    void shouldIncrementallyAppendExactEmptyObjectIdentityInOneFoldStep() {
+        // given
+        String prefixBlueId = DirectBlueIdCalculator.calculateBlueId(
+                Collections.singletonList(new Node().value("A")));
+        String emptyObjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(Nodes.emptyObject());
+        AtomicInteger hashCalls = new AtomicInteger();
+        CanonicalJsonHasher hasher = new CanonicalJsonHasher();
+        ListBlueIdFold fold = new ListBlueIdFold(value -> {
+            hashCalls.incrementAndGet();
+            return hasher.hash(value);
+        });
+
+        // when
+        String appendedBlueId = fold.appendBlueId(
+                prefixBlueId, emptyObjectBlueId);
+
+        // then
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(Arrays.asList(
+                        new Node().value("A"), Nodes.emptyObject())),
+                appendedBlueId);
+        assertEquals(1, hashCalls.get());
     }
 
     @Test

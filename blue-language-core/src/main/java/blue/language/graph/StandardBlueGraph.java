@@ -5,7 +5,7 @@ import blue.language.api.BlueOperationResult;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.NodeIdentities;
 import blue.language.merge.NodeSpecializer;
 
 import java.util.Objects;
@@ -27,7 +27,7 @@ public final class StandardBlueGraph implements BlueGraph {
      * Creates a graph service for one runtime configuration.
      *
      * @param nodeProvider verified provider selected by the runtime
-     * @param resolver complete resolver used to validate specialization
+     * @param resolver resolver used to validate definition-compatible specialization
      */
     public StandardBlueGraph(
             NodeProvider nodeProvider, NodeResolver resolver) {
@@ -54,7 +54,7 @@ public final class StandardBlueGraph implements BlueGraph {
             throw new IllegalArgumentException("node must not be null");
         }
         return new Node().blueId(
-                DirectBlueIdCalculator.calculateBlueId(exactInput));
+                NodeIdentities.calculate(exactInput));
     }
 
     @Override

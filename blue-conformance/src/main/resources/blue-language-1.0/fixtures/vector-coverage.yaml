@@ -18,7 +18,7 @@
   - B_root_pure_reference
 - id: B7
   fixtures:
-  - B_object_field_null_removal
+  - R_source_object_null_omission
 - id: B8
   fixtures:
   - B_empty_list
@@ -39,7 +39,7 @@
   - B_null_list_element_rejected
 - id: B14
   fixtures:
-  - B_empty_object_list_element_rejected
+  - B_empty_object_list_element_identity
 - id: B15
   fixtures:
   - B_placeholder_changes_list_identity
@@ -64,6 +64,10 @@
 - id: B21
   fixtures:
   - B_plain_blueid_validation
+  - B_null_type_blueid_rejected
+  - B_null_item_type_blueid_rejected
+  - B_null_key_type_blueid_rejected
+  - B_null_value_type_blueid_rejected
 - id: B22
   fixtures:
   - B_malformed_empty_rejected
@@ -174,7 +178,7 @@
   - R_source_null_list_to_empty
 - id: R3
   fixtures:
-  - R_source_empty_object_list_to_empty
+  - R_source_empty_object_list_retained
 - id: R4
   fixtures:
   - R_type_chain_merge
@@ -212,6 +216,7 @@
 - id: R15
   fixtures:
   - R_positional_reorder_or_remove_rejected
+  - R_pos_without_inherited_prefix_rejected
 - id: R16
   fixtures:
   - R_minimized_overlay_round_trip
@@ -227,9 +232,36 @@
 - id: R20
   fixtures:
   - R_type_aliases_removed_from_canonical_overlay
+  - R_inline_type_reference_identity_parity
+  - R_inline_item_type_reference_identity_parity
+  - R_inline_key_type_reference_identity_parity
+  - R_inline_value_type_reference_identity_parity
+  - R_nested_inline_type_reference_identity_parity
+  - R_nested_collection_type_reference_identity_parity
+  - R_wholly_inherited_collection_metadata_identity_parity
+  - R_inline_type_parent_chain_identity_parity
+  - R_inline_type_false_convergence_guard
+  - R_type_derived_field_removed
+  - R_instance_field_kept
+  - R_positional_inline_item_type_identity_parity
+  - B_null_type_blueid_rejected
+  - B_null_item_type_blueid_rejected
+  - B_null_key_type_blueid_rejected
+  - B_null_value_type_blueid_rejected
 - id: R21
   fixtures:
   - R_provider_reference_canonicalizes_back
+  - R_inline_type_reference_identity_parity
+  - R_inline_item_type_reference_identity_parity
+  - R_inline_key_type_reference_identity_parity
+  - R_inline_value_type_reference_identity_parity
+  - R_nested_inline_type_reference_identity_parity
+  - R_nested_collection_type_reference_identity_parity
+  - R_wholly_inherited_collection_metadata_identity_parity
+  - R_inline_type_parent_chain_identity_parity
+  - R_type_derived_field_removed
+  - R_instance_field_kept
+  - R_positional_inline_item_type_identity_parity
 - id: R22
   fixtures:
   - R_inherited_append_only_policy
@@ -237,9 +269,11 @@
   fixtures:
   - R_inherited_item_type
   - R_inherited_keyType_valueType
+  - R_wholly_inherited_collection_metadata_identity_parity
 - id: R24
   fixtures:
   - R_positional_canonical_final_payload
+  - R_positional_inline_item_type_identity_parity
 - id: R25
   fixtures:
   - R_positional_minimized_round_trip
@@ -279,7 +313,7 @@
   - R_dictionary_key_canonicalization
 - id: R37
   fixtures:
-  - R_source_recursive_empty_object_list_to_empty
+  - R_source_recursive_empty_object_list_retained
 - id: R38
   fixtures:
   - R_core_type_compatibility_nominal_by_blueid
@@ -387,9 +421,33 @@
   fixtures:
   - R_content_blueid_is_canonical_node_blueid
   - R_minimized_overlay_round_trip
+  - R_inline_type_reference_identity_parity
+  - R_inline_item_type_reference_identity_parity
+  - R_inline_key_type_reference_identity_parity
+  - R_inline_value_type_reference_identity_parity
+  - R_nested_inline_type_reference_identity_parity
+  - R_nested_collection_type_reference_identity_parity
+  - R_wholly_inherited_collection_metadata_identity_parity
+  - R_inline_type_parent_chain_identity_parity
+  - R_inline_type_false_convergence_guard
+  - R_type_derived_field_removed
+  - R_instance_field_kept
+  - R_positional_inline_item_type_identity_parity
 - id: R70
   fixtures:
   - R_content_blueid_is_canonical_node_blueid
+  - R_inline_type_reference_identity_parity
+  - R_inline_item_type_reference_identity_parity
+  - R_inline_key_type_reference_identity_parity
+  - R_inline_value_type_reference_identity_parity
+  - R_nested_inline_type_reference_identity_parity
+  - R_nested_collection_type_reference_identity_parity
+  - R_wholly_inherited_collection_metadata_identity_parity
+  - R_inline_type_parent_chain_identity_parity
+  - R_inline_type_false_convergence_guard
+  - R_type_derived_field_removed
+  - R_instance_field_kept
+  - R_positional_inline_item_type_identity_parity
 - id: R71
   fixtures:
   - R_resolved_form_not_direct_content_id
@@ -402,3 +460,80 @@
   fixtures:
   - R_positional_canonical_final_payload
   - R_positional_minimized_round_trip
+  - R_positional_inline_item_type_identity_parity
+- id: L-EMPTY-01
+  fixtures:
+  - B_root_empty_object
+- id: L-EMPTY-02
+  fixtures:
+  - B_empty_object_child_reference_equivalence
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-03
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-04
+  fixtures:
+  - B_empty_object_child_reference_equivalence
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-05
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-LIST-01
+  fixtures:
+  - R_source_null_list_to_empty
+- id: L-EMPTY-LIST-02
+  fixtures:
+  - R_source_empty_object_list_retained
+- id: L-EMPTY-LIST-03
+  fixtures:
+  - R_source_recursive_empty_object_list_retained
+- id: L-EMPTY-LIST-04
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-LIST-05
+  fixtures:
+  - B_empty_object_list_element_identity
+- id: L-EMPTY-LIST-06
+  fixtures:
+  - B_null_list_element_rejected
+- id: L-EMPTY-SCHEMA-01
+  fixtures:
+  - R_required_empty_object_present
+- id: L-EMPTY-SCHEMA-02
+  fixtures:
+  - R_minfields_rejects_empty_object
+- id: L-EMPTY-SCHEMA-03
+  fixtures:
+  - R_empty_object_parent_field_count
+- id: L-EMPTY-SCHEMA-04
+  fixtures:
+  - R_empty_object_child_field_count
+- id: L-EMPTY-CANON-01
+  fixtures:
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-CANON-02
+  fixtures:
+  - R_inherited_empty_object_omitted_by_provenance
+- id: L-EMPTY-CANON-03
+  fixtures:
+  - R_inline_empty_type_reference_identity_parity
+- id: L-EMPTY-CANON-04
+  fixtures:
+  - F_empty_object_collapse_reference_expand_parent_identity
+  - R_empty_object_minimized_overlay_round_trip
+- id: L-EMPTY-CANON-05
+  fixtures:
+  - F_empty_object_reference_cache_parity
+- id: L-EMPTY-CANON-06
+  fixtures:
+  - R_empty_object_reference_unavailable_not_absent
+  - R_empty_object_incomplete_resource_completion
+- id: L-EMPTY-MERGE-01
+  fixtures:
+  - R_empty_object_over_inherited_scalar_conflicts
+- id: L-EMPTY-MERGE-02
+  fixtures:
+  - R_empty_object_over_inherited_list_conflicts
+- id: L-EMPTY-TYPE-NULL-01
+  fixtures:
+  - R_source_null_and_empty_type_distinction

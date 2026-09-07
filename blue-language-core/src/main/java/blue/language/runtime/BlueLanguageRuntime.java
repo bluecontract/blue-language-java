@@ -10,12 +10,14 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.graph.BlueGraph;
 import blue.language.graph.StandardBlueGraph;
 import blue.language.identity.BlueIdentity;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.StandardBlueIdentity;
 import blue.language.matching.BlueMatching;
 import blue.language.matching.MatchingRuntime;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
+import blue.language.merge.SnapshotResolution;
 import blue.language.merge.processor.BasicTypesVerifier;
 import blue.language.merge.processor.DictionaryProcessor;
 import blue.language.merge.processor.ListProcessor;
@@ -42,7 +44,7 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.NodePathEditor;
@@ -199,7 +201,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
      * @param environmentImports host type aliases mapped to exact BlueIds
      * @return a new focused runtime
      */
-    static BlueLanguageRuntime create(
+    public static BlueLanguageRuntime create(
             NodeProvider nodeProvider,
             BlueCachePolicy cachePolicy,
             Map<String, String> preprocessingAliases,
@@ -427,17 +429,22 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 .expand(source, limits));
     }
 
-    /** Resolves a matching candidate under target-driven limits. */
+    /** Resolves a matching candidate and retains invocation type evidence. */
     @Override
-    public Node resolveForMatching(Node source, ResolutionLimits limits) {
-        return resolve(source, limits);
+    public blue.language.merge.TypeEvidenceResolution
+    resolveTypeEvidenceForMatching(
+            Node source,
+            ResolutionLimits limits) {
+        return call(() -> merger(nodeProvider).resolveTypeEvidence(
+                Objects.requireNonNull(source, "source").clone(),
+                Objects.requireNonNull(limits, "limits")));
     }
 
     /** Materializes one pure verified type reference for matching. */
     @Override
-    public FrozenNode materializeTypeReferenceForMatching(
+    public TypeEvidenceResolution materializeTypeReferenceForMatching(
             FrozenNode reference) {
-        return call(() -> materializeTypeReference(reference));
+        return call(() -> materializeTypeReferenceEvidence(reference));
     }
 
     /** Resolves already-preprocessed input under the supplied limits. */
@@ -446,6 +453,102 @@ public final class BlueLanguageRuntime implements NodeResolver,
         return call(() -> merger(nodeProvider).resolve(
                 Objects.requireNonNull(source, "source").clone(),
                 Objects.requireNonNull(limits, "limits")));
+    }
+
+    /**
+     * Resolves already-preprocessed input and returns the canonical type
+     * evidence established by that same resolver invocation.
+     *
+     * @param source non-null source graph; it is not mutated
+     * @param limits non-null traversal and reference-expansion budget
+     * @return immutable resolved graph and invocation-local type evidence
+     * @throws NullPointerException if {@code source} or {@code limits} is null
+     * @throws IllegalArgumentException if the graph contains invalid reference
+     *         or type metadata
+     * @throws IllegalStateException if the runtime is closed or exact type
+     *         evidence cannot be established
+     */
+    @Override
+    public TypeEvidenceResolution resolveTypeEvidence(
+            Node source,
+            ResolutionLimits limits) {
+        return call(() -> merger(nodeProvider).resolveTypeEvidence(
+                Objects.requireNonNull(source, "source").clone(),
+                Objects.requireNonNull(limits, "limits")));
+    }
+
+    /**
+     * Resolves an authored type declaration without applying instance rules.
+     *
+     * @param declaration authored inline declaration or pure reference
+     * @return exact canonical identity and authored-representation evidence
+     * @throws NullPointerException if {@code declaration} is null
+     * @throws IllegalArgumentException if declaration or provider evidence is
+     *         invalid
+     * @throws IllegalStateException if the runtime is closed or exact evidence
+     *         cannot be established
+     */
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        return call(() -> {
+            Node preprocessedWrapper = rawPreprocess(
+                    new Node().type(Objects.requireNonNull(
+                            declaration, "declaration").clone()));
+            Node authoredType = Objects.requireNonNull(
+                    preprocessedWrapper.getType(),
+                    "preprocessedTypeDeclaration");
+            TypeEvidenceResolution resolution = merger(nodeProvider)
+                    .resolveTypeDeclarationEvidence(
+                            authoredType,
+                            NO_LIMITS);
+            return resolution.canonicalTypeIdentities()
+                    .findCanonicalTypeIdentityEvidence(
+                            resolution.resolvedRoot().toNode(),
+                            authoredType)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Language did not establish canonical identity "
+                                    + "evidence for the authored type declaration"));
+        });
+    }
+
+    /**
+     * Resolves an authored declaration against verified operation-local exact
+     * evidence followed by this runtime's provider graph.
+     *
+     * @param declaration authored inline declaration or pure reference
+     * @param exactResolutionOverlay operation-local exact evidence
+     * @return exact canonical identity and authored-representation evidence
+     * @throws NullPointerException if an argument is null
+     * @throws IllegalArgumentException if declaration or provider evidence is
+     *         invalid
+     * @throws IllegalStateException if the runtime is closed or exact evidence
+     *         cannot be established
+     */
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            LanguageProcessing.ExactResolutionOverlay exactResolutionOverlay) {
+        try (LanguageProcessing.Scope scope = processing.openScope()) {
+            return scope.resolveTypeDeclarationIdentity(
+                    Objects.requireNonNull(declaration, "declaration"),
+                    Objects.requireNonNull(
+                            exactResolutionOverlay,
+                            "exactResolutionOverlay"));
+        }
+    }
+
+    /**
+     * Resolves canonical processing input while retaining selected exact paths.
+     *
+     * @param canonicalRoot strict canonical processing state
+     * @param preservedPaths exact subtrees retained without semantic expansion
+     * @return transient snapshot from the canonical input role
+     * @throws IllegalStateException if this runtime is closed
+     */
+    public ResolvedSnapshot resolveCanonicalSnapshotPreservingPaths(
+            FrozenNode canonicalRoot, java.util.Collection<String> preservedPaths) {
+        try (LanguageProcessing.Scope scope = processing.openScope()) {
+            return scope.resolveCanonicalTransient(canonicalRoot, preservedPaths);
+        }
     }
 
     /**
@@ -499,12 +602,26 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     @Override
     public Node canonicalize(Node source) {
+        return canonicalizeWithEvidence(source).canonicalRoot();
+    }
+
+    @Override
+    public ResolvedSnapshot canonicalizeWithEvidence(Node source) {
         return call(() -> {
             Node preprocessed = rawPreprocess(
                     Objects.requireNonNull(source, "source").clone());
-            Node resolved = rawResolve(preprocessed.clone(), NO_LIMITS);
-            return new CanonicalIdentityInputBuilder().build(
-                    resolved, preprocessed);
+            if (preprocessed.isReferenceOnly()) {
+                FrozenNode reference = FrozenNode.fromNode(preprocessed);
+                return new ResolvedSnapshot(reference, reference, reference.blueId());
+            }
+            TypeEvidenceResolution definition = merger(nodeProvider)
+                    .resolveTypeDeclarationEvidence(preprocessed, NO_LIMITS);
+            Node canonical = new blue.language.identity.CanonicalIdentityInputBuilder().build(
+                    definition.resolvedRoot().toNode(), preprocessed,
+                    definition.canonicalTypeIdentities());
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    FrozenNode.fromNode(canonical), definition.resolvedRoot(),
+                    definition.canonicalTypeIdentities());
         });
     }
 
@@ -519,6 +636,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 rawPreprocess(Objects.requireNonNull(
                         source, "source").clone()),
                 NO_LIMITS));
+    }
+
+    Node resolveDefinition(Node source) {
+        return call(() -> merger(nodeProvider).resolveTypeDeclarationEvidence(
+                rawPreprocess(Objects.requireNonNull(source, "source").clone()),
+                NO_LIMITS).resolvedRoot().toNode());
     }
 
     Node resolvePreservingPaths(
@@ -551,14 +674,50 @@ public final class BlueLanguageRuntime implements NodeResolver,
     }
 
     Node minimize(Node source) {
-        return call(() -> new MinimizedOverlayBuilder().build(
-                rawResolve(rawPreprocess(Objects.requireNonNull(
-                        source, "source").clone()), NO_LIMITS)));
+        return call(() -> {
+            Node preprocessed = rawPreprocess(Objects.requireNonNull(source, "source").clone());
+            if (preprocessed.isReferenceOnly()) {
+                return preprocessed;
+            }
+            TypeEvidenceResolution resolution =
+                    merger(nodeProvider).resolveTypeDeclarationEvidence(
+                        preprocessed,
+                        NO_LIMITS);
+            return new MinimizedOverlayBuilder().build(
+                    resolution.resolvedRoot(),
+                    resolution.canonicalTypeIdentities());
+        });
     }
 
     boolean isSubtype(Node candidate, Node superType) {
-        return call(() -> Types.isSubtype(
-                candidate, superType, nodeProvider));
+        return call(() -> {
+            if (candidate == null || superType == null) {
+                return false;
+            }
+
+            Node request = new Node().properties(
+                    "candidateType",
+                    new Node().type(candidate.clone()),
+                    "requiredSupertype",
+                    new Node().type(superType.clone()));
+            blue.language.merge.TypeEvidenceResolution resolution =
+                    merger(nodeProvider)
+                    .resolveTypeDeclarationEvidence(
+                            rawPreprocess(request),
+                            NO_LIMITS);
+            Node completed = resolution.resolvedRoot().toNode();
+            Node completedCandidate = completed.getProperties()
+                    .get("candidateType")
+                    .getType();
+            Node completedSupertype = completed.getProperties()
+                    .get("requiredSupertype")
+                    .getType();
+            return Types.isSubtype(
+                    completedCandidate,
+                    completedSupertype,
+                    nodeProvider,
+                    resolution.canonicalTypeIdentities());
+        });
     }
 
     BlueOperationResult<Node> resolveLimited(
@@ -573,12 +732,15 @@ public final class BlueLanguageRuntime implements NodeResolver,
     }
 
     ResolvedSnapshot resolveSnapshot(Node source) {
-        return call(() -> snapshotsStore.derived(
-                ResolvedSnapshot.fromResolverResult(
-                        merger(nodeProvider).resolveSnapshot(
-                                rawPreprocess(Objects.requireNonNull(
-                                        source, "source").clone()),
-                                NO_LIMITS))));
+        return call(() -> {
+            Node preprocessed = rawPreprocess(Objects.requireNonNull(
+                    source, "source").clone());
+            return snapshotsStore.derived(
+                    ResolvedSnapshot.fromSourceResolverResult(
+                            FrozenNode.fromSourceNode(preprocessed),
+                            merger(nodeProvider).resolveSnapshot(
+                                    preprocessed.clone(), NO_LIMITS)));
+        });
     }
 
     ResolvedSnapshot resolveSnapshotPreservingPaths(
@@ -591,15 +753,18 @@ public final class BlueLanguageRuntime implements NodeResolver,
                     preservedPaths);
             if (paths.isEmpty()) {
                 return snapshotsStore.derived(
-                        ResolvedSnapshot.fromResolverResult(
+                        ResolvedSnapshot.fromSourceResolverResult(
+                                FrozenNode.fromSourceNode(preprocessed),
                                 merger(nodeProvider).resolveSnapshot(
-                                        preprocessed, NO_LIMITS)));
+                                        preprocessed.clone(), NO_LIMITS)));
             }
-            Node deferred = rawResolve(
+            TypeEvidenceResolution projection = merger(nodeProvider)
+                    .resolveTypeEvidence(
                     preprocessed.clone(),
                     ResolutionLimits.allOf(
                             NO_LIMITS,
                             ResolutionLimits.deferringReferencesAt(paths)));
+            Node deferred = projection.resolvedRoot().toNode();
             for (String path : paths) {
                 Node authored = NodePathEditor.getOrNull(
                         preprocessed, path);
@@ -608,13 +773,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
                             deferred, path, authored.clone());
                 }
             }
-            FrozenNode canonical = FrozenNode.fromNode(
-                    new CanonicalIdentityInputBuilder().build(
-                            deferred.clone(), preprocessed));
-            return ResolvedSnapshot.withDeferredResolution(
-                    canonical,
+            return ResolvedSnapshot.withDeferredSource(
+                    FrozenNode.fromSourceNode(preprocessed),
                     snapshotsStore.referenceCache()
-                            .freezeResolved(deferred));
+                            .freezeResolved(deferred),
+                    projection.canonicalTypeIdentities());
         });
     }
 
@@ -797,7 +960,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                                 canonical, NO_LIMITS)));
     }
 
-    private FrozenNode materializeTypeReference(
+    private TypeEvidenceResolution materializeTypeReferenceEvidence(
             FrozenNode reference) {
         Objects.requireNonNull(reference, "reference");
         if (!reference.isReferenceOnly()
@@ -805,24 +968,17 @@ public final class BlueLanguageRuntime implements NodeResolver,
             throw new IllegalArgumentException(
                     "Matching materialization requires a pure reference");
         }
-        String blueId = reference.getReferenceBlueId();
-        try {
-            return loadSnapshot(blueId).frozenResolvedRoot();
-        } catch (RuntimeException unavailableSnapshot) {
-            try {
-                List<Node> nodes = nodeProvider.fetchByBlueId(blueId);
-                if (nodes == null || nodes.size() != 1) {
-                    return null;
-                }
-                Node sourceProjection = NodeToBlueIdInput
-                        .stripResolvedBlueIdMetadata(
-                                nodes.get(0).clone());
-                return FrozenNode.fromResolvedNode(
-                        rawPreprocess(sourceProjection));
-            } catch (RuntimeException unavailableDefinition) {
-                return null;
-            }
+        TypeEvidenceResolution wrapper = merger(nodeProvider)
+                .materializeTypeReferenceEvidence(
+                        reference,
+                        NO_LIMITS);
+        FrozenNode materializedType = wrapper.resolvedRoot().getType();
+        if (materializedType == null || materializedType.isReferenceOnly()) {
+            return null;
         }
+        return new TypeEvidenceResolution(
+                materializedType,
+                wrapper.canonicalTypeIdentities());
     }
 
     private <T> T call(Supplier<T> work) {

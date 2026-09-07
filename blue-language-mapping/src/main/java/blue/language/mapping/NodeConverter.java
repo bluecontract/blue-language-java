@@ -4,7 +4,10 @@ import blue.language.model.Node;
 
 import java.lang.reflect.Type;
 
-/** Produces a defensive mutable clone when the requested Java type is {@link Node}. */
+/**
+ * Validates the complete semantic node graph and produces a defensive mutable
+ * clone when the requested Java type is {@link Node}.
+ */
 public class NodeConverter implements Converter<Node> {
 
     /** Creates a stateless defensive-node converter. */
@@ -13,10 +16,21 @@ public class NodeConverter implements Converter<Node> {
 
     @Override
     public Node convert(Node node, Type targetType) {
-        if (targetType instanceof Class<?> && Node.class.isAssignableFrom((Class<?>) targetType)) {
-            return node.clone();
-        } else {
-            throw new IllegalArgumentException("Unsupported target type for Node conversion: " + targetType);
-        }
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "node mapping",
+                () -> {
+                    if (node == null) {
+                        return null;
+                    }
+                    if (targetType instanceof Class<?>
+                            && Node.class.isAssignableFrom(
+                                    (Class<?>) targetType)) {
+                        return node.clone();
+                    }
+                    throw new IllegalArgumentException(
+                            "Unsupported target type for Node conversion: "
+                                    + targetType);
+                });
     }
 }

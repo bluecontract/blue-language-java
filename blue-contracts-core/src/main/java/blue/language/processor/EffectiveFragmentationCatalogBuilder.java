@@ -67,9 +67,6 @@ final class EffectiveFragmentationCatalogBuilder {
                     admission.materializeTopLevel(
                             suppliedRoot,
                             "Fragmentation catalog Root");
-            String rootBlueId =
-                    DirectBlueIdCalculator.calculateBlueId(
-                            admitted.node());
             Set<String> participatingScopePaths =
                     new LinkedHashSet<>();
             participatingScopePaths.add(JsonPointer.ROOT);
@@ -89,17 +86,23 @@ final class EffectiveFragmentationCatalogBuilder {
                 discovery.discover(
                         admitted.node(),
                         participatingScopePaths);
-                ResolvedSnapshot snapshot =
-                        sequence
-                                .fromDocumentTransientPreservingPaths(
-                                        admitted.node(),
-                                        discovery
-                                                .executableBodyPaths());
+                // Nested authored contracts retain declaration-shaped exact
+                // fields before they become participating scopes. Use the same
+                // field ownership and fixed-value validation as hosted Source;
+                // catalog recognition below still opens only selected scopes.
+                Set<String> exactFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted.node(), registry.exactSourceFieldsByType(), sequence);
+                exactFields.addAll(discovery.executableBodyPaths());
+                Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted.node(), registry.executableBodyFieldsByType(), sequence);
+                ResolvedSnapshot snapshot = CanonicalIdentityEvidence.canonicalSnapshotWithExactFields(
+                        admitted.node(), sequence, "Fragmentation catalog Root",
+                        exactFields, executableFields);
                 CatalogPass pass = catalog(
                         sequence,
                         snapshot,
                         admitted.node(),
-                        rootBlueId);
+                        snapshot.blueId());
                 if (pass.unmaterializedScopePaths.isEmpty()) {
                     return pass.catalog;
                 }
@@ -162,14 +165,13 @@ final class EffectiveFragmentationCatalogBuilder {
             }
             requireObjectScope(frame.scopePath, effective);
 
-            Node selected =
-                    NodePathEditor.getOrNull(
-                            exactSelectedRoot,
-                            frame.scopePath);
+            Node selected = NodePathEditor.getOrNull(
+                    exactSelectedRoot,
+                    frame.scopePath);
             String exactScopeIdentity =
                     selected != null
-                            ? DirectBlueIdCalculator.calculateBlueId(
-                                    selected)
+                            ? snapshot.canonicalBlueIdAt(
+                                    frame.scopePath)
                             : null;
             if (exactScopeIdentity != null
                     && frame.ancestorScopeBlueIds
@@ -192,7 +194,8 @@ final class EffectiveFragmentationCatalogBuilder {
                             selected,
                             effective,
                             frame.scopePath,
-                            NoOpProcessingObserver.INSTANCE);
+                            NoOpProcessingObserver.INSTANCE,
+                            snapshot.canonicalTypeIdentities());
             List<EffectiveContractSnapshot> contracts =
                     new ArrayList<>(
                             bundle.effectiveContractSnapshots());
@@ -223,7 +226,8 @@ final class EffectiveFragmentationCatalogBuilder {
                 EmbeddedScopeDeclaration declaration =
                         bundle.embeddedScopeDeclaration();
                 embeddedPlan = new EmbeddedScopePlanner(
-                        sequence::materializeVerifiedExactReference)
+                        sequence,
+                        snapshot.canonicalTypeIdentities())
                         .plan(
                                 effective,
                                 frame.scopePath,
@@ -472,23 +476,8 @@ final class EffectiveFragmentationCatalogBuilder {
                 if (typeBlueId == null) {
                     continue;
                 }
-                List<String> deferredFields =
-                        new ArrayList<>(
-                                registry.executableBodyFields(
-                                        typeBlueId));
-                Class<?> contractClass =
-                        typeResolver.resolveClass(typeBlueId);
-                if (contractClass != null
-                        && HandlerContract.class
-                        .isAssignableFrom(
-                                contractClass)
-                        && !deferredFields.contains(
-                        EffectiveContractSnapshotConstants
-                                .DispatchField.EVENT)) {
-                    deferredFields.add(
-                            EffectiveContractSnapshotConstants
-                                    .DispatchField.EVENT);
-                }
+                List<String> deferredFields = registry.exactSourceFieldsByType()
+                        .getOrDefault(typeBlueId, Collections.<String>emptyList());
                 for (String field : deferredFields) {
                     executableBodyPaths.add(
                             JsonPointer.append(
@@ -595,10 +584,11 @@ final class EffectiveFragmentationCatalogBuilder {
                 return null;
             }
             String typeBlueId =
-                    contract.getType().getBlueId() != null
-                            ? contract.getType().getBlueId()
-                            : DirectBlueIdCalculator.calculateBlueId(
-                            contract.getType());
+                    CanonicalIdentityEvidence.sourceTypeBlueId(
+                            contract.getType(),
+                            manager,
+                            "Fragmentation catalog contract type '"
+                                    + key + "'");
             Class<?> type =
                     typeResolver.resolveClass(typeBlueId);
             if (type == null
@@ -683,8 +673,10 @@ final class EffectiveFragmentationCatalogBuilder {
                     && reference.getBlueId() != null) {
                 return reference.getBlueId();
             }
-            return DirectBlueIdCalculator.calculateBlueId(
-                    exact);
+            return CanonicalIdentityEvidence.sourceTypeBlueId(
+                    exact,
+                    manager,
+                    "Fragmentation catalog inline type contribution");
         }
 
         private void requireLimit(

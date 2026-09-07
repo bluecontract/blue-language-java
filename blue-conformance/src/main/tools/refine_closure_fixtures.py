@@ -255,21 +255,6 @@ def _charge_direct_identity_node(
     # Gas follows the canonical identity helper map, including the inferred
     # ``type`` contribution of an untyped scalar.
     direct_member_count = facts.direct_member_count
-    canonical_facts = facts
-    if isinstance(value, dict):
-        # Empty object-valued properties are empty Nodes. The strict Language
-        # normalizer omits them from their parent's direct helper map, while
-        # the MutationGasCharger still counts and recursively charges the raw
-        # property itself.
-        identity_value = {
-            key: child
-            for key, child in value.items()
-            if not (isinstance(child, dict) and not child)
-        }
-        if len(identity_value) != len(value):
-            canonical_facts = direct_identity_facts(
-                identity_value, allow_cyclic_placeholders=True
-            )
     trace.charge(
         "semantic", "nodeIdentityEstablished", 1,
         reason="identity-rebuild", context=context,
@@ -290,7 +275,7 @@ def _charge_direct_identity_node(
         trace.charge(
             "semantic", "directIdentityHashBlock",
             math.ceil(
-                (canonical_facts.canonical_input_utf8_bytes + 9) / 64
+                (facts.canonical_input_utf8_bytes + 9) / 64
             ),
             reason="identity-rebuild", context=context,
         )
@@ -4019,6 +4004,21 @@ def loop_trace(
             f"event.{next_work['occurrenceOrdinal']}.dequeue",
         ):
             rejected_owner_work = None
+            break
+        if not trace.charge(
+            "processor",
+            "channelCandidateTested",
+            1,
+            reason="acceptance",
+            context={
+                "documentId": next_work["targetDocumentId"],
+                "scopePath": "/",
+                "activationGeneration": 0,
+                "componentGeneration": 1,
+                "contractKey": next_work["channelKey"],
+            },
+        ):
+            rejected_owner_work = current
             break
         if not charge(
             "processor", "closureWorkOccurrenceEnqueued", 1,

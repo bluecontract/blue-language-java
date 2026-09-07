@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
@@ -19,6 +20,7 @@ import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ResolvedSnapshotPatchTransactionTest {
 
@@ -250,7 +252,7 @@ class ResolvedSnapshotPatchTransactionTest {
                         .name("forces authoritative resolution")
                         .properties("kept", new Node().value(true))),
                 JsonPatch.replace("/second", new Node().properties(
-                        "empty", new Node(),
+                        "empty", Nodes.emptyObject(),
                         "kept", new Node().value("value"))));
 
         // when
@@ -270,7 +272,10 @@ class ResolvedSnapshotPatchTransactionTest {
         assertEquals(blue.nodeToJson(reference.snapshot().canonicalRoot()),
                 blue.nodeToJson(optimized.snapshot().canonicalRoot()));
         assertEquals(reference.snapshot().blueId(), optimized.snapshot().blueId());
-        assertMissing(optimized.snapshot().canonicalRoot(), "/second/empty");
+        Node exactEmpty = ImmutablePatchPlanner.readNode(
+                optimized.snapshot().canonicalRoot(), "/second/empty");
+        assertNotNull(exactEmpty);
+        assertTrue(Nodes.isExactEmptyObject(exactEmpty));
         assertEquals("value", optimized.snapshot().canonicalRoot().getAsText("/second/kept"));
     }
 
@@ -335,7 +340,8 @@ class ResolvedSnapshotPatchTransactionTest {
         for (int value : values) {
             items.add(new Node().value(value));
         }
-        return new Node().properties("values", new Node().items(items)).contracts(new Node());
+        return new Node().properties("values", new Node().items(items))
+                .contracts(Nodes.emptyObject());
     }
 
     private static Node reference(String blueId) {
@@ -370,7 +376,7 @@ class ResolvedSnapshotPatchTransactionTest {
         private Node document() {
             return new Node()
                     .properties("status", reference(pendingId))
-                    .contracts(new Node());
+                    .contracts(Nodes.emptyObject());
         }
     }
 
@@ -391,7 +397,7 @@ class ResolvedSnapshotPatchTransactionTest {
         private ResolvedSnapshot snapshot() {
             return blue.resolveToSnapshot(new Node()
                     .type(new Node().blueId(documentTypeId))
-                    .contracts(new Node()));
+                    .contracts(Nodes.emptyObject()));
         }
     }
 
@@ -412,6 +418,17 @@ class ResolvedSnapshotPatchTransactionTest {
                 throw new IllegalStateException("patch value resolution failed");
             }
             return blue.resolveToSnapshot(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                blue.language.snapshot.FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            inputs.add(canonicalRoot.toNode());
+            if (failResolution) {
+                throw new IllegalStateException("patch value resolution failed");
+            }
+            return blue.loadSnapshot(canonicalRoot.toNode());
         }
 
         @Override

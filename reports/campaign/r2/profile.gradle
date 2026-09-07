@@ -1,0 +1,14 @@
+gradle.projectsEvaluated {
+    def module = gradle.rootProject.findProject(':blue-contracts-core')
+    if (module == null) return
+    module.tasks.register('profileR2', JavaExec) {
+        dependsOn module.tasks.named('testClasses')
+        classpath = module.sourceSets.test.runtimeClasspath
+        mainClass = 'blue.language.processor.closure.CompositionCampaignProfile'
+        javaLauncher = module.javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(26)
+        }
+        maxHeapSize = '768m'
+        jvmArgs '-XX:StartFlightRecording=filename=/private/tmp/r2-composition.jfr,settings=profile,dumponexit=true'
+    }
+}

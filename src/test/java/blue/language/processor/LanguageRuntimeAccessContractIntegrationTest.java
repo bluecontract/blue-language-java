@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -88,6 +89,50 @@ final class LanguageRuntimeAccessContractIntegrationTest {
                             .getReferenceBlueId());
             assertFalse(inheritedRuntime.isClosed());
         } finally {
+            inheritedRuntime.close();
+        }
+    }
+
+    @Test
+    void shouldPreserveInheritedEnvironmentImportsForTypeIdentity() {
+        // given
+        Node parent = new Node().name("Host-provided parent type");
+        String parentBlueId = DirectBlueIdCalculator.calculateBlueId(parent);
+        NodeProvider provider = blueId -> parentBlueId.equals(blueId)
+                ? Collections.singletonList(parent.clone())
+                : null;
+        BlueLanguageRuntime inheritedRuntime = BlueLanguageRuntime.create(
+                provider,
+                BlueCachePolicy.boundedDefaults(),
+                Collections.emptyMap(),
+                Collections.singletonMap("HostParent", parentBlueId));
+        RegisteredContractScopeIdentitySnapshotManager manager =
+                new RegisteredContractScopeIdentitySnapshotManager(
+                        ContractProcessorRegistryBuilder.create()
+                                .registerDefaults()
+                                .build(),
+                        inheritedRuntime);
+        Node child = YAML_MAPPER.readValue(
+                "name: Host child\n"
+                        + "type: HostParent\n",
+                Node.class);
+
+        try {
+            // when
+            CanonicalTypeIdentityEvidence expected = inheritedRuntime
+                    .resolveTypeDeclarationIdentity(child);
+            CanonicalTypeIdentityEvidence actual = manager
+                    .resolveTypeDeclarationIdentity(child);
+
+            // then
+            assertEquals(expected.blueId(), actual.blueId());
+            assertEquals(
+                    parentBlueId,
+                    actual.canonicalTypeIdentityInput()
+                            .getType()
+                            .getBlueId());
+        } finally {
+            manager.releaseTransientState();
             inheritedRuntime.close();
         }
     }

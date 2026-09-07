@@ -1,0 +1,106 @@
+diff --git a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java
+index c8c791c8..b883224e 100644
+--- a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java
++++ b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java
+@@ -178,6 +178,9 @@ abstract class BlueConformanceFixtureExecution extends BlueConformanceResolution
+             case FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID:
+                 runRegistryNodeHashesToPublishedBlueId(spec);
+                 return;
++            case FixtureOperation.RESOLVE_DEFINITION:
++                runResolveDefinition(spec);
++                return;
+             case FixtureOperation.RESOLVE:
+                 runResolve(spec);
+                 return;
+diff --git a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java
+index 7b5cf57e..9d334706 100644
+--- a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java
++++ b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java
+@@ -109,6 +109,7 @@ abstract class BlueConformanceFixturePrimitives {
+         static final String REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID =
+                 "registryNodeHashesToPublishedBlueId";
+         static final String RESOLVE = "resolve";
++        static final String RESOLVE_DEFINITION = "resolveDefinition";
+         static final String RESOLVE_LIMITED = "resolveLimited";
+         static final String RESOLVE_VARIANTS = "resolveVariants";
+         static final String RETRIEVE_DIRECT_LIST = "retrieveDirectList";
+@@ -336,6 +337,7 @@ abstract class BlueConformanceFixturePrimitives {
+             FixtureOperation.PREPROCESS,
+             FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID,
+             FixtureOperation.RESOLVE,
++            FixtureOperation.RESOLVE_DEFINITION,
+             FixtureOperation.RESOLVE_LIMITED,
+             FixtureOperation.RESOLVE_VARIANTS,
+             FixtureOperation.RETRIEVE_DIRECT_LIST,
+diff --git a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java
+index f7fe217d..df51986c 100644
+--- a/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java
++++ b/blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java
+@@ -146,6 +146,15 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
+         }
+     }
+ 
++    static void runResolveDefinition(JsonNode spec) {
++        ProviderContext provider = providerContext(spec, null);
++        try (LanguageFixtureRuntime blue = new LanguageFixtureRuntime(provider.provider)) {
++            Node source = sourceWithParent(spec);
++            Node actual = blue.resolveDefinition(source);
++            assertResolutionExpectations(spec, actual, blue, source);
++        }
++    }
++
+     static void runResolve(JsonNode spec) {
+         SymbolicTypeCycle symbolicCycle = symbolicTypeCycle(spec);
+         if (symbolicCycle != null) {
+diff --git a/blue-conformance/src/main/java/blue/language/conformance/api/LanguageFixtureRuntime.java b/blue-conformance/src/main/java/blue/language/conformance/api/LanguageFixtureRuntime.java
+index 3ad254a7..035aa2de 100644
+--- a/blue-conformance/src/main/java/blue/language/conformance/api/LanguageFixtureRuntime.java
++++ b/blue-conformance/src/main/java/blue/language/conformance/api/LanguageFixtureRuntime.java
+@@ -65,6 +65,11 @@ final class LanguageFixtureRuntime implements AutoCloseable {
+         return runtime.resolution().resolve(source);
+     }
+ 
++    /** Prepares a definition without certifying an instance payload. */
++    public Node resolveDefinition(Node source) {
++        return runtime.resolution().resolveDefinition(source);
++    }
++
+     /** Produces the canonical direct identity input for authored Source. */
+     public Node canonicalize(Node source) {
+         return runtime.identity().canonicalIdentityInput(source);
+diff --git a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml
+index cf6c8ff3..7b9c06e5 100644
+--- a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml
++++ b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml
+@@ -134,6 +134,7 @@ properties:
+     - preprocess
+     - registryNodeHashesToPublishedBlueId
+     - resolve
++    - resolveDefinition
+     - resolveLimited
+     - resolveVariants
+     - retrieveDirectList
+diff --git a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_enum_order_and_duplicates_canonical.yaml b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_enum_order_and_duplicates_canonical.yaml
+index 51e787d6..4b4230ea 100644
+--- a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_enum_order_and_duplicates_canonical.yaml
++++ b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_enum_order_and_duplicates_canonical.yaml
+@@ -1,6 +1,6 @@
+ id: R_schema_enum_order_and_duplicates_canonical
+ category: Schema
+-operation: resolve
++operation: resolveDefinition
+ description: enum order and duplicate entries normalize to a duplicate-free canonical
+   effective schema
+ source:
+diff --git a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_integer_multiple_of_lcm_merge.yaml b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_integer_multiple_of_lcm_merge.yaml
+index ca807b13..327b11c0 100644
+--- a/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_integer_multiple_of_lcm_merge.yaml
++++ b/blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_integer_multiple_of_lcm_merge.yaml
+@@ -1,6 +1,6 @@
+ id: R_schema_integer_multiple_of_lcm_merge
+ category: Schema
+-operation: resolve
++operation: resolveDefinition
+ description: inherited and instance integer multipleOf constraints merge deterministically
+   using LCM
+ source:

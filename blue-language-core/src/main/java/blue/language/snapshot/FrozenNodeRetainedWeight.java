@@ -6,6 +6,8 @@ import blue.language.model.Schema;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +32,185 @@ final class FrozenNodeRetainedWeight {
 
     static long graph(FrozenNode... roots) {
         IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+        Deque<Object> pending = new ArrayDeque<>();
         long weight = 0L;
         if (roots != null) {
             for (FrozenNode root : roots) {
-                weight += retainedNode(root, seen);
+                push(pending, root);
+            }
+        }
+        while (!pending.isEmpty()) {
+            Object value = pending.pop();
+            if (seen.put(value, Boolean.TRUE) != null) {
+                continue;
+            }
+            if (value instanceof FrozenNode) {
+                FrozenNode node = (FrozenNode) value;
+                weight = add(weight, FROZEN_NODE_BYTES);
+                weight = addStrings(weight, seen,
+                        node.name,
+                        node.description,
+                        node.referenceBlueId,
+                        node.mergePolicy,
+                        node.previousBlueId,
+                        node.cachedBlueId());
+                push(pending, node.value);
+                push(pending, node.type);
+                push(pending, node.itemType);
+                push(pending, node.keyType);
+                push(pending, node.valueType);
+                push(pending, node.contracts);
+                push(pending, node.blue);
+                push(pending, node.items);
+                push(pending, node.properties);
+                push(pending, node.schema);
+                push(pending, node.cachedStructuralKey());
+            } else if (value instanceof Node) {
+                Node node = (Node) value;
+                weight = add(weight, MUTABLE_NODE_BYTES);
+                weight = addStrings(weight, seen,
+                        node.getName(),
+                        node.getDescription(),
+                        node.getBlueId(),
+                        node.getMergePolicy(),
+                        node.getPreviousBlueId());
+                push(pending, node.getRawValue());
+                push(pending, node.getType());
+                push(pending, node.getItemType());
+                push(pending, node.getKeyType());
+                push(pending, node.getValueType());
+                push(pending, node.getContracts());
+                push(pending, node.getBlue());
+                push(pending, node.getItems());
+                push(pending, node.getProperties());
+                push(pending, node.getSchema());
+            } else if (value instanceof Schema) {
+                Schema schema = (Schema) value;
+                weight = add(weight, SCHEMA_BYTES);
+                weight = addString(weight, schema.getBlueId(), seen);
+                push(pending, schema.getRequired());
+                push(pending, schema.getMinLength());
+                push(pending, schema.getMaxLength());
+                push(pending, schema.getMinimum());
+                push(pending, schema.getMaximum());
+                push(pending, schema.getExclusiveMinimum());
+                push(pending, schema.getExclusiveMaximum());
+                push(pending, schema.getMultipleOf());
+                push(pending, schema.getMinItems());
+                push(pending, schema.getMaxItems());
+                push(pending, schema.getUniqueItems());
+                push(pending, schema.getMinFields());
+                push(pending, schema.getMaxFields());
+                push(pending, schema.getEnum());
+            } else if (value instanceof String) {
+                weight = add(weight, STRING_BYTES);
+                weight = add(weight, multiply(
+                        2L, ((String) value).length()));
+            } else if (value instanceof BigInteger) {
+                weight = add(weight, add(
+                        48L,
+                        multiply(4L,
+                                (((BigInteger) value).abs().bitLength()
+                                        + 31L) / 32L)));
+            } else if (value instanceof BigDecimal) {
+                weight = add(weight, 64L);
+                push(pending, ((BigDecimal) value).unscaledValue());
+            } else if (value instanceof Boolean) {
+                weight = add(weight, 16L);
+            } else if (value instanceof Number
+                    || value instanceof Character
+                    || value instanceof Enum) {
+                weight = add(weight, 24L);
+            } else if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                weight = add(weight, add(
+                        LIST_BYTES,
+                        multiply(REFERENCE_BYTES, list.size())));
+                for (Object item : list) {
+                    push(pending, item);
+                }
+            } else if (value instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) value;
+                weight = add(weight, add(
+                        MAP_BYTES,
+                        multiply(MAP_ENTRY_BYTES, map.size())));
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    push(pending, entry.getKey());
+                    push(pending, entry.getValue());
+                }
+            } else if (value.getClass().isArray()) {
+                int length = Array.getLength(value);
+                weight = add(weight, add(
+                        24L,
+                        multiply(REFERENCE_BYTES, length)));
+                for (int index = 0; index < length; index++) {
+                    push(pending, Array.get(value, index));
+                }
+            } else if (value
+                    instanceof FrozenNode.ResolvedStructuralKey) {
+                weight = add(weight, 32L);
+                push(pending,
+                        ((FrozenNode.ResolvedStructuralKey) value)
+                                .delegate());
+            } else if (value instanceof FrozenNodeStructuralKey) {
+                weight = add(weight, 32L);
+                push(pending,
+                        ((FrozenNodeStructuralKey) value).fields());
+            } else if (value
+                    instanceof FrozenNodeStructuralKey.PropertyKey) {
+                FrozenNodeStructuralKey.PropertyKey property =
+                        (FrozenNodeStructuralKey.PropertyKey) value;
+                weight = add(weight, 24L);
+                push(pending, property.name());
+                push(pending, property.value());
+            } else {
+                weight = add(weight, 48L);
             }
         }
         return weight;
+    }
+
+    private static void push(Deque<Object> pending, Object value) {
+        if (value != null) {
+            pending.push(value);
+        }
+    }
+
+    private static long addStrings(
+            long weight,
+            IdentityHashMap<Object, Boolean> seen,
+            String... values) {
+        long result = weight;
+        for (String value : values) {
+            result = addString(result, value, seen);
+        }
+        return result;
+    }
+
+    private static long addString(
+            long weight,
+            String value,
+            IdentityHashMap<Object, Boolean> seen) {
+        return value == null || seen.put(value, Boolean.TRUE) != null
+                ? weight
+                : add(weight, add(
+                        STRING_BYTES,
+                        multiply(2L, value.length())));
+    }
+
+    private static long add(long left, long right) {
+        return Long.MAX_VALUE - left < right
+                ? Long.MAX_VALUE
+                : left + right;
+    }
+
+    private static long multiply(long left, long right) {
+        if (left == 0L || right == 0L) {
+            return 0L;
+        }
+        return Long.MAX_VALUE / left < right
+                ? Long.MAX_VALUE
+                : left * right;
     }
 
     static long shallow(FrozenNode node) {

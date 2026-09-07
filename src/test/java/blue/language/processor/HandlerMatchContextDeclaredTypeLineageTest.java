@@ -277,25 +277,25 @@ class HandlerMatchContextDeclaredTypeLineageTest {
     }
 
     @Test
-    void shouldVerifyIdentityFreeParentIsADistinctCachedTerminalFact() {
+    void shouldVerifyMissingParentIsADistinctCachedTerminalFact() {
         // given
         TypeFixture types = TypeFixture.create();
-        Node incomplete = new Node().type(new Node().name("Anonymous Parent"));
-        String incompleteId = DirectBlueIdCalculator.calculateBlueId(incomplete);
+        Node terminal = new Node().name("Type without a declared parent");
+        String terminalId = DirectBlueIdCalculator.calculateBlueId(terminal);
         MutableCountingProvider provider = new MutableCountingProvider();
-        provider.put(incompleteId, incomplete);
+        provider.put(terminalId, terminal);
 
         // when
         ContractMatchingService matching = new ContractMatchingService(new Blue(provider));
         boolean firstMatch = context(
-                types.event(incompleteId),
+                types.event(terminalId),
                 matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(
                         reference(types.expectedId));
         int firstLookupCount = provider.lookupCount();
         int cacheSize = matching.declaredTypeLineageCacheSize();
         boolean secondMatch = context(
-                types.event(incompleteId),
+                types.event(terminalId),
                 matching)
                 .eventDeclaredTypeIsSameOrDescendantOf(
                         reference(types.expectedId));
@@ -972,7 +972,9 @@ class HandlerMatchContextDeclaredTypeLineageTest {
                 "channel",
                 event,
                 Collections.<String, MarkerContract>emptyMap(),
-                matching);
+                matching,
+                blue.language.identity.CanonicalTypeIdentityLookup
+                        .incomplete());
     }
 
     private static String syntheticId(String name) {

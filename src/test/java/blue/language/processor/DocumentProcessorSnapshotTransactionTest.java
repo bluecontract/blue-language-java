@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
@@ -13,15 +14,21 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.resolvedDocument;
 import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+import static blue.language.processor.DocumentProcessingResultTestSupport.diagnosticCategory;
+import static blue.language.processor.DocumentProcessingResultTestSupport.diagnosticMessage;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -323,6 +330,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
 
         // when
@@ -351,6 +359,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
         ResolvedSnapshot before = runtime.snapshot();
         FrozenNode beforeResolvedRoot = before.frozenResolvedRoot();
@@ -428,6 +437,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Counter Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Zero Counter") + "\n", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
 
         // when
@@ -445,7 +455,7 @@ class DocumentProcessorSnapshotTransactionTest {
     void shouldKeepCanonicalSnapshotInSameRuntimeTransactionForDirectWrite() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
 
         // when
@@ -616,6 +626,11 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult processed = processedDebug.processResult();
 
         // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                processed.status(),
+                "category=" + diagnosticCategory(processed)
+                        + ", diagnostic=" + diagnosticMessage(processed));
         assertNotNull(processedDebug.resultingSnapshot());
         assertEquals(
                 processedDebug.resultingSnapshot().blueId(),
@@ -626,7 +641,10 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(DirectBlueIdCalculator.calculateBlueId(event),
                 processed.document().getAsText(
                         "/contracts/checkpoint/entries/testChannel/subject/blueId"));
-        assertTrue(manager.cacheSnapshotCalls >= 2);
+        assertTrue(processedDebug.resultingSnapshot().hasCanonicalIdentity());
+        assertFalse(processedDebug.resultingSnapshot().isResolutionComplete());
+        assertEquals(0, manager.cacheSnapshotCalls,
+                "Deferred runtime snapshots must not enter the shared cache");
         assertSnapshotConsistent(processedDebug.resultingSnapshot());
     }
 
@@ -665,11 +683,21 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult result = debug.processResult();
 
         // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                "category=" + diagnosticCategory(result)
+                        + ", diagnostic=" + diagnosticMessage(result));
         assertTrue(manager.fromDocumentCalls >= 2,
                 "feeder verification and scalar writes must use coherent immutable snapshots");
         assertTrue(manager.fromDocumentInputs.stream()
+                .filter(node -> node.getType() == null)
                 .allMatch(node -> node.getContracts() != null),
-                "writes requiring resolution must retain the complete canonical companion");
+                "document writes requiring resolution must retain the "
+                        + "complete canonical companion");
+        assertTrue(manager.fromDocumentInputs.stream()
+                .anyMatch(node -> node.getType() == null
+                        && node.getContracts() != null));
         assertTrue(manager.cacheSnapshotCalls > 0);
         assertEquals(9, result.document().getAsInteger("/x"));
         assertSnapshotConsistent(debug.resultingSnapshot());
@@ -711,14 +739,27 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult snapshotProcessed = snapshotProcessor.processDocument(
                 uncheckedSnapshot(snapshotInitialized.document()),
                 event.clone());
+
+        // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                nodeProcessed.status(),
+                "node category=" + diagnosticCategory(nodeProcessed)
+                        + ", diagnostic="
+                        + diagnosticMessage(nodeProcessed));
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                snapshotProcessed.status(),
+                "snapshot category="
+                        + diagnosticCategory(snapshotProcessed)
+                        + ", diagnostic="
+                        + diagnosticMessage(snapshotProcessed));
         String expectedSubject =
                 DirectBlueIdCalculator.calculateBlueId(event);
         String nodeDomain = nodeProcessed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId");
         String snapshotDomain = snapshotProcessed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId");
-
-        // then
         assertEquals(nodeInitialized.totalGas(), snapshotInitialized.totalGas());
         assertEquals(
                 DirectBlueIdCalculator.calculateBlueId(nodeInitialized.document()),
@@ -986,6 +1027,32 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     private static final class CountingSnapshotManager implements ProcessingSnapshotManager {
+        private static final CanonicalTypeIdentityLookup
+                COMPLETE_PURE_REFERENCE_EVIDENCE =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType) {
+                        String blueId = requireCanonicalTypeBlueId(
+                                completedType);
+                        return Optional.of(CanonicalTypeIdentityEvidence
+                                .referenceSource(blueId));
+                    }
+
+                    @Override
+                    public String requireCanonicalTypeBlueId(
+                            Node completedType) {
+                        return CanonicalTypeIdentityLookup.incomplete()
+                                .requireCanonicalTypeBlueId(completedType);
+                    }
+                };
+
         private final Blue blue;
         private final Node canonical;
         private final Node resolved;
@@ -997,6 +1064,7 @@ class DocumentProcessorSnapshotTransactionTest {
         private boolean returnCurrentSnapshotOnApplyPatch;
         private int failFromDocumentOnCall;
         private final List<Node> fromDocumentInputs = new java.util.ArrayList<>();
+        private boolean canonicalIdentityResolution;
 
         private CountingSnapshotManager() {
             this(null, null, null);
@@ -1019,7 +1087,9 @@ class DocumentProcessorSnapshotTransactionTest {
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
             fromDocumentCalls++;
-            fromDocumentInputs.add(document.clone());
+            if (!canonicalIdentityResolution) {
+                fromDocumentInputs.add(document.clone());
+            }
             if (fromDocumentCalls == failFromDocumentOnCall) {
                 throw new IllegalStateException("snapshot rebuild failed");
             }
@@ -1029,9 +1099,67 @@ class DocumentProcessorSnapshotTransactionTest {
             Node canonicalSource = canonical != null ? canonical.clone() : document.clone();
             Node resolvedSource = resolved != null ? resolved.clone() : document.clone();
             FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(canonicalSource);
+            if (canonical == null && resolved == null) {
+                return ResolvedSnapshot.withCanonicalTypeIdentities(
+                        canonicalRoot,
+                        FrozenNode.fromResolvedNode(resolvedSource),
+                        COMPLETE_PURE_REFERENCE_EVIDENCE);
+            }
             return new ResolvedSnapshot(canonicalRoot,
                     FrozenNode.fromResolvedNode(resolvedSource),
                     canonicalRoot.blueId());
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            canonicalIdentityResolution = true;
+            try {
+                return ProcessingSnapshotManager.super
+                        .fromDocumentTransientForCanonicalIdentity(document);
+            } finally {
+                canonicalIdentityResolution = false;
+            }
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document, Collection<String> preservedPaths) {
+            if (blue == null) {
+                // This synthetic manager never resolves any subtree, so all Source
+                // paths remain intact in its existing canonical/resolved fixture.
+                return fromDocument(document);
+            }
+            fromDocumentCalls++;
+            if (!canonicalIdentityResolution) fromDocumentInputs.add(document.clone());
+            if (fromDocumentCalls == failFromDocumentOnCall)
+                throw new IllegalStateException("snapshot rebuild failed");
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromDocumentPreservingPaths(document, preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document, Collection<String> preservedPaths) {
+            if (blue == null) return fromDocumentTransientForCanonicalIdentity(document);
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromDocumentTransientPreservingPaths(document, preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            if (blue == null) {
+                // Synthetic fixtures clone their lanes and never reinterpret list Source controls.
+                return fromDocument(canonicalRoot.toNode());
+            }
+            fromDocumentCalls++;
+            if (!canonicalIdentityResolution) fromDocumentInputs.add(canonicalRoot.toNode());
+            if (fromDocumentCalls == failFromDocumentOnCall)
+                throw new IllegalStateException("snapshot rebuild failed");
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromCanonicalTransient(canonicalRoot, preservedPaths);
         }
 
         @Override
@@ -1046,6 +1174,12 @@ class DocumentProcessorSnapshotTransactionTest {
             CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
                     snapshot.frozenCanonicalRoot()).apply(patch);
             Node resolved = patched.root().toNode();
+            if (snapshot.canonicalTypeIdentities().hasCompleteCoverage()) {
+                return ResolvedSnapshot.withCanonicalTypeIdentities(
+                        patched.root(),
+                        FrozenNode.fromResolvedNode(resolved),
+                        snapshot.canonicalTypeIdentities());
+            }
             return new ResolvedSnapshot(patched.root(),
                     FrozenNode.fromResolvedNode(resolved),
                     patched.blueId());
@@ -1060,4 +1194,10 @@ class DocumentProcessorSnapshotTransactionTest {
             return snapshot;
         }
     }
+    private static void permitGeneralization(Node document) {
+        document.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
+    }
+
 }

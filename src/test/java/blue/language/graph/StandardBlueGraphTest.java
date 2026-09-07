@@ -8,7 +8,9 @@ import blue.language.api.BlueOperationResult;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -21,12 +23,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class StandardBlueGraphTest {
 
     private static final NodeResolver IDENTITY_RESOLVER =
-            (node, limits) -> node;
+            new NodeResolver() {
+                @Override
+                public Node resolve(Node node, ResolutionLimits limits) {
+                    return node;
+                }
+
+                @Override
+                public blue.language.merge.TypeEvidenceResolution
+                resolveTypeEvidence(Node node, ResolutionLimits limits) {
+                    throw new AssertionError(
+                            "graph operation must not request type evidence");
+                }
+
+            };
 
     @Test
     void shouldExpandExactReferenceWithoutMutatingProviderOrSource() {
@@ -119,14 +135,91 @@ final class StandardBlueGraphTest {
     }
 
     @Test
+    void shouldCollapseExpandedTypeEvidenceThroughResolvedIdentity() {
+        // given
+        Node exactType = new Node()
+                .name("Expanded collapse type")
+                .properties("fixed", new Node().value("inherited"));
+        String typeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(exactType);
+        Node canonical = new Node()
+                .type(new Node().blueId(typeBlueId))
+                .properties("own", new Node().value("kept"));
+        String canonicalBlueId =
+                DirectBlueIdCalculator.calculateBlueId(canonical);
+        StandardBlueGraph graph = new StandardBlueGraph(
+                requested -> typeBlueId.equals(requested)
+                        ? Collections.singletonList(exactType)
+                        : null,
+                IDENTITY_RESOLVER);
+
+        // when
+        Node expanded = graph.expand(canonical);
+        Node collapsed = graph.collapse(expanded);
+
+        // then
+        assertFalse(expanded.getType().isReferenceOnly());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DirectBlueIdCalculator.calculateBlueId(expanded));
+        assertTrue(collapsed.isReferenceOnly());
+        assertEquals(canonicalBlueId, collapsed.getBlueId());
+    }
+
+    @Test
+    void shouldCollapseAndExpandExactEmptyObjectWithoutChangingParentIdentity() {
+        // given
+        Node emptyObject = Nodes.emptyObject();
+        String emptyObjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(emptyObject);
+        StandardBlueGraph graph = new StandardBlueGraph(
+                requested -> emptyObjectBlueId.equals(requested)
+                        ? Collections.singletonList(emptyObject)
+                        : null,
+                IDENTITY_RESOLVER);
+        Node inlineParent = new Node().properties(
+                "child", emptyObject.clone());
+
+        // when
+        Node collapsed = graph.collapse(emptyObject);
+        Node referencedParent = new Node().properties(
+                "child", collapsed);
+        Node expandedParent = graph.expand(referencedParent);
+
+        // then
+        assertTrue(collapsed.isReferenceOnly());
+        assertEquals(emptyObjectBlueId, collapsed.getBlueId());
+        assertTrue(Nodes.isExactEmptyObject(emptyObject));
+        assertTrue(Nodes.isExactEmptyObject(
+                expandedParent.getProperties().get("child")));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineParent),
+                DirectBlueIdCalculator.calculateBlueId(referencedParent));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineParent),
+                DirectBlueIdCalculator.calculateBlueId(expandedParent));
+    }
+
+    @Test
     void shouldSpecializeThroughInjectedResolverWithoutMutatingInputs() {
         // given
         Node type = new Node().blueId(TEXT_TYPE_BLUE_ID);
         Node overlay = new Node().value("hello");
         AtomicReference<Node> validated = new AtomicReference<>();
-        NodeResolver resolver = (node, limits) -> {
-            validated.set(node);
-            return node;
+        NodeResolver resolver = new NodeResolver() {
+            @Override
+            public Node resolve(Node node, ResolutionLimits limits) {
+                validated.set(node);
+                return node;
+            }
+
+            @Override
+            public blue.language.merge.TypeEvidenceResolution
+            resolveTypeEvidence(Node node, ResolutionLimits limits) {
+                throw new AssertionError(
+                        "specialization must not request type evidence");
+            }
+
         };
         StandardBlueGraph graph = new StandardBlueGraph(
                 blueId -> null, resolver);

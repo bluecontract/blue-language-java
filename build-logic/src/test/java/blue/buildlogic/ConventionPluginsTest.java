@@ -252,6 +252,7 @@ final class ConventionPluginsTest {
         JmhParameters parameters = (JmhParameters)
                 project.getExtensions().getByName("jmh");
         assertTrue(parameters.getIncludeTests().get());
+        assertTrue(parameters.getFailOnError().get());
     }
 
     @Test
@@ -387,6 +388,8 @@ final class ConventionPluginsTest {
     @Test
     void shouldRejectEmptyOrMalformedJmhIncludeFilters() {
         // given / when / then
+        assertThrows(InvalidUserDataException.class,
+                () -> JmhConventionsPlugin.parseIncludes(""));
         assertThrows(InvalidUserDataException.class,
                 () -> JmhConventionsPlugin.parseIncludes("first,,second"));
         assertThrows(InvalidUserDataException.class,

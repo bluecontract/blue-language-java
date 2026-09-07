@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -84,26 +85,20 @@ class ResolvedReferenceCacheContractTest {
     }
 
     @Test
-    void shouldKeepVerifiedEvidenceValueOpaqueWhenMergerIsFinal()
-            throws NoSuchMethodException {
+    void shouldKeepVerifiedEvidenceValueOpaqueWhenMergerIsFinal() {
         // given
         Class<?> mergerType = Merger.class;
-        Class<?> evidenceType =
-                Merger.VerifiedReferenceResolution.class;
+        Class<?> evidenceType = VerifiedReferenceResolution.class;
 
         // when
         int mergerModifiers = mergerType.getModifiers();
         int evidenceModifiers = evidenceType.getModifiers();
-        int evidenceConstructorModifiers = evidenceType
-                .getDeclaredConstructor(String.class, FrozenNode.class, FrozenNode.class)
-                .getModifiers();
 
         // then
         assertTrue(Modifier.isFinal(mergerModifiers),
                 "Merger is a concrete engine; MergingProcessor is the supported extension point");
         assertTrue(Modifier.isFinal(evidenceModifiers));
-        assertTrue(Modifier.isPrivate(evidenceConstructorModifiers),
-                "subclasses must not be able to fabricate verification evidence");
+        assertSourceConstructorsAreNotPublic(evidenceType);
     }
 
     @Test
@@ -685,11 +680,8 @@ class ResolvedReferenceCacheContractTest {
         assertTrue(beforeClose.verifiedCurrentWeightBytes() > 0L);
         assertTrue(beforeClose.structuralCurrentWeightBytes() > 0L);
         assertEquals(0, afterClose.verifiedEntries());
-        assertEquals(0, afterClose.transientTrustedEntries());
         assertEquals(0, afterClose.structuralEntries());
         assertEquals(0L, afterClose.verifiedCurrentWeightBytes());
-        assertEquals(0L,
-                afterClose.transientTrustedCurrentWeightBytes());
         assertEquals(0L,
                 afterClose.structuralCurrentWeightBytes());
         assertInstanceOf(IllegalStateException.class,
@@ -746,10 +738,8 @@ class ResolvedReferenceCacheContractTest {
         ResolvedReferenceCache.CacheStats stats = parent.cacheStats();
         // then
         assertEquals(0, stats.verifiedEntries());
-        assertEquals(0, stats.transientTrustedEntries());
         assertEquals(0, stats.structuralEntries());
         assertTrue(stats.verifiedHighWaterWeightBytes() > 0L);
-        assertEquals(0L, stats.transientTrustedHighWaterWeightBytes());
         assertTrue(stats.structuralHighWaterWeightBytes() > 0L);
     }
 
@@ -774,8 +764,6 @@ class ResolvedReferenceCacheContractTest {
                     && parameters[1] == FrozenNode.class) {
                 directCanonicalInsertionMethods++;
                 if (!"putVerifiedCanonical".equals(
-                        method.getName())
-                        && !"putTransientTrustedCanonical".equals(
                         method.getName())) {
                     unexpectedInsertionMethods.add(
                             method.getName());
@@ -784,12 +772,6 @@ class ResolvedReferenceCacheContractTest {
         }
         Throwable directInsertionFailure = captureFailure(
                 () -> cache.putVerifiedCanonical(requested.blueId(), mismatched));
-        FrozenNode compatibilityResult =
-                cache.putTransientTrustedCanonical(
-                        requested.blueId(), mismatched);
-        boolean compatibilityEntryPresent =
-                cache.getTransientTrustedCanonical(
-                        requested.blueId()).isPresent();
         Throwable loadFailure = captureFailure(
                 () -> cache.getOrLoadVerifiedCanonical(
                         requested.blueId(),
@@ -803,16 +785,12 @@ class ResolvedReferenceCacheContractTest {
                         () -> requested);
 
         // then
-        assertEquals(2, directCanonicalInsertionMethods);
+        assertEquals(1, directCanonicalInsertionMethods);
         assertTrue(unexpectedInsertionMethods.isEmpty(),
-                "only the verifying insertion and its fail-closed "
-                        + "binary compatibility bridge may exist: "
+                "only the verifying insertion may exist: "
                         + unexpectedInsertionMethods);
         assertInstanceOf(IllegalArgumentException.class,
                 directInsertionFailure);
-        assertSame(mismatched, compatibilityResult);
-        assertFalse(compatibilityEntryPresent,
-                "the compatibility bridge must not retain trusted content");
         assertInstanceOf(IllegalArgumentException.class,
                 loadFailure);
         assertFalse(rejectedLoadRetained,
@@ -1038,10 +1016,6 @@ class ResolvedReferenceCacheContractTest {
         assertNotNull(verification);
         assertEquals(snapshot.blueId(), verification.requestedBlueId());
         assertEquals(verification.canonicalRoot().blueId(), verification.requestedBlueId());
-        assertSourceConstructorsArePrivate(
-                Merger.VerifiedReferenceResolution.class);
-        assertSourceConstructorsArePrivate(
-                Merger.SnapshotResolution.class);
         assertSourceConstructorsAreNotPublic(
                 VerifiedReferenceResolution.class);
         assertSourceConstructorsAreNotPublic(
@@ -1242,8 +1216,27 @@ class ResolvedReferenceCacheContractTest {
     private void assertValidEvidenceWinsConcurrentRace(
             List<ConcurrentRaceObservation> observations) {
         for (ConcurrentRaceObservation observation : observations) {
-            assertSame(observation.valid, observation.retained);
-            assertSame(observation.valid, observation.resolvedAgain);
+            assertTrue(observation.valid.isSourceBacked());
+            assertFalse(observation.retained.isSourceBacked());
+            assertTrue(observation.resolvedAgain.isSourceBacked());
+            assertNotSame(observation.valid, observation.retained);
+            assertNotSame(observation.valid, observation.resolvedAgain);
+            assertSame(observation.valid.frozenCanonicalRoot(),
+                    observation.retained.frozenCanonicalRoot());
+            assertSame(observation.valid.frozenResolvedRoot(),
+                    observation.retained.frozenResolvedRoot());
+            assertTrue(observation.valid.frozenCanonicalRoot()
+                    .sameResolvedStructure(
+                            observation.resolvedAgain
+                                    .frozenCanonicalRoot()));
+            assertTrue(observation.valid.frozenResolvedRoot()
+                    .sameResolvedStructure(
+                            observation.resolvedAgain
+                                    .frozenResolvedRoot()));
+            assertNotNull(observation.retained
+                    .verifiedReferenceResolution());
+            assertNotNull(observation.resolvedAgain
+                    .verifiedReferenceResolution());
             assertEquals("Concurrent Canonical", observation.retainedName);
             assertEquals(1, observation.snapshotCacheSize);
             assertEquals(1, observation.referenceCacheSize);
@@ -1320,22 +1313,6 @@ class ResolvedReferenceCacheContractTest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("interrupted while awaiting test gate", interrupted);
         }
-    }
-
-    private void assertSourceConstructorsArePrivate(Class<?> type) {
-        int sourceConstructors = 0;
-        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
-            if (constructor.isSynthetic()) {
-                assertFalse(Modifier.isPublic(constructor.getModifiers()),
-                        type.getSimpleName() + " compiler bridge must not be public");
-                continue;
-            }
-            sourceConstructors++;
-            assertTrue(Modifier.isPrivate(constructor.getModifiers()),
-                    type.getSimpleName() + " constructor must be private");
-        }
-        assertEquals(1, sourceConstructors,
-                type.getSimpleName() + " must have exactly one source constructor");
     }
 
     private void assertSourceConstructorsAreNotPublic(Class<?> type) {

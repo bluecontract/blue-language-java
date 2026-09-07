@@ -12,6 +12,7 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
@@ -31,7 +32,8 @@ class MinimizedOverlayNestedTypedNodeTest {
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         String markerTypeBlueId = writerProvider.getBlueIdByName("Processing Marker");
-        ResolvedSnapshot initial = writer.loadSnapshot(new Node());
+        ResolvedSnapshot initial = writer.loadSnapshot(
+                new Node().contracts(Nodes.emptyObject()));
         Node marker = new Node()
                 .type(new Node().blueId(markerTypeBlueId))
                 .properties("documentId", new Node().value("document-1"));
@@ -43,7 +45,8 @@ class MinimizedOverlayNestedTypedNodeTest {
         ResolvedSnapshot patched = writer.applyCanonicalPatch(initial,
                 JsonPatch.add("/contracts/initialized", marker));
         Node minimized = new MinimizedOverlayBuilder().build(
-                patched.resolvedRoot());
+                patched.frozenResolvedRoot(),
+                patched.canonicalTypeIdentities());
         BasicNodeProvider readerProvider = provider();
         Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
@@ -76,7 +79,9 @@ class MinimizedOverlayNestedTypedNodeTest {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
         // when
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         Node minimizedDocumentId = minimized.getContracts().getProperties().get("initialized")
                 .getProperties().get("documentId");
         Node minimizedOrder =
@@ -123,7 +128,9 @@ class MinimizedOverlayNestedTypedNodeTest {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
         // when
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         Blue reader = new Blue(provider());
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(
                 reader.jsonToNode(writer.nodeToJson(minimized)));
@@ -154,7 +161,9 @@ class MinimizedOverlayNestedTypedNodeTest {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
 
         // when
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         Node minimizedInline = minimized.getAsNode("/inline");
         Blue reader = new Blue();
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(

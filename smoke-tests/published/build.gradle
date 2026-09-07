@@ -11,9 +11,12 @@ def artifacts = [
         'blue-language-mapping',
         'blue-language-ipfs',
         'blue-contracts-core',
-        'blue-conformance',
         'blue-language-java'
 ]
+
+if (blueVersion ==~ /3\.1\.0-rc\.[1-9][0-9]*/) {
+    artifacts.add('blue-conformance')
+}
 
 repositories {
     exclusiveContent {
@@ -45,7 +48,6 @@ application {
 
 dependencies {
     implementation "blue.language:blue-language-java:${blueVersion}"
-    implementation "blue.language:blue-conformance:${blueVersion}"
 }
 
 artifacts.each { artifact ->

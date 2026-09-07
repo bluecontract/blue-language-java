@@ -10,6 +10,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIds;
+import blue.language.identity.NodeToBlueIdInput;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,16 +29,25 @@ import java.util.Set;
 final class ContractContributionResolver {
 
     private final NodeProvider provider;
+    private final ProcessingSnapshotManager snapshotManager;
     private volatile GasSchedule gasSchedule;
 
     ContractContributionResolver(NodeProvider provider) {
-        this(provider, GasSchedule.contracts10());
+        this(provider, GasSchedule.contracts10(), null);
     }
 
     ContractContributionResolver(NodeProvider provider,
                                  GasSchedule gasSchedule) {
+        this(provider, gasSchedule, null);
+    }
+
+    ContractContributionResolver(
+            NodeProvider provider,
+            GasSchedule gasSchedule,
+            ProcessingSnapshotManager snapshotManager) {
         this.provider = provider;
         this.gasSchedule = Objects.requireNonNull(gasSchedule, "gasSchedule");
+        this.snapshotManager = snapshotManager;
     }
 
     void gasSchedule(GasSchedule gasSchedule) {
@@ -106,16 +116,59 @@ final class ContractContributionResolver {
             String contractKey,
             boolean effectiveContractExists,
             Collection<String> executableBodyFields) {
+        return resolveBinding(
+                selectedScope,
+                effectiveScope,
+                contractKey,
+                effectiveContractExists,
+                executableBodyFields,
+                executableBodyFields);
+    }
+
+    BindingResolution resolveBinding(
+            Node selectedScope,
+            FrozenNode effectiveScope,
+            String contractKey,
+            boolean effectiveContractExists,
+            Collection<String> exactSourceFields,
+            Collection<String> executableBodyFields) {
+        return resolveBinding(
+                selectedScope,
+                effectiveScope,
+                contractKey,
+                effectiveContractExists,
+                exactSourceFields,
+                executableBodyFields,
+                null);
+    }
+
+    BindingResolution resolveBinding(
+            Node selectedScope,
+            FrozenNode effectiveScope,
+            String contractKey,
+            boolean effectiveContractExists,
+            Collection<String> exactSourceFields,
+            Collection<String> executableBodyFields,
+            CanonicalContributionIdentityMemo identityMemo) {
         List<String> contributions = new ArrayList<>();
         Map<String, Node> exactExecutableBodies =
                 new LinkedHashMap<>();
         Map<String, ExecutableBodySource> executableBodySources =
                 new LinkedHashMap<>();
+        Set<String> requestedExactSourceFields =
+                exactSourceFields == null
+                        ? Collections.<String>emptySet()
+                        : new LinkedHashSet<>(
+                                exactSourceFields);
         Set<String> requestedExecutableBodies =
                 executableBodyFields == null
                         ? Collections.<String>emptySet()
-                        : new LinkedHashSet<>(
-                                executableBodyFields);
+                        : new LinkedHashSet<>(executableBodyFields);
+        if (!requestedExactSourceFields.containsAll(
+                requestedExecutableBodies)) {
+            throw new IllegalArgumentException(
+                    "Executable body fields must be exact Source fields");
+        }
         Set<String> activeTypes = new LinkedHashSet<>();
         Node selectedType =
                 selectedScope != null ? selectedScope.getType() : null;
@@ -141,10 +194,12 @@ final class ContractContributionResolver {
                 selectedType,
                 contractKey,
                 contributions,
+                requestedExactSourceFields,
                 requestedExecutableBodies,
                 exactExecutableBodies,
                 executableBodySources,
                 activeTypes,
+                identityMemo,
                 0);
         Node contracts = selectedScope != null ? selectedScope.getContracts() : null;
         Node direct = null;
@@ -152,12 +207,16 @@ final class ContractContributionResolver {
             direct = contracts.getProperties().get(contractKey);
         }
         if (direct != null && contributesContent(direct)) {
-            String contributionBlueId = exactIdentity(direct);
+            String contributionBlueId = exactIdentity(
+                    direct,
+                    requestedExactSourceFields,
+                    requestedExecutableBodies,
+                    identityMemo);
             contributions.add(contributionBlueId);
             overlayDeclaredExecutableBodies(
                     direct,
                     contributionBlueId,
-                    requestedExecutableBodies,
+                    requestedExactSourceFields,
                     exactExecutableBodies,
                     executableBodySources);
         }
@@ -176,11 +235,14 @@ final class ContractContributionResolver {
     private void collectTypeContributions(Node typeReference,
                                           String contractKey,
                                           List<String> result,
+                                          Set<String> exactSourceFields,
                                           Set<String> executableBodyFields,
                                           Map<String, Node> exactExecutableBodies,
                                           Map<String, ExecutableBodySource>
                                                   executableBodySources,
                                           Set<String> activeTypes,
+                                          CanonicalContributionIdentityMemo
+                                                  identityMemo,
                                           int depth) {
         if (typeReference == null) {
             return;
@@ -197,7 +259,7 @@ final class ContractContributionResolver {
         Node typeNode = materialize(typeReference, typeBlueId);
         String cycleKey = typeBlueId != null
                 ? typeBlueId
-                : exactIdentity(typeNode);
+                : exactIdentity(typeNode, identityMemo);
         if (!activeTypes.add(cycleKey)) {
             throw new MustUnderstandFailureException(
                     "Cyclic type contribution while resolving contract '"
@@ -208,10 +270,12 @@ final class ContractContributionResolver {
                 typeNode.getType(),
                 contractKey,
                 result,
+                exactSourceFields,
                 executableBodyFields,
                 exactExecutableBodies,
                 executableBodySources,
                 activeTypes,
+                identityMemo,
                 depth + 1);
         Node contracts = typeNode.getContracts();
         Node contribution = null;
@@ -220,12 +284,16 @@ final class ContractContributionResolver {
         }
         if (contribution != null && contributesContent(contribution)) {
             String contributionBlueId =
-                    exactIdentity(contribution);
+                    exactIdentity(
+                            contribution,
+                            exactSourceFields,
+                            executableBodyFields,
+                            identityMemo);
             result.add(contributionBlueId);
             overlayDeclaredExecutableBodies(
                     contribution,
                     contributionBlueId,
-                    executableBodyFields,
+                    exactSourceFields,
                     exactExecutableBodies,
                     executableBodySources);
         }
@@ -260,9 +328,15 @@ final class ContractContributionResolver {
                 continue;
             }
             Node body = properties.get(field);
+            if (body == null) {
+                // A host-null map value carries no Blue content. Keep the
+                // executable body absent instead of manufacturing a bare
+                // fieldless Node that could escape as semantic content.
+                continue;
+            }
             exactExecutableBodies.put(
                     field,
-                    body != null ? body.clone() : new Node());
+                    body.clone());
             executableBodySources.put(
                     field,
                     new ExecutableBodySource(
@@ -270,8 +344,7 @@ final class ContractContributionResolver {
                             PointerUtils.toPointer(
                                     Collections.singletonList(
                                             field)),
-                            body != null
-                                    && body.isReferenceOnly()));
+                            body.isReferenceOnly()));
         }
     }
 
@@ -448,16 +521,100 @@ final class ContractContributionResolver {
     }
 
     private String referenceIdentity(Node node) {
-        return node != null && node.getBlueId() != null
-                ? node.getBlueId()
-                : node != null ? DirectBlueIdCalculator.calculateBlueId(node) : null;
+        return node != null
+                ? CanonicalIdentityEvidence.sourceTypeBlueId(
+                        node,
+                        snapshotManager,
+                        "Contract contribution type")
+                : null;
     }
 
-    private String exactIdentity(Node node) {
+    private String exactIdentity(
+            Node node,
+            CanonicalContributionIdentityMemo identityMemo) {
+        return exactIdentity(
+                node,
+                Collections.<String>emptySet(),
+                Collections.<String>emptySet(),
+                identityMemo);
+    }
+
+    private String exactIdentity(
+            Node node,
+            Set<String> exactSourceFields,
+            Set<String> executableBodyFields,
+            CanonicalContributionIdentityMemo identityMemo) {
         Objects.requireNonNull(node, "node");
-        return node.getBlueId() != null
-                ? node.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(node);
+        if (node.isReferenceOnly()) {
+            return CanonicalIdentityEvidence.sourceBlueId(
+                    node,
+                    snapshotManager,
+                    "Exact contract contribution");
+        }
+        Set<String> exactFieldPaths = fieldPaths(exactSourceFields);
+        Set<String> executableBodyPaths = fieldPaths(executableBodyFields);
+        if (identityMemo == null) {
+            return resolveExactIdentity(
+                    node,
+                    exactSourceFields,
+                    exactFieldPaths,
+                    executableBodyPaths);
+        }
+        Node exactSource = NodeToBlueIdInput
+                .stripResolvedBlueIdMetadata(node.clone());
+        final FrozenNode frozenSource;
+        try {
+            frozenSource = FrozenNode.fromSourceNode(exactSource);
+        } catch (RuntimeException unsupportedFingerprint) {
+            // Acceleration must never widen or narrow the accepted Source
+            // surface. Let the authoritative identity path produce the same
+            // result or diagnostic it would have produced without a memo.
+            return resolveExactIdentity(
+                    node,
+                    exactSourceFields,
+                    exactFieldPaths,
+                    executableBodyPaths);
+        }
+        return identityMemo.resolve(
+                frozenSource,
+                exactFieldPaths,
+                executableBodyPaths,
+                () -> resolveExactIdentity(
+                        exactSource,
+                        exactSourceFields,
+                        exactFieldPaths,
+                        executableBodyPaths));
+    }
+
+    private String resolveExactIdentity(
+            Node exactSource,
+            Set<String> exactSourceFields,
+            Set<String> exactFieldPaths,
+            Set<String> executableBodyPaths) {
+        ProcessingSnapshotManager valueManager = snapshotManager == null
+                ? null : snapshotManager.forValueIdentity();
+        return snapshotManager == null || exactSourceFields.isEmpty()
+                ? CanonicalIdentityEvidence.sourceBlueId(
+                        exactSource,
+                        valueManager,
+                        "Exact contract contribution")
+                : CanonicalIdentityEvidence
+                        .sourceBlueIdWithCanonicalExactFields(
+                                exactSource,
+                                valueManager,
+                                "Exact contract contribution",
+                                exactFieldPaths,
+                                executableBodyPaths);
+    }
+
+    private Set<String> fieldPaths(Set<String> fields) {
+        Set<String> paths = new LinkedHashSet<>();
+        for (String field : fields) {
+            paths.add(PointerUtils.toPointer(
+                    Collections.singletonList(
+                            Objects.requireNonNull(field, "field"))));
+        }
+        return paths;
     }
 
     private boolean contributesContent(Node node) {
@@ -505,9 +662,10 @@ final class ContractContributionResolver {
                     : exactExecutableBodies.entrySet()) {
                 exactBodies.put(
                         entry.getKey(),
-                        entry.getValue() != null
-                                ? entry.getValue().clone()
-                                : new Node());
+                        Objects.requireNonNull(
+                                entry.getValue(),
+                                "exactExecutableBody")
+                                .clone());
             }
             this.exactExecutableBodies =
                     Collections.unmodifiableMap(

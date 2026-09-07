@@ -13,6 +13,20 @@ import refine_closure_fixtures
 
 class PatchResultIdentityTest(unittest.TestCase):
 
+    def test_explicit_empty_member_keeps_its_identity_contribution(self) -> None:
+        marker = {"type": {"blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"}, "entries": {}}
+        patch = {"op": "add", "path": "/checkpoint", "val": marker}
+        document, expected, total = reference_scenarios.derive_direct_patch_result_identity_trace({}, [patch])
+        actual = GasReferenceTrace()
+        result = refine_closure_fixtures._charge_direct_patch_result({}, patch, actual,
+            context={"logicalPath": "/checkpoint"})
+        self.assertEqual(marker, result["checkpoint"])
+        self.assertEqual(document, result)
+        self.assertEqual(expected, actual.entries)
+        self.assertEqual(total, actual.total)
+        self.assertEqual(3, next(row["quantity"] for row in actual.entries
+                               if row["counter"] == "directIdentityHashBlock"))
+
     def test_untyped_scalar_charges_inferred_type_member(self) -> None:
         initial = {}
         patches = [

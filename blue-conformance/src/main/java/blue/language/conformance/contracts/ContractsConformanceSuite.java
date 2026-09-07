@@ -115,7 +115,7 @@ public final class ContractsConformanceSuite {
                 results);
     }
 
-    private static void executeClosureFixture(
+    static void executeClosureFixture(
             BlueContractsConformanceReport.FixtureInventoryEntry entry,
             JsonNode fixture) {
         if ("limit-micro".equals(entry.operation())) {
@@ -192,7 +192,7 @@ public final class ContractsConformanceSuite {
                 failure);
     }
 
-    private static void requireInventoryMatch(
+    static void requireInventoryMatch(
             BlueContractsConformanceReport.FixtureInventoryEntry entry,
             JsonNode fixture) {
         if (!entry.id().equals(fixture.path("id").asText())

@@ -77,6 +77,20 @@ final class ProcessingGasContext {
         return session;
     }
 
+    RuntimeWorkSession newRuntimeWorkSession(
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager,
+            ContractProcessorRegistry registry) {
+        RuntimeWorkSession session = new RuntimeWorkSession(
+                meter, RuntimeWorkSession.Mode.PROCESSING);
+        if (languageRuntime != null) {
+            session.attachSemanticOutputBoundary(new SemanticOutputBoundary(
+                    session, languageRuntime, snapshotManager, meter.semantic(),
+                    outputAdmissionMemo, registry));
+        }
+        return session;
+    }
+
     /** Opens admission work against this invocation's shared live budget. */
     RuntimeWorkSession newAdmissionRuntimeWorkSession(
             LanguageRuntimeAccess languageRuntime,

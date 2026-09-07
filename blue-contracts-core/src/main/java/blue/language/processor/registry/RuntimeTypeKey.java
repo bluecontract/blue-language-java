@@ -25,6 +25,8 @@ public enum RuntimeTypeKey {
     DOCUMENT_UPDATE,
     /** Document-update channel type. */
     DOCUMENT_UPDATE_CHANNEL,
+    /** Embedded-collection event channel type. */
+    EMBEDDED_COLLECTION_EVENT_CHANNEL,
     /** Embedded-delivery event type. */
     EMBEDDED_EVENT_DELIVERY,
     /** Embedded-node channel type. */

@@ -1,17 +1,17 @@
 package blue.language.processor;
 
-import blue.language.model.wire.BlueLanguageConstants;
-
 import blue.language.Blue;
-import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class CheckpointIdentityCalculatorTest {
@@ -77,6 +77,61 @@ final class CheckpointIdentityCalculatorTest {
 
         // then
         assertEquals(directIdentity, aliasedIdentity);
+    }
+
+    @Test
+    void shouldCanonicalizeInlineReferenceAndMixedTypeSourceEqually() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        Node authoredType = new Node()
+                .name("Checkpoint Event Type");
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                authoredType);
+        String unrelatedAnnotation = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("Unrelated annotation"));
+        Node inline = new Node()
+                .type(authoredType.clone())
+                .properties("payload", new Node().value("same"));
+        Node reference = new Node()
+                .type(new Node().blueId(typeBlueId))
+                .properties("payload", new Node().value("same"));
+        Node mixed = new Node()
+                .type(authoredType.clone().blueId(unrelatedAnnotation))
+                .properties("payload", new Node().value("same"));
+
+        // when
+        String inlineIdentity = CheckpointIdentityCalculator.identity(
+                inline, blue);
+        String referenceIdentity = CheckpointIdentityCalculator.identity(
+                reference, blue);
+        String mixedIdentity = CheckpointIdentityCalculator.identity(
+                mixed, blue);
+
+        // then
+        assertEquals(
+                blue.calculateSourceDocumentBlueId(inline.clone()),
+                inlineIdentity);
+        assertEquals(referenceIdentity, inlineIdentity);
+        assertEquals(inlineIdentity, mixedIdentity);
+    }
+
+    @Test
+    void shouldFailClosedForInlineTypeSourceWithoutLanguageRuntime() {
+        // given
+        Node event = new Node()
+                .type(new Node().name("Checkpoint Event Type"))
+                .properties("payload", new Node().value("value"));
+
+        // when
+        Executable calculateIdentity =
+                () -> CheckpointIdentityCalculator.identity(event);
+
+        // then
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class,
+                calculateIdentity);
+        assertTrue(failure.getMessage().contains(
+                "requires a Blue canonicalization context"));
     }
 
     @Test

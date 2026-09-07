@@ -1,7 +1,7 @@
 package blue.language.processor;
 
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -62,6 +62,9 @@ final class EvidenceClassificationTypeCatalog {
         collectTypeColdContractPaths(
                 scope.getType(),
                 scopePath,
+                PointerUtils.appendPointer(
+                        scopePath,
+                        BlueLanguageConstants.OBJECT_TYPE),
                 selectedKeys,
                 preserved,
                 activeTypes,
@@ -134,7 +137,7 @@ final class EvidenceClassificationTypeCatalog {
             return true;
         }
         Node exactType = exactContent(declaredType, manager);
-        String identity = typeIdentity(declaredType, exactType);
+        String identity = typeIdentity(declaredType);
         enterType(identity, activeTypes);
         try {
             if (providesAnyDirectSegment(exactType, requiredSegments)) {
@@ -182,6 +185,7 @@ final class EvidenceClassificationTypeCatalog {
     private void collectTypeColdContractPaths(
             Node declaredType,
             String scopePath,
+            String declaredTypePath,
             Map<String, Set<String>> selectedKeys,
             Set<String> preserved,
             Set<String> activeTypes,
@@ -195,12 +199,15 @@ final class EvidenceClassificationTypeCatalog {
             return;
         }
         Node exactType = exactContent(declaredType, manager);
-        String identity = typeIdentity(declaredType, exactType);
+        String identity = typeIdentity(declaredType);
         enterType(identity, activeTypes);
         try {
             collectTypeColdContractPaths(
                     exactType.getType(),
                     scopePath,
+                    PointerUtils.appendPointer(
+                            declaredTypePath,
+                            BlueLanguageConstants.OBJECT_TYPE),
                     selectedKeys,
                     preserved,
                     activeTypes,
@@ -208,6 +215,7 @@ final class EvidenceClassificationTypeCatalog {
             addUnselectedContractPaths(
                     exactType.getContracts(),
                     scopePath,
+                    declaredTypePath,
                     selectedKeys,
                     preserved);
             collectTypeProvidedDescendantPaths(
@@ -286,11 +294,15 @@ final class EvidenceClassificationTypeCatalog {
         addUnselectedContractPaths(
                 exactScope.getContracts(),
                 scopePath,
+                null,
                 selectedKeys,
                 preserved);
         collectTypeColdContractPaths(
                 exactScope.getType(),
                 scopePath,
+                PointerUtils.appendPointer(
+                        scopePath,
+                        BlueLanguageConstants.OBJECT_TYPE),
                 selectedKeys,
                 preserved,
                 new LinkedHashSet<String>(),
@@ -306,6 +318,7 @@ final class EvidenceClassificationTypeCatalog {
     private void addUnselectedContractPaths(
             Node contracts,
             String scopePath,
+            String declaredTypePath,
             Map<String, Set<String>> selectedKeys,
             Set<String> preserved) {
         if (contracts == null) {
@@ -326,12 +339,21 @@ final class EvidenceClassificationTypeCatalog {
                 scopePath, selectedKeys.keySet());
         String contractsPath = PointerUtils.appendPointer(
                 scopePath, ProcessorContractConstants.KEY_CONTRACTS);
+        String declaredContractsPath = declaredTypePath != null
+                ? PointerUtils.appendPointer(
+                        declaredTypePath,
+                        ProcessorContractConstants.KEY_CONTRACTS)
+                : null;
         for (String key : exactContracts.getProperties().keySet()) {
             if (!selected.contains(key)
                     && !(includeProcessEmbedded
                     && ProcessorContractConstants.KEY_EMBEDDED.equals(key))) {
                 preserved.add(PointerUtils.appendPointer(
                         contractsPath, key));
+                if (declaredContractsPath != null) {
+                    preserved.add(PointerUtils.appendPointer(
+                            declaredContractsPath, key));
+                }
             }
         }
     }
@@ -367,10 +389,11 @@ final class EvidenceClassificationTypeCatalog {
     }
 
     /** Returns the stable identity used by the active-ancestry guard. */
-    private String typeIdentity(Node declaredType, Node exactType) {
-        return declaredType.getBlueId() != null
-                ? declaredType.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(exactType);
+    private String typeIdentity(Node declaredType) {
+        return CanonicalIdentityEvidence.sourceTypeBlueId(
+                declaredType,
+                owner.snapshotManager(),
+                "Phase-B type ancestry");
     }
 
     /** Rejects a type already active in the current ancestry. */

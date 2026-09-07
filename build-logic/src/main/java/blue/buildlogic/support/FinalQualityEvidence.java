@@ -297,7 +297,7 @@ public final class FinalQualityEvidence {
         return value;
     }
 
-    private static Map<String, Object> classes(
+    public static Map<String, Object> classes(
             JavaSourceQuality.Analysis source,
             Map<String, String> rationales,
             int lineLimit,
@@ -415,7 +415,7 @@ public final class FinalQualityEvidence {
         return value;
     }
 
-    private static Map<String, Object> benchmarks(
+    public static Map<String, Object> benchmarks(
             Path resultFile,
             List<String> required,
             boolean compiled,
@@ -425,14 +425,13 @@ public final class FinalQualityEvidence {
             JsonNode report = json(resultFile, "JMH smoke result");
             if (report.isArray()) {
                 for (JsonNode benchmark : report) {
-                    executed.add(benchmark.path("benchmark").asText());
+                    if (validBenchmarkResult(benchmark)) executed.add(benchmark.path("benchmark").asText());
                 }
             }
         }
         List<String> missing = new ArrayList<>();
         for (String requiredBenchmark : required) {
-            if (executed.stream().noneMatch(name -> name.equals(requiredBenchmark)
-                    || name.endsWith("." + requiredBenchmark))) {
+            if (!executed.contains(requiredBenchmark)) {
                 missing.add(requiredBenchmark);
             }
         }
@@ -445,6 +444,24 @@ public final class FinalQualityEvidence {
         value.put("requiredBenchmarks", new ArrayList<>(required));
         value.put("smokePassed", missing.isEmpty());
         return value;
+    }
+
+    private static boolean validBenchmarkResult(JsonNode result) {
+        JsonNode metric = result.path("primaryMetric");
+        JsonNode score = metric.path("score");
+        int forks = result.path("forks").asInt(0);
+        int iterations = result.path("measurementIterations").asInt(0);
+        JsonNode raw = metric.path("rawData");
+        if (!score.isNumber() || !Double.isFinite(score.asDouble()) || score.asDouble() <= 0
+                || metric.path("scoreUnit").asText().trim().isEmpty()
+                || forks < 1 || iterations < 1 || !raw.isArray() || raw.size() != forks) return false;
+        for (JsonNode fork : raw) {
+            if (!fork.isArray() || fork.size() != iterations) return false;
+            for (JsonNode sample : fork) {
+                if (!sample.isNumber() || !Double.isFinite(sample.asDouble()) || sample.asDouble() < 0) return false;
+            }
+        }
+        return true;
     }
 
     private static Map<String, Object> architecture(Path reportFile, List<String> blockers) {

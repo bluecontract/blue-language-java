@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
 registryKind: runtime-type
 specificationVersion: '1.0'
 languageVersion: '1.0'
-fixturePackageIdentity: sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c
+fixturePackageIdentity: sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c
 entries:
 - key: Channel
   path: Channel.blue
@@ -12,8 +12,8 @@ entries:
   fixtureOnly: false
 - key: ChannelEventCheckpoint
   path: ChannelEventCheckpoint.blue
-  blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
-  sha256: 3f4805232f6e22d2a32079ad1df67d5262863d7cc1e287f3b9cd64688dbdf4e0
+  blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+  sha256: 002cc9c8b9307387acb0bf335eda91dddbe7d6029efd36db0ef1dae5cd5d361b
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: CheckpointEntry
@@ -30,8 +30,8 @@ entries:
   fixtureOnly: false
 - key: ContractExecutionResult
   path: ContractExecutionResult.blue
-  blueId: 3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv
-  sha256: 6b3fd65507c9db589ee4e3b5c14f68f3ba64a0c9998a82b98605bed6fbf0e9c0
+  blueId: QAGTb2Kecxf1vVuysfWD8B9rehhCAtnWkiB2Ssni5BV
+  sha256: b7af5d544a3904ea1383cc829dd67b09f3fa17c22b40d0cc4ac1c7b048698d13
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: DocumentProcessingInitiated
@@ -56,6 +56,12 @@ entries:
   path: DocumentUpdateChannel.blue
   blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
   sha256: 85e9be8104ea101b9e226572e85c2c83f05be5fb50f03816ab7eefbc0b2bb7b6
+  semanticDescriptionIdentityBearing: true
+  fixtureOnly: false
+- key: EmbeddedCollectionEventChannel
+  path: EmbeddedCollectionEventChannel.blue
+  blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
+  sha256: f7bd147b811db775af0f5e46f699ab7975f91490ac710988181ee1513610887c
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: EmbeddedEventDelivery
@@ -108,8 +114,8 @@ entries:
   fixtureOnly: false
 - key: ProcessEmbedded
   path: ProcessEmbedded.blue
-  blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
-  sha256: e8a70c30080f0afa187d12d29dccb08aa5eb4e19ae8938ea517b689df5b9fa1d
+  blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+  sha256: ce72bfae0fd102188543a4100eea1fa2309a979fb52a529f5b28439b76255c02
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: ProcessingInitializedMarker
@@ -132,8 +138,8 @@ entries:
   fixtureOnly: false
 - key: RuntimeLedger
   path: RuntimeLedger.blue
-  blueId: EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2
-  sha256: 788518f6f6bc8570ffef719822c3359b41c140e795e3b4ff74a7fd2c24f4f314
+  blueId: D8eB7VDLhpQJmcf1UYtHF9ShTdZoW5xYGKWSgs4f4Jqh
+  sha256: b0e9f3d0c6d3bbdf489d8d6ab8f34a2c13391e4d54f1bab8bca262048cb00a78
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: ScriptedExternalChannel
@@ -144,8 +150,8 @@ entries:
   fixtureOnly: true
 - key: ScriptedHandler
   path: ScriptedHandler.blue
-  blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-  sha256: 5f0bf56628d08f6fd3020edea085381a7363938fac2a67e432feb4f26ecd9bb2
+  blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+  sha256: 19a16a248e7d56f867812f098ec7202c96fde462da80a9c0ef23275468ef2ff7
   semanticDescriptionIdentityBearing: true
   fixtureOnly: true
 - key: TriggeredEventChannel
@@ -156,8 +162,8 @@ entries:
   fixtureOnly: false
 - key: TypeGeneralizationPolicy
   path: TypeGeneralizationPolicy.blue
-  blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
-  sha256: 65eb522ae7ee74074148a2aa06452f8df26fa2364eff9205d46c94bf82b1f023
+  blueId: EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP
+  sha256: a9843db7f72270c2125daaa57201bef74d3146dbdc4879420eb817dccd5732e5
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: TypeGeneralizationRule
@@ -170,4 +176,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity and fixturePackageIdentity are null before hashing
-packageIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+packageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4

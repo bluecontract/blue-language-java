@@ -111,7 +111,9 @@ final class MutationCommit {
                         canonicalPlan.root(),
                         resolvedPlan.root(),
                         planning.isResolutionComplete(),
-                        false);
+                        planning.isSourceBacked(),
+                        false,
+                        requireCanonicalTypeIdentities(snapshotRollback));
             }
             boolean published = next.isResolutionComplete();
             runtime.snapshot =
@@ -123,6 +125,16 @@ final class MutationCommit {
             runtime.snapshot = snapshotRollback;
             throw failure;
         }
+    }
+
+    private static blue.language.identity.CanonicalTypeIdentityLookup
+    requireCanonicalTypeIdentities(ResolvedSnapshot snapshot) {
+        if (snapshot == null) {
+            throw new IllegalStateException(
+                    "Direct snapshot write requires resolver-issued canonical "
+                            + "type identity evidence");
+        }
+        return snapshot.canonicalTypeIdentities();
     }
 
     private void materializeReferenceAncestors(Node root, String path) {
@@ -196,8 +208,8 @@ final class MutationCommit {
     private static void removeMaterializedPath(Node root, String path) {
         List<String> segments = JsonPointer.split(path);
         if (segments.isEmpty()) {
-            root.replaceWith(new Node());
-            return;
+            throw new IllegalArgumentException(
+                    "Direct materialized writes cannot remove the root document");
         }
         List<String> parentSegments = new ArrayList<>(
                 segments.subList(0, segments.size() - 1));

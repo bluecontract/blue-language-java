@@ -174,34 +174,23 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
-    void shouldRetireAndReactivateReplacedCollectionMember()
+    void shouldRejectSameInvocationCollectionMemberReactivation()
             throws IOException {
         // given
         ObjectNode fixture = copy("emb/c-emb-11.yaml");
-        ArrayNode assertions = (ArrayNode) fixture.path("expected")
-                .path("assertions");
-        assertions.removeAll();
-        assertions.addObject()
-                .put("actual", "result.status")
-                .put("op", "equals")
-                .put("expected", "success");
 
         // when
         ContractsConformanceProjection projection = execute(fixture);
 
         // then
-        assertTrue(
-                projection.project(
-                        "commit.retiredIntervals.0.scopePath").isPresent(),
-                projection.values()::toString);
         assertEquals(
-                "/lessons/lesson-a",
-                projection.project("commit.retiredIntervals.0.scopePath")
+                "invalid-processing-document",
+                projection.project("result.status")
                         .getValue(),
                 projection.values()::toString);
         assertEquals(
-                "/lessons/lesson-a",
-                projection.project("commit.newIntervals.0.scopePath")
+                false,
+                projection.project("commit.rootCommitted")
                         .getValue(),
                 projection.values()::toString);
     }

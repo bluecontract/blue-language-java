@@ -142,10 +142,10 @@ public class BlueLanguageConstants {
             "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2";
     /** Released BlueId of the List core type. */
     public static final String LIST_TYPE_BLUE_ID =
-            "8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF";
+            "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK";
     /** Released BlueId of the Dictionary core type. */
     public static final String DICTIONARY_TYPE_BLUE_ID =
-            "Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG";
+            "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF";
     /** Ordered released BlueIds corresponding to {@link #BASIC_TYPES}. */
     public static final List<String> BASIC_TYPE_BLUE_IDS = Arrays.asList(
             TEXT_TYPE_BLUE_ID, DOUBLE_TYPE_BLUE_ID,

@@ -7,12 +7,14 @@ import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ExternalChannelHostedOutputAdmissionTest {
@@ -143,6 +145,215 @@ final class ExternalChannelHostedOutputAdmissionTest {
         }
     }
 
+    @Test
+    void shouldUseAdmittedEventIdentityForDefaultCheckpointAcrossTypeForms() {
+        // given
+        Node eventType = new Node()
+                .name("Hosted Event Type")
+                .properties(
+                        "semanticMarker",
+                        new Node().value("same"));
+        String eventTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        eventType);
+        Node inlineEvent = event()
+                .name("Inline Hosted Event")
+                .type(eventType.clone());
+        Node referencedEvent = event()
+                .name("Inline Hosted Event")
+                .type(new Node().blueId(
+                        eventTypeBlueId));
+        Node output = output();
+
+        EvaluationResult inline;
+        try (EvaluationFixture fixture =
+                     new EvaluationFixture(
+                             new BasicNodeProvider(
+                                     output,
+                                     eventType),
+                             output,
+                             inlineEvent,
+                             true,
+                             null)) {
+            inline = fixture.evaluate();
+        }
+
+        // when
+        EvaluationResult referenced;
+        try (EvaluationFixture fixture =
+                     new EvaluationFixture(
+                             new BasicNodeProvider(
+                                     output,
+                                     eventType),
+                             output,
+                             referencedEvent,
+                             true,
+                             null)) {
+            referenced = fixture.evaluate();
+        }
+
+        // then
+        assertEquals(
+                inline.eventBlueId,
+                referenced.eventBlueId,
+                "inline and referenced type forms must admit one event identity");
+        assertEquals(
+                inline.eventBlueId,
+                inline.evaluation.checkpointSubjectBlueId());
+        assertEquals(
+                referenced.eventBlueId,
+                referenced.evaluation.checkpointSubjectBlueId());
+        assertTrue(
+                inline.evaluation.checkpointSubject()
+                        .isReferenceOnly());
+        assertEquals(
+                inline.eventBlueId,
+                inline.evaluation.checkpointSubject()
+                        .getReferenceBlueId());
+    }
+
+    @Test
+    void shouldPreserveAdmittedCyclicMemberIdentityForDefaultCheckpoint() {
+        // given
+        Node cyclicSet = new Node().items(
+                event()
+                        .name("Hosted Cyclic Event A")
+                        .properties(
+                                "next",
+                                new Node().blueId("this#1")),
+                event()
+                        .name("Hosted Cyclic Event B")
+                        .properties(
+                                "next",
+                                new Node().blueId("this#0")));
+        Node output = output();
+        BasicNodeProvider provider = new BasicNodeProvider(
+                cyclicSet, output);
+        String eventBlueId = provider.getBlueIdByName(
+                "Hosted Cyclic Event A");
+        Node resolvedEvent = provider.fetchFirstByBlueId(
+                eventBlueId).clone().blueId(null);
+
+        // when
+        try (EvaluationFixture fixture =
+                     new EvaluationFixture(
+                             provider,
+                             output,
+                             resolvedEvent,
+                             true,
+                             eventBlueId)) {
+            EvaluationResult result = fixture.evaluate();
+
+            // then
+            assertEquals(
+                    eventBlueId,
+                    result.evaluation.checkpointSubjectBlueId());
+            assertTrue(
+                    result.evaluation.checkpointSubject()
+                            .isReferenceOnly());
+            assertEquals(
+                    eventBlueId,
+                    result.evaluation.checkpointSubject()
+                            .getReferenceBlueId());
+        }
+    }
+
+    @Test
+    void shouldRejectContextFreeDefaultCheckpointIdentityDerivation() {
+        // given
+        ExternalChannelSubscriptionFunctions<HostedOutputChannel>
+                functions =
+                new ExternalChannelSubscriptionFunctions<
+                        HostedOutputChannel>() {
+                };
+
+        // when
+        Executable deriveCheckpointSubject = () ->
+                functions.checkpointSubject(
+                        new HostedOutputChannel(),
+                        event(),
+                        output());
+
+        // then
+        assertThrows(
+                UnsupportedOperationException.class,
+                deriveCheckpointSubject);
+    }
+
+    @Test
+    void shouldDispatchExplicitContextFreeCheckpointOverrideExactly() {
+        // given
+        ExternalChannelSubscriptionFunctions<HostedOutputChannel>
+                functions =
+                new ExternalChannelSubscriptionFunctions<
+                        HostedOutputChannel>() {
+                    @Override
+                    public Node checkpointSubject(
+                            HostedOutputChannel contract,
+                            Node exactEvent,
+                            Node exactPayload) {
+                        return new Node().value(
+                                "runtime-defined-subject");
+                    }
+                };
+
+        // when
+        Node subject = functions.checkpointSubject(
+                new HostedOutputChannel(),
+                event(),
+                output(),
+                null);
+
+        // then
+        assertEquals(
+                "runtime-defined-subject",
+                subject.getValue());
+    }
+
+    @Test
+    void shouldRejectEventEvaluationWithoutSemanticAdmissionBoundary() {
+        // given
+        try (EvaluationFixture fixture =
+                     new EvaluationFixture(
+                             output(),
+                             false)) {
+            // when
+            Executable evaluate =
+                    fixture::evaluateWithoutSemanticAdmissionBoundary;
+
+            // then
+            IllegalStateException failure = assertThrows(
+                    IllegalStateException.class,
+                    evaluate);
+            assertTrue(
+                    failure.getMessage().contains(
+                            "requires a live Language semantic "
+                                    + "admission boundary"),
+                    failure::getMessage);
+        }
+    }
+
+    @Test
+    void shouldRejectEventEvaluationWithoutCarriedExactIdentity() {
+        // given
+        try (EvaluationFixture fixture =
+                     new EvaluationFixture(
+                             output(),
+                             false)) {
+            // when
+            Executable evaluate =
+                    fixture::evaluateWithoutCarriedEventIdentity;
+
+            // then
+            IllegalStateException failure = assertThrows(
+                    IllegalStateException.class,
+                    evaluate);
+            assertTrue(
+                    failure.getMessage().contains(
+                            "exact event identity was not admitted"));
+        }
+    }
+
     private static long hostedQuantity(
             ProcessingConformanceTrace trace,
             String counter) {
@@ -222,11 +433,20 @@ final class ExternalChannelHostedOutputAdmissionTest {
     private static final class HostedOutputProcessor
             implements ChannelProcessor<HostedOutputChannel> {
         private final Node suppliedOutput;
+        private final boolean defaultCheckpointSubject;
 
         private HostedOutputProcessor(
                 Node suppliedOutput) {
+            this(suppliedOutput, false);
+        }
+
+        private HostedOutputProcessor(
+                Node suppliedOutput,
+                boolean defaultCheckpointSubject) {
             this.suppliedOutput =
                     suppliedOutput.clone();
+            this.defaultCheckpointSubject =
+                    defaultCheckpointSubject;
         }
 
         @Override
@@ -265,7 +485,16 @@ final class ExternalChannelHostedOutputAdmissionTest {
                 public Node checkpointSubject(
                         HostedOutputChannel contract,
                         Node exactEvent,
-                        Node exactPayload) {
+                        Node exactPayload,
+                        ExternalChannelFunctionContext context) {
+                    if (defaultCheckpointSubject) {
+                        return ExternalChannelSubscriptionFunctions.super
+                                .checkpointSubject(
+                                        contract,
+                                        exactEvent,
+                                        exactPayload,
+                                        context);
+                    }
                     return suppliedOutput();
                 }
             };
@@ -280,6 +509,8 @@ final class ExternalChannelHostedOutputAdmissionTest {
             implements AutoCloseable {
         private final Blue blue;
         private final DocumentProcessor processor;
+        private final Node exactEvent;
+        private final String assertedEventBlueId;
 
         private EvaluationFixture(
                 Node output,
@@ -291,24 +522,44 @@ final class ExternalChannelHostedOutputAdmissionTest {
                                     DirectBlueIdCalculator
                                             .calculateBlueId(
                                                     output))
-                            : output);
+                            : output,
+                    event(),
+                    false,
+                    null);
         }
 
         private EvaluationFixture(
                 BasicNodeProvider provider,
                 Node suppliedOutput) {
+            this(
+                    provider,
+                    suppliedOutput,
+                    event(),
+                    false,
+                    null);
+        }
+
+        private EvaluationFixture(
+                BasicNodeProvider provider,
+                Node suppliedOutput,
+                Node exactEvent,
+                boolean defaultCheckpointSubject,
+                String assertedEventBlueId) {
             this.blue =
                     ProcessorTestSupport.blue(
                             provider);
             HostedOutputProcessor hosted =
                     new HostedOutputProcessor(
-                            suppliedOutput);
+                            suppliedOutput,
+                            defaultCheckpointSubject);
             blue.registerExternalContractType(
                     CHANNEL_TYPE_BLUE_ID,
                     CHANNEL_TYPE,
                     hosted);
             this.processor =
                     blue.getDocumentProcessor();
+            this.exactEvent = exactEvent.clone();
+            this.assertedEventBlueId = assertedEventBlueId;
         }
 
         private EvaluationResult evaluate() {
@@ -326,6 +577,13 @@ final class ExternalChannelHostedOutputAdmissionTest {
                     execution.runtime()
                             .newRuntimeWorkSession(
                                     blue);
+            String eventBlueId = assertedEventBlueId != null
+                    ? assertedEventBlueId
+                    : blue.calculateSourceDocumentBlueId(
+                            exactEvent);
+            phase.carryExactInput(
+                    exactEvent,
+                    eventBlueId);
             ExternalChannelFunctionEvaluation
                     evaluation =
                     ExternalChannelFunctionEvaluation
@@ -341,13 +599,81 @@ final class ExternalChannelHostedOutputAdmissionTest {
                                     bundle
                                             .effectiveContractSnapshot(
                                                     "source"),
-                                    event(),
+                                    exactEvent,
                                     null,
                                     phase);
             return new EvaluationResult(
                     evaluation,
+                    eventBlueId,
                     execution.runtime()
                             .conformanceTrace());
+        }
+
+        private void evaluateWithoutSemanticAdmissionBoundary() {
+            ResolvedSnapshot snapshot =
+                    processor.snapshotManager()
+                            .fromDocumentTransient(
+                                    document());
+            ContractBundle bundle =
+                    processor.contractLoader()
+                            .load(snapshot, "/");
+            RuntimeWorkSession phase =
+                    new RuntimeWorkSession(
+                            new GasMeter(),
+                            RuntimeWorkSession.Mode.ADMISSION);
+            String eventBlueId = assertedEventBlueId != null
+                    ? assertedEventBlueId
+                    : blue.calculateSourceDocumentBlueId(
+                            exactEvent);
+            phase.carryExactInput(exactEvent, eventBlueId);
+            try {
+                ExternalChannelFunctionEvaluation.evaluate(
+                        processor.registry(),
+                        processor.contractConverter(),
+                        ExternalChannelFunctionEvaluation
+                                .verifiedMatcherSessions(
+                                        processor.snapshotManager()),
+                        bundle,
+                        bundle.effectiveContractSnapshot(
+                                "source"),
+                        exactEvent,
+                        null,
+                        phase);
+            } finally {
+                if (phase.isOpen()) {
+                    phase.suspend();
+                }
+                phase.close();
+            }
+        }
+
+        private void evaluateWithoutCarriedEventIdentity() {
+            ResolvedSnapshot snapshot =
+                    processor.snapshotManager()
+                            .fromDocumentTransient(
+                                    document());
+            ContractBundle bundle =
+                    processor.contractLoader()
+                            .load(snapshot, "/");
+            ProcessorInvocationState execution =
+                    new ProcessorInvocationState(
+                            processor, snapshot);
+            RuntimeWorkSession phase =
+                    execution.runtime()
+                            .newRuntimeWorkSession(
+                                    blue);
+            ExternalChannelFunctionEvaluation.evaluate(
+                    processor.registry(),
+                    processor.contractConverter(),
+                    ExternalChannelFunctionEvaluation
+                            .verifiedMatcherSessions(
+                                    processor.snapshotManager()),
+                    bundle,
+                    bundle.effectiveContractSnapshot(
+                            "source"),
+                    exactEvent,
+                    null,
+                    phase);
         }
 
         @Override
@@ -359,13 +685,16 @@ final class ExternalChannelHostedOutputAdmissionTest {
     private static final class EvaluationResult {
         private final ExternalChannelFunctionEvaluation
                 evaluation;
+        private final String eventBlueId;
         private final ProcessingConformanceTrace trace;
 
         private EvaluationResult(
                 ExternalChannelFunctionEvaluation
                         evaluation,
+                String eventBlueId,
                 ProcessingConformanceTrace trace) {
             this.evaluation = evaluation;
+            this.eventBlueId = eventBlueId;
             this.trace = trace;
         }
     }

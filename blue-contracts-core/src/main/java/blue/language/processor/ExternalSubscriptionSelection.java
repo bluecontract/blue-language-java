@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,28 +34,11 @@ final class ExternalSubscriptionSelection {
             ContractBundle bundle,
             EffectiveContractSnapshot snapshot,
             blue.language.model.Node event,
-            List<String> effectiveContractKeys) {
-        return immutableEvaluation(
-                ExternalChannelFunctionEvaluation.evaluate(
-                        registry,
-                        converter,
-                        ExternalChannelFunctionEvaluation
-                                .verifiedMatcherSessions(
-                                        snapshotManager),
-                        bundle,
-                        snapshot,
-                        event,
-                        effectiveContractKeys));
-    }
-
-    ExternalSubscriptionEvaluation evaluate(
-            ContractBundle bundle,
-            EffectiveContractSnapshot snapshot,
-            blue.language.model.Node event,
+            String eventBlueId,
             List<String> effectiveContractKeys,
             RuntimeWorkSession runtimeWorkSession) {
         return immutableEvaluation(
-                ExternalChannelFunctionEvaluation.evaluate(
+                ExternalChannelFunctionEvaluation.evaluateWithExactInput(
                         registry,
                         converter,
                         ExternalChannelFunctionEvaluation
@@ -64,6 +48,8 @@ final class ExternalSubscriptionSelection {
                         snapshot,
                         event,
                         effectiveContractKeys,
+                        FrozenNode.fromResolvedNode(event.clone()),
+                        eventBlueId,
                         runtimeWorkSession));
     }
 

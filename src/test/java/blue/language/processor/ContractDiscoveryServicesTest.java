@@ -1,13 +1,14 @@
 package blue.language.processor;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.mapping.TypeClassResolver;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -119,21 +120,60 @@ final class ContractDiscoveryServicesTest {
                                 "handler",
                                 new Node().properties(
                                         "order", new Node().value(1)))));
+        String evidenceA = "canonical-scope:a";
+        String evidenceB = "canonical-scope:b";
 
         // when
         ContractSnapshotCache.Key original =
-                cache.key(selectedA, effectiveA, "/", 1L);
+                cache.key(selectedA, effectiveA, "/", 1L, evidenceA);
         ContractSnapshotCache.Key selectedTypeChanged =
-                cache.key(selectedB, effectiveA, "/", 1L);
+                cache.key(selectedB, effectiveA, "/", 1L, evidenceA);
         ContractSnapshotCache.Key effectiveTypeChanged =
-                cache.key(selectedA, effectiveB, "/", 1L);
+                cache.key(selectedA, effectiveB, "/", 1L, evidenceA);
         ContractSnapshotCache.Key effectiveContractsChanged =
-                cache.key(selectedA, contractsChanged, "/", 1L);
+                cache.key(
+                        selectedA,
+                        contractsChanged,
+                        "/",
+                        1L,
+                        evidenceA);
+        ContractSnapshotCache.Key canonicalEvidenceChanged =
+                cache.key(selectedA, effectiveA, "/", 1L, evidenceB);
 
         // then
         assertNotEquals(original, selectedTypeChanged);
         assertNotEquals(original, effectiveTypeChanged);
         assertNotEquals(original, effectiveContractsChanged);
+        assertNotEquals(original, canonicalEvidenceChanged);
+    }
+
+    @Test
+    void shouldRejectCacheEntriesRetainingUnboundedIdentityEvidence() {
+        // given
+        ContractSnapshotCache cache = new ContractSnapshotCache(
+                BlueCachePolicy.boundedDefaults());
+        CanonicalTypeIdentityLookup onDemand =
+                CanonicalIdentityEvidence.onDemand(
+                        CanonicalTypeIdentityLookup.incomplete(),
+                        () -> {
+                            throw new AssertionError(
+                                    "cache sizing must not materialize evidence");
+                        });
+        ContractSnapshotCache.Key key = cache.key(
+                null,
+                null,
+                "/",
+                1L,
+                "canonical-scope:test");
+
+        // when
+        cache.putIfAbsent(
+                key,
+                ContractBundle.builder(onDemand).build());
+
+        // then
+        assertEquals(0, cache.size());
+        assertEquals(0L, cache.currentWeightBytes());
     }
 
     @Test
@@ -162,10 +202,17 @@ final class ContractDiscoveryServicesTest {
                         .sourceContribution(blueId("source contribution"))
                         .build();
         AtomicInteger builds = new AtomicInteger();
+        CanonicalTypeIdentityLookup invocationIdentities =
+                CanonicalIdentityEvidence.onDemand(
+                        CanonicalTypeIdentityLookup.incomplete(),
+                        () -> {
+                            throw new AssertionError(
+                                    "empty contracts must not demand type evidence");
+                        });
         ContractRefreshService.StructuralBundleLoader structural =
-                (selected, effective, scope, meter, reason) -> {
+                (selected, effective, scope, meter, reason, typeIdentities) -> {
                     builds.incrementAndGet();
-                    return ContractBundle.builder()
+                    return ContractBundle.builder(typeIdentities)
                             .addEffectiveContractSnapshot(frozenDelivery)
                             .build();
                 };
@@ -185,6 +232,8 @@ final class ContractDiscoveryServicesTest {
                 NoOpProcessingObserver.INSTANCE,
                 null,
                 null,
+                invocationIdentities,
+                "<test-content-evidence>",
                 structural);
         ContractBundle second = refresh.load(
                 selectedScope,
@@ -193,6 +242,8 @@ final class ContractDiscoveryServicesTest {
                 NoOpProcessingObserver.INSTANCE,
                 null,
                 null,
+                invocationIdentities,
+                "<test-content-evidence>",
                 structural);
         ContractRecognitionMeter meter =
                 new ContractRecognitionMeter(new GasMeter(GasSchedule.contracts10()));
@@ -203,6 +254,8 @@ final class ContractDiscoveryServicesTest {
                 NoOpProcessingObserver.INSTANCE,
                 meter,
                 "test",
+                invocationIdentities,
+                "<test-content-evidence>",
                 structural);
         refresh.load(
                 selectedScope,
@@ -211,6 +264,8 @@ final class ContractDiscoveryServicesTest {
                 NoOpProcessingObserver.INSTANCE,
                 meter,
                 "test",
+                invocationIdentities,
+                "<test-content-evidence>",
                 structural);
 
         // then

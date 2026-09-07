@@ -10,6 +10,7 @@ import blue.language.provider.VerifyingNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +36,24 @@ class ProcessingInputAdmissionTest {
                     1, "fragment-input", 1));
     private static final String CYCLIC_MEMBER_BLUE_ID =
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
+
+    @Test
+    void shouldKeepMissingInvalidRootFallbackAbsent() {
+        // given
+
+        // when
+        DocumentProcessingResult result =
+                ProcessingDocumentValidator.validateRaw(
+                        com.fasterxml.jackson.databind.node.NullNode
+                                .getInstance(),
+                        null);
+
+        // then
+        assertEquals(
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.status());
+        assertNull(result.document());
+    }
 
     @Test
     void shouldVerifyBlueFacadeProcessesExactPureReferenceRootAndEvent() {
@@ -76,7 +95,10 @@ class ProcessingInputAdmissionTest {
             // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
-                    result.status());
+                    result.status(),
+                    result.diagnostic() == null
+                            ? "processing returned no diagnostic"
+                            : result.diagnostic().message());
             assertEquals(
                     rootBlueId,
                     DirectBlueIdCalculator.calculateBlueId(
@@ -171,7 +193,8 @@ class ProcessingInputAdmissionTest {
         ResolvedSnapshot snapshot =
                 ResolvedSnapshot.withDeferredResolution(
                         FrozenNode.fromNode(root),
-                        FrozenNode.fromResolvedNode(root));
+                        FrozenNode.fromResolvedNode(root),
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // when
         try (DocumentProcessor processor = processor(

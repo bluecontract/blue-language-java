@@ -41,15 +41,14 @@ final class ExcludedPathLimits implements ResolutionLimits {
         return !isExcluded(potentialPath(pathSegment));
     }
 
-    /** Legacy binary-API spelling delegated to the canonical method. */
-    @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return shouldExpandPathSegment(pathSegment, currentNode);
-    }
-
     @Override
     public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
         return !isExcluded(potentialPath(pathSegment));
+    }
+
+    @Override
+    public boolean retainsEveryAuthoredPath() {
+        return false;
     }
 
     @Override

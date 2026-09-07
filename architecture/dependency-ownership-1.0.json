@@ -5,7 +5,7 @@
     "buildScriptPathIdentity": "sha256:cace7a9f9b968b1dfc058aba4e85a5b2446161249df2768f167e26253e9c2881",
     "typedBuildLogicSourceCount": 2,
     "typedBuildLogicSourcePathIdentity": "sha256:476d632583eed63e48f9910eaa2f2533f7b3c6a64fe0698c068cedb5f94669ec",
-    "ownedLibraries": 13,
+    "ownedLibraries": 14,
     "ownedPlugins": 2,
     "removedLibraries": 1
   },
@@ -221,6 +221,21 @@
           "declaringProject": ":root",
           "configuration": "testImplementation",
           "declaredVersion": "4.5.14"
+        }
+      ]
+    },
+    {
+      "component": "org.apiguardian:apiguardian-api",
+      "currentVersion": "1.1.2",
+      "owner": ":build-logic",
+      "targetConfiguration": "testRuntimeOnly",
+      "reason": "Loads JUnit API annotations in isolated development-verifier functional tests; no published runtime dependency.",
+      "declarations": [
+        {
+          "path": "build-logic/build.gradle",
+          "declaringProject": ":build-logic",
+          "configuration": "testRuntimeOnly",
+          "declaredVersion": "1.1.2"
         }
       ]
     },

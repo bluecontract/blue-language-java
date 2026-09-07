@@ -1,10 +1,13 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.BlueIds;
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.processor.ExactEventIdentityEvidence;
+import blue.language.processor.ProcessorRuntimeAccess;
 import blue.language.provider.CyclicSetProof;
 
 import java.util.HashSet;
@@ -12,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /** Authoritative Phase-A identity and admission-evidence verifier. */
 final class ClosureInvocationVerifier {
@@ -30,7 +34,9 @@ final class ClosureInvocationVerifier {
      * semantic disposition, because a negative candidate is ordinary
      * invocation evidence and not malformed transport.</p>
      */
-    static Verification verify(ClosureInvocationInput input) {
+    static Verification verify(
+            ClosureInvocationInput input,
+            Supplier<ProcessorRuntimeAccess> runtimeAccess) {
         ClosureInvocationInput selected = Objects.requireNonNull(
                 input, "input");
 
@@ -41,7 +47,8 @@ final class ClosureInvocationVerifier {
                 selected.snapshot().closureIdentity(),
                 IDENTITIES.affectedClosureIdentity(selected.snapshot()));
         verifyAuthoritativeBindings(selected);
-        verifyCause(selected.cause());
+        ExactEventIdentityEvidence externalEventIdentityEvidence =
+                verifyCause(selected.cause(), runtimeAccess);
 
         requireClaim(
                 "gasPolicyIdentity",
@@ -74,15 +81,18 @@ final class ClosureInvocationVerifier {
                 : CandidateDisposition.SEMANTICALLY_INVALID;
         return new Verification(
                 selected.invocationIdentity(), disposition,
-                candidate == null ? null : candidate.kind());
+                candidate == null ? null : candidate.kind(),
+                externalEventIdentityEvidence);
     }
 
     /** Verifies one additive demand-bound processing retry. */
-    static Verification verifyRetry(ClosureProcessRetryInput retry) {
+    static Verification verifyRetry(
+            ClosureProcessRetryInput retry,
+            Supplier<ProcessorRuntimeAccess> runtimeAccess) {
         ClosureProcessRetryInput selected = Objects.requireNonNull(
                 retry, "retry");
         ClosureInvocationInput base = selected.baseInvocation();
-        Verification verified = verify(base);
+        Verification verified = verify(base, runtimeAccess);
         for (ManagedOccurrenceEvidenceResolution resolution
                 : selected.resolutions()) {
             ManagedOccurrenceEvidenceDemand demand = resolution.demand();
@@ -117,18 +127,19 @@ final class ClosureInvocationVerifier {
                 }
             }
             if (active == null || !(active.active()
-                    || isVerifiedManagedReceiptEventSource(base, active))
-                    || active.targetDocumentId().equals(
-                            resolution.targetDocumentId())) {
+                    || (isVerifiedManagedReceiptEventSource(base, active)
+                            && !active.targetDocumentId().equals(
+                                    resolution.targetDocumentId())))) {
                 throw new IllegalArgumentException(
                         "A managed-occurrence process retry requires an "
-                                + "active different-lineage source row");
+                                + "active source row or verified different-lineage receipt event");
             }
         }
         return new Verification(
                 selected.retryInvocationIdentity(),
                 verified.candidateDisposition(),
-                verified.candidateKind());
+                verified.candidateKind(),
+                verified.externalEventIdentityEvidence());
     }
 
     private static boolean isVerifiedManagedReceiptEventSource(
@@ -217,16 +228,23 @@ final class ClosureInvocationVerifier {
         }
     }
 
-    private static void verifyCause(ProcessingCause cause) {
+    private static ExactEventIdentityEvidence verifyCause(
+            ProcessingCause cause,
+            Supplier<ProcessorRuntimeAccess> runtimeAccess) {
         ProcessingCause selected = Objects.requireNonNull(cause, "cause");
+        ExactEventIdentityEvidence externalEventIdentityEvidence = null;
         if (selected instanceof ExternalEventCause) {
             ExternalEventCause external = (ExternalEventCause) selected;
-            requireClaim(
-                    "eventBlueId",
-                    external.eventBlueId(),
-                    DirectBlueIdCalculator.calculateBlueId(external.event()));
-        } else if (selected instanceof ManagedRevisionCause) {
-            ManagedRevisionCause revision = (ManagedRevisionCause) selected;
+            if (BlueIds.hasCyclicMemberSeparator(
+                    external.eventBlueId())) {
+                throw new IllegalArgumentException(
+                        "A cyclic-set member identity must not be used as a "
+                                + "top-level external event");
+            }
+            externalEventIdentityEvidence = verifyExternalEvent(
+                    external, runtimeAccess);
+        } else if (selected instanceof ManagedHistoryStep) {
+            ManagedHistoryStep revision = (ManagedHistoryStep) selected;
             Optional<CyclicSetProof> cyclicProof =
                     revision.afterCyclicProof();
             if (cyclicProof.isPresent()) {
@@ -275,6 +293,31 @@ final class ClosureInvocationVerifier {
                 "causeIdentity",
                 selected.causeIdentity(),
                 IDENTITIES.causeIdentity(selected));
+        return externalEventIdentityEvidence;
+    }
+
+    /** Acquires Language runtime state only when Source canonicalization needs it. */
+    private static ExactEventIdentityEvidence verifyExternalEvent(
+            ExternalEventCause external,
+            Supplier<ProcessorRuntimeAccess> runtimeAccess) {
+        try {
+            return ExactEventIdentityEvidence.verify(
+                    null,
+                    external.event(),
+                    external.eventBlueId(),
+                    null);
+        } catch (IllegalStateException runtimeRequired) {
+            if (runtimeAccess == null) {
+                throw runtimeRequired;
+            }
+            return ExactEventIdentityEvidence.verify(
+                    Objects.requireNonNull(
+                            runtimeAccess.get(),
+                            "runtimeAccess for external event verification"),
+                    external.event(),
+                    external.eventBlueId(),
+                    null);
+        }
     }
 
     private static boolean verifyCandidate(
@@ -441,14 +484,19 @@ final class ClosureInvocationVerifier {
         private final String invocationIdentity;
         private final CandidateDisposition candidateDisposition;
         private final AdmissionCandidate.Kind candidateKind;
+        private final ExactEventIdentityEvidence
+                externalEventIdentityEvidence;
 
         private Verification(
                 String invocationIdentity,
                 CandidateDisposition candidateDisposition,
-                AdmissionCandidate.Kind candidateKind) {
+                AdmissionCandidate.Kind candidateKind,
+                ExactEventIdentityEvidence externalEventIdentityEvidence) {
             this.invocationIdentity = invocationIdentity;
             this.candidateDisposition = candidateDisposition;
             this.candidateKind = candidateKind;
+            this.externalEventIdentityEvidence =
+                    externalEventIdentityEvidence;
         }
 
         String invocationIdentity() {
@@ -461,6 +509,17 @@ final class ClosureInvocationVerifier {
 
         AdmissionCandidate.Kind candidateKind() {
             return candidateKind;
+        }
+
+        /**
+         * Returns the already verified external-event capability, if any.
+         *
+         * <p>Consumers must carry this evidence across the Phase-A/Phase-B
+         * boundary instead of independently re-admitting the detached event
+         * and identity pair.</p>
+         */
+        ExactEventIdentityEvidence externalEventIdentityEvidence() {
+            return externalEventIdentityEvidence;
         }
     }
 }

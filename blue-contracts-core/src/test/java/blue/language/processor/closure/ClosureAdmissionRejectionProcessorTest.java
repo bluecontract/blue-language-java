@@ -32,7 +32,7 @@ final class ClosureAdmissionRejectionProcessorTest {
     private static final String BINDING_POLICY =
             "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35";
     private static final String MASTER =
-            "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR";
+            "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW";
     private static final DocumentId SIMPLE_A = new DocumentId("simple-a");
     private static final DocumentId SIMPLE_B = new DocumentId("simple-b");
 
@@ -185,7 +185,8 @@ final class ClosureAdmissionRejectionProcessorTest {
     private static ClosureProcessResult reject(
             DocumentProcessor owner, ClosureInvocationInput input) {
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(input);
+                ClosureInvocationVerifier.verify(
+                        input, owner.administration()::runtimeAccess);
         assertEquals(
                 ClosureInvocationVerifier.CandidateDisposition
                         .SEMANTICALLY_INVALID,
@@ -573,7 +574,7 @@ final class ClosureAdmissionRejectionProcessorTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference(targetBlueId),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg"));
     }
 
     private static Node simpleB(String targetBlueId) {
@@ -584,7 +585,7 @@ final class ClosureAdmissionRejectionProcessorTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference(targetBlueId),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9"));
     }
 
     private static Node ambiguousMember(String target) {

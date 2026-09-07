@@ -17,6 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 final class ProcessEmbeddedTest {
 
     @Test
+    void shouldModelCanonicalDirectContractParent() {
+        assertEquals(Contract.class, ProcessEmbedded.class.getSuperclass());
+    }
+
+    @Test
     void shouldCopyAssignedExactPaths() {
         // given
         ProcessEmbedded embedded = new ProcessEmbedded();

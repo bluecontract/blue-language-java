@@ -5,6 +5,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.snapshot.FrozenNode;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
 import blue.language.provider.NodeProvider;
@@ -13,6 +14,7 @@ import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
+import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.FrozenJsonPatch;
@@ -544,7 +546,8 @@ final class ContractEvolutionClosureAcceptanceTest {
                 .runtimeRegistry(runtime)
                 .nodeProvider(evidenceProvider)
                 .conformanceEngine(conformance)
-                .snapshotStore(new LanguageSnapshotManager(language))
+                .snapshotStore(new LanguageSnapshotManager(language, evidenceProvider))
+                .matchingService(new ContractMatchingService(language))
                 .build()) {
             Node body = new Node()
                     .name("Generated generalization evidence")
@@ -1808,9 +1811,22 @@ final class ContractEvolutionClosureAcceptanceTest {
     private static final class LanguageSnapshotManager
             implements ProcessingSnapshotManager {
         private final BlueLanguageRuntime language;
+        private final NodeProvider exactProvider;
 
-        private LanguageSnapshotManager(BlueLanguageRuntime language) {
+        private LanguageSnapshotManager(BlueLanguageRuntime language, NodeProvider exactProvider) {
             this.language = language;
+            this.exactProvider = exactProvider;
+        }
+
+        @Override
+        public FrozenNode materializeVerifiedExactReference(FrozenNode reference) {
+            if (!reference.isReferenceOnly()) return reference;
+            List<Node> content = exactProvider.fetchByBlueId(reference.getReferenceBlueId());
+            if (content == null || content.isEmpty()) return null;
+            assertEquals(1, content.size());
+            Node exact = blue.language.identity.NodeToBlueIdInput.stripResolvedBlueIdMetadata(content.get(0));
+            assertEquals(reference.getReferenceBlueId(), blueId(exact));
+            return FrozenNode.fromNode(exact);
         }
 
         @Override

@@ -8,6 +8,20 @@
   },
   "approvals": [
     {
+      "id": "historical-representation-proposed-isolated-amendment",
+      "rationale": "PROPOSED, NOT ADOPTED: Explicit independently metered historical representation traversal, preserving ManagedRevisionCause +1 epoch, exact predecessor checks, authenticated original publication evidence and positional receipt ordering. The three public conformance harness types expose executable fixtures for the same protocol. No previous approvals, baseline or checker rule changes. Requires exact normative adoption review after current-tuple graph, proof, rollback and restart evidence.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli",
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe",
+        "public/protected class added: blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationCause",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationCursor",
+        "public/protected class added: blue.language.processor.closure.ManagedRepresentationTransition"
+      ],
+      "requirement": "User-authorized isolated historical-representation amendment; maintained adoption remains pending exact review."
+    },
+    {
       "id": "phase-2-language-core-refactor",
       "requirement": "blue-language-java-modernization/prompts/02-CODEX-PROMPT-language-core-refactor.md",
       "rationale": "Approve only the exact JVM API changes required by the ordered Language-core modernization prompt; semantic behavior remains governed by the unchanged characterization baseline.",
@@ -24,10 +38,6 @@
         "method removed/descriptor changed: blue.language.snapshot.CanonicalPatchResult :: op()Lblue/language/processor/model/JsonPatch$Op;"
       ],
       "additiveChanges": [
-        "implemented interface added: blue.language.merge.Merger$SnapshotResolution :: blue.language.merge.ResolutionSnapshot",
-        "method added: blue.language.merge.Merger$SnapshotResolution :: asStandalone()Lblue/language/merge/SnapshotResolution;",
-        "method added: blue.language.merge.Merger$SnapshotResolution :: provenance()Lblue/language/merge/ResolutionProvenance;",
-        "method added: blue.language.merge.Merger$VerifiedReferenceResolution :: asStandalone()Lblue/language/merge/VerifiedReferenceResolution;",
         "method added: blue.language.processor.model.JsonPatch :: path()Ljava/lang/String;",
         "method added: blue.language.processor.model.JsonPatch :: value()Lblue/language/model/Node;",
         "method added: blue.language.provider.CachingNodeProvider :: fetchResultByBlueId(Ljava/lang/String;)Lblue/language/provider/NodeProviderResult;",
@@ -429,7 +439,6 @@
         "method removed/descriptor changed: blue.language.registry.BlueCoreTypeRegistry :: verifiedProvider()Lblue/language/NodeProvider;"
       ],
       "additiveChanges": [
-        "default interface method added: blue.language.merge.MergingProcessor :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
         "default interface method added: blue.language.processor.ProcessingSnapshotManager :: cacheSnapshot(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot;",
         "default interface method added: blue.language.processor.ProcessingSnapshotManager :: calculateScopeContentBlueId(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;Lblue/language/merge/ResolvedSnapshot;)Ljava/lang/String;",
         "default interface method added: blue.language.processor.ProcessingSnapshotManager :: fromDocumentPreservingPaths(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot;",
@@ -465,24 +474,8 @@
         "method added: blue.language.merge.Merger :: <init>(Lblue/language/merge/MergingProcessor;Lblue/language/provider/NodeProvider;Lblue/language/merge/ResolvedReferenceCache;Lblue/language/resolve/ReferenceCacheAdmissionPolicy;)V",
         "method added: blue.language.merge.Merger :: merge(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)V",
         "method added: blue.language.merge.Merger :: resolve(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/model/Node;",
-        "method added: blue.language.merge.Merger :: resolveSnapshot(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/Merger$SnapshotResolution;",
-        "method added: blue.language.merge.Merger :: resolveSnapshot(Lblue/language/snapshot/FrozenNode;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/Merger$SnapshotResolution;",
-        "method added: blue.language.merge.MergingProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
         "method added: blue.language.merge.NodeResolver :: resolve(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/model/Node;",
-        "method added: blue.language.merge.processor.BasicTypesVerifier :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.BasicTypesVerifier :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.DictionaryProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.ExclusiveItemsOrValueChecker :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
         "method added: blue.language.merge.processor.ListItemsTypeChecker :: <init>(Lblue/language/provider/Types;)V",
-        "method added: blue.language.merge.processor.ListItemsTypeChecker :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.ListProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.SchemaPropagator :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.SchemaVerifier :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.SchemaVerifier :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.SequentialMergingProcessor :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.SequentialMergingProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.TypeAssigner :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
-        "method added: blue.language.merge.processor.ValuePropagator :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;)V",
         "method added: blue.language.preprocess.PreprocessingContext :: <init>(Ljava/util/Map;Lblue/language/provider/NodeProvider;)V",
         "method added: blue.language.preprocess.PreprocessingDirectiveResolver :: <init>(Lblue/language/preprocess/TransformationProcessorProvider;Lblue/language/provider/NodeProvider;Ljava/util/Map;Ljava/util/Map;)V",
         "method added: blue.language.preprocess.Preprocessor :: <init>(Lblue/language/preprocess/TransformationProcessorProvider;Lblue/language/provider/NodeProvider;)V",
@@ -636,7 +629,7 @@
     {
       "id": "phase-6-collection-paths-and-cohesion",
       "requirement": "blue-language-java-collection-paths-next-phase/CODEX-PROMPT-blue-language-java-final-collection-paths-and-cohesion.md",
-      "rationale": "Approve the exact JVM API changes required by the final collectionPaths protocol amendment and focused Contracts cohesion pass: immutable collection-plan inspection, canonical processor administration and builder surfaces, removal of superseded façade aliases and runtime patch entry points, and rebinding the unchanged SourceProviderEnvironment field to the corrected top-level release package identity.",
+      "rationale": "Approve the exact JVM API changes required by the final collectionPaths protocol amendment and focused Contracts cohesion pass: immutable collection-plan inspection, canonical processor administration and builder surfaces, removal of superseded fa\u00e7ade aliases and runtime patch entry points, and rebinding the unchanged SourceProviderEnvironment field to the corrected top-level release package identity.",
       "incompatibleChanges": [
         "method removed/descriptor changed: blue.language.processor.DocumentProcessingRuntime :: applyPatch(Ljava/lang/String;Lblue/language/processor/model/JsonPatch;)Lblue/language/processor/DocumentProcessingRuntime$DocumentUpdateData;",
         "method removed/descriptor changed: blue.language.processor.DocumentProcessingRuntime :: applyPatch(Ljava/lang/String;Lblue/language/processor/model/JsonPatch;Lblue/language/processor/PatchSource;)Lblue/language/processor/DocumentProcessingRuntime$DocumentUpdateData;",
@@ -747,7 +740,6 @@
         "method added: blue.language.processor.ProcessorExecutionContext :: frozenEvent()Lblue/language/snapshot/FrozenNode;",
         "method added: blue.language.processor.SemanticGasMeter :: textOperandsExamined(JJLblue/language/processor/GasChargeContext;)V",
         "method added: blue.language.processor.SemanticOutputBoundary :: carryExactCapability(Lblue/language/processor/ExactBlueValue;)Lblue/language/processor/ExactBlueValue;",
-        "method added: blue.language.processor.SemanticOutputBoundary :: carryExactValue(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;)Lblue/language/processor/ExactBlueValue;",
         "method added: blue.language.processor.util.NodeCanonicalizer :: directIdentityCanonicalSizeAllowingCyclicPlaceholders(Lblue/language/model/Node;)J",
         "method added: blue.language.provider.ProviderUnavailableException :: <init>(Ljava/lang/String;Ljava/lang/String;)V",
         "method added: blue.language.provider.ProviderUnavailableException :: requiredExactBlueId()Ljava/util/Optional;",
@@ -916,6 +908,92 @@
       ]
     },
     {
+      "id": "phase-inline-identity-empty-object-embedded-collections",
+      "requirement": "CODEX_PROMPT_IMPLEMENT_EMPTY_OBJECTS_EMBEDDED_COLLECTIONS_BEX_NULL_ALIGNMENT.md",
+      "rationale": "Approve exactly the intentional JVM API replacements and additions required for canonical inline-type identity parity, normative empty-object semantics, and embedded-collection processing. Because the 1.0 API is not published, obsolete overloads and nested resolution carriers are removed instead of retained as aliases; this phase approves no compatibility shims and no changes beyond the exact descriptors listed here.",
+      "incompatibleChanges": [
+        "class removed: blue.language.merge.Merger$SnapshotResolution",
+        "class removed: blue.language.merge.Merger$VerifiedReferenceResolution",
+        "method removed/descriptor changed: blue.language.conformance.ConformanceEngine :: planGeneralization(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/lang/String;)Lblue/language/conformance/ConformancePlan;",
+        "method removed/descriptor changed: blue.language.conformance.ConformanceEngine :: planGeneralization(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/util/List;)Lblue/language/conformance/ConformancePlan;",
+        "method removed/descriptor changed: blue.language.conformance.ConformanceEngine :: planGeneralization(Lblue/language/snapshot/FrozenNode;Ljava/lang/String;)Lblue/language/conformance/ConformancePlan;",
+        "method removed/descriptor changed: blue.language.conformance.ConformanceEngine :: planGeneralizationPreservingPaths(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/util/List;Ljava/util/Collection;)Lblue/language/conformance/ConformancePlan;",
+        "method removed/descriptor changed: blue.language.merge.MergingProcessor :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;)V",
+        "method removed/descriptor changed: blue.language.merge.processor.SchemaVerifier :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;)V",
+        "method removed/descriptor changed: blue.language.merge.processor.SequentialMergingProcessor :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;)V",
+        "method removed/descriptor changed: blue.language.processor.ContractBundle$Builder :: addHandler(Ljava/lang/String;Lblue/language/processor/model/HandlerContract;Lblue/language/snapshot/FrozenNode;Ljava/util/List;)Lblue/language/processor/ContractBundle$Builder;",
+        "method removed/descriptor changed: blue.language.processor.DocumentProcessingRuntime :: calculatePreInitializationScopeNodeBlueId(Ljava/lang/String;)Ljava/lang/String;",
+        "method removed/descriptor changed: blue.language.processor.VerifiedExecutionEvidence :: revalidate(Lblue/language/model/Node;Lblue/language/model/Node;Ljava/lang/String;)V",
+        "method removed/descriptor changed: blue.language.processor.VerifiedExecutionEvidence :: revalidate(Lblue/language/model/Node;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)V",
+        "superclass changed: blue.language.processor.model.ProcessEmbedded (blue.language.processor.model.MarkerContract -> blue.language.processor.model.Contract)"
+      ],
+      "additiveChanges": [
+        "default interface method added: blue.language.merge.MergingProcessor :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "default interface method added: blue.language.merge.MergingProcessor :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: fromDocumentTransientForCanonicalIdentity(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot;",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: fromDocumentTransientForCanonicalIdentity(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/merge/ResolvedSnapshot;",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: materializeVerifiedTypeReference(Lblue/language/snapshot/FrozenNode;)Lblue/language/merge/TypeEvidenceResolution;",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: resolveTypeDeclarationIdentity(Lblue/language/model/Node;)Lblue/language/identity/CanonicalTypeIdentityEvidence;",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: resolveTypeDeclarationIdentity(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/identity/CanonicalTypeIdentityEvidence;",
+        "field added: blue.language.processor.EffectiveContractSnapshotConstants$DispatchField :: COLLECTION_PATHLjava/lang/String;",
+        "field added: blue.language.processor.EffectiveContractSnapshotConstants$DispatchField :: INCLUDE_DESCENDANTSLjava/lang/String;",
+        "field added: blue.language.processor.registry.RuntimeBlueIds :: EMBEDDED_COLLECTION_EVENT_CHANNELLjava/lang/String;",
+        "field added: blue.language.processor.registry.RuntimeTypeKey :: EMBEDDED_COLLECTION_EVENT_CHANNELLblue/language/processor/registry/RuntimeTypeKey;",
+        "field added: blue.language.processor.util.ProcessorContractConstants :: KEY_COLLECTION_PATHLjava/lang/String;",
+        "field added: blue.language.processor.util.ProcessorContractConstants :: KEY_INCLUDE_DESCENDANTSLjava/lang/String;",
+        "method added: blue.language.conformance.ConformanceEngine :: planGeneralization(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)Lblue/language/conformance/ConformancePlan;",
+        "method added: blue.language.conformance.ConformanceEngine :: planGeneralization(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/util/List;Lblue/language/identity/CanonicalTypeIdentityLookup;)Lblue/language/conformance/ConformancePlan;",
+        "method added: blue.language.conformance.ConformanceEngine :: planGeneralizationPreservingPaths(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;Ljava/util/List;Lblue/language/identity/CanonicalTypeIdentityLookup;Ljava/util/Collection;)Lblue/language/conformance/ConformancePlan;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convert(Lblue/language/merge/ResolvedSnapshot;Ljava/lang/Class;)Ljava/lang/Object;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convert(Lblue/language/merge/ResolvedSnapshot;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convert(Lblue/language/model/Node;Ljava/lang/Class;Lblue/language/identity/CanonicalTypeIdentityLookup;)Ljava/lang/Object;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convertWithType(Lblue/language/merge/ResolvedSnapshot;Ljava/lang/String;Ljava/lang/reflect/Type;Z)Ljava/lang/Object;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convertWithType(Lblue/language/model/Node;Ljava/lang/reflect/Type;ZLblue/language/identity/CanonicalTypeIdentityLookup;)Ljava/lang/Object;",
+        "method added: blue.language.mapping.NodeToObjectConverter :: convertWithTypeOmittingProperties(Lblue/language/merge/ResolvedSnapshot;Ljava/lang/String;Ljava/util/Collection;Ljava/lang/reflect/Type;Z)Ljava/lang/Object;",
+        "method added: blue.language.merge.Merger :: materializeTypeReferenceEvidence(Lblue/language/snapshot/FrozenNode;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution;",
+        "method added: blue.language.merge.Merger :: resolveSnapshot(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/SnapshotResolution;",
+        "method added: blue.language.merge.Merger :: resolveSnapshot(Lblue/language/snapshot/FrozenNode;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/SnapshotResolution;",
+        "method added: blue.language.merge.Merger :: resolveTypeDeclarationEvidence(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution;",
+        "method added: blue.language.merge.Merger :: resolveTypeEvidence(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution;",
+        "method added: blue.language.merge.MergingProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.NodeResolver :: resolveTypeEvidence(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution;",
+        "method added: blue.language.merge.processor.BasicTypesVerifier :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.BasicTypesVerifier :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.DictionaryProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.ExclusiveItemsOrValueChecker :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.ListItemsTypeChecker :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.ListProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SchemaPropagator :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SchemaVerifier :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SchemaVerifier :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SchemaVerifier :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SequentialMergingProcessor :: postProcess(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SequentialMergingProcessor :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SequentialMergingProcessor :: validateCompleted(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.TypeAssigner :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.ValuePropagator :: process(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.processor.ContractBundle$Builder :: addHandler(Ljava/lang/String;Lblue/language/processor/model/HandlerContract;Lblue/language/snapshot/FrozenNode;Ljava/util/List;Lblue/language/identity/CanonicalTypeIdentityLookup;)Lblue/language/processor/ContractBundle$Builder;",
+        "method added: blue.language.processor.ExternalChannelFunctionContext :: exactEventBlueId()Ljava/lang/String;",
+        "method added: blue.language.processor.ProcessorExecutionContext :: exactEventIdentityEvidence()Lblue/language/processor/ExactEventIdentityEvidence;",
+        "method added: blue.language.processor.ProcessorExecutionContext :: exactOccurrenceEventIdentityEvidence()Lblue/language/processor/ExactEventIdentityEvidence;",
+        "method added: blue.language.processor.SelectedExecutableBody :: applyResolvedPatch(Lblue/language/processor/model/JsonPatch;)Lblue/language/processor/model/JsonPatch;",
+        "method added: blue.language.processor.SelectedExecutableBody :: applyResolvedPatches(Ljava/util/List;)Ljava/util/List;",
+        "method added: blue.language.processor.SelectedExecutableBody :: emitResolvedEvent(Lblue/language/model/Node;)Lblue/language/model/Node;",
+        "method added: blue.language.processor.SelectedExecutableBody :: wasMaterializedFromReference()Z",
+        "method added: blue.language.processor.VerifiedExecutionEvidence :: revalidate(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/runtime/LanguageRuntimeAccess;Ljava/lang/String;)V",
+        "method added: blue.language.processor.VerifiedExecutionEvidence :: revalidate(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/runtime/LanguageRuntimeAccess;Ljava/lang/String;Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)V",
+        "method added: blue.language.snapshot.FrozenNode :: fromSourceNode(Lblue/language/model/Node;)Lblue/language/snapshot/FrozenNode;",
+        "public/protected class added: blue.language.identity.CanonicalTypeIdentityEvidence",
+        "public/protected class added: blue.language.identity.CanonicalTypeIdentityLookup",
+        "public/protected class added: blue.language.merge.TypeEvidenceResolution",
+        "public/protected class added: blue.language.processor.EmbeddedScopePlanView$CollectionState",
+        "public/protected class added: blue.language.processor.ExactEventIdentityEvidence",
+        "public/protected class added: blue.language.processor.ProcessorStateReferencePaths",
+        "public/protected class added: blue.language.processor.model.EmbeddedCollectionEventChannel",
+        "public/protected class added: blue.language.runtime.LanguageProcessing$ExactResolutionOverlay"
+      ]
+    },
+    {
       "id": "phase-managed-transition-receipts",
       "requirement": "CODEX_RETAINED_MANAGED_EPOCH_CATCH_UP_ROUND.md",
       "rationale": "Approve exactly the additive immutable Contracts receipt API and deterministic conformance exporter required for Coordination to consume duplicate-preserving managed Root transitions without reinitializing or reprocessing the source document. These additions expose committed transition evidence only and do not change Blue Language values, identity calculation, BEX, or Repository semantics.",
@@ -934,6 +1012,27 @@
       "additiveChanges": [
         "public/protected class added: blue.language.processor.closure.ClosureProcessRetryInput",
         "public/protected class added: blue.language.processor.closure.ManagedOccurrenceEvidenceResolution"
+      ]
+    },
+    {
+      "id": "stabilization-canonical-processing-input",
+      "requirement": "docs/canonical-processing-api-review.md",
+      "rationale": "Record only the additive default processing SPI introduced by 35de814a to preserve strict canonical input through snapshot-manager decorators. Existing implementations retain binary compatibility and fail closed with UnsupportedOperationException when they do not support canonical resolution. Implementations that support it delegate to the canonical resolver while preserving deferred paths; no fallback interprets completed list payloads as Source append overlays. The original Source resolution methods and all 351 incompatible and 537 earlier additive ledger entries remain unchanged.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: fromCanonicalTransient(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot;"
+      ]
+    },
+    {
+      "id": "stabilization-definition-and-managed-birth",
+      "requirement": "docs/stabilization-cycle-review.md",
+      "rationale": "Record the reviewed additive definition-validation SPI, which validates fixed constraints without inventing instance payloads, and immutable managed-birth input evidence, which binds exact authored content to a host-reserved fresh lineage without claiming initialization. Existing instance validation and publication checks remain mandatory. LanguageRuntimeAccess.canonicalizeWithEvidence is an additive default within the already approved runtime service class: it returns canonical content and its same-resolution semantic companion, without certifying required instance values or opening opaque cyclic references. The borrowed forValueIdentity view retains exact and cyclic overlays while omitting only enclosing root path bindings. The original manager still validates managed document roots. Processing Source canonicalization preserves registered definition/executable boundaries, and matchesTypeOrThrow propagates authoritative failures. Existing methods remain compatible. The already additive BlueContracts and DocumentProcessorAdministration services now expose resolveProcessingSource for read-only projections under the same registered field roles as canonicalizeProcessingSource.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "default interface method added: blue.language.merge.MergingProcessor :: validateDefinition(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "default interface method added: blue.language.processor.ProcessingSnapshotManager :: forValueIdentity()Lblue/language/processor/ProcessingSnapshotManager;",
+        "method added: blue.language.merge.processor.SequentialMergingProcessor :: validateDefinition(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "public/protected class added: blue.language.processor.closure.ManagedDocumentBirth"
       ]
     }
   ]

@@ -1,7 +1,9 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
@@ -53,8 +55,9 @@ final class EffectiveContractResolver {
         if (selectedContracts != null) {
             selectedScope.contracts(selectedContracts.toNode());
         }
-        MaterializationProvenance.clear(selectedScope);
-        return selectedScope;
+        return Nodes.isBareFieldlessBuilder(selectedScope)
+                ? null
+                : selectedScope;
     }
 
     Node materializeSelectedContractsMap(Node selectedScope) {
@@ -72,7 +75,8 @@ final class EffectiveContractResolver {
     }
 
     Map<String, FrozenNode> effectiveApplicationContracts(
-            FrozenNode effectiveScopeNode) {
+            FrozenNode effectiveScopeNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
         FrozenNode effectiveContracts =
                 property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         Map<String, FrozenNode> fields =
@@ -89,7 +93,8 @@ final class EffectiveContractResolver {
                         ? contributions.materializeVerifiedReference(
                                 contribution)
                         : contribution;
-                String effectiveTypeBlueId = typeBlueId(materialized);
+                String effectiveTypeBlueId = typeBlueId(
+                        materialized, typeIdentities);
                 List<String> deferredFields =
                         effectiveTypeBlueId != null
                                 ? new ArrayList<>(
@@ -126,7 +131,9 @@ final class EffectiveContractResolver {
         return contracts;
     }
 
-    void requireRegisteredProviderEvidence(FrozenNode effectiveScopeNode) {
+    void requireRegisteredProviderEvidence(
+            FrozenNode effectiveScopeNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
         FrozenNode contracts =
                 property(effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         Map<String, FrozenNode> entries =
@@ -139,7 +146,7 @@ final class EffectiveContractResolver {
                 continue;
             }
             FrozenNode contract = entry.getValue();
-            String blueId = typeBlueId(contract);
+            String blueId = typeBlueId(contract, typeIdentities);
             if (blueId == null || !registry.requiresProviderEvidence(blueId)) {
                 continue;
             }
@@ -168,21 +175,54 @@ final class EffectiveContractResolver {
         }
     }
 
-    void collectProcessEmbeddedKeys(
+    void collectEffectiveProcessEmbeddedKeys(
             FrozenNode scopeNode,
-            Set<String> retainedKeys) {
+            Set<String> retainedKeys,
+            CanonicalTypeIdentityLookup typeIdentities) {
         FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null || contracts.getProperties() == null) {
             return;
         }
         for (Map.Entry<String, FrozenNode> entry : contracts.getProperties().entrySet()) {
-            if (entry.getValue() != null && isProcessEmbeddedContract(entry.getValue())) {
+            if (entry.getValue() != null
+                    && isProcessEmbeddedContract(
+                            entry.getValue(), typeIdentities)) {
                 retainedKeys.add(entry.getKey());
             }
         }
     }
 
-    Node filterScopeContracts(FrozenNode scopeNode, Set<String> retainedKeys) {
+    /**
+     * Selects contract fields from exact authored Source without changing any
+     * retained representation.
+     */
+    Node filterSelectedScopeContracts(
+            FrozenNode selectedScopeNode,
+            Set<String> retainedKeys) {
+        return copyFilteredScopeContracts(selectedScopeNode, retainedKeys);
+    }
+
+    /**
+     * Selects contract fields from a completed effective scope without
+     * changing their resolved representation.
+     *
+     * <p>The resolver-issued identity sidecar remains mandatory at every
+     * downstream type-identity and conversion boundary. Projecting this lane
+     * back to Source would discard inherited effective contracts and would
+     * make runtime recognition depend on the authored representation.</p>
+     */
+    Node filterEffectiveScopeContracts(
+            FrozenNode effectiveScopeNode,
+            Set<String> retainedKeys,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
+        return copyFilteredScopeContracts(
+                effectiveScopeNode, retainedKeys);
+    }
+
+    private Node copyFilteredScopeContracts(
+            FrozenNode scopeNode,
+            Set<String> retainedKeys) {
         if (scopeNode == null) {
             return null;
         }
@@ -192,36 +232,33 @@ final class EffectiveContractResolver {
         }
         FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null) {
-            MaterializationProvenance.clear(filtered);
-            return filtered;
+            return Nodes.isBareFieldlessBuilder(filtered)
+                    ? null
+                    : filtered;
         }
         if (contracts.getProperties() == null) {
             filtered.contracts(contracts.toNode());
-            MaterializationProvenance.clear(filtered);
             return filtered;
         }
-        Node retained = new Node();
+        Node retained = Nodes.emptyObject();
         for (Map.Entry<String, FrozenNode> entry : contracts.getProperties().entrySet()) {
             if (isDirectProcessorStateKey(entry.getKey())
                     || retainedKeys.contains(entry.getKey())) {
                 retained.properties(entry.getKey(), entry.getValue().toNode());
             }
         }
-        if (retained.getProperties() != null && !retained.getProperties().isEmpty()) {
-            filtered.contracts(retained);
-        }
-        MaterializationProvenance.clear(filtered);
+        filtered.contracts(retained);
         return filtered;
     }
 
-    boolean isProcessEmbeddedContract(Node contractNode) {
-        return contractNode != null
-                && contractNode.getType() != null
-                && isProcessEmbeddedContract(FrozenNode.fromResolvedNode(contractNode));
+    boolean isProcessEmbeddedContract(
+            FrozenNode contractNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        String blueId = typeBlueId(contractNode, typeIdentities);
+        return isProcessEmbeddedTypeBlueId(blueId);
     }
 
-    boolean isProcessEmbeddedContract(FrozenNode contractNode) {
-        String blueId = typeBlueId(contractNode);
+    boolean isProcessEmbeddedTypeBlueId(String blueId) {
         Class<?> contractClass = blueId != null ? typeResolver.resolveClass(blueId) : null;
         return contractClass != null
                 && ProcessEmbedded.class.isAssignableFrom(contractClass);
@@ -230,7 +267,8 @@ final class EffectiveContractResolver {
     MarkerValue directMarker(
             String key,
             Node selectedNode,
-            FrozenNode effectiveNode) {
+            FrozenNode effectiveNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
         FrozenNode directNode;
         try {
             directNode = selectedNode != null
@@ -241,10 +279,11 @@ final class EffectiveContractResolver {
                     "Invalid direct processor state at reserved key '" + key + "'",
                     invalidDirectState);
         }
-        if (typeBlueId(directNode) == null) {
+        if (directNode == null || directNode.getType() == null) {
             return null;
         }
-        String typeBlueId = typeBlueId(effectiveNode);
+        String typeBlueId = typeBlueId(
+                effectiveNode, typeIdentities);
         if (typeBlueId == null) {
             return null;
         }
@@ -254,7 +293,10 @@ final class EffectiveContractResolver {
             return null;
         }
         Contract contract = converter.convertWithType(
-                effectiveNode.toNode(), Contract.class, false);
+                effectiveNode.toNode(),
+                Contract.class,
+                false,
+                typeIdentities);
         return contract instanceof MarkerContract
                 ? new MarkerValue(
                         typeBlueId,
@@ -271,14 +313,16 @@ final class EffectiveContractResolver {
                 : null;
     }
 
-    String typeBlueId(FrozenNode node) {
+    String typeBlueId(
+            FrozenNode node,
+            CanonicalTypeIdentityLookup typeIdentities) {
         if (node == null || node.getType() == null) {
             return null;
         }
-        FrozenNode type = node.getType();
-        return type.getReferenceBlueId() != null
-                ? type.getReferenceBlueId()
-                : type.blueId();
+        return CanonicalIdentityEvidence.resolvedTypeBlueId(
+                node.getType(),
+                typeIdentities,
+                "Effective contract type");
     }
 
     static boolean isDirectProcessorStateKey(String key) {

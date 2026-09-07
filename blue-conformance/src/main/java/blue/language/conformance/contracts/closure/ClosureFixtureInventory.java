@@ -28,8 +28,8 @@ final class ClosureFixtureInventory {
     static final String FIXTURE_ROOT = ROOT + "fixtures/";
     static final String MANIFEST = FIXTURE_ROOT + "manifest.yaml";
     static final String PACKAGE_IDENTITY =
-            "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c";
-    static final int CLOSURE_FIXTURE_COUNT = 93;
+            "sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c";
+    static final int CLOSURE_FIXTURE_COUNT = 98;
     static final int EXTERNAL_PROCESS_FIXTURE_COUNT = 30;
     static final int MANAGED_REVISION_PROCESS_FIXTURE_COUNT = 5;
     static final String C_CLO_34 = "c-clo-34-separate-document-steps";
@@ -109,7 +109,7 @@ final class ClosureFixtureInventory {
         }
         if (entries.size() != CLOSURE_FIXTURE_COUNT) {
             throw new IllegalStateException(
-                    "Manifest does not inventory exactly 93 closure fixtures");
+                    "Manifest does not inventory exactly 98 closure fixtures");
         }
         return Collections.unmodifiableList(entries);
     }

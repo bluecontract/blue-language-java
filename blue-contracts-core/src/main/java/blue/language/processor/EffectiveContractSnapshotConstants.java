@@ -39,6 +39,11 @@ public final class EffectiveContractSnapshotConstants {
         public static final String EVENT = "event";
         /** Embedded source-path field. */
         public static final String SOURCE_PATH = "sourcePath";
+        /** Embedded collection declaration-path field. */
+        public static final String COLLECTION_PATH = "collectionPath";
+        /** Embedded collection descendant-selection field. */
+        public static final String INCLUDE_DESCENDANTS =
+                "includeDescendants";
 
         private DispatchField() {
         }

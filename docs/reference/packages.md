@@ -17,14 +17,15 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.conformance.cli` | 1 | present |
 | `blue.language.conformance.contracts` | 4 | present |
 | `blue.language.conformance.contracts.closure` | 1 | present |
+| `blue.language.conformance.contracts.representation` | 1 | present |
 | `blue.language.conformance.runner` | 1 | present |
 | `blue.language.dictionary` | 4 | present |
 | `blue.language.graph` | 3 | present |
-| `blue.language.identity` | 23 | present |
+| `blue.language.identity` | 25 | present |
 | `blue.language.mapping` | 16 | present |
 | `blue.language.mapping.provider` | 1 | present |
 | `blue.language.matching` | 4 | present |
-| `blue.language.merge` | 13 | present |
+| `blue.language.merge` | 14 | present |
 | `blue.language.merge.processor` | 10 | present |
 | `blue.language.model` | 15 | present |
 | `blue.language.model.value` | 2 | present |
@@ -32,9 +33,9 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.patching` | 1 | present |
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
-| `blue.language.processor` | 125 | present |
-| `blue.language.processor.closure` | 61 | present |
-| `blue.language.processor.model` | 18 | present |
+| `blue.language.processor` | 127 | present |
+| `blue.language.processor.closure` | 65 | present |
+| `blue.language.processor.model` | 19 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
 | `blue.language.provider` | 21 | present |
@@ -105,6 +106,10 @@ Package ownership is derived from production Java source files. Only top-level p
 
 - `blue.language.conformance.contracts.closure.ClosureFixtureConformance`
 
+## `blue.language.conformance.contracts.representation`
+
+- `blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli`
+
 ## `blue.language.conformance.runner`
 
 - `blue.language.conformance.runner.BlueContractsConformanceSuiteRunner`
@@ -134,6 +139,8 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.identity.CanonicalIdentityInputBuilder`
 - `blue.language.identity.CanonicalJsonHasher`
 - `blue.language.identity.CanonicalJsonValueWriter`
+- `blue.language.identity.CanonicalTypeIdentityEvidence`
+- `blue.language.identity.CanonicalTypeIdentityLookup`
 - `blue.language.identity.CircularSetIdentityCalculator`
 - `blue.language.identity.CyclicMemberFinalization`
 - `blue.language.identity.CyclicSetFinalization`
@@ -192,6 +199,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.merge.ResolvedReferenceCache`
 - `blue.language.merge.ResolvedSnapshot`
 - `blue.language.merge.SnapshotResolution`
+- `blue.language.merge.TypeEvidenceResolution`
 - `blue.language.merge.VerifiedReferenceResolution`
 
 ## `blue.language.merge.processor`
@@ -298,6 +306,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.EffectiveFragmentationCatalog`
 - `blue.language.processor.EmbeddedScopePlanView`
 - `blue.language.processor.ExactBlueValue`
+- `blue.language.processor.ExactEventIdentityEvidence`
 - `blue.language.processor.ExecutableBodySourceDescriptor`
 - `blue.language.processor.ExecutionEvidenceUnavailableException`
 - `blue.language.processor.ExternalChannelDependencySnapshot`
@@ -378,6 +387,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.ProcessorFailureException`
 - `blue.language.processor.ProcessorFatalException`
 - `blue.language.processor.ProcessorRuntimeAccess`
+- `blue.language.processor.ProcessorStateReferencePaths`
 - `blue.language.processor.ProcessorStatus`
 - `blue.language.processor.RecordingProcessingObserver`
 - `blue.language.processor.RootExternalDeliveryEvidenceVerifier`
@@ -439,12 +449,16 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.GasTraceEntry`
 - `blue.language.processor.closure.GraphChange`
 - `blue.language.processor.closure.LocalDocumentStepResult`
+- `blue.language.processor.closure.ManagedDocumentBirth`
 - `blue.language.processor.closure.ManagedDocumentGraph`
 - `blue.language.processor.closure.ManagedDocumentSnapshot`
 - `blue.language.processor.closure.ManagedDocumentTransitionReceipt`
 - `blue.language.processor.closure.ManagedOccurrenceBinding`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceDemand`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceResolution`
+- `blue.language.processor.closure.ManagedRepresentationCause`
+- `blue.language.processor.closure.ManagedRepresentationCursor`
+- `blue.language.processor.closure.ManagedRepresentationTransition`
 - `blue.language.processor.closure.ManagedRevisionCause`
 - `blue.language.processor.closure.ManagedRootEventOccurrence`
 - `blue.language.processor.closure.ManagedScopeKey`
@@ -468,6 +482,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.model.Contract`
 - `blue.language.processor.model.DocumentUpdate`
 - `blue.language.processor.model.DocumentUpdateChannel`
+- `blue.language.processor.model.EmbeddedCollectionEventChannel`
 - `blue.language.processor.model.EmbeddedEventDelivery`
 - `blue.language.processor.model.EmbeddedNodeChannel`
 - `blue.language.processor.model.HandlerContract`

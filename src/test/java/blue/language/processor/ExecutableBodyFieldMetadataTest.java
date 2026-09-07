@@ -19,6 +19,7 @@ import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -287,7 +288,8 @@ class ExecutableBodyFieldMetadataTest {
                         FrozenNode.fromUncheckedCanonicalNode(
                                 document),
                         Collections.singleton("/"),
-                        handlerMetadata);
+                        handlerMetadata,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -361,7 +363,8 @@ class ExecutableBodyFieldMetadataTest {
                         FrozenNode.fromUncheckedCanonicalNode(
                                 fixture.document()),
                         Collections.singleton("/"),
-                        registry.executableBodyFieldsByType());
+                        registry.executableBodyFieldsByType(),
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -877,6 +880,7 @@ class ExecutableBodyFieldMetadataTest {
         private final BodyForm bodyForm;
         private final boolean patchBeforeProgramMatch;
         private final boolean typedPartialEventMatcher;
+        private boolean permitTypeGeneralization;
 
         private Fixture(boolean matches) {
             this(matches,
@@ -989,6 +993,11 @@ class ExecutableBodyFieldMetadataTest {
                                         "propertyValue",
                                         new Node().value(1)));
             }
+            if (permitTypeGeneralization) {
+                result.properties("generalization",
+                        new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                                .properties("defaultMode", new Node().value("nearest-valid-ancestor")));
+            }
             return result.properties("run", handler);
         }
 
@@ -1084,6 +1093,7 @@ class ExecutableBodyFieldMetadataTest {
         }
 
         private ProcessingMetricsSnapshot applyUnrelatedTypedPatchDirectly() {
+            permitTypeGeneralization = true;
             Map<String, Node> content =
                     new LinkedHashMap<>();
             Node generalScopeType =

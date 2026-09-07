@@ -1,14 +1,16 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.wire.JsonPointer;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -51,6 +53,10 @@ public final class RuntimeWorkSession {
             new LinkedHashMap<>();
     private final Map<GasMeter.ChildGasLedger, LedgerState> byIdentity =
             new IdentityHashMap<>();
+    private final Map<String, ExactBlueValue> carriedInputsByIdentity =
+            new LinkedHashMap<>();
+    private final Map<FrozenNode.ResolvedStructuralKey, ExactBlueValue>
+            carriedInputsByStructure = new LinkedHashMap<>();
     private Outcome outcome = Outcome.OPEN;
     private GasLimitExceededException rejectedCharge;
     private GasMeter.ChildGasLedger rejectedLedger;
@@ -399,29 +405,45 @@ public final class RuntimeWorkSession {
     synchronized void carryExactInput(
             Node input,
             String blueId) {
-        ensureOpen();
-        semanticOutputBoundary()
-                .carryExactInput(input, blueId);
+        carryExactInput(
+                FrozenNode.fromResolvedNode(
+                        Objects.requireNonNull(input, "input").clone()),
+                blueId);
     }
 
     synchronized void carryExactInput(
-            blue.language.snapshot.FrozenNode input,
+            FrozenNode input,
             String blueId) {
         ensureOpen();
-        semanticOutputBoundary()
-                .carryExactInput(input, blueId);
+        if (semanticOutputBoundary != null) {
+            semanticOutputBoundary.carryExactInput(input, blueId);
+            return;
+        }
+        carryExactInputLocally(input, blueId);
     }
 
     synchronized List<ExactBlueValue> exactValuesSnapshot() {
+        ensureOpen();
         return semanticOutputBoundary != null
                 ? semanticOutputBoundary.exactValuesSnapshot()
-                : Collections.<ExactBlueValue>emptyList();
+                : Collections.unmodifiableList(
+                        new ArrayList<>(new java.util.LinkedHashSet<>(
+                                carriedInputsByIdentity.values())));
     }
 
     synchronized void carryExactInputs(
             Collection<ExactBlueValue> inputs) {
         ensureOpen();
-        semanticOutputBoundary().carryExactInputs(inputs);
+        Collection<ExactBlueValue> exactInputs = Objects.requireNonNull(
+                inputs, "inputs");
+        if (semanticOutputBoundary != null) {
+            semanticOutputBoundary.carryExactInputs(exactInputs);
+            return;
+        }
+        for (ExactBlueValue input : exactInputs) {
+            ExactBlueValue exact = Objects.requireNonNull(input, "input");
+            admitCarriedInput(exact.frozenValue(), exact.blueId());
+        }
     }
 
     synchronized void attachSemanticOutputBoundary(
@@ -431,8 +453,14 @@ public final class RuntimeWorkSession {
             throw new IllegalStateException(
                     "Semantic output boundary was already attached");
         }
-        semanticOutputBoundary =
-                Objects.requireNonNull(boundary, "boundary");
+        SemanticOutputBoundary attached = Objects.requireNonNull(
+                boundary, "boundary");
+        if (!carriedInputsByIdentity.isEmpty()) {
+            attached.carryExactInputs(exactValuesSnapshot());
+            carriedInputsByIdentity.clear();
+            carriedInputsByStructure.clear();
+        }
+        semanticOutputBoundary = attached;
     }
 
     SemanticGasMeter semanticMeter() {
@@ -493,9 +521,81 @@ public final class RuntimeWorkSession {
                 twin.attachSemanticOutputBoundary(
                         semanticOutputBoundary
                                 .forkFor(twin));
+            } else if (!carriedInputsByIdentity.isEmpty()) {
+                twin.carryExactInputs(exactValuesSnapshot());
             }
         }
         return twin;
+    }
+
+    /** Returns an already carried exact input matching one hosted output. */
+    synchronized ExactBlueValue carriedExactInput(Node output) {
+        ensureOpen();
+        FrozenNode supplied = FrozenNode.fromResolvedNode(
+                Objects.requireNonNull(output, "output").clone());
+        ExactBlueValue matched = null;
+        for (ExactBlueValue candidate : exactValuesSnapshot()) {
+            boolean same = supplied.isReferenceOnly()
+                    ? supplied.getReferenceBlueId().equals(candidate.blueId())
+                    : !candidate.frozenValue().isReferenceOnly()
+                    && supplied.resolvedStructuralKey().equals(
+                            candidate.frozenValue().resolvedStructuralKey());
+            if (!same) {
+                continue;
+            }
+            if (matched != null
+                    && !matched.blueId().equals(candidate.blueId())) {
+                throw new InvalidExecutionEvidenceException(
+                        "Carried exact inputs disagree on hosted output identity");
+            }
+            matched = candidate;
+        }
+        return matched;
+    }
+
+    private void carryExactInputLocally(
+            FrozenNode input,
+            String blueId) {
+        FrozenNode frozen = Objects.requireNonNull(input, "input");
+        admitCarriedInput(frozen, blueId);
+        for (Map.Entry<String, FrozenNode> entry
+                : frozen.pathIndex().entrySet()) {
+            if (entry.getKey().isEmpty()
+                    || JsonPointer.ROOT.equals(entry.getKey())
+                    || entry.getValue() == null) {
+                continue;
+            }
+            FrozenNode descendant = entry.getValue();
+            if (descendant.isReferenceOnly()) {
+                admitCarriedInput(
+                        descendant, descendant.getReferenceBlueId());
+            } else if (descendant.isStrictCanonical()) {
+                admitCarriedInput(descendant, descendant.blueId());
+            }
+        }
+    }
+
+    private void admitCarriedInput(
+            FrozenNode value,
+            String blueId) {
+        ExactBlueValue exact = new ExactBlueValue(value, blueId);
+        ExactBlueValue byIdentity = carriedInputsByIdentity.get(
+                exact.blueId());
+        if (byIdentity != null) {
+            return;
+        }
+        if (!value.isReferenceOnly()) {
+            FrozenNode.ResolvedStructuralKey key =
+                    value.resolvedStructuralKey();
+            ExactBlueValue byStructure = carriedInputsByStructure.get(key);
+            if (byStructure != null
+                    && !byStructure.blueId().equals(exact.blueId())) {
+                throw new InvalidExecutionEvidenceException(
+                        "Carried exact inputs disagree on BlueId");
+            }
+            carriedInputsByStructure.put(key, exact);
+        }
+        carriedInputsByIdentity.put(exact.blueId(), exact);
     }
 
     /**
@@ -516,6 +616,82 @@ public final class RuntimeWorkSession {
                             : Outcome.FAILED,
                     true);
         }
+    }
+
+    static Throwable failIfOpenPreserving(
+            RuntimeWorkSession session,
+            Throwable primary) {
+        if (session == null || !session.isOpen()) {
+            return primary;
+        }
+        try {
+            session.failDeterministically();
+        } catch (RuntimeException | Error failure) {
+            return retain(primary, failure);
+        }
+        return primary;
+    }
+
+    static Throwable suspendIfOpenPreserving(
+            RuntimeWorkSession session,
+            Throwable primary) {
+        if (session == null || !session.isOpen()) {
+            return primary;
+        }
+        try {
+            session.suspend();
+        } catch (RuntimeException | Error failure) {
+            return retain(primary, failure);
+        }
+        return primary;
+    }
+
+    static Throwable closePreserving(
+            RuntimeWorkSession session,
+            Throwable primary) {
+        return closePreserving(
+                session == null ? null : session::close,
+                primary);
+    }
+
+    static Throwable closePreserving(
+            CloseAction action,
+            Throwable primary) {
+        if (action == null) {
+            return primary;
+        }
+        try {
+            action.close();
+        } catch (RuntimeException | Error failure) {
+            return retain(primary, failure);
+        }
+        return primary;
+    }
+
+    static void rethrow(Throwable failure) {
+        if (failure instanceof RuntimeException) {
+            throw (RuntimeException) failure;
+        }
+        if (failure instanceof Error) {
+            throw (Error) failure;
+        }
+    }
+
+    private static Throwable retain(
+            Throwable primary,
+            Throwable additional) {
+        if (primary == null) {
+            return additional;
+        }
+        if (additional != primary) {
+            primary.addSuppressed(additional);
+        }
+        return primary;
+    }
+
+    @FunctionalInterface
+    interface CloseAction {
+        void close();
     }
 
     private synchronized void ensureChargeable(

@@ -4,8 +4,10 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
@@ -168,7 +170,7 @@ class ProcessorOwnedCacheLifecycleTest {
 
         // when
         DocumentProcessingResult result = processor.processDocument(
-                new Node(), new Node().value("event"));
+                Nodes.emptyObject(), new Node().value("event"));
 
         // then
         assertTrue(result != null);
@@ -188,7 +190,12 @@ class ProcessorOwnedCacheLifecycleTest {
     private ContractBundle loadEmpty(ContractLoader loader,
                                      String scope,
                                      ProcessingObserver metrics) {
-        return loader.load((Node) null, (FrozenNode) null, scope, metrics);
+        return loader.load(
+                (Node) null,
+                (FrozenNode) null,
+                scope,
+                metrics,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     private String blueId(String value) {

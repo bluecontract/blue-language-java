@@ -11,6 +11,11 @@ public interface BlueResolution {
 
     /**
      * Resolves a Source Document completely.
+     * Enforces completed-value presence and payload obligations regardless of
+     * inline/reference spelling. Use {@link #resolveDefinition(Node)} when
+     * preparing a declaration with obligations for future instances.
+     * Pure references remain opaque unless their content is demanded by
+     * type/schema constraints; success does not certify an unfetched target.
      *
      * @param source authored Source Document
      * @return completely resolved value
@@ -18,7 +23,24 @@ public interface BlueResolution {
     Node resolve(Node source);
 
     /**
+     * Prepares a definition, checking fixed content and known constraints while
+     * retaining obligations that require a future instance payload. The returned
+     * graph is not a completed-value certificate. Neither this goal nor a sample
+     * payload is added to content or identity. The caller's source is unchanged.
+     *
+     * @param source authored definition, including optional imports
+     * @return resolved definition with retained schema obligations
+     * @throws UnsupportedOperationException if an alternate implementation
+     *         does not support definition preparation
+     */
+    default Node resolveDefinition(Node source) {
+        throw new UnsupportedOperationException("Definition preparation is not supported");
+    }
+
+    /**
      * Resolves demanded content without conflating incomplete with absent.
+     * An established result covers the demanded semantic closure only. A pure
+     * reference at the root can be established without certifying its target.
      *
      * @param source authored Source Document
      * @param limits semantic-demand and reference-expansion limits
@@ -39,6 +61,7 @@ public interface BlueResolution {
 
     /**
      * Produces an ordinary smaller Source overlay with the same meaning.
+     * Uses definition preparation; it is not a completed-value certificate.
      *
      * @param source authored Source Document
      * @return minimized Source overlay

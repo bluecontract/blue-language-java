@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -69,7 +70,7 @@ final class SubscriptionValidationServicesTest {
     @Test
     void shouldBuildReplacementDeltaWithExactCommitInterval() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         ExternalOrderKey previousOrder = ExternalOrderKey.of(
                 Arrays.asList(1, "source", 0));
         ExternalOrderKey committingOrder = ExternalOrderKey.of(
@@ -89,7 +90,7 @@ final class SubscriptionValidationServicesTest {
                         .build();
         ActivationIntervalValidator intervals =
                 new ActivationIntervalValidator(
-                        new SubscriptionSurfaceRules());
+                        new SubscriptionSurfaceRules(null));
         SubscriptionDeltaBuilder builder =
                 new SubscriptionDeltaBuilder(intervals);
         Map<String, SubscriptionDelta.Entry> beforeSurface =
@@ -144,7 +145,7 @@ final class SubscriptionValidationServicesTest {
                         .activeSubscriptionIntervals(
                                 Arrays.asList(affected, unaffected))
                         .build();
-        SubscriptionSurfaceRules rules = new SubscriptionSurfaceRules();
+        SubscriptionSurfaceRules rules = new SubscriptionSurfaceRules(null);
         ActivationIntervalValidator validator =
                 new ActivationIntervalValidator(rules);
 
@@ -168,7 +169,7 @@ final class SubscriptionValidationServicesTest {
                 new Node().properties(CHANNEL_KEY, newChannel));
         Node root = rootWithCollection(
                 new Node()
-                        .properties("existing", new Node())
+                        .properties("existing", Nodes.emptyObject())
                         .properties("new", newMember));
         EmbeddedScopePlan entryPlan = collectionPlan(
                 "/lessons", "existing");
@@ -212,7 +213,7 @@ final class SubscriptionValidationServicesTest {
                 Arrays.asList(1, "source", 0));
         ExternalOrderKey currentOrder = ExternalOrderKey.of(
                 Arrays.asList(8, "source", 2));
-        String contribution = channel.getBlueId();
+        String contribution = DirectBlueIdCalculator.calculateBlueId(channel);
         SubscriptionDelta.Entry retained = new SubscriptionDelta.Entry(
                 "/lessons/lesson-a",
                 CHANNEL_KEY,
@@ -347,7 +348,6 @@ final class SubscriptionValidationServicesTest {
                 .properties(
                         "checkpointDomain",
                         new Node().value(CHECKPOINT_DOMAIN));
-        channel.blueId(DirectBlueIdCalculator.calculateBlueId(channel));
         return channel;
     }
 
@@ -373,6 +373,9 @@ final class SubscriptionValidationServicesTest {
                 Collections.singletonMap(
                         declaration,
                         Collections.singletonList(memberKey)),
+                Collections.singletonMap(
+                        declaration,
+                        EmbeddedCollectionState.PRESENT_COLLECTION),
                 Collections.singletonList(
                         new EmbeddedConcretePath(
                                 memberPath,

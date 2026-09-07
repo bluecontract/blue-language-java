@@ -3,6 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.conformance.api.BlueContractsFixtureCategory;
 import blue.language.processor.GasScheduleConstants;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.ParsedJsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Arrays;
@@ -26,7 +27,7 @@ final class ClosedContractsFixtureValidator {
     private static final Pattern ID =
             Pattern.compile("^[A-Za-z0-9][A-Za-z0-9-]*$");
     private static final Pattern VECTOR =
-            Pattern.compile("^C-[A-Z0-9]+-[0-9]{2}$");
+            Pattern.compile("^C-(?:[A-Z0-9]+-)+[0-9]{2}$");
 
     private static final Set<String> TOP = set(
             BlueLanguageConstants.OBJECT_SCHEMA,
@@ -112,6 +113,8 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.Field.LIST_OPERATION,
             "newEmbeddedSurface",
             ContractsFixtureConstants.Field.ROOT_FORM,
+            ContractsFixtureConstants.Field.ROOT_OVERRIDES,
+            ContractsFixtureConstants.Field.ROOT_REMOVALS,
             ContractsFixtureConstants.Field.ROOT_REVISION,
             ContractsFixtureConstants.Field.SAME_EVENT);
     private static final Set<String> LIST_OPERATION = set(
@@ -149,6 +152,7 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.AssertionOperator.EQUALS,
             ContractsFixtureConstants.AssertionOperator.NOT_EQUALS,
             ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION,
+            ContractsFixtureConstants.AssertionOperator.NOT_EQUALS_PROJECTION,
             ContractsFixtureConstants.AssertionOperator.ABSENT,
             ContractsFixtureConstants.AssertionOperator.PRESENT,
             ContractsFixtureConstants.AssertionOperator.SEQUENCE_EQUALS,
@@ -275,6 +279,56 @@ final class ClosedContractsFixtureValidator {
                         path,
                         ContractsFixtureConstants.Field.ROOT_FORM,
                         set("inline", "reference", "eager", "lazy"));
+                if (variant.has(
+                        ContractsFixtureConstants.Field.ROOT_OVERRIDES)) {
+                    JsonNode overrides = variant.get(
+                            ContractsFixtureConstants.Field.ROOT_OVERRIDES);
+                    requireObject(overrides, path + ".rootOverrides");
+                    if (overrides.size() == 0) {
+                        fail(path + ".rootOverrides",
+                                "must contain at least one pointer override");
+                    }
+                    Iterator<String> pointers = overrides.fieldNames();
+                    while (pointers.hasNext()) {
+                        String pointer = pointers.next();
+                        try {
+                            if (ParsedJsonPointer.parse(pointer).isRoot()) {
+                                fail(path + ".rootOverrides",
+                                        "cannot replace the fixture Root");
+                            }
+                        } catch (IllegalArgumentException invalidPointer) {
+                            fail(path + ".rootOverrides",
+                                    "invalid JSON Pointer " + pointer);
+                        }
+                    }
+                }
+                if (variant.has(
+                        ContractsFixtureConstants.Field.ROOT_REMOVALS)) {
+                    JsonNode removals = variant.get(
+                            ContractsFixtureConstants.Field.ROOT_REMOVALS);
+                    requireArray(removals, path + ".rootRemovals");
+                    if (removals.size() == 0) {
+                        fail(path + ".rootRemovals",
+                                "must contain at least one pointer removal");
+                    }
+                    for (JsonNode removal : removals) {
+                        if (!removal.isTextual()) {
+                            fail(path + ".rootRemovals",
+                                    "must contain only JSON Pointer text");
+                        }
+                        try {
+                            if (ParsedJsonPointer.parse(
+                                    removal.textValue()).isRoot()) {
+                                fail(path + ".rootRemovals",
+                                        "cannot remove the fixture Root");
+                            }
+                        } catch (IllegalArgumentException invalidPointer) {
+                            fail(path + ".rootRemovals",
+                                    "invalid JSON Pointer "
+                                            + removal.textValue());
+                        }
+                    }
+                }
                 optionalEnum(
                         variant,
                         path,
@@ -727,7 +781,9 @@ final class ClosedContractsFixtureValidator {
         optionalBoolean(
                 assertion, path, ContractsFixtureConstants.Field.ORDERED);
         if (ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION
-                .equals(op)) {
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator
+                .NOT_EQUALS_PROJECTION.equals(op)) {
             requireFields(
                     assertion,
                     path,
@@ -738,7 +794,8 @@ final class ClosedContractsFixtureValidator {
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION);
             if (assertion.has(
                     ContractsFixtureConstants.Field.EXPECTED)) {
-                fail(path + ".expected", "equalsProjection must not also declare expected");
+                fail(path + ".expected",
+                        op + " must not also declare expected");
             }
         } else if (ContractsFixtureConstants.AssertionOperator.ABSENT
                 .equals(op)
@@ -759,8 +816,12 @@ final class ClosedContractsFixtureValidator {
                     ContractsFixtureConstants.Field.EXPECTED);
             if (assertion.has(
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION)) {
-                fail(path + ".expectedProjection",
-                        "only equalsProjection accepts expectedProjection");
+                fail(
+                        path + "." + ContractsFixtureConstants.Field
+                                .EXPECTED_PROJECTION,
+                        "only projection comparison operators accept "
+                                + ContractsFixtureConstants.Field
+                                        .EXPECTED_PROJECTION);
             }
         }
     }

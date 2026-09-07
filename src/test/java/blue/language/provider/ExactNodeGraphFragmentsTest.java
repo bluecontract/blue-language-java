@@ -642,6 +642,8 @@ class ExactNodeGraphFragmentsTest {
                         "deep", new Node().value(true)));
         Node inlineType = new Node().properties(
                 "kind", new Node().value("fixture-type"));
+        String inlineTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                inlineType);
         Node contracts = new Node().properties(
                 "guard", new Node().value(false));
         Schema schema = new Schema()
@@ -652,7 +654,7 @@ class ExactNodeGraphFragmentsTest {
                         new Node().blueId(externalBlueId)));
         Node root = new Node()
                 .name("root")
-                .type(inlineType)
+                .type(new Node().blueId(inlineTypeBlueId))
                 .contracts(contracts)
                 .schema(schema)
                 .properties(

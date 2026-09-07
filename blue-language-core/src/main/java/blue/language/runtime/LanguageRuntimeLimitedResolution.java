@@ -6,6 +6,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.ProviderUnavailableException;
 
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
@@ -18,6 +19,8 @@ import blue.language.resolve.ResolutionLimits;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -97,7 +100,7 @@ final class LanguageRuntimeLimitedResolution {
                 }
                 if (result.outcome()
                         == NodeProviderOutcome.UNAVAILABLE) {
-                    throw new IllegalStateException(
+                    throw new ProviderUnavailableException(blueId,
                             result.diagnostic().orElse(
                                     "Provider unavailable for " + blueId));
                 }
@@ -110,8 +113,13 @@ final class LanguageRuntimeLimitedResolution {
                 if (!budget.tryAcquire(blueId)) {
                     throw new ReferenceExpansionLimitException(blueId);
                 }
-                NodeProviderResult result = nodeProvider
-                        .fetchResultByBlueId(blueId);
+                NodeProviderResult result = budget.evidence.get(blueId);
+                if (result == null) {
+                    result = nodeProvider.fetchResultByBlueId(blueId);
+                    // Detached ancestry/enum probes share one invocation's
+                    // evidence and budget, including defensive result copies.
+                    budget.evidence.put(blueId, result);
+                }
                 budget.providerOutcome = result.outcome();
                 if (result.outcome() != NodeProviderOutcome.FOUND) {
                     budget.outstandingBlueIds.add(blueId);
@@ -124,6 +132,26 @@ final class LanguageRuntimeLimitedResolution {
     private static BlueOperationResult<Node> classifyFailure(
             RuntimeException failure,
             ReferenceBudget budget) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ReferenceExpansionLimitException) {
+                return BlueOperationResult.incomplete(null, budget.outstandingBlueIds,
+                        null, cause.getMessage());
+            }
+            if (cause instanceof ProviderUnavailableException) {
+                ProviderUnavailableException unavailable =
+                        (ProviderUnavailableException) cause;
+                unavailable.requiredExactBlueId().ifPresent(
+                        budget.outstandingBlueIds::add);
+                return BlueOperationResult.incomplete(
+                        null,
+                        budget.outstandingBlueIds,
+                        NodeProviderOutcome.UNAVAILABLE,
+                        failure.getMessage());
+            }
+        }
+        if (budget.providerOutcome == NodeProviderOutcome.INVALID_EVIDENCE) {
+            return BlueOperationResult.invalid(failure.getMessage(), NodeProviderOutcome.INVALID_EVIDENCE);
+        }
         BlueLanguageErrorCategory category =
                 BlueLanguageErrorClassifier.classify(failure);
         if (category == BlueLanguageErrorCategory.ProviderUnavailable) {
@@ -150,6 +178,7 @@ final class LanguageRuntimeLimitedResolution {
         private final Set<String> outstandingBlueIds =
                 new LinkedHashSet<>();
         private NodeProviderOutcome providerOutcome;
+        private final Map<String, NodeProviderResult> evidence = new LinkedHashMap<>();
 
         private ReferenceBudget(int maximum) {
             this.maximum = maximum;
@@ -184,15 +213,14 @@ final class LanguageRuntimeLimitedResolution {
         }
 
         @Override
-        public boolean shouldExtendPathSegment(
-                String segment, Node current) {
-            return shouldExpandPathSegment(segment, current);
-        }
-
-        @Override
         public boolean shouldMergePathSegment(
                 String segment, Node current) {
             return isDemandedClosure(potentialPath(segment));
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return false;
         }
 
         @Override

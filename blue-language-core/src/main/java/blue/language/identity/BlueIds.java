@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import java.math.BigInteger;
 import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Syntax and canonicality checks for plain and cyclic-member BlueIds.
@@ -20,6 +21,11 @@ public class BlueIds {
     private static final int SHA_256_BYTE_COUNT = 32;
     private static final int MAX_SHA_256_BASE58_LENGTH = 44;
     private static final char BASE58_ZERO = BASE58_ALPHABET.charAt(0);
+    // Fixed-size positive syntax cache. An exact String equality hit proves
+    // only this immutable value's grammar; it never authenticates content.
+    private static final AtomicReferenceArray<String> VALIDATED_PLAIN_IDS =
+            new AtomicReferenceArray<>(4096);
+    private static final int VALIDATED_PLAIN_ID_PROBES = 16;
 
     /** Placeholder for the current document in a single-document cycle. */
     public static final String THIS_PLACEHOLDER = "this";
@@ -77,12 +83,29 @@ public class BlueIds {
      * @throws IllegalArgumentException when the identity is not canonical
      */
     public static String requirePlainBlueId(String value, String path) {
+        if (value != null) {
+            int mask = VALIDATED_PLAIN_IDS.length() - 1;
+            int first = value.hashCode() & mask;
+            for (int probe = 0; probe < VALIDATED_PLAIN_ID_PROBES; probe++) {
+                if (value.equals(VALIDATED_PLAIN_IDS.get((first + probe) & mask))) {
+                    return value;
+                }
+            }
+        }
         if (value == null || value.isEmpty() || !PLAIN_BLUE_ID_PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
         if (!hasCanonicalSha256DecodedLength(value)) {
             throw new IllegalArgumentException("Expected canonical Base58 SHA-256 BlueId at " + path + ".");
         }
+        int mask = VALIDATED_PLAIN_IDS.length() - 1;
+        int first = value.hashCode() & mask;
+        for (int probe = 0; probe < VALIDATED_PLAIN_ID_PROBES; probe++) {
+            if (VALIDATED_PLAIN_IDS.compareAndSet((first + probe) & mask, null, value)) {
+                return value;
+            }
+        }
+        VALIDATED_PLAIN_IDS.set(first, value);
         return value;
     }
 
@@ -122,6 +145,9 @@ public class BlueIds {
     public static String requireBlueIdOrCyclicMember(String value, String path) {
         if (value == null) {
             throw new IllegalArgumentException("Expected BlueId at " + path + ".");
+        }
+        if (!hasCyclicMemberSeparator(value)) {
+            return requirePlainBlueId(value, path);
         }
         java.util.regex.Matcher cyclic = CYCLIC_MEMBER_PATTERN.matcher(value);
         if (cyclic.matches()) {

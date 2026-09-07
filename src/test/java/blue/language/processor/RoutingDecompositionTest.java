@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.TriggeredEventChannel;
@@ -106,6 +107,7 @@ final class RoutingDecompositionTest {
             String handler,
             String logical,
             String payload) {
+        Node payloadNode = new Node().value(payload);
         return ChannelRunner.ExternalClassification.acceptedNew(
                 "/",
                 source,
@@ -113,7 +115,8 @@ final class RoutingDecompositionTest {
                 logical,
                 null,
                 ContractBundle.empty(),
-                FrozenNode.fromResolvedNode(new Node().value(payload)),
+                FrozenNode.fromResolvedNode(payloadNode),
+                DirectBlueIdCalculator.calculateBlueId(payloadNode),
                 java.util.Collections.<ExactBlueValue>emptyList(),
                 null,
                 "event-" + source,

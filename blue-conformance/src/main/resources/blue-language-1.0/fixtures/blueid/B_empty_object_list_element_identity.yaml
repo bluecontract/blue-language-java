@@ -1,0 +1,20 @@
+id: B_empty_object_list_element_identity
+category: BlueId
+operation: calculateBlueId
+description: an exact empty-object list element is ordinary content with an identity distinct from omission, a placeholder, and an empty list
+input:
+  items:
+  - A
+  - {}
+  - B
+alsoEquivalentTo:
+  items:
+  - A
+  - blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  - B
+expectedNodeBlueId: GQZi9QVMELa3FPNX5S5bVaY5zg419tiV56hHfZaeswtX
+alsoDifferentFrom:
+- items: [A, B]
+- items: [A, {$empty: true}, B]
+- items: [A, [], B]
+note: The expected identity is an independent literal oracle derived from RFC 8785 SHA-256/Base58 list-fold inputs; the verified pure-reference element contributes the same literal empty-object element identity.

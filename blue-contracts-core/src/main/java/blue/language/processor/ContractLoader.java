@@ -1,14 +1,17 @@
 package blue.language.processor;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.mapping.TypeClassResolver;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -28,6 +31,7 @@ final class ContractLoader {
     private final ContractHeaderLoader headers;
     private final ExecutableBodyLoader executableBodies;
     private final ContractRefreshService refresh;
+    private final ProcessingSnapshotManager snapshotManager;
 
     ContractLoader(
             ContractProcessorRegistry registry,
@@ -61,11 +65,31 @@ final class ContractLoader {
             BlueCachePolicy cachePolicy,
             NodeProvider contributionProvider,
             boolean canonicalContractOrder) {
+        this(
+                registry,
+                converter,
+                typeResolver,
+                cachePolicy,
+                contributionProvider,
+                canonicalContractOrder,
+                null);
+    }
+
+    ContractLoader(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            TypeClassResolver typeResolver,
+            BlueCachePolicy cachePolicy,
+            NodeProvider contributionProvider,
+            boolean canonicalContractOrder,
+            ProcessingSnapshotManager snapshotManager) {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(converter, "converter");
         Objects.requireNonNull(typeResolver, "typeResolver");
+        this.snapshotManager = snapshotManager;
         this.contributions = new ContractContributionCollector(
-                contributionProvider);
+                contributionProvider,
+                snapshotManager);
         this.effectiveContracts = new EffectiveContractResolver(
                 registry, converter, typeResolver, contributions);
         this.executableBodies = new ExecutableBodyLoader(converter);
@@ -76,7 +100,8 @@ final class ContractLoader {
                 effectiveContracts,
                 contributions,
                 executableBodies,
-                new ContractSnapshotFactory(),
+                new ContractSnapshotFactory(snapshotManager),
+                snapshotManager,
                 canonicalContractOrder);
         this.refresh = new ContractRefreshService(
                 registry,
@@ -98,45 +123,88 @@ final class ContractLoader {
 
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
         Objects.requireNonNull(snapshot, "snapshot");
+        FrozenNode source = snapshot.sourceAt(scopePath);
+        Node selectedScope = source != null
+                ? effectiveContracts.selectedContractContainer(source)
+                : null;
         return load(
-                snapshot.canonicalAt(scopePath),
+                selectedScope,
                 snapshot.resolvedAt(scopePath),
-                scopePath);
-    }
-
-    ContractBundle load(FrozenNode scopeNode, String scopePath) {
-        return load(scopeNode, scopeNode, scopePath);
+                scopePath,
+                NoOpProcessingObserver.INSTANCE,
+                null,
+                null,
+                snapshot.canonicalTypeIdentities(),
+                ContractHeaderMappingEvidence.fromSnapshot(
+                        snapshot, scopePath),
+                null);
     }
 
     ContractBundle load(
             FrozenNode scopeNode,
             String scopePath,
-            ProcessingObserver observer) {
-        return load(scopeNode, scopeNode, scopePath, observer);
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return load(scopeNode, scopeNode, scopePath, typeIdentities);
     }
 
     ContractBundle load(
-            FrozenNode selectedScopeNode,
-            FrozenNode effectiveScopeNode,
-            String scopePath) {
+            FrozenNode scopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return load(
-                selectedScopeNode,
-                effectiveScopeNode,
+                scopeNode,
+                scopeNode,
                 scopePath,
-                NoOpProcessingObserver.INSTANCE);
+                observer,
+                typeIdentities);
     }
 
     ContractBundle load(
             FrozenNode selectedScopeNode,
             FrozenNode effectiveScopeNode,
             String scopePath,
-            ProcessingObserver observer) {
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                NoOpProcessingObserver.INSTANCE,
+                typeIdentities);
+    }
+
+    ContractBundle load(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return load(
                 selectedScopeNode,
                 effectiveScopeNode,
                 scopePath,
                 observer,
                 null,
+                null,
+                typeIdentities);
+    }
+
+    ContractBundle load(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
                 null);
     }
 
@@ -146,7 +214,9 @@ final class ContractLoader {
             String scopePath,
             ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
         Node selectedScope = selectedScopeNode != null
                 ? effectiveContracts.selectedContractContainer(selectedScopeNode)
                 : null;
@@ -156,7 +226,9 @@ final class ContractLoader {
                 scopePath,
                 observer,
                 recognitionMeter,
-                recognitionReason);
+                recognitionReason,
+                typeIdentities,
+                identityMemo);
     }
 
     ContractBundle loadExternalClassification(
@@ -164,20 +236,23 @@ final class ContractLoader {
             FrozenNode effectiveScopeNode,
             String scopePath,
             Set<String> retainedContractKeys,
-            boolean includeProcessEmbedded) {
+            boolean includeProcessEmbedded,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Set<String> retainedKeys = new LinkedHashSet<>(
                 Objects.requireNonNull(
                         retainedContractKeys, "retainedContractKeys"));
         if (includeProcessEmbedded) {
-            effectiveContracts.collectProcessEmbeddedKeys(
+            collectSelectedProcessEmbeddedKeys(
                     selectedScopeNode, retainedKeys);
-            effectiveContracts.collectProcessEmbeddedKeys(
-                    effectiveScopeNode, retainedKeys);
+            effectiveContracts.collectEffectiveProcessEmbeddedKeys(
+                    effectiveScopeNode,
+                    retainedKeys,
+                    typeIdentities);
         }
-        Node selectedScope = effectiveContracts.filterScopeContracts(
+        Node selectedScope = effectiveContracts.filterSelectedScopeContracts(
                 selectedScopeNode, retainedKeys);
-        Node effectiveScope = effectiveContracts.filterScopeContracts(
-                effectiveScopeNode, retainedKeys);
+        Node effectiveScope = effectiveContracts.filterEffectiveScopeContracts(
+                effectiveScopeNode, retainedKeys, typeIdentities);
         FrozenNode frozenEffective = effectiveScope != null
                 ? FrozenNode.fromResolvedNode(effectiveScope)
                 : null;
@@ -187,7 +262,8 @@ final class ContractLoader {
                 scopePath,
                 NoOpProcessingObserver.INSTANCE,
                 null,
-                null);
+                null,
+                typeIdentities);
     }
 
     ContractBundle loadExternalClassification(
@@ -196,7 +272,8 @@ final class ContractLoader {
             String scopePath,
             String channelKey,
             boolean includeProcessEmbedded,
-            ProcessingObserver observer) {
+            ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return loadExternalClassification(
                 selectedScopeNode,
                 effectiveScopeNode,
@@ -204,7 +281,7 @@ final class ContractLoader {
                 channelKey,
                 includeProcessEmbedded,
                 observer,
-                null,
+                typeIdentities,
                 null);
     }
 
@@ -215,8 +292,32 @@ final class ContractLoader {
             String channelKey,
             boolean includeProcessEmbedded,
             ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                ExternalChannelDependencySnapshot.none(),
+                observer,
+                null,
+                null,
+                typeIdentities,
+                identityMemo);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return loadExternalClassification(
                 selectedScopeNode,
                 effectiveScopeNode,
@@ -226,7 +327,8 @@ final class ContractLoader {
                 ExternalChannelDependencySnapshot.none(),
                 observer,
                 recognitionMeter,
-                recognitionReason);
+                recognitionReason,
+                typeIdentities);
     }
 
     ContractBundle loadExternalClassification(
@@ -238,17 +340,45 @@ final class ContractLoader {
             ExternalChannelDependencySnapshot declaredDependencies,
             ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                declaredDependencies,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
+                null);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ExternalChannelDependencySnapshot declaredDependencies,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
         Set<String> retainedKeys = externalClassificationContractKeys(
                 selectedScopeNode,
                 effectiveScopeNode,
                 channelKey,
                 includeProcessEmbedded,
-                declaredDependencies);
-        Node selectedScope = effectiveContracts.filterScopeContracts(
+                declaredDependencies,
+                typeIdentities);
+        Node selectedScope = effectiveContracts.filterSelectedScopeContracts(
                 selectedScopeNode, retainedKeys);
-        Node effectiveScope = effectiveContracts.filterScopeContracts(
-                effectiveScopeNode, retainedKeys);
+        Node effectiveScope = effectiveContracts.filterEffectiveScopeContracts(
+                effectiveScopeNode, retainedKeys, typeIdentities);
         FrozenNode frozenEffective = effectiveScope != null
                 ? FrozenNode.fromResolvedNode(effectiveScope)
                 : null;
@@ -258,7 +388,9 @@ final class ContractLoader {
                 scopePath,
                 observer,
                 recognitionMeter,
-                recognitionReason);
+                recognitionReason,
+                typeIdentities,
+                identityMemo);
     }
 
     Set<String> externalClassificationContractKeys(
@@ -266,7 +398,8 @@ final class ContractLoader {
             FrozenNode effectiveScopeNode,
             String channelKey,
             boolean includeProcessEmbedded,
-            ExternalChannelDependencySnapshot declaredDependencies) {
+            ExternalChannelDependencySnapshot declaredDependencies,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Set<String> retainedKeys = new LinkedHashSet<>();
         if (channelKey != null) {
             retainedKeys.add(channelKey);
@@ -276,25 +409,67 @@ final class ContractLoader {
                 Objects.requireNonNull(
                         declaredDependencies, "declaredDependencies"));
         if (includeProcessEmbedded) {
-            effectiveContracts.collectProcessEmbeddedKeys(
+            collectSelectedProcessEmbeddedKeys(
                     selectedScopeNode, retainedKeys);
-            effectiveContracts.collectProcessEmbeddedKeys(
-                    effectiveScopeNode, retainedKeys);
+            effectiveContracts.collectEffectiveProcessEmbeddedKeys(
+                    effectiveScopeNode,
+                    retainedKeys,
+                    typeIdentities);
         }
         return retainedKeys;
+    }
+
+    private void collectSelectedProcessEmbeddedKeys(
+            FrozenNode selectedScopeNode,
+            Set<String> retainedKeys) {
+        FrozenNode contracts = effectiveContracts.property(
+                selectedScopeNode,
+                ProcessorContractConstants.KEY_CONTRACTS);
+        if (contracts == null || contracts.getProperties() == null) {
+            return;
+        }
+        for (Map.Entry<String, FrozenNode> entry
+                : contracts.getProperties().entrySet()) {
+            if (entry.getValue() != null
+                    && isProcessEmbeddedContract(
+                            entry.getValue().toNode())) {
+                retainedKeys.add(entry.getKey());
+            }
+        }
     }
 
     ContractBundle load(
             Node selectedScopeNode,
             FrozenNode effectiveScopeNode,
             String scopePath,
-            ProcessingObserver observer) {
+            ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return load(
                 selectedScopeNode,
                 effectiveScopeNode,
                 scopePath,
                 observer,
                 null,
+                null,
+                typeIdentities);
+    }
+
+    ContractBundle load(
+            Node selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
                 null);
     }
 
@@ -304,7 +479,33 @@ final class ContractLoader {
             String scopePath,
             ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
-            String recognitionReason) {
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
+                ContractHeaderMappingEvidence.none(scopePath),
+                identityMemo);
+    }
+
+    private ContractBundle load(
+            Node selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
+        ContractHeaderMappingEvidence contentEvidence = Objects.requireNonNull(
+                mappingEvidence, "mappingEvidence");
         return refresh.load(
                 selectedScopeNode,
                 effectiveScopeNode,
@@ -312,7 +513,18 @@ final class ContractLoader {
                 observer,
                 recognitionMeter,
                 recognitionReason,
-                headers::load);
+                typeIdentities,
+                contentEvidence.cacheSignature(),
+                (selected, effective, path, meter, reason, identities) ->
+                        headers.load(
+                                selected,
+                                effective,
+                                path,
+                                meter,
+                                reason,
+                                identities,
+                                contentEvidence,
+                                identityMemo));
     }
 
     void clearCaches() {
@@ -321,7 +533,7 @@ final class ContractLoader {
 
     ContractBundle.HandlerBinding materializeSelectedExecutableBodies(
             ContractBundle.HandlerBinding binding,
-            Function<FrozenNode, FrozenNode> materializer) {
+            Function<FrozenNode, ResolvedSnapshot> materializer) {
         return executableBodies.materializeSelected(binding, materializer);
     }
 
@@ -334,14 +546,25 @@ final class ContractLoader {
     }
 
     boolean isProcessEmbeddedContract(Node contractNode) {
-        return effectiveContracts.isProcessEmbeddedContract(contractNode);
+        Node type = contractNode != null ? contractNode.getType() : null;
+        String typeBlueId = type != null
+                ? CanonicalIdentityEvidence.sourceTypeBlueId(
+                        type,
+                        snapshotManager,
+                        "Direct Process Embedded contract type")
+                : null;
+        return effectiveContracts.isProcessEmbeddedTypeBlueId(typeBlueId);
     }
 
     void preflightSelectedContractHeaders(FrozenNode selectedScopeNode) {
         headers.preflightSelectedContractHeaders(selectedScopeNode);
     }
 
-    void preflightDirectContractHeader(String key, FrozenNode contractNode) {
-        headers.preflightDirectContractHeader(key, contractNode);
+    void preflightDirectContractHeader(
+            String key,
+            FrozenNode contractNode,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        headers.preflightDirectContractHeader(
+                key, contractNode, canonicalTypeIdentities);
     }
 }

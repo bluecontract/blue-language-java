@@ -1,6 +1,7 @@
 package blue.language.mapping;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.TypeBlueId;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +60,7 @@ final class BlueMapperIsolationTest {
                         FactoryValue.class,
                         RightFactoryValue::new)
                 .build();
-        Node source = new Node();
+        Node source = Nodes.emptyObject();
 
         // when
         FactoryValue leftValue = left.fromNode(

@@ -9,13 +9,16 @@ import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.PortableLimitExceededException;
 import blue.language.processor.ProcessorDiagnostic;
 import blue.language.processor.ProcessorFailureException;
+import blue.language.processor.ProcessorRuntimeAccess;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.SubscriptionSurfaceInvalidException;
 import blue.language.provider.ProviderUnavailableException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Production affected-closure processor composed over the ordinary document
@@ -39,6 +42,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
 
     private final DocumentProcessor owner;
     private final ClosureRuntimeDescriptor runtimeDescriptor;
+    private final Supplier<ProcessorRuntimeAccess> runtimeAccess;
     private final ClosureExecutionObserver observer;
 
     /**
@@ -61,6 +65,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             ClosureExecutionObserver observer) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.runtimeDescriptor = ClosureRuntimeDescriptor.capture(owner);
+        this.runtimeAccess = () -> owner.administration().runtimeAccess();
         this.observer = Objects.requireNonNull(observer, "observer");
     }
 
@@ -71,7 +76,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
         ClosureInvocationInput admitted = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(admitted);
+                ClosureInvocationVerifier.verify(admitted, runtimeAccess);
         verifyRuntimeBinding(admitted, verification);
         ClosureExecutionRecorder recorder =
                 new ClosureExecutionRecorder(
@@ -84,7 +89,10 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                     owner,
                     admitted,
                     recorder,
-                    ClosureExecutionSession.ExecutionMode.PROCESSING);
+                    ClosureExecutionSession.ExecutionMode.PROCESSING,
+                    verification.externalEventIdentityEvidence(),
+                    Collections.<ManagedOccurrenceEvidenceResolution>
+                            emptyList());
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;
             long assemblyStarted =
@@ -101,8 +109,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -196,7 +203,8 @@ final class DefaultClosureProcessor implements ClosureProcessor {
         ClosureProcessRetryInput selected = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verifyRetry(selected);
+                ClosureInvocationVerifier.verifyRetry(
+                        selected, runtimeAccess);
         ClosureInvocationInput admitted = selected.baseInvocation()
                 .withInvocationIdentity(
                         selected.retryInvocationIdentity());
@@ -213,6 +221,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                     admitted,
                     recorder,
                     ClosureExecutionSession.ExecutionMode.PROCESSING,
+                    verification.externalEventIdentityEvidence(),
                     selected.resolutions());
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;
@@ -230,8 +239,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -327,7 +335,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
         ClosureInvocationInput admitted = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(admitted);
+                ClosureInvocationVerifier.verify(admitted, runtimeAccess);
         verifyRuntimeBinding(admitted, verification);
         ClosureExecutionRecorder recorder =
                 new ClosureExecutionRecorder(
@@ -367,8 +375,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -462,7 +469,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
         ClosureInvocationInput admitted = Objects.requireNonNull(
                 input, "input");
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(admitted);
+                ClosureInvocationVerifier.verify(admitted, runtimeAccess);
         verifyRuntimeBinding(admitted, verification);
         ClosureExecutionRecorder recorder =
                 new ClosureExecutionRecorder(
@@ -487,7 +494,10 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                     owner,
                     admitted,
                     recorder,
-                    ClosureExecutionSession.ExecutionMode.ADMISSION);
+                    ClosureExecutionSession.ExecutionMode.ADMISSION,
+                    verification.externalEventIdentityEvidence(),
+                    Collections.<ManagedOccurrenceEvidenceResolution>
+                            emptyList());
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;
             long assemblyStarted =
@@ -504,8 +514,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -590,6 +599,19 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                 session.close();
             }
         }
+    }
+
+    private static ClosureAttemptResult resourceSuspension(
+            ClosureInvocationInput input,
+            List<ClosureResourceDemand> demands) {
+        List<ClosureResourceDemand> emitted = new ArrayList<>(demands.size());
+        for (ClosureResourceDemand demand : demands) {
+            emitted.add(demand instanceof ManagedOccurrenceEvidenceDemand
+                    ? ((ManagedOccurrenceEvidenceDemand) demand)
+                            .emittedBy(input.invocationIdentity())
+                    : demand);
+        }
+        return ClosureAttemptResult.needsResources(emitted);
     }
 
     private static ClosureAttemptResult providerSuspension(

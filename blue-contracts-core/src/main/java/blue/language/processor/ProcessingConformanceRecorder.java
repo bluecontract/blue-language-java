@@ -3,7 +3,6 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.List;
@@ -22,9 +21,13 @@ final class ProcessingConformanceRecorder {
     private final ProcessingConformanceTrace.Builder trace =
             new ProcessingConformanceTrace.Builder();
     private final GasMeter gasMeter;
+    private final ProcessingSnapshotManager snapshotManager;
 
-    ProcessingConformanceRecorder(GasMeter gasMeter) {
+    ProcessingConformanceRecorder(
+            GasMeter gasMeter,
+            ProcessingSnapshotManager snapshotManager) {
         this.gasMeter = Objects.requireNonNull(gasMeter, "gasMeter");
+        this.snapshotManager = snapshotManager;
     }
 
     ProcessingConformanceTrace snapshot() {
@@ -43,9 +46,11 @@ final class ProcessingConformanceRecorder {
         if (body == null) {
             return;
         }
-        String bodyBlueId = body.isReferenceOnly()
-                ? body.getReferenceBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(body.toNode());
+        String bodyBlueId = CanonicalIdentityEvidence.executableBodyBlueId(
+                body.toNode(),
+                snapshotManager,
+                "Selected executable body at " + logicalPath
+                        + " for contract '" + contractKey + "'");
         semanticDemand(bodyBlueId);
     }
 

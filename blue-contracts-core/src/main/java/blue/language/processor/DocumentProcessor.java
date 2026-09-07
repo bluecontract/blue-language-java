@@ -505,6 +505,9 @@ public class DocumentProcessor implements AutoCloseable {
                         snapshotManager,
                         contractRegistry,
                         contractConverter,
+                        languageRuntimeAccess,
+                        gasSchedule,
+                        gasLimit,
                         externalDeliveryPlanDeriver);
     }
 

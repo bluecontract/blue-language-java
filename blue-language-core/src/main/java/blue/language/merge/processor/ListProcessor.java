@@ -1,5 +1,6 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.merge.MergingProcessor;
@@ -7,9 +8,7 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
-import blue.language.provider.Types;
 
-import static blue.language.provider.Types.isSubtype;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL;
 
@@ -26,10 +25,17 @@ public class ListProcessor implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         processMergePolicy(target, source);
 
-        if (source.getItemType() != null && !Types.isListType(source.getType(), nodeProvider)) {
+        if (source.getItemType() != null
+                && !EffectiveTypeChecks.isListType(
+                source.getType(), nodeProvider, nodeResolver, typeIdentities)) {
             throw new IllegalArgumentException("Source node with itemType must have a List type");
         }
 
@@ -41,7 +47,12 @@ public class ListProcessor implements MergingProcessor {
                 target.itemType(sourceItemType);
             }
         } else if (sourceItemType != null) {
-            boolean isSubtype = isSubtype(sourceItemType, targetItemType, nodeProvider);
+            boolean isSubtype = EffectiveTypeChecks.isSubtype(
+                    sourceItemType,
+                    targetItemType,
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities);
             if (!isSubtype) {
                 String errorMessage = String.format("The source item type '%s' is not a subtype of the target item type '%s'.",
                         NodeWireForm.get(sourceItemType), NodeWireForm.get(targetItemType));
@@ -52,7 +63,13 @@ public class ListProcessor implements MergingProcessor {
 
         if (target.getItemType() != null && source.getItems() != null) {
             for (Node item : source.getItems()) {
-                if (item.getType() != null && !isSubtype(item.getType(), target.getItemType(), nodeProvider)) {
+                if (item.getType() != null
+                        && !EffectiveTypeChecks.isCollectionMemberCompatible(
+                        item.getType(),
+                        target.getItemType(),
+                        nodeProvider,
+                        nodeResolver,
+                        typeIdentities)) {
                     String errorMessage = String.format("Item of type '%s' is not a subtype of the list's item type '%s'.",
                             NodeWireForm.get(item.getType()), NodeWireForm.get(target.getItemType()));
                     throw new IllegalArgumentException(errorMessage);

@@ -11,7 +11,7 @@ properties:
     type: array
     minItems: 1
     uniqueItems: true
-    items: {type: string, pattern: '^(?:C-CLO|C-EVO|FL-ADM)-[0-9]{2}$'}
+    items: {type: string, pattern: '^(?:(?:C-CLO|C-EVO|FL-ADM)-[0-9]{2}|C-EMB-EMPTY-05|C-EVT-COLLECTION-07)$'}
   category:
     enum: [admission, atomicity, cycle, dynamic-graph, gas, history, identity, initialization, limits, locality, ordering, public-events, recovery]
   operation: {enum: [process-closure, admit-closure, limit-micro]}
@@ -175,6 +175,8 @@ $defs:
         type: array
         uniqueItems: true
         items: {$ref: '#/$defs/blueId'}
+      cache: {enum: [warm, cold]}
+      batching: {enum: [batched, unbatched]}
   localityHarness:
     description: Harness-only locality setup and observation; neither field is production result API.
     type: object

@@ -191,7 +191,10 @@ final class FrozenCanonicalDigester {
             addReference(fields, OBJECT_ITEMS, calculateValidatedList(node.getItems(), observer));
         }
         if (node.frozenSchemaView() != null) {
-            String schemaBlueId = calculateSchemaBlueId(node.frozenSchemaView(), observer);
+            Schema schema = node.frozenSchemaView();
+            String schemaBlueId = schema.isReferenceOnly()
+                    ? schema.getBlueId()
+                    : calculateSchemaBlueId(schema, observer);
             addReference(fields, OBJECT_SCHEMA, schemaBlueId);
         }
         addNodeReference(fields, OBJECT_CONTRACTS, node.getContracts());
@@ -209,9 +212,7 @@ final class FrozenCanonicalDigester {
                     // via the full oracle rather than inventing a composition.
                     throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
                 }
-                if (!inputCleansToEmptyMap(child)) {
-                    addReference(fields, key, child.blueId());
-                }
+                addReference(fields, key, child.blueId());
             }
         }
         return hashFields(fields, observer);
@@ -223,7 +224,7 @@ final class FrozenCanonicalDigester {
             if (node.getPreviousBlueId() != null && index != 0
                     || node.getProperties() != null
                     && node.getProperties().containsKey(LIST_CONTROL_PREVIOUS)
-                    || inputCleansToEmptyMap(node)) {
+                    ) {
                 // Only the whole-list oracle can preserve both the positional
                 // control/placeholder semantics and the original nested
                 // diagnostic path.
@@ -271,9 +272,6 @@ final class FrozenCanonicalDigester {
                     elementBlueId = hashScalar(value.getValue(), observer);
                 } else {
                     FrozenNode frozen = FrozenNode.fromNode(value);
-                    if (inputCleansToEmptyMap(frozen)) {
-                        throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
-                    }
                     elementBlueId = frozen.blueId();
                 }
                 accumulator = hashListCons(elementBlueId, accumulator, observer);
@@ -304,9 +302,7 @@ final class FrozenCanonicalDigester {
             return;
         }
         FrozenNode frozen = FrozenNode.fromNode(value);
-        if (!inputCleansToEmptyMap(frozen)) {
-            addReference(fields, key, frozen.blueId());
-        }
+        addReference(fields, key, frozen.blueId());
     }
 
     /**
@@ -489,7 +485,7 @@ final class FrozenCanonicalDigester {
     }
 
     private static void addNodeReference(List<HashField> fields, String key, FrozenNode node) {
-        if (node != null && !inputCleansToEmptyMap(node)) {
+        if (node != null) {
             fields.add(HashField.reference(key, node.blueId()));
         }
     }
@@ -548,7 +544,7 @@ final class FrozenCanonicalDigester {
                 FrozenNode node = nodes.get(index);
                 if (node == null || !node.isStrictCanonical() || !node.isStrictBlueIdValidation()
                         || !validate(node, Context.LIST_ELEMENT, index, false)
-                        || inputCleansToEmptyMap(node)) {
+                        ) {
                     return false;
                 }
             }
@@ -562,7 +558,10 @@ final class FrozenCanonicalDigester {
                                     Context context,
                                     int listIndex,
                                     boolean typePosition) {
-        if (node == null || context == Context.METADATA && typePosition && node.isInlineValue()
+        if (node == null || node.isEmptyNode()
+                || context == Context.METADATA
+                && typePosition
+                && !node.isReferenceOnly()
                 || node.getBlue() != null || node.getPosition() != null
                 || node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
             return false;
@@ -579,7 +578,7 @@ final class FrozenCanonicalDigester {
         }
         int payloadKinds = (node.frozenValue() != null ? 1 : 0)
                 + (node.getItems() != null ? 1 : 0)
-                + (node.getProperties() != null && !node.getProperties().isEmpty() ? 1 : 0);
+                + (node.getProperties() != null ? 1 : 0);
         if (payloadKinds > 1 || node.getReferenceBlueId() != null && !node.isReferenceOnly()
                 || node.getPreviousBlueId() != null && !node.isPreviousOnly()) {
             return false;
@@ -607,10 +606,13 @@ final class FrozenCanonicalDigester {
                     || canonical != null && canonical.getClass().isArray()) return false;
             if (!FrozenCanonicalWriter.supportsCanonicalValue(canonical)) return false;
         }
-        if (node.getType() != null && node.getType().isInlineValue()
-                || node.getItemType() != null && node.getItemType().isInlineValue()
-                || node.getKeyType() != null && node.getKeyType().isInlineValue()
-                || node.getValueType() != null && node.getValueType().isInlineValue()) {
+        if (node.getType() != null && !node.getType().isReferenceOnly()
+                || node.getItemType() != null
+                && !node.getItemType().isReferenceOnly()
+                || node.getKeyType() != null
+                && !node.getKeyType().isReferenceOnly()
+                || node.getValueType() != null
+                && !node.getValueType().isReferenceOnly()) {
             return false;
         }
         if (node.getProperties() != null) {
@@ -705,51 +707,6 @@ final class FrozenCanonicalDigester {
                 && node.getReferenceBlueId() == null && node.frozenSchemaView() == null
                 && node.getMergePolicy() == null && node.getPreviousBlueId() == null
                 && node.getPosition() == null && node.getBlue() == null;
-    }
-
-    private static boolean inputCleansToEmptyMap(FrozenNode node) {
-        if (node == null || node.isReferenceOnly() || node.getPreviousBlueId() != null
-                || isPayloadOnlyList(node)) return false;
-        if (hasReservedPropertyCollision(node)) {
-            throw new CanonicalJsonValueWriter.UnsupportedCanonicalValueException(FrozenNode.class);
-        }
-        if (node.getName() != null || node.getDescription() != null || node.frozenValue() != null
-                || node.getItems() != null || node.getMergePolicy() != null) return false;
-        if (node.getType() != null && !inputCleansToEmptyMap(node.getType())) return false;
-        if (node.getItemType() != null && !inputCleansToEmptyMap(node.getItemType())) return false;
-        if (node.getKeyType() != null && !inputCleansToEmptyMap(node.getKeyType())) return false;
-        if (node.getValueType() != null && !inputCleansToEmptyMap(node.getValueType())) return false;
-        if (node.getContracts() != null && !inputCleansToEmptyMap(node.getContracts())) return false;
-        if (node.frozenSchemaView() != null && schemaHasInput(node.frozenSchemaView())) return false;
-        if (node.getProperties() != null) {
-            for (FrozenNode child : node.getProperties().values()) {
-                if (!inputCleansToEmptyMap(child)) return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean schemaHasInput(Schema schema) {
-        return schema.getRequired() != null && schema.getRequiredValue() != null
-                || schemaValue(schema.getMinLength()) != null
-                || schemaValue(schema.getMaxLength()) != null
-                || schemaNumericHasInput(schema.getMinimum())
-                || schemaNumericHasInput(schema.getMaximum())
-                || schemaNumericHasInput(schema.getExclusiveMinimum())
-                || schemaNumericHasInput(schema.getExclusiveMaximum())
-                || schemaNumericHasInput(schema.getMultipleOf())
-                || schemaValue(schema.getMinItems()) != null
-                || schemaValue(schema.getMaxItems()) != null
-                || schema.getUniqueItems() != null && schema.getUniqueItemsValue() != null
-                || schemaValue(schema.getMinFields()) != null
-                || schemaValue(schema.getMaxFields()) != null
-                || schema.getEnum() != null;
-    }
-
-    private static boolean schemaNumericHasInput(Node value) {
-        if (value == null) return false;
-        if (FrozenCanonicalWriter.isPlainScalar(value)) return true;
-        return !inputCleansToEmptyMap(FrozenNode.fromNode(value));
     }
 
     private static boolean hasReservedPropertyCollision(FrozenNode node) {

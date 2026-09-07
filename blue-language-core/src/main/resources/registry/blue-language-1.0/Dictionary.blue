@@ -13,5 +13,6 @@ description: >-
   direct object encoding. For direct object encoding, keyType must resolve to
   a scalar key type with a canonical textual form, such as Text, Integer,
   Double, or Boolean. valueType is optional; if omitted and no effective
-  valueType is inherited, values may be any Blue node. Applicable schema
-  constraints are minFields and maxFields.
+  valueType is inherited, values may be any Blue node. A Dictionary with zero
+  direct keys is the exact present empty object `{}`; it is distinct from an
+  absent field. Applicable schema constraints are minFields and maxFields.
