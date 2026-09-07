@@ -38,6 +38,12 @@ public final class ClosureEvidenceFactory {
      * The complete semantic prefix is replayed and charged under the same cap;
      * this factory never resumes from a partially executed, gas-free suffix.</p>
      *
+     * <p>Each birth must retain the actual immutable demand object returned by
+     * a processor resource suspension for this exact invocation. Runtime
+     * provenance is process-local and cannot be recreated by public demand
+     * constructors or serialization. After restoring a persisted retry, rerun
+     * the unchanged input to obtain fresh authenticated demands.</p>
+     *
      * @param input exact input of the noncommitting resource attempt
      * @param births exact demands paired with fresh durable lineage reservations
      * @return expanded independently verifiable invocation; publishes nothing

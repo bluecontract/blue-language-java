@@ -39,12 +39,13 @@ final class ProspectiveBirthRetry {
         ordered.sort(Comparator.comparing(ManagedDocumentBirth::documentId));
         for (ManagedDocumentBirth birth : ordered) {
             ManagedOccurrenceEvidenceDemand demand = birth.demand();
-            if (!demand.logicalCauseIdentity().equals(input.cause().causeIdentity())
+            if (!demand.wasEmittedBy(input.invocationIdentity())
+                    || !demand.logicalCauseIdentity().equals(input.cause().causeIdentity())
                     || !demand.inputClosureIdentity().equals(before.closureIdentity())
                     || demand.inputGraphGeneration() != before.graphGeneration()
                     || before.managedDocument(demand.sourceDocumentId()) == null
                     || !demands.add(demand.demandIdentity())) {
-                throw new IllegalArgumentException("Birth demand does not belong to this exact input");
+                throw new IllegalArgumentException("Birth demand was not emitted for this exact input");
             }
             if (documents.containsKey(birth.documentId())) {
                 throw new IllegalArgumentException("Birth lineage is already represented in the closure");

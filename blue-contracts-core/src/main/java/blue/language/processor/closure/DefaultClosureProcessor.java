@@ -14,6 +14,7 @@ import blue.language.processor.ProcessorStatus;
 import blue.language.processor.SubscriptionSurfaceInvalidException;
 import blue.language.provider.ProviderUnavailableException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -108,8 +109,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -239,8 +239,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -376,8 +375,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -516,8 +514,7 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ClosureResourceDemandException suspension) {
-            return ClosureAttemptResult.needsResources(
-                    suspension.demands());
+            return resourceSuspension(admitted, suspension.demands());
         } catch (ExecutionEvidenceUnavailableException unavailable) {
             if (unavailable.requiredExactBlueIds().isEmpty()) {
                 throw unavailable;
@@ -602,6 +599,19 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                 session.close();
             }
         }
+    }
+
+    private static ClosureAttemptResult resourceSuspension(
+            ClosureInvocationInput input,
+            List<ClosureResourceDemand> demands) {
+        List<ClosureResourceDemand> emitted = new ArrayList<>(demands.size());
+        for (ClosureResourceDemand demand : demands) {
+            emitted.add(demand instanceof ManagedOccurrenceEvidenceDemand
+                    ? ((ManagedOccurrenceEvidenceDemand) demand)
+                            .emittedBy(input.invocationIdentity())
+                    : demand);
+        }
+        return ClosureAttemptResult.needsResources(emitted);
     }
 
     private static ClosureAttemptResult providerSuspension(
