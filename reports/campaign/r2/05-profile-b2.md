@@ -10,7 +10,7 @@ local profile, not a cross-machine performance threshold or release benchmark.
 Command (run from the Language worktree):
 
 ```sh
-./gradlew :blue-contracts-core:profileR2 --init-script build/campaign/r2/profile.gradle --offline --console=plain
+./gradlew :blue-contracts-core:profileR2 --init-script reports/campaign/r2/profile.gradle --offline --console=plain
 ```
 
 The profile uses JDK 26.0.1 with a 768 MB heap and JFR `profile` settings; normal

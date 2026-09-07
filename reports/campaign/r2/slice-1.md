@@ -1,7 +1,7 @@
 # Slice 1: exact schema arithmetic and private validation helpers
 
 Base: cc5e06ef9dbe782bf4d667368db1a9954ecb86df (resolved uniquely).
-Branch: codex/r2-types. This file is committed with its slice; `git log -- build/campaign/r2/slice-1.md` gives its exact commit.
+Branch: codex/r2-types. This file is committed with its slice; `git log --follow -- reports/campaign/r2/slice-1.md` gives its exact commit.
 
 Four independently specified public SDK counterexamples failed before the fix and pass afterwards: binary64 1e23 equality with Integer 99999999999999991611392; Double 2^53 versus Integer divisor 2^53+1; crossed inclusive/exclusive bounds; exact dyadic LCM of binary64 .1 and .3. The latter is 19471113219505603967277331424215 / 18014398509481984, represented by its Integer numerator over the supported value domains.
 
