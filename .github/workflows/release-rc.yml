@@ -73,6 +73,14 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install RC verification dependencies
+        run: python -m pip install PyYAML==6.0.3
+
       - name: Test release tooling
         run: node --test .github/scripts/*.test.js
 
