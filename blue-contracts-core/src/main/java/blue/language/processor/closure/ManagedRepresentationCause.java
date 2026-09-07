@@ -60,16 +60,32 @@ public final class ManagedRepresentationCause extends ProcessingCause implements
     public String sourceRevisionReceiptIdentity() { return transition.transitionReceipt().transitionReceiptIdentity(); }
     public Optional<ManagedDocumentTransitionReceipt> sourceTransitionReceipt() { return Optional.of(transition.transitionReceipt()); }
     public Optional<CyclicSetProof> afterCyclicProof() { return Optional.ofNullable(copyProof(afterCyclicProof)); }
-    /** @return the original transition whose evidence this cause carries */
+    /**
+     * Returns the original transition whose evidence this cause carries.
+     *
+     * @return the original transition whose evidence this cause carries
+     */
     public ManagedRepresentationTransition transition() { return transition; }
-    /** @return the captured terminal position, unchanged by intermediate progress */
+    /**
+     * Returns the captured terminal position, unchanged by intermediate progress.
+     *
+     * @return the captured terminal position, unchanged by intermediate progress
+     */
     public String targetPositionIdentity() { return targetPositionIdentity; }
-    /** @return the next immutable numbered receipt, or null for a representation-only tail */
+    /**
+     * Returns the next immutable numbered receipt, or null for a representation-only tail.
+     *
+     * @return the next immutable numbered receipt, or null for a representation-only tail
+     */
     public String nextRevisionReceiptIdentity() { return nextRevisionReceiptIdentity; }
     private static CyclicSetProof copyProof(CyclicSetProof proof) {
         return proof == null ? null : CyclicSetProof.fromDeclaredPlaceholderSet(proof.declaredPlaceholderSet());
     }
-    /** @return whether this step reaches the captured end of a representation-only tail */
+    /**
+     * Reports whether this step reaches the captured end of a representation-only tail.
+     *
+     * @return whether this step reaches the captured end of a representation-only tail
+     */
     public boolean terminalPositionReached() {
         return nextRevisionReceiptIdentity == null && targetPositionIdentity.equals(transition.positionIdentity());
     }

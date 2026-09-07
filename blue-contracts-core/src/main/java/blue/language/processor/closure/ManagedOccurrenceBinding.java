@@ -299,7 +299,11 @@ public final class ManagedOccurrenceBinding
         return pendingHistoricalEpoch;
     }
 
-    /** @return the pending exact representation position, or null outside such traversal */
+    /**
+     * Returns the pending exact representation position, or null outside such traversal.
+     *
+     * @return the pending exact representation position, or null outside such traversal
+     */
     public ManagedRepresentationCursor pendingRepresentationCursor() { return pendingRepresentationCursor; }
 
     /**

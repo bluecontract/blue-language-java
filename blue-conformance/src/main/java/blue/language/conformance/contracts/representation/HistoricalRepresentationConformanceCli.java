@@ -406,9 +406,19 @@ public final class HistoricalRepresentationConformanceCli {
     /** Fixture channel that exposes retained checkpoint and optional catalog dependencies. */
     public static final class Source extends ChannelContract {
         private Boolean catalog;
-        /** @return whether this fixture depends on its same-scope channel catalog */
+        /** Creates a fixture channel with no declared catalog dependency. */
+        public Source() { }
+        /**
+         * Returns the fixture's same-scope channel catalog dependency setting.
+         *
+         * @return whether this fixture depends on its same-scope channel catalog
+         */
         public Boolean getCatalog() { return catalog; }
-        /** @param value whether the fixture should depend on its channel catalog */
+        /**
+         * Sets the fixture's same-scope channel catalog dependency setting.
+         *
+         * @param value whether the fixture should depend on its channel catalog
+         */
         public void setCatalog(Boolean value) { catalog = value; }
     }
     private static final class SourceProcessor implements ChannelProcessor<Source> {
@@ -440,7 +450,10 @@ public final class HistoricalRepresentationConformanceCli {
         }
     }
     /** Fixture handler whose processor records real downstream execution. */
-    public static final class Probe extends HandlerContract { }
+    public static final class Probe extends HandlerContract {
+        /** Creates a fixture handler for recording downstream execution. */
+        public Probe() { }
+    }
     private static final class ProbeProcessor implements HandlerProcessor<Probe> {
         private final List<String> calls = new ArrayList<>();
         @Override public Class<Probe> contractType() { return Probe.class; }

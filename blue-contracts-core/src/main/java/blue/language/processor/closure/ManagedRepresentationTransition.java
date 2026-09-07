@@ -189,22 +189,58 @@ public final class ManagedRepresentationTransition {
         value.put("commitCompanionIdentity", originalResult.platformCommitCompanion().companionIdentity());
         return value;
     }
-    /** @return the authoritative source lineage */
+    /**
+     * Returns the authoritative source lineage.
+     *
+     * @return the authoritative source lineage
+     */
     public DocumentId documentId() { return documentId; }
-    /** @return the unchanged source epoch */
+    /**
+     * Returns the unchanged source epoch.
+     *
+     * @return the unchanged source epoch
+     */
     public long epoch() { return epoch; }
-    /** @return the numbered receipt anchoring this chain */
+    /**
+     * Returns the numbered receipt anchoring this chain.
+     *
+     * @return the numbered receipt anchoring this chain
+     */
     public String anchorReceiptIdentity() { return anchorReceiptIdentity; }
-    /** @return the exact preceding historical position */
+    /**
+     * Returns the exact preceding historical position.
+     *
+     * @return the exact preceding historical position
+     */
     public String predecessorPositionIdentity() { return predecessorPositionIdentity; }
-    /** @return the identity binding this transition and its historical position */
+    /**
+     * Returns the identity binding this transition and its historical position.
+     *
+     * @return the identity binding this transition and its historical position
+     */
     public String positionIdentity() { return positionIdentity; }
-    /** @return the complete original processor invocation */
+    /**
+     * Returns the complete original processor invocation.
+     *
+     * @return the complete original processor invocation
+     */
     public ClosureInvocationInput originalInput() { return originalInput; }
-    /** @return the complete original committed result */
+    /**
+     * Returns the complete original committed result.
+     *
+     * @return the complete original committed result
+     */
     public ClosureProcessResult originalResult() { return originalResult; }
-    /** @return the selected complete source transition receipt */
+    /**
+     * Returns the selected complete source transition receipt.
+     *
+     * @return the selected complete source transition receipt
+     */
     public ManagedDocumentTransitionReceipt transitionReceipt() { return transition; }
-    /** @return a detached copy of the exact historical successor document */
+    /**
+     * Returns a detached copy of the exact historical successor document.
+     *
+     * @return a detached copy of the exact historical successor document
+     */
     public Node afterDocument() { return after.document(); }
 }

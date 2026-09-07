@@ -47,12 +47,24 @@ public final class ManagedDocumentBirth {
         }
     }
 
-    /** @return immutable exact demand */
+    /**
+     * Returns immutable exact demand.
+     *
+     * @return immutable exact demand
+     */
     public ManagedOccurrenceEvidenceDemand demand() { return demand; }
 
-    /** @return freshly reserved lineage, whose durable uniqueness is host-owned */
+    /**
+     * Returns freshly reserved lineage, whose durable uniqueness is host-owned.
+     *
+     * @return freshly reserved lineage, whose durable uniqueness is host-owned
+     */
     public DocumentId documentId() { return documentId; }
 
-    /** @return defensive copy of the exact authored content */
+    /**
+     * Returns defensive copy of the exact authored content.
+     *
+     * @return defensive copy of the exact authored content
+     */
     public Node document() { return document.clone(); }
 }

@@ -25,15 +25,35 @@ public final class ManagedRepresentationCursor {
         this.nextRevisionReceiptIdentity = nextRevisionReceiptIdentity == null ? null
                 : ClosureValueSupport.requireSha256Identity(nextRevisionReceiptIdentity, "nextRevisionReceiptIdentity");
     }
-    /** @return the immutable numbered receipt anchoring this chain */
+    /**
+     * Returns the immutable numbered receipt anchoring this chain.
+     *
+     * @return the immutable numbered receipt anchoring this chain
+     */
     public String anchorReceiptIdentity() { return anchorReceiptIdentity; }
-    /** @return the current exact historical position */
+    /**
+     * Returns the current exact historical position.
+     *
+     * @return the current exact historical position
+     */
     public String positionIdentity() { return positionIdentity; }
-    /** @return the captured destination position */
+    /**
+     * Returns the captured destination position.
+     *
+     * @return the captured destination position
+     */
     public String targetPositionIdentity() { return targetPositionIdentity; }
-    /** @return the next numbered receipt, or null for a terminal tail */
+    /**
+     * Returns the next numbered receipt, or null for a terminal tail.
+     *
+     * @return the next numbered receipt, or null for a terminal tail
+     */
     public String nextRevisionReceiptIdentity() { return nextRevisionReceiptIdentity; }
-    /** @return a fresh constructor-value map containing every cursor identity field */
+    /**
+     * Returns a fresh constructor-value map containing every cursor identity field.
+     *
+     * @return a fresh constructor-value map containing every cursor identity field
+     */
     public Map<String, Object> identityValue() {
         Map<String, Object> value = new LinkedHashMap<String, Object>();
         value.put("anchorReceiptIdentity", anchorReceiptIdentity);
