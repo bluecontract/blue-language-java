@@ -497,6 +497,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                             value, appendPath(path, keyword), false));
                     break;
                 case KEY_ENUM:
+                    // An omitted keyword differs from an empty list constraint.
+                    if (value.isNull()) {
+                        break;
+                    }
                     List<Node> enumValues = new ArrayList<>(value.size());
                     for (int index = 0; index < value.size(); index++) {
                         enumValues.add(handleNode(
@@ -528,6 +532,8 @@ public class NodeDeserializer extends StdDeserializer<Node> {
     }
 
     private void validateSchemaValueShapes(JsonNode schemaNode, String path) {
+        // Source-null keyword values contribute absence, not a malformed constraint.
+        // Scalar keyword Nodes retain this provenance until mandatory preprocessing.
         requireBooleanKeyword(schemaNode, KEY_REQUIRED, path);
         requireBooleanKeyword(schemaNode, KEY_UNIQUE_ITEMS, path);
 
@@ -545,7 +551,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         requireNumericKeyword(schemaNode, KEY_MULTIPLE_OF, path);
 
         JsonNode enumNode = schemaNode.get(KEY_ENUM);
-        if (enumNode != null) {
+        if (enumNode != null && !enumNode.isNull()) {
             if (!enumNode.isArray()) {
                 throw new IllegalArgumentException(
                         "\"schema.enum\" must be a list. Path: "
@@ -561,7 +567,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
 
     private void requireBooleanKeyword(JsonNode schemaNode, String keyword, String path) {
         JsonNode value = schemaNode.get(keyword);
-        if (value == null || value.isBoolean()) {
+        if (value == null || value.isNull() || value.isBoolean()) {
             return;
         }
         throw new IllegalArgumentException("\"schema." + keyword + "\" must be a boolean. Path: " + appendPath(path, keyword));
@@ -585,7 +591,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
 
     private void requireNonNegativeIntegerKeyword(JsonNode schemaNode, String keyword, String path) {
         JsonNode value = schemaNode.get(keyword);
-        if (value == null) {
+        if (value == null || value.isNull()) {
             return;
         }
         BigInteger integer = null;
@@ -611,7 +617,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
 
     private void requireNumericKeyword(JsonNode schemaNode, String keyword, String path) {
         JsonNode value = schemaNode.get(keyword);
-        if (value == null) {
+        if (value == null || value.isNull()) {
             return;
         }
         if (value.isNumber()) {
