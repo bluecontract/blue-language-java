@@ -92,10 +92,11 @@ final class SourceSchemaNullNormalizationTest {
                 "minItems: -1", "minimum: wrong", "unknown: 1"
         };
         try (BlueLanguage language = BlueLanguage.builder().build()) {
+            // when
             for (String invalidSchema : invalidSchemas) {
                 String source = "schema:\n  " + invalidSchema;
 
-                // when / then: Source null omission does not relax retained constraints.
+                // then: Source null omission does not relax retained constraints.
                 assertThrows(RuntimeException.class,
                         () -> language.codec().parseSource(source, BlueFormat.YAML), invalidSchema);
             }
