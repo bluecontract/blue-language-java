@@ -58,6 +58,24 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
+     * Expands rooted read evidence using complete independently verified source views.
+     * Historical proof members may differ from a calculating view of the same lineage.
+     * Original owners, documents, deliveries, cause and meter remain unchanged.
+     *
+     * @param original frozen rooted input
+     * @param graphGeneration exact expanded inventory generation
+     * @param documents selected primary document views, including every original
+     * @param occurrences complete selected binding inventory
+     * @param sourceProofs complete retained source snapshots authenticating immutable witnesses
+     * @return expanded input with the original rooted authority
+     */
+    public static ClosureInvocationInput rootedReadExpansion(ClosureInvocationInput original,
+            long graphGeneration, List<ManagedDocumentSnapshot> documents,
+            List<ManagedOccurrenceBinding> occurrences, List<AffectedClosureSnapshot> sourceProofs) {
+        return RootedInputExpansion.prepare(original, graphGeneration, documents, occurrences, sourceProofs);
+    }
+
+    /**
      * Captures one exact production environment from a configured processor.
      *
      * @param processor configured ordinary processor used by the closure

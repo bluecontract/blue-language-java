@@ -61,6 +61,33 @@ final class RootedWitnessFrame {
         return result;
     }
 
+    static State readExpansion(ClosureInvocationInput original, List<ManagedDocumentSnapshot> documents,
+            List<ManagedOccurrenceBinding> bindings, List<AffectedClosureSnapshot> sourceProofs) {
+        RootedWitnessFrame frame = new RootedWitnessFrame(original);
+        for (AffectedClosureSnapshot proof : sourceProofs) ClosureEvidenceVerifier.verifySnapshot(proof);
+        Set<DocumentId> live = reachable(frame.owners, bindings);
+        for (ManagedDocumentSnapshot selected : documents) {
+            DocumentId id = selected.documentId();
+            if (!selected.initialized() || live.contains(id) || original.rootedBinding().birthParents.containsKey(id)
+                    || frame.originals.containsKey(id)) continue;
+            AffectedClosureSnapshot matching = null;
+            for (AffectedClosureSnapshot proof : sourceProofs) {
+                ManagedDocumentSnapshot witness = proof.managedDocument(id);
+                if (witness != null && witness.blueId().equals(selected.blueId()) && witness.epoch() == selected.epoch()
+                        && witness.initialized() == selected.initialized() && witness.terminated() == selected.terminated()
+                        && witness.componentGeneration() == selected.componentGeneration()
+                        && NodeWireForm.get(witness.document()).equals(NodeWireForm.get(selected.document()))
+                        && State.rows(proof.occurrences(), id).equals(State.rows(bindings, id))) {
+                    matching = proof;
+                    break;
+                }
+            }
+            if (matching == null) throw new IllegalArgumentException("Missing complete exact historical witness for " + id);
+            frame.originals.put(id, matching);
+        }
+        return new State(frame.originals);
+    }
+
     State at(Collection<ManagedOccurrenceBinding> bindings, Collection<DocumentId> documents) {
         ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(documents, bindings);
         boolean expanded;
@@ -122,7 +149,9 @@ final class RootedWitnessFrame {
                 ManagedDocumentSnapshot after = snapshot.managedDocument(entry.getKey());
                 if (!before.blueId().equals(after.blueId()) || before.epoch() != after.epoch()
                         || before.initialized() != after.initialized() || before.terminated() != after.terminated()
-                        || before.publicRoot() != after.publicRoot() || before.componentGeneration() != after.componentGeneration()) {
+                        // Public-root flags are orchestration roles. An immutable
+                        // source proof never becomes a public owner in this view.
+                        || after.publicRoot() || before.componentGeneration() != after.componentGeneration()) {
                     throw new IllegalArgumentException("Immutable rooted witness position changed: " + entry.getKey());
                 }
             }
