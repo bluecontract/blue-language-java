@@ -205,4 +205,34 @@ class AuthoredInitialCyclePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'STEP_ORDER'):
             P.literal_steps(self.plan,self.variant,self.rows)
 
+class PhaseEventTests(unittest.TestCase):
+    """Synthetic collection event-inventory checks, not a runtime pass."""
+    def setUp(self):
+        label,weight=next(iter(T.WEIGHTS.items()))
+        events=[{'origin':'P','ordinal':0,'kind':'direct-observed'},
+                {'origin':'P','ordinal':1,'kind':'descendant-observed'}]
+        self.phases={'first':{'status':'SUCCESS','causeKind':'LIVE','budget':weight,
+            'before':{'P':{'count':0}},'after':{'P':{'count':1}},'ownedWrites':['P'],
+            'events':copy.deepcopy(events),'semanticReceipts':[{'owner':'P','receiptIdentity':'receipt'}],
+            'sourceBefore':{},'sourceAfter':{},'gas':{'total':weight,'rejected':None,
+              'charges':[{'sequence':0,'label':label,'quantity':1,'weight':weight,'amount':weight}]}}}
+        self.anchors={'first':events}
+    def check(self):P.check_phase_events(self.phases,self.anchors,T.WEIGHTS)
+    def test_exact_phase_inventory_passes(self):self.check()
+    def test_missing_phase_rejects(self):
+        self.phases.clear()
+        with self.assertRaisesRegex(ValueError,'MISSING_EVENT_PHASE'):self.check()
+    def test_missing_descendant_rejects(self):
+        self.phases['first']['events'].pop()
+        with self.assertRaisesRegex(ValueError,'PHASE_EVENT_COUNT'):self.check()
+    def test_extra_initialization_or_source_event_rejects(self):
+        self.phases['first']['events'].append({'origin':'P','ordinal':2,'kind':'initialized'})
+        with self.assertRaisesRegex(ValueError,'PHASE_EVENT_COUNT'):self.check()
+    def test_wrong_origin_rejects(self):
+        self.phases['first']['events'][0]['origin']='source'
+        with self.assertRaisesRegex(ValueError,'PHASE_EVENT_ANCHOR'):self.check()
+    def test_reversed_event_order_rejects(self):
+        self.phases['first']['events'].reverse()
+        with self.assertRaisesRegex(ValueError,'PHASE_EVENT_ANCHOR'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

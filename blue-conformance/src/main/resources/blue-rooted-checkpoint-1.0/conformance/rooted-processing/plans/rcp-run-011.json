@@ -1,0 +1,240 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-011",
+  "title": "Initially empty Orders collection receives later members",
+  "inputIdentityPolicy": "Start with orders: {}; attach actual saved initialized member references only after listener registration.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/empty-orders.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "payment",
+      "source": "examples/collection-payment.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/collection-order-a.yaml",
+      "bindings": {
+        "/nested": {
+          "$capture": "payment.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/collection-order-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "start",
+      "alias": "unrelated",
+      "source": "examples/collection-order-b.yaml",
+      "bindings": {
+        "/documentId": "rc-collection-unrelated",
+        "/contracts/ownerChannel/timeline/timelineId": "rc/collection/unrelated"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {
+          "orderKey": "first",
+          "order": {
+            "$capture": "A.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EaddA",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EaddA"
+        },
+        "budget": "DEFAULT",
+        "capture": "addA",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "150",
+        "request": {
+          "orderKey": "second",
+          "order": {
+            "$capture": "B.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EaddB",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EaddB"
+        },
+        "budget": "DEFAULT",
+        "capture": "addB",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "200",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EA",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EA"
+        },
+        "budget": "DEFAULT",
+        "capture": "first",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "300",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EB",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EB"
+        },
+        "budget": "DEFAULT",
+        "capture": "second",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "append",
+        "target": "payment",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "400",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "Epayment",
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "Epayment"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "append",
+        "target": "unrelated",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "500",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "Eunrelated",
+        "stepId": "baseline-011"
+      },
+      {
+        "op": "processNext",
+        "root": "unrelated",
+        "mustSelect": {
+          "$capture": "Eunrelated"
+        },
+        "budget": "DEFAULT",
+        "capture": "irrelevant",
+        "stepId": "baseline-012"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-013"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-014"
+      }
+    ]
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-011.json",
+    "sha256": "380528047da4b9b4bdddc523887396c13b971b47680203ed1a0db048818780c8"
+  }
+}

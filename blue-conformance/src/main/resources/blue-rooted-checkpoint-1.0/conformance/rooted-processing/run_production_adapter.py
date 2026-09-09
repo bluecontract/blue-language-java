@@ -264,6 +264,17 @@ def check_multiple_history(o,contract,weights,document_ids):
     require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
     if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
 
+def check_phase_events(phases,anchors,weights):
+    """Bind every named phase to its complete ordered literal event inventory."""
+    for name,expected in anchors.items():
+        require(name in phases,'MISSING_EVENT_PHASE')
+        output=phases[name];structured_output(output,weights)
+        require(len(output['events'])==len(expected),'PHASE_EVENT_COUNT:'+name)
+        for actual,anchor in zip(output['events'],expected):
+            require(isinstance(anchor,dict) and anchor,'PHASE_EVENT_ANCHOR_FIELDS')
+            for key,value in anchor.items():
+                require(key in actual and exact_equal(actual[key],value),'PHASE_EVENT_ANCHOR:'+name+'.'+key)
+
 def check_runs(f,run_records,weights,calibration=None):
     require(f['input'].get('qualification')=='LITERAL_CRITICAL','RECIPE_ONLY_NOT_QUALIFIED')
     require(f['expected'].get('oracleVersion')==2,'ORACLE_VERSION')
@@ -338,6 +349,8 @@ def check_runs(f,run_records,weights,calibration=None):
             require(after.get('epoch',-1)>=contract['sourceEpochMinimum'],'SOURCE_REWIND')
             require(sorted(o.get('liveCycle',[]))==sorted(contract['requireLiveCycle']),'LIVE_JOIN_MISSING')
         if scope=='HISTORY_MULTIPLE':check_multiple_history(o,contract,weights,rec['documentIds'])
+        if contract.get('phaseEventAnchors'):
+            check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):
             for path,rule in contract['derivedAfter'].items():
                 require(rule['function']=='canonicalComponentOrder','UNKNOWN_ORACLE')
