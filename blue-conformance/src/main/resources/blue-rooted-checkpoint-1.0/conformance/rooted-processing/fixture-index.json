@@ -854,7 +854,8 @@
         "RCP-PROGRESS-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL",
+      "literalPlan": "plans/rcp-run-016.json"
     },
     {
       "id": "RCP-RUN-017",

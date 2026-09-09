@@ -11,51 +11,133 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/event-only-source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "EVENT_ONLY_RETAINED_APPLICATION",
-        "bind": "s"
-      },
-      {
-        "op": "restartAndCompare",
-        "target": "s",
-        "bind": "restart"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-016.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-016.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.numberedEpochRequiredToAdvance",
+        "actual": "status",
         "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.applicationPositionAdvanced",
-        "op": "isTrue"
-      },
-      {
-        "actual": "restart.duplicateEmissions",
-        "op": "equals",
-        "expected": 0
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.seen": 0,
+        "P.log": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "P.child.counter": 0,
+        "S.counter": 0
+      },
+      "requiredApplicationCount": 2,
+      "occurrenceSuffixes": {
+        "/child": {
+          "source": "S",
+          "positions": [
+            1,
+            2
+          ]
+        }
+      },
+      "applicationOrder": [
+        [
+          "S",
+          100
+        ],
+        [
+          "S",
+          150
+        ]
+      ],
+      "perApplicationEquals": {
+        "P.seen": 0,
+        "S.counter": 0
+      },
+      "preserveSource": true,
+      "sourceAliases": [
+        "S"
+      ],
+      "requiredEvents": 0,
+      "phaseEventAnchors": {
+        "firstSource": [
+          {
+            "origin": "S",
+            "ordinal": 0,
+            "kind": "RCP2/Tick"
+          },
+          {
+            "origin": "S",
+            "ordinal": 1,
+            "kind": "RCP2/Tick"
+          }
+        ],
+        "secondSource": [
+          {
+            "origin": "S",
+            "ordinal": 0,
+            "kind": "RCP2/Tick"
+          },
+          {
+            "origin": "S",
+            "ordinal": 1,
+            "kind": "RCP2/Tick"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "firstSource.selectedBefore.S.epoch": 0,
+          "firstSource.selectedAfter.S.epoch": 0,
+          "firstSource.after.S.counter": 0,
+          "firstSource.ownedWrites": [
+            "S"
+          ],
+          "secondSource.selectedBefore.S.epoch": 1,
+          "secondSource.selectedAfter.S.epoch": 1,
+          "secondSource.after.S.counter": 0,
+          "secondSource.ownedWrites": [
+            "S"
+          ]
+        }
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-016.json",
+    "sha256": "70c87341376b80c6e0adfbabbc08222392bf94119c9c749efac4cce66ee1b71c"
   }
 }

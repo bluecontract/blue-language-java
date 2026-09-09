@@ -85,7 +85,7 @@
 | [RCP-RUN-013](fixtures/run/rcp-run-013.json) | runtime | RECIPE_ONLY | Historical retarget does not read the retired or latest wrong source |
 | [RCP-RUN-014](fixtures/run/rcp-run-014.json) | runtime | LITERAL_CRITICAL | Diamond preserves canonical event and Handler-visible read order |
 | [RCP-RUN-015](fixtures/run/rcp-run-015.json) | runtime | RECIPE_ONLY | Equal payload events remain distinct occurrences |
-| [RCP-RUN-016](fixtures/run/rcp-run-016.json) | runtime | RECIPE_ONLY | An event-only source step survives restart without duplication |
+| [RCP-RUN-016](fixtures/run/rcp-run-016.json) | runtime | LITERAL_CRITICAL | An event-only source step survives restart without duplication |
 | [RCP-RUN-017](fixtures/run/rcp-run-017.json) | runtime | RECIPE_ONLY | Same-epoch representation chain uses exact predecessors |
 | [RCP-RUN-018](fixtures/run/rcp-run-018.json) | runtime | RECIPE_ONLY | Saved-original pair then ring forms without rewriting history |
 | [RCP-RUN-019](fixtures/run/rcp-run-019.json) | runtime | RECIPE_ONLY | Breaking/advancing/reconnecting preserves missed history |
