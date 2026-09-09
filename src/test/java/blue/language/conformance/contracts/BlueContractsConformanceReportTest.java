@@ -144,7 +144,7 @@ class BlueContractsConformanceReportTest {
                         .RELEASE_PACKAGE_IDENTITY,
                 nested(encoded, "release", "packageIdentity"));
         assertEquals(
-                "sha256:bc314cf21297d900167d222b2d0db71519643371f23725e2b4b8359f948ff2e0",
+                "sha256:47bc422048e1d743fa47478421ef31ba7ca53bc9d7c88facebb96634f407e18d",
                 nested(encoded, "release", "contractsReleaseIdentity"));
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -165,7 +165,7 @@ class BlueContractsConformanceReportTest {
                 expectedContractsFixtures,
                 nested(encoded, "packages", "contractsFixtures"));
         assertEquals(
-                "sha256:bc314cf21297d900167d222b2d0db71519643371f23725e2b4b8359f948ff2e0",
+                "sha256:47bc422048e1d743fa47478421ef31ba7ca53bc9d7c88facebb96634f407e18d",
                 nested(encoded, "packages", "contractsRelease"));
         assertEquals(
                 BlueContractsConformanceReport

@@ -179,7 +179,7 @@ def validate_resource_continuation_plan(suite, fixture, plan, require):
          'expectError':'EXACT_NODE_IDENTITY_MISMATCH','capture':'wrongUpload'},
         {'op':'hostSnapshot','capture':'wrongState'},
         {'op':'hostUpload','expectedBlueId':capture('missing.blueId'),'source':sources[2],'capture':'correctUpload'},
-        {'op':'hostAwait','commandId':capture('blocked.commandId'),'expectedStatus':'APPLIED','capture':'subject'},
+        {'op':'hostAwait','commandId':capture('blocked.commandId'),'expectedStatus':'APPLIED','capture':'subject','awaitReadiness':True},
         {'op':'hostSnapshot','capture':'appliedState'},
         {'op':'hostUpload','expectedBlueId':capture('missing.blueId'),'source':sources[2],'capture':'duplicateUpload'},
         {'op':'hostDuplicate','commandCapture':'blocked','capture':'duplicateSubmission'},
