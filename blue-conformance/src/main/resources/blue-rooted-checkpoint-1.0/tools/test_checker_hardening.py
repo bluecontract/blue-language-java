@@ -306,4 +306,41 @@ class SilentMiddleTests(unittest.TestCase):
         self.output['computedEvents'][0]['kind']='other'
         with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_EVENT_ANCHOR'):self.check()
 
+class EqualOccurrenceTests(unittest.TestCase):
+    def setUp(self):
+        self.ids={'S':'source','P':'parent'};self.contract={'sourceAlias':'S','consumerAlias':'P'}
+        self.events=[{'ordinal':i,'sourceDocumentId':{'value':'source'},'eventBlueId':'same-blueid',
+                      'exactEvent':{'kind':{'value':'RCP2/Tick'}},'occurrenceIdentity':'occurrence-'+str(i)} for i in range(2)]
+        self.work=[{'kind':'EMBEDDED_EVENT','targetDocumentId':{'value':'parent'},'eventBlueId':'same-blueid',
+                    'sourceOccurrenceIdentity':'occurrence-'+str(i)} for i in range(2)]
+        self.output={'computedReceipts':[{'documentId':{'value':'source'},'emittedRootEvents':self.events}],
+                     'implementationEvidence':{'complete':True,'invocationIdentity':'actual',
+                     'inputInvocationIdentity':'actual','workTrace':self.work}}
+    def check(self):P.check_equal_occurrences(self.output,self.contract,self.ids)
+    def test_two_exact_distinct_deliveries_pass(self):self.check()
+    def test_missing_emission_rejects(self):
+        self.events.pop()
+        with self.assertRaisesRegex(ValueError,'EQUAL_SOURCE_ORDINALS'):self.check()
+    def test_duplicate_ordinal_rejects(self):
+        self.events[1]['ordinal']=0
+        with self.assertRaisesRegex(ValueError,'EQUAL_SOURCE_ORDINALS'):self.check()
+    def test_other_source_lineage_rejects(self):
+        self.events[1]['sourceDocumentId']={'value':'other'}
+        with self.assertRaisesRegex(ValueError,'EQUAL_SOURCE_LINEAGE'):self.check()
+    def test_different_payload_rejects(self):
+        self.events[1]['exactEvent']={'kind':{'value':'different'}}
+        with self.assertRaisesRegex(ValueError,'EQUAL_PAYLOAD_REQUIRED'):self.check()
+    def test_same_occurrence_identity_rejects(self):
+        self.events[1]['occurrenceIdentity']=self.events[0]['occurrenceIdentity']
+        with self.assertRaisesRegex(ValueError,'EQUAL_OCCURRENCES_DISTINCT'):self.check()
+    def test_dropped_delivery_rejects(self):
+        self.work.pop()
+        with self.assertRaisesRegex(ValueError,'EQUAL_DELIVERY_COUNT'):self.check()
+    def test_reordered_delivery_rejects(self):
+        self.work.reverse()
+        with self.assertRaisesRegex(ValueError,'EQUAL_DELIVERY_OCCURRENCES'):self.check()
+    def test_reused_first_delivery_rejects(self):
+        self.work[1]=copy.deepcopy(self.work[0])
+        with self.assertRaisesRegex(ValueError,'EQUAL_DELIVERY_OCCURRENCES'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

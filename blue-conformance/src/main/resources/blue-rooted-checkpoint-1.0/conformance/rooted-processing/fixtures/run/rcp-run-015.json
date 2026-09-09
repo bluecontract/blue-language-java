@@ -11,46 +11,90 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/two-equal-events.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "TWO_EQUAL_PAYLOAD_EMISSIONS",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-015.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-015.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.sourceEmissionCount",
+        "actual": "status",
         "op": "equals",
-        "expected": 2
-      },
-      {
-        "actual": "s.parentDeliveryCount",
-        "op": "equals",
-        "expected": 2
-      },
-      {
-        "actual": "s.distinctOrdinals",
-        "op": "isTrue"
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "EQUAL_PAYLOAD_OCCURRENCES",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.seen": 1,
+        "P.log": [
+          1,
+          1
+        ],
+        "P.child.counter": 1,
+        "S.counter": 0
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "sourceAlias": "S",
+      "consumerAlias": "P",
+      "phaseEventAnchors": {
+        "sourcePublication": [
+          {
+            "origin": "S",
+            "ordinal": 0,
+            "kind": "RCP2/Tick"
+          },
+          {
+            "origin": "S",
+            "ordinal": 1,
+            "kind": "RCP2/Tick"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "sourcePublication.after.S.counter": 1,
+          "sourcePublication.after.P.log": [
+            1,
+            1
+          ],
+          "sourcePublication.ownedWrites": [
+            "S"
+          ]
+        }
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-015.json",
+    "sha256": "e7fc0481a8697501684cd5ad44a0fd1ea47703afbca564bf8fcab2c4b4a4c875"
   }
 }

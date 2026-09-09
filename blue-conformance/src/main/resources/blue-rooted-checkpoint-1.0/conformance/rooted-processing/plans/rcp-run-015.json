@@ -1,0 +1,155 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-015",
+  "title": "Equal payload events remain distinct occurrences",
+  "inputIdentityPolicy": "Exact source and initialized capture; identical payloads emitted by two actual appendEvent instructions.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/two-equal-events.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E1",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E1"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E1"
+        },
+        "budget": "DEFAULT",
+        "capture": "sourcePublication",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-007"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "EQUAL_PAYLOAD_OCCURRENCES",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.seen": 1,
+      "P.log": [
+        1,
+        1
+      ],
+      "P.child.counter": 1,
+      "S.counter": 0
+    },
+    "requiredEvents": 0,
+    "preserveSource": true,
+    "sourceAlias": "S",
+    "consumerAlias": "P",
+    "phaseEventAnchors": {
+      "sourcePublication": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        },
+        {
+          "origin": "S",
+          "ordinal": 1,
+          "kind": "RCP2/Tick"
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "sourcePublication.after.S.counter": 1,
+        "sourcePublication.after.P.log": [
+          1,
+          1
+        ],
+        "sourcePublication.ownedWrites": [
+          "S"
+        ]
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-015.json",
+    "sha256": "e7fc0481a8697501684cd5ad44a0fd1ea47703afbca564bf8fcab2c4b4a4c875"
+  }
+}

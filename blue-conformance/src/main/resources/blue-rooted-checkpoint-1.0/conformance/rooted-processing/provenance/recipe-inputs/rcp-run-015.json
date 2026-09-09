@@ -1,0 +1,56 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-015",
+  "category": "RUN",
+  "title": "Equal payload events remain distinct occurrences",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-02"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "TWO_EQUAL_PAYLOAD_EMISSIONS",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.sourceEmissionCount",
+        "op": "equals",
+        "expected": 2
+      },
+      {
+        "actual": "s.parentDeliveryCount",
+        "op": "equals",
+        "expected": 2
+      },
+      {
+        "actual": "s.distinctOrdinals",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

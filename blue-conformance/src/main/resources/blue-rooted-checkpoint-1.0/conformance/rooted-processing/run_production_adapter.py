@@ -278,6 +278,29 @@ def check_multiple_history(o,contract,weights,document_ids):
     require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
     if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
 
+def check_equal_occurrences(output,contract,document_ids):
+    source=contract['sourceAlias'];consumer=contract['consumerAlias']
+    receipts=[r for r in output.get('computedReceipts',[]) if r.get('documentId',{}).get('value')==document_ids[source]]
+    require(len(receipts)==1,'EQUAL_SOURCE_RECEIPT')
+    events=receipts[0].get('emittedRootEvents',[])
+    require(len(events)==2 and [e.get('ordinal') for e in events]==[0,1],'EQUAL_SOURCE_ORDINALS')
+    require(all(e.get('sourceDocumentId',{}).get('value')==document_ids[source] for e in events),'EQUAL_SOURCE_LINEAGE')
+    require(events[0].get('eventBlueId')==events[1].get('eventBlueId')
+            and isinstance(events[0].get('eventBlueId'),str)
+            and isinstance(events[0].get('exactEvent'),dict) and events[0]['exactEvent']
+            and exact_equal(events[0].get('exactEvent'),events[1].get('exactEvent')),'EQUAL_PAYLOAD_REQUIRED')
+    require(isinstance(events[0].get('occurrenceIdentity'),str) and isinstance(events[1].get('occurrenceIdentity'),str)
+            and events[0]['occurrenceIdentity']!=events[1]['occurrenceIdentity'],'EQUAL_OCCURRENCES_DISTINCT')
+    evidence=output.get('implementationEvidence',{})
+    require(evidence.get('complete') is True and isinstance(evidence.get('invocationIdentity'),str)
+            and evidence.get('invocationIdentity')==evidence.get('inputInvocationIdentity'),'EQUAL_BOUND_WORK')
+    deliveries=[w for w in evidence.get('workTrace',[]) if w.get('kind')=='EMBEDDED_EVENT'
+                and w.get('targetDocumentId',{}).get('value')==document_ids[consumer]]
+    require(len(deliveries)==2,'EQUAL_DELIVERY_COUNT')
+    require([w.get('eventBlueId') for w in deliveries]==[e['eventBlueId'] for e in events],'EQUAL_DELIVERY_PAYLOADS')
+    require([w.get('sourceOccurrenceIdentity') for w in deliveries]==[e['occurrenceIdentity'] for e in events],
+            'EQUAL_DELIVERY_OCCURRENCES')
+
 def check_silent_middle(output,contract,document_ids):
     evidence=output.get('implementationEvidence',{})
     require(evidence.get('complete') is True,'SILENT_INCOMPLETE_WORK')
@@ -399,6 +422,7 @@ def check_runs(f,run_records,weights,calibration=None):
             require(sorted(o.get('liveCycle',[]))==sorted(contract['requireLiveCycle']),'LIVE_JOIN_MISSING')
         if scope=='HISTORY_MULTIPLE':check_multiple_history(o,contract,weights,rec['documentIds'])
         if scope=='SILENT_MIDDLE':check_silent_middle(o,contract,rec['documentIds'])
+        if scope=='EQUAL_PAYLOAD_OCCURRENCES':check_equal_occurrences(o,contract,rec['documentIds'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):
