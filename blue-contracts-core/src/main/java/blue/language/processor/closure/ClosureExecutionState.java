@@ -28,6 +28,7 @@ final class ClosureExecutionState {
             checkpointMutations;
     private final Set<DocumentId> epochAdvanceDocuments;
     private final List<DocumentTransitionEvidence> transitionEvidence;
+    private final RootedOwnershipTracker.Snapshot rootedOwnership;
 
     ClosureExecutionState(
             AffectedClosureSnapshot tentativeSnapshot,
@@ -94,6 +95,27 @@ final class ClosureExecutionState {
             Set<DocumentId> epochAdvanceDocuments,
             List<DocumentTransitionEvidence> transitionEvidence,
             List<ManagedRootEventOccurrence> managedRootEvents) {
+        this(tentativeSnapshot, finalization, publicEvents, gasTrace,
+                inputChannelSurfaces, resultingChannelSurfaces, checkpointMutations,
+                epochAdvanceDocuments, transitionEvidence, managedRootEvents, null);
+    }
+
+    ClosureExecutionState(
+            AffectedClosureSnapshot tentativeSnapshot,
+            ComponentFinalizationResult finalization,
+            List<PublicEventOccurrence> publicEvents,
+            List<blue.language.processor.GasTraceEntry> gasTrace,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    inputChannelSurfaces,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    resultingChannelSurfaces,
+            List<ManagedCheckpointSettlementBatch.Mutation>
+                    checkpointMutations,
+            Set<DocumentId> epochAdvanceDocuments,
+            List<DocumentTransitionEvidence> transitionEvidence,
+            List<ManagedRootEventOccurrence> managedRootEvents,
+            RootedOwnershipTracker.Snapshot rootedOwnership) {
+        this.rootedOwnership = rootedOwnership;
         this.tentativeSnapshot = Objects.requireNonNull(
                 tentativeSnapshot, "tentativeSnapshot");
         this.finalization = finalization;
@@ -127,6 +149,8 @@ final class ClosureExecutionState {
                                 transitionEvidence,
                                 "transitionEvidence")));
     }
+
+    RootedOwnershipTracker.Snapshot rootedOwnership() { return rootedOwnership; }
 
     AffectedClosureSnapshot tentativeSnapshot() {
         return tentativeSnapshot;

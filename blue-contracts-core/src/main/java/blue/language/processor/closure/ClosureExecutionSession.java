@@ -169,6 +169,7 @@ final class ClosureExecutionSession
     private boolean managedRevisionActivationCompleted;
     private boolean managedRevisionReceiptReconciled;
     private boolean closed;
+    private final RootedOwnershipTracker rootedOwnership;
 
     ClosureExecutionSession(
             DocumentProcessor owner,
@@ -178,6 +179,8 @@ final class ClosureExecutionSession
             ExactEventIdentityEvidence externalEventIdentityEvidence,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
         this.input = Objects.requireNonNull(input, "input");
+        this.rootedOwnership = input.rootedBinding() == null ? null
+                : new RootedOwnershipTracker(input.rootedBinding(), input.snapshot());
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
@@ -2584,6 +2587,9 @@ final class ClosureExecutionSession
         }
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
+        if (rootedOwnership != null) {
+            rootedOwnership.finalized(currentSnapshot);
+        }
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);
         if (owner != null
@@ -3797,7 +3803,8 @@ final class ClosureExecutionSession
                 checkpointMutations,
                 epochAdvanceDocuments,
                 transitionEvidence,
-                managedRootEvents);
+                managedRootEvents,
+                rootedOwnership == null ? null : rootedOwnership.snapshot());
     }
 
     @Override

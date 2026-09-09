@@ -135,7 +135,8 @@ final class ClosureSuccessResultAssembler {
                 execution.finalization(),
                 execution.transitionEvidence(),
                 managedTransitionReceipts,
-                Objects.requireNonNull(resolutions, "resolutions"));
+                Objects.requireNonNull(resolutions, "resolutions"))
+                .withRootedProjection(execution.rootedOwnership());
     }
 
     private static AffectedClosureSnapshot committedSnapshot(

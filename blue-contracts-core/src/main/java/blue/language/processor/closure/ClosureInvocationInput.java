@@ -48,6 +48,7 @@ public final class ClosureInvocationInput {
     private final String directDeliverySnapshotIdentity;
     private final ExecutionPolicy executionPolicy;
     private final ClosureEnvironment environment;
+    private final RootedInvocationBinding rootedBinding;
 
     private ClosureInvocationInput(
             Operation operation,
@@ -84,6 +85,7 @@ public final class ClosureInvocationInput {
         this.executionPolicy = Objects.requireNonNull(
                 executionPolicy, "executionPolicy");
         this.environment = Objects.requireNonNull(environment, "environment");
+        this.rootedBinding = null;
         validateOperationShape();
         validateSnapshotReferences();
     }
@@ -263,7 +265,43 @@ public final class ClosureInvocationInput {
                 directDeliveries,
                 directDeliverySnapshotIdentity,
                 executionPolicy,
-                environment);
+                environment).withRootedBinding(rootedBinding);
+    }
+
+    /**
+     * Binds a verified entry context while preserving the base 1.0 constructor.
+     * History and receiving evidence must be authenticated by the admission owner.
+     *
+     * @param context context derived from this exact entry snapshot
+     * @param deliveryBasisIdentity authenticated draft.2 receiving/cause identity
+     * @return new immutable input carrying the frozen rooted adjunct
+     */
+    public ClosureInvocationInput withRootedContext(RootedProcessingContext context,
+            String deliveryBasisIdentity) {
+        if (rootedBinding != null) {
+            throw new IllegalArgumentException("An admitted rooted context cannot be replaced");
+        }
+        return withRootedBinding(new RootedInvocationBinding(this, context, deliveryBasisIdentity));
+    }
+
+    RootedInvocationBinding rootedBinding() { return rootedBinding; }
+
+    ClosureInvocationInput withRootedBinding(RootedInvocationBinding binding) {
+        return binding == null ? this : new ClosureInvocationInput(this, binding);
+    }
+
+    private ClosureInvocationInput(ClosureInvocationInput original, RootedInvocationBinding binding) {
+        operation = original.operation;
+        invocationIdentity = original.invocationIdentity;
+        snapshot = original.snapshot;
+        cause = original.cause;
+        admissionCandidate = original.admissionCandidate;
+        admissionCandidateIdentity = original.admissionCandidateIdentity;
+        directDeliveries = original.directDeliveries;
+        directDeliverySnapshotIdentity = original.directDeliverySnapshotIdentity;
+        executionPolicy = original.executionPolicy;
+        environment = original.environment;
+        rootedBinding = Objects.requireNonNull(binding, "binding");
     }
 
     private void validateOperationShape() {

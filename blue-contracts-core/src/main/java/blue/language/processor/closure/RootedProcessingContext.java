@@ -29,13 +29,15 @@ public final class RootedProcessingContext {
     private final Map<String, Object> ownerDescriptor;
     private final Map<String, Object> descriptor;
     private final String identity;
+    private final String entryClosureIdentity;
 
     private RootedProcessingContext(List<DocumentId> owners,
-            Map<String, Object> ownerDescriptor) {
+            Map<String, Object> ownerDescriptor, String entryClosureIdentity) {
         this.entryOwners = Collections.unmodifiableList(new ArrayList<DocumentId>(owners));
         this.ownerDescriptor = RootedIdentity.owner(ownerDescriptor);
         this.descriptor = RootedIdentity.context(this.ownerDescriptor);
         this.identity = RootedIdentity.contextIdentity(this.ownerDescriptor);
+        this.entryClosureIdentity = entryClosureIdentity;
     }
 
     /**
@@ -89,7 +91,14 @@ public final class RootedProcessingContext {
                         "activationGeneration", Long.toString(edge.activationGeneration())));
             }
         }
-        return new RootedProcessingContext(owners, object("members", members, "internalEdges", edges));
+        return new RootedProcessingContext(owners, object("members", members, "internalEdges", edges),
+                selected.closureIdentity());
+    }
+
+    void requireEntrySnapshot(AffectedClosureSnapshot snapshot) {
+        if (!entryClosureIdentity.equals(snapshot.closureIdentity())) {
+            throw new IllegalArgumentException("Root context belongs to another exact entry snapshot");
+        }
     }
 
     /**

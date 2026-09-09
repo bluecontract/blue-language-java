@@ -27,7 +27,9 @@ final class CompositionCampaignFixture implements AutoCloseable {
     boolean removeChannel;
     ClosureImplementationEvidence evidence;
 
-    CompositionCampaignFixture() {
+    CompositionCampaignFixture() { this(false); }
+
+    CompositionCampaignFixture(boolean rooted) {
         owner = DocumentProcessor.builder().registerContractProcessor(HANDLER_ID, HANDLER,
                 new HandlerProcessor<CampaignHandler>() {
                     public Class<CampaignHandler> contractType() { return CampaignHandler.class; }
@@ -36,7 +38,8 @@ final class CompositionCampaignFixture implements AutoCloseable {
                     }
                 }).nodeProvider(id -> exact.containsKey(id)
                         ? Collections.singletonList(exact.get(id).clone()) : Collections.emptyList()).build();
-        environment = ClosureEvidenceFactory.environment(owner, hash('a'), hash('b'),
+        environment = ClosureEvidenceFactory.environment(owner, hash('a'),
+                rooted ? RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY : hash('b'),
                 "r2-document-lineage", "r2-occurrence-binding", "r2-provider",
                 "r2-source-order", "r2-limits", GasSchedule.contracts10().portableLimits());
     }
