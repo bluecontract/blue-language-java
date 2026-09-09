@@ -19,3 +19,9 @@ The same five-specification set is bundled there for self-contained review.
 `rootedCheckerTest` runs only the 18 + 64 + 26 abstract/checker tests. It does not establish
 production conformance. The new SDK adapter and final local RC acceptance are required
 separately. Old-profile receipts and fixture outputs cannot be relabelled as rooted results.
+
+The development export binds the candidate Contracts specification bytes in the
+existing release manifest. Its status is explicitly a rooted development candidate;
+the prior rc.24 manifest is retained byte-for-byte with the rooted historical resources.
+This export binding is not a final conformance or release-readiness result. The full
+rooted runtime and publication protocol remain under implementation.

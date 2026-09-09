@@ -1,10 +1,10 @@
 manifestType: blue-contracts-release
 specification: Blue Contracts and Processor Specification
 specificationVersion: '1.0'
-status: rooted-checkpoint-development-candidate
+status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 527ed42f6ccac62a05918fac493ecc3729ec6f57d97b0cf1814d9ab752a6d523
+  sha256: 0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
