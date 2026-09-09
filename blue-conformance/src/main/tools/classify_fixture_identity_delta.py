@@ -1028,6 +1028,22 @@ def reviewed_rooted_terminal_tail_transition(before_files, after_files):
     return review
 
 
+ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-canonical-managed-payload-transition.json")
+ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256 = "360efb656606435a81c8d701274cc8a1acb3d50f051ea880e298c87e87110cb0"
+
+
+def reviewed_rooted_canonical_managed_payload_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the canonical managed payload correction."""
+    data = ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed canonical managed payload review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1490,6 +1506,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         reviewed_transition = reviewed_rooted_checkpoint_graph_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_rooted_terminal_tail_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_canonical_managed_payload_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1547,7 +1565,9 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (ROOTED_TERMINAL_TAIL_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-canonical-managed-payload-exact-proposed-transition"
+                else ROOTED_TERMINAL_TAIL_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "rooted-terminal-tail-exact-proposed-transition"
                 else ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "rooted-checkpoint-graph-exact-proposed-transition"
