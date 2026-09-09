@@ -3145,9 +3145,11 @@ final class ClosureExecutionSession
     private void requireAvailableProcessEmbeddedResources(
             Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
             ProcessEmbeddedSurfaceReconciler.DemandContext demandContext) {
+        Map<DocumentId, Node> calculatingBodies = new LinkedHashMap<DocumentId, Node>();
+        for (DocumentId source : projected.keySet()) calculatingBodies.put(source, latestBodies.get(source));
         List<ClosureResourceDemand> demands =
                 processEmbeddedReconciler.resourceDemands(
-                        latestBodies,
+                        calculatingBodies,
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
@@ -3171,7 +3173,7 @@ final class ClosureExecutionSession
         applyManagedOccurrenceResolutions(selected);
         List<ClosureResourceDemand> remaining =
                 processEmbeddedReconciler.resourceDemands(
-                        latestBodies,
+                        calculatingBodies,
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
@@ -3259,6 +3261,9 @@ final class ClosureExecutionSession
                 new LinkedHashMap<DocumentId,
                         List<ManagedProcessEmbeddedPath>>();
         for (DocumentId source : sources) {
+            // Witness surfaces were authenticated with their original exact graph.
+            // Comparing them with this invocation's newer owner is a false retarget.
+            if (currentWitnesses != null && currentWitnesses.sources().contains(source)) continue;
             result.put(
                     source,
                     stepProcessor.projectManagedProcessEmbeddedSurface(
