@@ -1,0 +1,304 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-012",
+  "title": "Removed/re-added key has a distinct occurrence and correct later event",
+  "inputIdentityPolicy": "Initially empty collection; remove key and readd the same saved initialized source ID, preserving source history and requiring a fresh occurrence generation.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/removable-orders.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/collection-order-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {
+          "orderKey": "same",
+          "order": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "firstAttach",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "200",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "firstSource",
+        "recordWorkAndSelectedViews": false,
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "firstDelivery",
+        "recordWorkAndSelectedViews": false,
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "removeOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "300",
+        "request": {
+          "orderKey": "same"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E300",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E300"
+        },
+        "budget": "DEFAULT",
+        "capture": "removed",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "400",
+        "request": {
+          "orderKey": "same",
+          "order": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E400"
+        },
+        "budget": "DEFAULT",
+        "capture": "readded",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "subject",
+        "mustConsumePositions": [
+          0,
+          1
+        ],
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "500",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E500",
+        "stepId": "baseline-011"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E500"
+        },
+        "budget": "DEFAULT",
+        "capture": "laterSource",
+        "recordWorkAndSelectedViews": false,
+        "stepId": "baseline-012"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E500"
+        },
+        "budget": "DEFAULT",
+        "capture": "later",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "baseline-013"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-014"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "baseline-015"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-016"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_MULTIPLE",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "P.directMemberEvents": 2,
+      "P.descendantEvents": 2,
+      "P.orders.same.signalCount": 1,
+      "S.signalCount": 1
+    },
+    "requiredApplicationCount": 1,
+    "occurrenceSuffixes": {
+      "/orders/same": {
+        "source": "S",
+        "positions": [
+          1
+        ]
+      }
+    },
+    "applicationOrder": [
+      [
+        "S",
+        200
+      ]
+    ],
+    "preserveSource": true,
+    "sourceAliases": [
+      "S"
+    ],
+    "requiredEvents": 2,
+    "recreatedOccurrence": {
+      "owner": "P",
+      "source": "S",
+      "path": "/orders/same",
+      "first": "firstAttach",
+      "removed": "removed",
+      "readded": "readded",
+      "later": "later"
+    },
+    "phaseEventAnchors": {
+      "firstAttach": [],
+      "removed": [],
+      "readded": [],
+      "firstDelivery": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "direct-observed"
+        },
+        {
+          "origin": "P",
+          "ordinal": 1,
+          "kind": "descendant-observed"
+        }
+      ],
+      "later": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "direct-observed"
+        },
+        {
+          "origin": "P",
+          "ordinal": 1,
+          "kind": "descendant-observed"
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "firstDelivery.after.P.directMemberEvents": 1,
+        "firstDelivery.after.P.descendantEvents": 1,
+        "removed.after.P.orders": {},
+        "readded.after.P.directMemberEvents": 1,
+        "readded.after.P.descendantEvents": 1,
+        "later.after.P.directMemberEvents": 3,
+        "later.after.P.descendantEvents": 3,
+        "later.after.P.orders.same.signalCount": 2,
+        "later.after.S.signalCount": 2
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-012.json",
+    "sha256": "fd6b86bfb7ebcd72ad657c5d54585b1520d12a3b417b4bf0968073a1918325c0"
+  }
+}

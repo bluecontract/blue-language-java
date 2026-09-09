@@ -343,4 +343,49 @@ class EqualOccurrenceTests(unittest.TestCase):
         self.work[1]=copy.deepcopy(self.work[0])
         with self.assertRaisesRegex(ValueError,'EQUAL_DELIVERY_OCCURRENCES'):self.check()
 
+class RecreatedOccurrenceTests(unittest.TestCase):
+    def setUp(self):
+        self.ids={'P':'parent','S':'source'}
+        self.rule={'owner':'P','source':'S','path':'/orders/same','first':'first','removed':'removed','readded':'new','later':'later'}
+        def row(generation,active):return {'sourcePath':'/orders/same','sourceDocumentId':{'value':'parent'},
+            'targetDocumentId':{'value':'source'},'activationGeneration':generation,'active':active,
+            'occurrenceIdentity':'occurrence-'+str(generation),'expectedTargetBlueId':'saved-source'}
+        self.phases={}
+        for phase,rows in [('first',[row(1,True)]),('removed',[row(2,False)]),('new',[row(2,False)]),('later',[row(2,True)])]:
+            self.phases[phase]={'selectedAfter':{'P':{'documentId':'parent','occurrences':rows},
+                'S':{'documentId':'source','blueId':'current-source'}}}
+        self.rows('removed')[0]['expectedTargetBlueId']='current-source'
+        self.rows('new')[0]['pendingHistoricalEpoch']=0
+        self.output={'applications':[{'work':{'targetOccurrenceIdentity':'occurrence-2'}}]}
+    def rows(self,phase):return self.phases[phase]['selectedAfter']['P']['occurrences']
+    def check(self):P.check_recreated_occurrence(self.output,self.phases,self.rule,self.ids)
+    def test_new_generation_and_bound_history_pass(self):self.check()
+    def test_missing_retirement_reservation_rejects(self):
+        self.rows('removed').clear()
+        with self.assertRaisesRegex(ValueError,'RECREATED_OCCURRENCE_INVENTORY'):self.check()
+    def test_retirement_keeps_old_active_row_rejects(self):
+        self.rows('removed')[0]=copy.deepcopy(self.rows('first')[0])
+        with self.assertRaisesRegex(ValueError,'RECREATED_RETIRED_RESERVATION'):self.check()
+    def test_readd_allocates_an_extra_generation_rejects(self):
+        self.rows('new')[0]['activationGeneration']=3
+        with self.assertRaisesRegex(ValueError,'RECREATED_GENERATION'):self.check()
+    def test_retired_expected_target_is_not_current_rejects(self):
+        self.rows('removed')[0]['expectedTargetBlueId']='saved-source'
+        with self.assertRaisesRegex(ValueError,'RECREATED_RETIRED_TARGET'):self.check()
+    def test_readd_inherits_retired_cursor_rejects(self):
+        self.rows('new')[0]['pendingHistoricalEpoch']=1
+        with self.assertRaisesRegex(ValueError,'RECREATED_INITIALIZED_CURSOR'):self.check()
+    def test_reused_generation_rejects(self):
+        self.rows('new')[0]['activationGeneration']=1
+        with self.assertRaisesRegex(ValueError,'RECREATED_GENERATION'):self.check()
+    def test_substituted_current_source_rejects(self):
+        self.rows('new')[0]['expectedTargetBlueId']='current-source'
+        with self.assertRaisesRegex(ValueError,'RECREATED_SAVED_SOURCE'):self.check()
+    def test_history_applied_to_retired_occurrence_rejects(self):
+        self.output['applications'][0]['work']['targetOccurrenceIdentity']='occurrence-1'
+        with self.assertRaisesRegex(ValueError,'RECREATED_HISTORY_BINDING'):self.check()
+    def test_later_delivery_uses_old_occurrence_rejects(self):
+        self.rows('later')[0]['occurrenceIdentity']='occurrence-1'
+        with self.assertRaisesRegex(ValueError,'RECREATED_LATER_BINDING'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

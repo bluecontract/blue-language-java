@@ -278,6 +278,34 @@ def check_multiple_history(o,contract,weights,document_ids):
     require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
     if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
 
+def check_recreated_occurrence(output,phases,rule,document_ids):
+    owner=rule['owner'];source=document_ids[rule['source']]
+    def rows(phase):
+        state=phases.get(phase,{}).get('selectedAfter',{}).get(owner,{})
+        require(state.get('documentId')==document_ids[owner],'RECREATED_OWNER_VIEW')
+        return [r for r in state.get('occurrences',[]) if r.get('sourcePath')==rule['path']]
+    first=rows(rule['first']);removed=rows(rule['removed']);new=rows(rule['readded']);later=rows(rule['later'])
+    require(len(first)==len(removed)==len(new)==len(later)==1,'RECREATED_OCCURRENCE_INVENTORY')
+    a,reservation,b,c=first[0],removed[0],new[0],later[0]
+    require(all(r.get('sourceDocumentId',{}).get('value')==document_ids[owner]
+                and r.get('targetDocumentId',{}).get('value')==source for r in (a,reservation,b,c)),'RECREATED_LINEAGE')
+    require(integer(a.get('activationGeneration'),1) and integer(b.get('activationGeneration'),1)
+            and b['activationGeneration']==a['activationGeneration']+1
+            and a.get('occurrenceIdentity')!=b.get('occurrenceIdentity'),'RECREATED_GENERATION')
+    require(reservation.get('active') is False and reservation.get('pendingHistoricalEpoch') is None
+            and reservation.get('activationGeneration')==b['activationGeneration']
+            and reservation.get('occurrenceIdentity')==b.get('occurrenceIdentity'),'RECREATED_RETIRED_RESERVATION')
+    source_at_removal=phases.get(rule['removed'],{}).get('selectedAfter',{}).get(rule['source'],{})
+    require(source_at_removal.get('documentId')==source
+            and reservation.get('expectedTargetBlueId')==source_at_removal.get('blueId'),'RECREATED_RETIRED_TARGET')
+    require(a.get('expectedTargetBlueId')==b.get('expectedTargetBlueId'),'RECREATED_SAVED_SOURCE')
+    require(b.get('pendingHistoricalEpoch')==0,'RECREATED_INITIALIZED_CURSOR')
+    require(a.get('active') is True and b.get('active') is False
+            and c.get('active') is True and c.get('occurrenceIdentity')==b.get('occurrenceIdentity')
+            and c.get('activationGeneration')==b['activationGeneration'],'RECREATED_LATER_BINDING')
+    require(output.get('applications') and all(h.get('work',{}).get('targetOccurrenceIdentity')==b.get('occurrenceIdentity')
+            for h in output['applications']),'RECREATED_HISTORY_BINDING')
+
 def check_equal_occurrences(output,contract,document_ids):
     source=contract['sourceAlias'];consumer=contract['consumerAlias']
     receipts=[r for r in output.get('computedReceipts',[]) if r.get('documentId',{}).get('value')==document_ids[source]]
@@ -423,6 +451,8 @@ def check_runs(f,run_records,weights,calibration=None):
         if scope=='HISTORY_MULTIPLE':check_multiple_history(o,contract,weights,rec['documentIds'])
         if scope=='SILENT_MIDDLE':check_silent_middle(o,contract,rec['documentIds'])
         if scope=='EQUAL_PAYLOAD_OCCURRENCES':check_equal_occurrences(o,contract,rec['documentIds'])
+        if contract.get('recreatedOccurrence'):
+            check_recreated_occurrence(o,rec.get('phaseRecords',{}),contract['recreatedOccurrence'],rec['documentIds'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):
