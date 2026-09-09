@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-018",
+  "category": "SEL",
+  "title": "Reject repeated entry inside one projected history",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          },
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "error": "INVALID_ORDER"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

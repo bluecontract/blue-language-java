@@ -1,0 +1,67 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-006",
+  "category": "RUN",
+  "title": "Two occurrences of A5 and A8 apply distinct successor suffixes",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-03",
+    "RCP-HISTORY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "TWO_OCCURRENCES_5_8",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.leftObservedPositions",
+        "op": "equals",
+        "expected": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      {
+        "actual": "s.rightObservedPositions",
+        "op": "equals",
+        "expected": [
+          9,
+          10
+        ]
+      },
+      {
+        "actual": "s.sourceHistoryRewritten",
+        "op": "equals",
+        "expected": false
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

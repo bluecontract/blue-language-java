@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blue:root-context:1.0-draft.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "canonicalRootDocumentId",
+    "operationOwnerIdentity"
+  ],
+  "properties": {
+    "canonicalRootDocumentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Also NFC, no NUL, at most 512 UTF-8 bytes; checked by constructor."
+    },
+    "operationOwnerIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

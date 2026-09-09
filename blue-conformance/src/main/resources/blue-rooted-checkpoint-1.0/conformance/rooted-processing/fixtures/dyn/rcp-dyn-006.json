@@ -1,0 +1,96 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-006",
+  "category": "DYN",
+  "title": "Retarget uses the selected new source not the retired suffix",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "R",
+            "entry": "retarget"
+          },
+          {
+            "timestamp": 5,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/x#g1",
+        "entries": [
+          {
+            "timestamp": 2,
+            "timeline": "X",
+            "entry": "X:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "retarget": [
+        {
+          "kind": "remove",
+          "address": "R/x#g1",
+          "entries": [],
+          "cursor": 0
+        },
+        {
+          "kind": "attach",
+          "address": "R/x#g2",
+          "entries": [
+            {
+              "timestamp": 3,
+              "timeline": "Y",
+              "entry": "Y:3"
+            }
+          ],
+          "cursor": 0
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "retarget",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "Y:3",
+        "receivers": [
+          "R/x#g2"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

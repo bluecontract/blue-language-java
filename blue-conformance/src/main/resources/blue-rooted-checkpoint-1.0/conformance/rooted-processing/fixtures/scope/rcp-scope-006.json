@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-006",
+  "category": "SCOPE",
+  "title": "A genuine return path includes the cycle",
+  "kind": "graph",
+  "requirements": [
+    "RCP-GRAPH-01",
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "A",
+      "B"
+    ],
+    "edges": [
+      [
+        "A",
+        "B"
+      ],
+      [
+        "B",
+        "A"
+      ]
+    ],
+    "root": "A"
+  },
+  "expected": {
+    "reachable": [
+      "A",
+      "B"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

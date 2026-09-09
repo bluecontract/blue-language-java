@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blue:delivery-basis:1.0-draft.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operationOwnerIdentity",
+    "causeIdentity",
+    "kind",
+    "receivingBindings",
+    "sourcePositionIdentity"
+  ],
+  "properties": {
+    "operationOwnerIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "causeIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "kind": {
+      "enum": [
+        "LIVE",
+        "ADMISSION",
+        "MANAGED_REVISION",
+        "MANAGED_REPRESENTATION"
+      ]
+    },
+    "receivingBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "scopePath",
+          "activationGeneration",
+          "channelKey",
+          "occurrenceIdentity"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Also NFC, no NUL, at most 512 UTF-8 bytes; checked by constructor."
+          },
+          "scopePath": {
+            "type": "string"
+          },
+          "activationGeneration": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Also <= 9007199254740991."
+          },
+          "channelKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "occurrenceIdentity": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "sourcePositionIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "NONE"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "identity"
+          ],
+          "properties": {
+            "kind": {
+              "const": "POSITION"
+            },
+            "identity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

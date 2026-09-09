@@ -1,0 +1,33 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-WORK-002",
+  "category": "WORK",
+  "title": "One unit below required work rolls back",
+  "kind": "reaction",
+  "requirements": [
+    "RCP-ORDER-05",
+    "RCP-GRAPH-02",
+    "RCP-READY-04"
+  ],
+  "input": {
+    "route": {
+      "A": "B",
+      "B": "A"
+    },
+    "start": "A",
+    "ttl": 4,
+    "budget": 4,
+    "costModel": "ONE_UNIT_PER_DELIVERY_NOT_BLUE_GAS"
+  },
+  "expected": {
+    "status": "OUT_OF_GAS",
+    "committed": [],
+    "gas": 4
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

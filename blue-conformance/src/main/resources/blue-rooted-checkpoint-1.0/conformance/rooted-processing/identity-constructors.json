@@ -1,0 +1,54 @@
+{
+  "schema": "blue-rooted-identity-constructors/1.0-draft.2",
+  "status": "NORMATIVE_CANDIDATE_NOT_PRODUCTION",
+  "specification": "RCP-1 \u00a710.1\u201310.6",
+  "canonicalEncoding": "RFC8785 JCS restricted to closed ASCII-key objects, arrays and valid Unicode strings; see identity/constructors.py. SHA-256 of UTF-8 {domain,value}, prefix sha256:. Not BlueIds.",
+  "constructors": {
+    "DocumentHistoryBasis": {
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "schema": "schemas/history-basis.schema.json"
+    },
+    "OperationOwner": {
+      "domain": "blue-operation-owner/1.0-draft.2",
+      "schema": "schemas/operation-owner.schema.json"
+    },
+    "RootProcessingContext": {
+      "domain": "blue-contracts-root-processing-context/1.0-draft.2",
+      "schema": "schemas/root-context.schema.json"
+    },
+    "DeliveryBasis": {
+      "domain": "blue-rooted-delivery-basis/1.0-draft.2",
+      "schema": "schemas/delivery-basis.schema.json"
+    },
+    "rootedInvocationIdentity": {
+      "domain": "blue-contracts-rooted-invocation/1.0-draft.2",
+      "fields": [
+        "baseInvocationIdentity",
+        "rootProcessingContextIdentity",
+        "deliveryBasisIdentity"
+      ]
+    },
+    "rootedCommitCompanionIdentity": {
+      "domain": "blue-contracts-rooted-commit-companion/1.0-draft.2",
+      "fields": [
+        "baseCommitCompanionIdentity",
+        "rootedInvocationIdentity",
+        "rootProcessingContextIdentity"
+      ]
+    },
+    "rootedTerminalKey": {
+      "domain": "blue-coordination-rooted-terminal-key/1.0-draft.2",
+      "fields": [
+        "operationOwnerIdentity",
+        "deliveryBasisIdentity"
+      ]
+    }
+  },
+  "constraints": [
+    "Authenticate operands before wrapping; these functions do not validate Blue processing",
+    "Only the selected root live SCC canonicalizes view entrypoints",
+    "Original semantic Operation Request target remains inside exact cause",
+    "Freeze entry context across dynamic merge/split/retry",
+    "Production identity generation/release conformance NOT_RUN"
+  ]
+}

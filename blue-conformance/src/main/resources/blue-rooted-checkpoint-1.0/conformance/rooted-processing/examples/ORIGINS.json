@@ -1,0 +1,155 @@
+[
+  {
+    "file": "examples/counter.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/frontier-source.yaml",
+    "sha256": "7bd79d44052e5fa08bccd2781f66389379e4d32930ff90757e4e2e41151976b1",
+    "changed": false
+  },
+  {
+    "file": "examples/parent.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/frontier-host.yaml",
+    "sha256": "b4f32f9062d484146b2222a1d87e44a7b6d2b1251949e90df684c1ef9b4ff9e9",
+    "changed": false
+  },
+  {
+    "file": "examples/empty-orders.yaml",
+    "source": "source/myos-mini/src/packagedHttpTest/resources/public-api-preview/initially-empty-orders.yaml",
+    "sha256": "5c651e8bebfc58887cccc30098f585f6810e537df6a9859373f8b046f539d1b3",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/cycle-a.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/cycle-a.yaml",
+    "sha256": "786fc7f2aeca1cde2c4a5d5f027a157725b5cff42fa76b50671d75fb0fd4d0b1",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/cycle-b.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/cycle-b.yaml",
+    "sha256": "c430be25533f1b07dd0b29851799fbf4a41b8ea9a325b47dbf304261a7669b72",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/frontier-host.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/frontier-host.yaml",
+    "sha256": "b4f32f9062d484146b2222a1d87e44a7b6d2b1251949e90df684c1ef9b4ff9e9",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/frontier-source.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/frontier-source.yaml",
+    "sha256": "7bd79d44052e5fa08bccd2781f66389379e4d32930ff90757e4e2e41151976b1",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/order-emitter.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/order-emitter.yaml",
+    "sha256": "99ab35a834b0f854b64e2f5d50c6c2673d40954560f2a5bed504660f6fb6a61f",
+    "changed": false,
+    "sourceKind": "EXISTING_HARNESS_TEMPLATE_NOT_DIRECT_YAML",
+    "templateTokens": [
+      "NAME",
+      "FIELDS"
+    ],
+    "parseAfterExpansion": true
+  },
+  {
+    "file": "examples/retained/orders-host.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/orders-host.yaml",
+    "sha256": "5c651e8bebfc58887cccc30098f585f6810e537df6a9859373f8b046f539d1b3",
+    "changed": false
+  },
+  {
+    "file": "examples/retained/user-inline-cycle-a.yaml",
+    "source": "source/myos-mini/docs/tutorial/examples/preview/user-inline-cycle-a.yaml",
+    "sha256": "e4ea895d80e00381d3ad11c3c2cdbb9552268462286aff6a4819cc5c98feb212",
+    "changed": false
+  },
+  {
+    "file": "examples/collection-payment.yaml",
+    "source": "examples/retained/order-emitter.yaml",
+    "sourceKind": "EXACT_HARNESS_TEMPLATE_EXPANSION",
+    "sha256": "459f031c66183b51190d55668a03f5664edf63664b89f41dad6cc6ab2f477b16",
+    "templateParameters": {
+      "NAME": "payment",
+      "FIELDS": ""
+    },
+    "changed": true
+  },
+  {
+    "file": "examples/collection-order-b.yaml",
+    "source": "examples/retained/order-emitter.yaml",
+    "sourceKind": "EXACT_HARNESS_TEMPLATE_EXPANSION",
+    "sha256": "8019131b7fff7b7be40a41a2a097e6697bcdb7e039330e0d8170b9feb9fe088b",
+    "templateParameters": {
+      "NAME": "order-b",
+      "FIELDS": ""
+    },
+    "changed": true
+  },
+  {
+    "file": "examples/collection-order-a.yaml",
+    "source": "examples/retained/order-emitter.yaml",
+    "sourceKind": "EXACT_HARNESS_TEMPLATE_EXPANSION",
+    "sha256": "d913f47fb294364bf3fad260c024d04afd1b4fdcac2636d459c586263d1a1217",
+    "templateParameters": {
+      "NAME": "order-a",
+      "FIELDS": "nested concrete payment"
+    },
+    "changed": true
+  },
+  {
+    "file": "examples/iteration2/cycle-a.yaml",
+    "sha256": "611e685ea952b1aa9580acb94c7ccacd5cbc243f822adf489b101a0a1e0549ed",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/source.yaml",
+    "sha256": "50a36a85f7a2cc009c5fede556716e54b4231c0df6297d1aa4fa694b9b51f8c0",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/diamond-b.yaml",
+    "sha256": "a083191b85cc07d75d377b87444c5c63d9273066827f871f83285722b8a1001f",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/diamond-c.yaml",
+    "sha256": "f29918408a8aa6a167af0e29671e178641734ad1da5b2ec103eda8926c615adb",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/diamond-root.yaml",
+    "sha256": "4cfafc496009d63ba0f49618468c59763c8aa26a1bb633a265283662894a8f49",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/historical-a.yaml",
+    "sha256": "7b45e7eaa24de14143c0fbdb16fe92c6c62a3181ee5d2dfe45dad0b4f0d918ab",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/parent.yaml",
+    "sha256": "6dfc00244167cfc0f0ac3826fdcd0d5d4a5df79aa744fea83eb95b99423e4245",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/historical-b.yaml",
+    "sha256": "51a146ce25c753694daacb9aa2574869d367a086128d54d5fab5d1a30066f5f3",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  },
+  {
+    "file": "examples/iteration2/cycle-b.yaml",
+    "sha256": "657d706aa42a1958d77e91888d6aa8975ad78534508a426b44cbb92fb25dd1e4",
+    "origin": "Authored iteration-2 literal source, derived from preserved counter/parent/cycle source templates. Not executed under revised production runtime.",
+    "treatment": "LITERAL_SOURCE_PARSE_CHECKED"
+  }
+]

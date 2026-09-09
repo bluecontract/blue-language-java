@@ -1,0 +1,65 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-005",
+  "category": "SEL",
+  "title": "Root E20 cannot suppress child E10",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "B/owner",
+        "entries": [
+          {
+            "timestamp": 10,
+            "timeline": "T",
+            "entry": "T:10"
+          },
+          {
+            "timestamp": 20,
+            "timeline": "T",
+            "entry": "T:20"
+          }
+        ],
+        "cursor": 2,
+        "active": true
+      },
+      {
+        "address": "B/a@5/owner",
+        "entries": [
+          {
+            "timestamp": 5,
+            "timeline": "T",
+            "entry": "T:5"
+          },
+          {
+            "timestamp": 10,
+            "timeline": "T",
+            "entry": "T:10"
+          }
+        ],
+        "cursor": 1,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "T:10",
+        "receivers": [
+          "B/a@5/owner"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

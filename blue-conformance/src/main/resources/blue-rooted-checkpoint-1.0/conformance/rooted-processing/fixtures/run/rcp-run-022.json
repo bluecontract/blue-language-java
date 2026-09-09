@@ -1,0 +1,55 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-022",
+  "category": "RUN",
+  "title": "Cycle gas failure rolls back its required result without meter reset",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-READY-04"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "CYCLE_GAS_ROLLBACK",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.allTentativeChangesDiscarded",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.checkpointAdvanced",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.retryTraceIdentical",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

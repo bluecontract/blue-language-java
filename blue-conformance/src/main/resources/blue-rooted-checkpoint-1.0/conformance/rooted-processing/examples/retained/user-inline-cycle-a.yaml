@@ -1,0 +1,212 @@
+name: Dynamic Cycle A
+documentId: tutorial-cycle-a
+phase: initial
+peer:
+  name: Dynamic Cycle B
+  documentId: tutorial-cycle-b
+  phase: initial
+  contracts:
+    embedded:
+      type: Process Embedded
+      paths:
+        - /peer
+    ownerChannel:
+      type: Coordination/Timeline Channel
+      timeline:
+        type: MyOS/MyOS Timeline
+        timelineId: tutorial/cycle/alice
+      actor:
+        type: MyOS/Principal Actor
+        accountId: alice
+    connectA:
+      type: Coordination/Sequential Workflow Operation
+      channel: ownerChannel
+      request:
+        a: { }
+      steps:
+        - type: Coordination/Compute
+          do:
+            - $appendChange:
+                op: add
+                path: /peer
+                val:
+                  $binding: event/message/request/a
+            - $appendChange:
+                op: replace
+                path: /phase
+                val: connected
+            - $return: true
+    detachA:
+      type: Coordination/Sequential Workflow Operation
+      channel: ownerChannel
+      request: { }
+      steps:
+        - type: Coordination/Compute
+          do:
+            - $appendChange:
+                op: remove
+                path: /peer
+            - $appendChange:
+                op: replace
+                path: /phase
+                val: detached
+            - $return: true
+    touchB:
+      type: Coordination/Sequential Workflow Operation
+      channel: ownerChannel
+      request: { }
+      steps:
+        - type: Coordination/Compute
+          do:
+            - $appendChange:
+                op: replace
+                path: /phase
+                val: usable-b
+            - $return: true
+    finiteFromA:
+      type: Embedded Node Channel
+      sourcePath: /peer
+      event:
+        type: Coordination/Event
+        kind: Tutorial/Cycle X
+    relayFinite:
+      type: Coordination/Sequential Workflow
+      channel: finiteFromA
+      event:
+        type: Coordination/Event
+        kind: Tutorial/Cycle X
+      steps:
+        - type: Coordination/Compute
+          do:
+            - $appendChange:
+                op: replace
+                path: /phase
+                val: relayed
+            - $appendEvent:
+                type: Coordination/Event
+                kind: Tutorial/Cycle Y
+            - $return: true
+    loopFromA:
+      type: Embedded Node Channel
+      sourcePath: /peer
+      event:
+        type: Coordination/Event
+        kind: Tutorial/Cycle Loop
+    repeatLoop:
+      type: Coordination/Sequential Workflow
+      channel: loopFromA
+      event:
+        type: Coordination/Event
+        kind: Tutorial/Cycle Loop
+      steps:
+        - type: Coordination/Compute
+          do:
+            - $appendEvent:
+                type: Coordination/Event
+                kind: Tutorial/Cycle Loop
+            - $return: true
+
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+      - /peer
+  ownerChannel:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: tutorial/cycle/alice
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  attachB:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request:
+      b: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: add
+              path: /peer
+              val:
+                $binding: event/message/request/b
+          - $return: true
+  startFinite:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /phase
+              val: started
+          - $appendEvent:
+              type: Coordination/Event
+              kind: Tutorial/Cycle X
+          - $return: true
+  startLoop:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendEvent:
+              type: Coordination/Event
+              kind: Tutorial/Cycle Loop
+          - $return: true
+  touchA:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /phase
+              val: usable-a
+          - $return: true
+  finiteFromB:
+    type: Embedded Node Channel
+    sourcePath: /peer
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Cycle Y
+  finishFinite:
+    type: Coordination/Sequential Workflow
+    channel: finiteFromB
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Cycle Y
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /phase
+              val: done
+          - $return: true
+  loopFromB:
+    type: Embedded Node Channel
+    sourcePath: /peer
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Cycle Loop
+  repeatLoop:
+    type: Coordination/Sequential Workflow
+    channel: loopFromB
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Cycle Loop
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendEvent:
+              type: Coordination/Event
+              kind: Tutorial/Cycle Loop
+          - $return: true

@@ -1,0 +1,43 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-004",
+  "category": "HIST",
+  "title": "Event-only application advances application position, not business value",
+  "kind": "history",
+  "requirements": [
+    "RCP-HISTORY-02",
+    "RCP-HISTORY-03",
+    "RCP-PROGRESS-03"
+  ],
+  "input": {
+    "position": 5,
+    "value": 12,
+    "receipts": [
+      {
+        "position": 6,
+        "before": 12,
+        "after": 12,
+        "events": [
+          "x",
+          "x"
+        ]
+      }
+    ],
+    "failAt": null
+  },
+  "expected": {
+    "position": 6,
+    "value": 12,
+    "events": [
+      "x",
+      "x"
+    ],
+    "status": "APPLIED"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-029",
+  "category": "RUN",
+  "title": "Nanosecond timestamp round-trip cannot masquerade as conflicting evidence",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "PERSISTED_TIME_PRECISION",
+        "completionTime": "2026-09-08T12:00:00.123456789Z",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.falseImmutableConflict",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.exactSemanticEvidenceChecksRetained",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

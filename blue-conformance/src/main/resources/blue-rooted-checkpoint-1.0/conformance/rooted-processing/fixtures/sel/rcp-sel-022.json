@@ -1,0 +1,51 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-022",
+  "category": "SEL",
+  "title": "A fully evidenced earlier entry may be selected before a later frontier",
+  "kind": "safe-window",
+  "requirements": [
+    "RCP-ORDER-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/A",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "A",
+            "entry": "A:20"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "A",
+            "entry": "A:30"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/B",
+        "entries": [],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "completeBefore": {
+      "A": 40,
+      "B": 25
+    }
+  },
+  "expected": {
+    "status": "SELECTED",
+    "next": "A:20"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-007",
+  "category": "SCOPE",
+  "title": "Self cycle is a finite graph",
+  "kind": "graph",
+  "requirements": [
+    "RCP-GRAPH-01",
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "A"
+    ],
+    "edges": [
+      [
+        "A",
+        "A"
+      ]
+    ],
+    "root": "A"
+  },
+  "expected": {
+    "reachable": [
+      "A"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

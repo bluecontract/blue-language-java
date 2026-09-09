@@ -1,0 +1,64 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-018",
+  "category": "RUN",
+  "title": "Saved-original pair then ring forms without rewriting history",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "SAVED_ORIGINAL_PAIR_RING",
+        "bind": "s"
+      },
+      {
+        "op": "restartAndCompare",
+        "target": "s",
+        "bind": "restart"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.actualOriginalIdsUsed",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.duplicateInitialization",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.finitePropagationMatched",
+        "op": "isTrue"
+      },
+      {
+        "actual": "restart.exactStateAndHistoryEqual",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

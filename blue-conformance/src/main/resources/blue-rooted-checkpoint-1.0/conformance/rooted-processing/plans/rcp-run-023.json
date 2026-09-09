@@ -1,0 +1,273 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-023",
+  "title": "Same exact input through alternate live-cycle views, then split",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/cycle-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/cycle-a.yaml",
+      "bindings": {
+        "/peer": {
+          "$capture": "B.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "B",
+      "operation": "connectA",
+      "channel": "ownerChannel",
+      "timestampUs": "90",
+      "request": {
+        "a": {
+          "$capture": "A.initialBlueId"
+        }
+      },
+      "exactDocumentPrecondition": false,
+      "capture": "E90",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "B",
+      "mustSelect": {
+        "$capture": "E90"
+      },
+      "budget": "DEFAULT",
+      "capture": "join",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "assert",
+      "actual": "liveComponent(A)",
+      "expectedMembers": [
+        "A",
+        "B"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "view-A": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "capture": "E100",
+        "stepId": "view-A-001"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "view-A-002"
+      },
+      {
+        "target": "B",
+        "operation": "detachA",
+        "channel": "ownerChannel",
+        "timestampUs": "110",
+        "request": {},
+        "op": "append",
+        "capture": "E110",
+        "stepId": "view-A-003"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E110"
+        },
+        "budget": "DEFAULT",
+        "capture": "split",
+        "collect": [
+          "exactBeforeAfter",
+          "entryOwnerSet",
+          "nextComponents",
+          "contextBeforeAfter",
+          "subjectReceiptBeforeAfter"
+        ],
+        "stepId": "view-A-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-A-005"
+      }
+    ],
+    "view-B": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "capture": "E100",
+        "stepId": "view-B-001"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "view-B-002"
+      },
+      {
+        "target": "B",
+        "operation": "detachA",
+        "channel": "ownerChannel",
+        "timestampUs": "110",
+        "request": {},
+        "op": "append",
+        "capture": "E110",
+        "stepId": "view-B-003"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E110"
+        },
+        "budget": "DEFAULT",
+        "capture": "split",
+        "collect": [
+          "exactBeforeAfter",
+          "entryOwnerSet",
+          "nextComponents",
+          "contextBeforeAfter",
+          "subjectReceiptBeforeAfter"
+        ],
+        "stepId": "view-B-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-B-005"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "A",
+      "B"
+    ],
+    "afterEquals": {
+      "A.phase": "done",
+      "B.phase": "relayed"
+    },
+    "requiredEvents": 2,
+    "equalAcrossVariants": [
+      "after",
+      "events",
+      "ownedWrites",
+      "operationContext",
+      "deliveryBasisIdentity",
+      "rootedInvocationIdentity",
+      "rootedTerminalKey",
+      "gas",
+      "semanticReceipts",
+      "rootedCommitCompanionIdentity"
+    ],
+    "additionalPhase": {
+      "instruction": "After the subject receipt is compared, submit the literal detach input below in each realm. Do not include the different future partition in the earlier invocation key.",
+      "input": {
+        "target": "B",
+        "operation": "detachA",
+        "channel": "ownerChannel",
+        "timestampUs": "110",
+        "request": {}
+      },
+      "expected": "entry owners A/B remain frozen for detach; next component selections are singletons; old exact subject key/receipt is unchanged"
+    },
+    "verifyIdentityEnvelopes": true
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

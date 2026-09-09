@@ -1,0 +1,55 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-009",
+  "category": "RUN",
+  "title": "No listener still permits required reference advancement",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "SILENT_INTERMEDIATE_STATE_UPDATE",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.middleHandlerInvocations",
+        "op": "equals",
+        "expected": 0
+      },
+      {
+        "actual": "s.middleExactChildAdvanced",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.rootExactDescendantAdvanced",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

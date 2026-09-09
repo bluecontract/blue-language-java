@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-003",
+  "category": "SCOPE",
+  "title": "Chain leaf C does not open its incoming observers",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02",
+    "RCP-SCOPE-03"
+  ],
+  "input": {
+    "nodes": [
+      "A",
+      "B",
+      "C"
+    ],
+    "edges": [
+      [
+        "A",
+        "B"
+      ],
+      [
+        "B",
+        "C"
+      ]
+    ],
+    "root": "C"
+  },
+  "expected": {
+    "reachable": [
+      "C"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,4518 @@
+{
+  "schema": "blue-rooted-specification-set/1.0-draft.2",
+  "profile": "blue-rooted-checkpoint/1.0-draft.2",
+  "status": "DRAFT_IMPLEMENTATION_TARGET",
+  "releaseReadinessClaimed": false,
+  "files": [
+    {
+      "path": "specifications/blue-bex-specification-2.0.md",
+      "sha256": "560c18300bbaba312ad1b8a9bb53ea0655627a2228360d5074a923fb7de539de",
+      "bytes": 103066,
+      "headings": [
+        {
+          "level": 1,
+          "title": "Blue BEX Specification 2.0",
+          "line": 1
+        },
+        {
+          "level": 2,
+          "title": "Conventions",
+          "line": 9
+        },
+        {
+          "level": 2,
+          "title": "0. Overview",
+          "line": 19
+        },
+        {
+          "level": 3,
+          "title": "0.1 Operator shape",
+          "line": 54
+        },
+        {
+          "level": 3,
+          "title": "0.2 BEX and Blue",
+          "line": 71
+        },
+        {
+          "level": 3,
+          "title": "0.3 Existing exact values and transient values",
+          "line": 85
+        },
+        {
+          "level": 2,
+          "title": "1. Scope, Versioning, and Conformance",
+          "line": 101
+        },
+        {
+          "level": 3,
+          "title": "1.1 Goal",
+          "line": 103
+        },
+        {
+          "level": 3,
+          "title": "1.2 Out of scope",
+          "line": 117
+        },
+        {
+          "level": 3,
+          "title": "1.3 Version selection",
+          "line": 127
+        },
+        {
+          "level": 3,
+          "title": "1.4 Conformance",
+          "line": 135
+        },
+        {
+          "level": 3,
+          "title": "1.5 Dependencies",
+          "line": 167
+        },
+        {
+          "level": 2,
+          "title": "2. BEX Source Documents and Program Model",
+          "line": 179
+        },
+        {
+          "level": 3,
+          "title": "2.1 BEX source as Blue data (normative)",
+          "line": 181
+        },
+        {
+          "level": 3,
+          "title": "2.2 Program selection (normative)",
+          "line": 197
+        },
+        {
+          "level": 3,
+          "title": "2.3 Definition node plus program node (normative)",
+          "line": 209
+        },
+        {
+          "level": 3,
+          "title": "2.4 Plain name containers (normative)",
+          "line": 220
+        },
+        {
+          "level": 3,
+          "title": "2.5 Static Blue definition fields (normative)",
+          "line": 245
+        },
+        {
+          "level": 3,
+          "title": "2.6 Literal escape (normative)",
+          "line": 259
+        },
+        {
+          "level": 3,
+          "title": "2.7 Operator recognition (normative)",
+          "line": 278
+        },
+        {
+          "level": 2,
+          "title": "3. BEX Values",
+          "line": 292
+        },
+        {
+          "level": 3,
+          "title": "3.1 Semantic value kinds (normative)",
+          "line": 294
+        },
+        {
+          "level": 3,
+          "title": "3.2 Exact Blue values and transient values (normative)",
+          "line": 311
+        },
+        {
+          "level": 3,
+          "title": "3.3 Undefined (normative)",
+          "line": 325
+        },
+        {
+          "level": 3,
+          "title": "3.4 Null (normative)",
+          "line": 337
+        },
+        {
+          "level": 3,
+          "title": "3.5 Scalars and the Blue numeric boundary (normative)",
+          "line": 353
+        },
+        {
+          "level": 3,
+          "title": "3.6 Objects (normative)",
+          "line": 369
+        },
+        {
+          "level": 3,
+          "title": "3.7 Lists (normative)",
+          "line": 381
+        },
+        {
+          "level": 3,
+          "title": "3.8 Truthiness (normative)",
+          "line": 392
+        },
+        {
+          "level": 3,
+          "title": "3.9 Equality and identity (normative)",
+          "line": 406
+        },
+        {
+          "level": 3,
+          "title": "3.10 Conversions (normative)",
+          "line": 421
+        },
+        {
+          "level": 3,
+          "title": "3.10.1 Scalar text representation (normative)",
+          "line": 432
+        },
+        {
+          "level": 2,
+          "title": "4. Compilation",
+          "line": 443
+        },
+        {
+          "level": 3,
+          "title": "4.1 Compile-time failures (normative)",
+          "line": 445
+        },
+        {
+          "level": 3,
+          "title": "4.2 Root compilation (normative)",
+          "line": 470
+        },
+        {
+          "level": 3,
+          "title": "4.3 Function compilation (normative)",
+          "line": 476
+        },
+        {
+          "level": 3,
+          "title": "4.4 Recursion (normative)",
+          "line": 492
+        },
+        {
+          "level": 3,
+          "title": "4.5 Local variables (normative)",
+          "line": 498
+        },
+        {
+          "level": 3,
+          "title": "4.6 Static versus dynamic operands (normative)",
+          "line": 513
+        },
+        {
+          "level": 2,
+          "title": "5. Execution Context and Blue Views",
+          "line": 531
+        },
+        {
+          "level": 3,
+          "title": "5.1 Execution context (normative)",
+          "line": 533
+        },
+        {
+          "level": 3,
+          "title": "5.2 Document access (normative)",
+          "line": 552
+        },
+        {
+          "level": 3,
+          "title": "5.3 Event and causal-event access (normative)",
+          "line": 570
+        },
+        {
+          "level": 3,
+          "title": "5.4 Scope-relative pointers (normative)",
+          "line": 582
+        },
+        {
+          "level": 3,
+          "title": "5.5 Identity-preserving host values (normative)",
+          "line": 589
+        },
+        {
+          "level": 2,
+          "title": "6. Expressions",
+          "line": 603
+        },
+        {
+          "level": 3,
+          "title": "6.1 Expression evaluation (normative)",
+          "line": 605
+        },
+        {
+          "level": 3,
+          "title": "6.1.1 Operand evaluation order (normative)",
+          "line": 616
+        },
+        {
+          "level": 3,
+          "title": "6.2 Literal expressions (normative)",
+          "line": 637
+        },
+        {
+          "level": 3,
+          "title": "6.3 Read expressions (normative)",
+          "line": 654
+        },
+        {
+          "level": 3,
+          "title": "6.4 Type and conversion expressions (normative)",
+          "line": 695
+        },
+        {
+          "level": 3,
+          "title": "6.5 String expressions (normative)",
+          "line": 738
+        },
+        {
+          "level": 3,
+          "title": "6.6 Logic and comparison expressions (normative)",
+          "line": 775
+        },
+        {
+          "level": 3,
+          "title": "6.7 Numeric expressions (normative)",
+          "line": 796
+        },
+        {
+          "level": 3,
+          "title": "6.8 Object and list expressions (normative)",
+          "line": 809
+        },
+        {
+          "level": 4,
+          "title": "6.8.1 Collection query expressions (normative)",
+          "line": 841
+        },
+        {
+          "level": 3,
+          "title": "6.9 Result helper expressions (normative)",
+          "line": 896
+        },
+        {
+          "level": 3,
+          "title": "6.10 Control expressions (normative)",
+          "line": 904
+        },
+        {
+          "level": 3,
+          "title": "6.11 `$intrinsic` (normative)",
+          "line": 918
+        },
+        {
+          "level": 2,
+          "title": "7. Statements",
+          "line": 951
+        },
+        {
+          "level": 3,
+          "title": "7.1 Statement execution (normative)",
+          "line": 953
+        },
+        {
+          "level": 3,
+          "title": "7.2 Statement operators (normative)",
+          "line": 964
+        },
+        {
+          "level": 3,
+          "title": "7.3 `$let` and `$set` (normative)",
+          "line": 982
+        },
+        {
+          "level": 3,
+          "title": "7.4 `$if` (normative)",
+          "line": 1015
+        },
+        {
+          "level": 3,
+          "title": "7.5 `$forEach` (normative)",
+          "line": 1021
+        },
+        {
+          "level": 3,
+          "title": "7.6 `$appendChange` (normative)",
+          "line": 1044
+        },
+        {
+          "level": 3,
+          "title": "7.7 `$appendChanges` (normative)",
+          "line": 1062
+        },
+        {
+          "level": 3,
+          "title": "7.8 `$appendEvent` and `$appendEvents` (normative)",
+          "line": 1068
+        },
+        {
+          "level": 3,
+          "title": "7.9 `$return` (normative)",
+          "line": 1074
+        },
+        {
+          "level": 3,
+          "title": "7.10 `$returnIf` and `$failIf` (normative)",
+          "line": 1091
+        },
+        {
+          "level": 3,
+          "title": "7.11 `$fail` (normative)",
+          "line": 1099
+        },
+        {
+          "level": 2,
+          "title": "8. Functions, Constants, and Static Patterns",
+          "line": 1105
+        },
+        {
+          "level": 3,
+          "title": "8.1 Constants (normative)",
+          "line": 1107
+        },
+        {
+          "level": 3,
+          "title": "8.2 Functions (normative)",
+          "line": 1115
+        },
+        {
+          "level": 3,
+          "title": "8.3 Function arguments (normative)",
+          "line": 1121
+        },
+        {
+          "level": 3,
+          "title": "8.4 Static `$is.pattern` (normative)",
+          "line": 1136
+        },
+        {
+          "level": 3,
+          "title": "8.5 Empty patterns (normative)",
+          "line": 1142
+        },
+        {
+          "level": 3,
+          "title": "8.6 Pattern labels (normative)",
+          "line": 1146
+        },
+        {
+          "level": 2,
+          "title": "9. Pointers",
+          "line": 1152
+        },
+        {
+          "level": 3,
+          "title": "9.1 JSON Pointer syntax (normative)",
+          "line": 1154
+        },
+        {
+          "level": 3,
+          "title": "9.2 Pointer kinds (normative)",
+          "line": 1160
+        },
+        {
+          "level": 3,
+          "title": "9.3 Static pointer defaults (normative)",
+          "line": 1169
+        },
+        {
+          "level": 3,
+          "title": "9.4 Dynamic pointer failures (normative)",
+          "line": 1176
+        },
+        {
+          "level": 3,
+          "title": "9.5 `$pointerJoin` (normative)",
+          "line": 1182
+        },
+        {
+          "level": 2,
+          "title": "10. Changesets, Events, and Result Overlay",
+          "line": 1195
+        },
+        {
+          "level": 3,
+          "title": "10.1 Changeset entries (normative)",
+          "line": 1197
+        },
+        {
+          "level": 3,
+          "title": "10.2 Patch order and duplicates (normative)",
+          "line": 1211
+        },
+        {
+          "level": 3,
+          "title": "10.3 Events (normative)",
+          "line": 1215
+        },
+        {
+          "level": 3,
+          "title": "10.4 `$resultValue` overlay (normative)",
+          "line": 1219
+        },
+        {
+          "level": 3,
+          "title": "10.4.1 Sparse list overlay views (normative)",
+          "line": 1237
+        },
+        {
+          "level": 3,
+          "title": "10.5 Result value output (normative)",
+          "line": 1248
+        },
+        {
+          "level": 2,
+          "title": "11. Blue Output and Identity Boundaries",
+          "line": 1254
+        },
+        {
+          "level": 3,
+          "title": "11.1 Purpose (normative)",
+          "line": 1256
+        },
+        {
+          "level": 3,
+          "title": "11.2 Existing exact values (normative)",
+          "line": 1266
+        },
+        {
+          "level": 3,
+          "title": "11.3 Transient conversion (normative)",
+          "line": 1270
+        },
+        {
+          "level": 3,
+          "title": "11.4 `$nodeBlueId` (normative)",
+          "line": 1287
+        },
+        {
+          "level": 3,
+          "title": "11.5 Pure references and payload kinds (normative)",
+          "line": 1296
+        },
+        {
+          "level": 3,
+          "title": "11.6 Schema and reserved fields (normative)",
+          "line": 1302
+        },
+        {
+          "level": 3,
+          "title": "11.6a Empty objects, `null`, omission, and list position (normative)",
+          "line": 1306
+        },
+        {
+          "level": 3,
+          "title": "11.7 Preprocessing and list controls (normative)",
+          "line": 1344
+        },
+        {
+          "level": 3,
+          "title": "11.8 Failure atomicity (normative)",
+          "line": 1350
+        },
+        {
+          "level": 2,
+          "title": "12. Canonical Gas Accounting",
+          "line": 1354
+        },
+        {
+          "level": 3,
+          "title": "12.1 Governing rule (normative)",
+          "line": 1356
+        },
+        {
+          "level": 3,
+          "title": "12.2 Shared child ledger (normative)",
+          "line": 1370
+        },
+        {
+          "level": 3,
+          "title": "12.3 Counter weights (normative)",
+          "line": 1376
+        },
+        {
+          "level": 3,
+          "title": "12.4 Universal evaluation charges (normative)",
+          "line": 1413
+        },
+        {
+          "level": 3,
+          "title": "12.5 Read and pointer charges (normative)",
+          "line": 1421
+        },
+        {
+          "level": 3,
+          "title": "12.6 Text work (normative)",
+          "line": 1429
+        },
+        {
+          "level": 3,
+          "title": "12.7 Integer and decimal work (normative)",
+          "line": 1443
+        },
+        {
+          "level": 3,
+          "title": "12.8 Objects, lists, and collection queries (normative)",
+          "line": 1456
+        },
+        {
+          "level": 3,
+          "title": "12.9 Equality, matching, and type work (normative)",
+          "line": 1469
+        },
+        {
+          "level": 3,
+          "title": "12.10 Canonical sorting (normative)",
+          "line": 1479
+        },
+        {
+          "level": 3,
+          "title": "12.11 Changes, events, and updates (normative)",
+          "line": 1491
+        },
+        {
+          "level": 3,
+          "title": "12.12 Blue output and identity (normative)",
+          "line": 1501
+        },
+        {
+          "level": 3,
+          "title": "12.13 Intrinsics (normative)",
+          "line": 1507
+        },
+        {
+          "level": 3,
+          "title": "12.14 Exhaustion and failure (normative)",
+          "line": 1511
+        },
+        {
+          "level": 3,
+          "title": "12.15 Conformance trace (normative)",
+          "line": 1517
+        },
+        {
+          "level": 2,
+          "title": "13. Errors and Diagnostics",
+          "line": 1536
+        },
+        {
+          "level": 3,
+          "title": "13.1 Error classes (normative)",
+          "line": 1538
+        },
+        {
+          "level": 3,
+          "title": "13.1.1 Diagnostic fields (normative)",
+          "line": 1552
+        },
+        {
+          "level": 3,
+          "title": "13.2 Runtime failures (normative)",
+          "line": 1565
+        },
+        {
+          "level": 3,
+          "title": "13.3 Metrics (normative)",
+          "line": 1585
+        },
+        {
+          "level": 2,
+          "title": "14. Determinism and Security",
+          "line": 1601
+        },
+        {
+          "level": 3,
+          "title": "14.1 Determinism (normative)",
+          "line": 1603
+        },
+        {
+          "level": 3,
+          "title": "14.2 No implicit authority (normative)",
+          "line": 1620
+        },
+        {
+          "level": 3,
+          "title": "14.3 Host validation (normative)",
+          "line": 1633
+        },
+        {
+          "level": 3,
+          "title": "14.4 Resource limits (normative)",
+          "line": 1639
+        },
+        {
+          "level": 2,
+          "title": "15. Operator Reference Summary",
+          "line": 1655
+        },
+        {
+          "level": 3,
+          "title": "15.1 Expression operators",
+          "line": 1659
+        },
+        {
+          "level": 3,
+          "title": "15.2 Statement operators",
+          "line": 1693
+        },
+        {
+          "level": 3,
+          "title": "15.3 Operand naming guidance (informative)",
+          "line": 1702
+        },
+        {
+          "level": 3,
+          "title": "15.4 Future standard library candidates (informative)",
+          "line": 1724
+        },
+        {
+          "level": 2,
+          "title": "16. Machine-Readable Conformance Fixtures",
+          "line": 1738
+        },
+        {
+          "level": 3,
+          "title": "16.1 Fixture root (normative)",
+          "line": 1740
+        },
+        {
+          "level": 3,
+          "title": "16.2 Required context fields (normative)",
+          "line": 1754
+        },
+        {
+          "level": 3,
+          "title": "16.3 Required fixture assertions (normative)",
+          "line": 1771
+        },
+        {
+          "level": 3,
+          "title": "16.4 Manifest and package identity (normative)",
+          "line": 1786
+        },
+        {
+          "level": 2,
+          "title": "17. Conformance Vectors",
+          "line": 1809
+        },
+        {
+          "level": 3,
+          "title": "17.1 Compiler vectors",
+          "line": 1813
+        },
+        {
+          "level": 3,
+          "title": "17.2 Semantic execution vectors",
+          "line": 1825
+        },
+        {
+          "level": 3,
+          "title": "17.3 Statements and accumulators",
+          "line": 1848
+        },
+        {
+          "level": 3,
+          "title": "17.4 Representation and identity vectors",
+          "line": 1858
+        },
+        {
+          "level": 3,
+          "title": "17.5 Host-boundary vectors",
+          "line": 1870
+        },
+        {
+          "level": 3,
+          "title": "17.6 Gas vectors",
+          "line": 1879
+        },
+        {
+          "level": 2,
+          "title": "18. Worked Examples",
+          "line": 1897
+        },
+        {
+          "level": 3,
+          "title": "18.1 Simple expression",
+          "line": 1899
+        },
+        {
+          "level": 3,
+          "title": "18.2 Statement program with changes and events",
+          "line": 1910
+        },
+        {
+          "level": 3,
+          "title": "18.3 Constants",
+          "line": 1930
+        },
+        {
+          "level": 3,
+          "title": "18.4 Function with static argument pattern",
+          "line": 1943
+        },
+        {
+          "level": 3,
+          "title": "18.5 Reading host bindings",
+          "line": 1965
+        },
+        {
+          "level": 3,
+          "title": "18.6 Dynamic pointer construction",
+          "line": 1983
+        },
+        {
+          "level": 3,
+          "title": "18.7 `$resultValue`",
+          "line": 1996
+        },
+        {
+          "level": 3,
+          "title": "18.8 `$resultValue` non-shifting list removal",
+          "line": 2011
+        },
+        {
+          "level": 3,
+          "title": "18.9 `$resultValue` parent and child replacement",
+          "line": 2035
+        },
+        {
+          "level": 3,
+          "title": "18.10 Guard-style return",
+          "line": 2068
+        },
+        {
+          "level": 3,
+          "title": "18.11 Collection projection",
+          "line": 2090
+        },
+        {
+          "level": 3,
+          "title": "18.12 Intrinsic signature verification",
+          "line": 2111
+        },
+        {
+          "level": 3,
+          "title": "18.13 Literal escape",
+          "line": 2128
+        },
+        {
+          "level": 2,
+          "title": "Appendix A — BEX Value and Blue Node Boundary",
+          "line": 2142
+        },
+        {
+          "level": 2,
+          "title": "Appendix B — Gas Calculation Examples",
+          "line": 2170
+        },
+        {
+          "level": 2,
+          "title": "Appendix C — Common Implementer Mistakes",
+          "line": 2214
+        },
+        {
+          "level": 3,
+          "title": "C.0 Do not use BEX `null` to mean a present empty Blue object",
+          "line": 2218
+        },
+        {
+          "level": 3,
+          "title": "C.1 Do not treat every `$` key as an operator",
+          "line": 2222
+        },
+        {
+          "level": 3,
+          "title": "C.2 Do not allow executable BEX in Blue type fields",
+          "line": 2226
+        },
+        {
+          "level": 3,
+          "title": "C.3 Do not use Blue reserved keys as user argument names",
+          "line": 2230
+        },
+        {
+          "level": 3,
+          "title": "C.4 Do not apply changesets automatically",
+          "line": 2234
+        },
+        {
+          "level": 3,
+          "title": "C.5 Do not delete or reorder patches",
+          "line": 2238
+        },
+        {
+          "level": 3,
+          "title": "C.6 Do not interpret dynamic null pointers as root",
+          "line": 2242
+        },
+        {
+          "level": 3,
+          "title": "C.7 Do not forget root function gas",
+          "line": 2246
+        },
+        {
+          "level": 3,
+          "title": "C.8 Do not expose mutable host nodes",
+          "line": 2250
+        },
+        {
+          "level": 3,
+          "title": "C.9 Do not treat BEX numeric equality as Blue identity",
+          "line": 2254
+        },
+        {
+          "level": 3,
+          "title": "C.10 Do not expose object keys in host map iteration order",
+          "line": 2258
+        },
+        {
+          "level": 3,
+          "title": "C.11 Do not swallow runtime failures inside `$is.node`",
+          "line": 2262
+        },
+        {
+          "level": 3,
+          "title": "C.12 Do not treat `$size` as text length",
+          "line": 2266
+        },
+        {
+          "level": 3,
+          "title": "C.13 Do not implement `$binding` with host-defined gas under the fixture harness",
+          "line": 2270
+        },
+        {
+          "level": 3,
+          "title": "C.14 Do not rely on host operand evaluation order",
+          "line": 2274
+        },
+        {
+          "level": 3,
+          "title": "C.15 Do not assume `$split` uses regex semantics or drops trailing empty parts",
+          "line": 2278
+        },
+        {
+          "level": 3,
+          "title": "C.16 Do not materialize sparse `$resultValue` list overlays as dense Blue lists",
+          "line": 2282
+        },
+        {
+          "level": 3,
+          "title": "C.17 Do not emit `blue` under the strict host boundary",
+          "line": 2286
+        },
+        {
+          "level": 3,
+          "title": "C.18 Do not use UTF-16 or recursive size gas",
+          "line": 2290
+        },
+        {
+          "level": 3,
+          "title": "C.19 Do not emit Java compatibility schema keys",
+          "line": 2294
+        },
+        {
+          "level": 3,
+          "title": "C.20 Do not use collection queries as leaking local scopes",
+          "line": 2298
+        },
+        {
+          "level": 3,
+          "title": "C.21 Do not split `$var` or `$const` names on `/`",
+          "line": 2302
+        },
+        {
+          "level": 3,
+          "title": "C.22 Do not implement `$intrinsic` as arbitrary host callback dispatch",
+          "line": 2306
+        }
+      ]
+    },
+    {
+      "path": "specifications/blue-contracts-and-processor-specification-1.0.md",
+      "sha256": "527ed42f6ccac62a05918fac493ecc3729ec6f57d97b0cf1814d9ab752a6d523",
+      "bytes": 364520,
+      "headings": [
+        {
+          "level": 1,
+          "title": "Blue Contracts and Processor Specification 1.0 — rooted checkpoint candidate",
+          "line": 1
+        },
+        {
+          "level": 2,
+          "title": "Conventions",
+          "line": 13
+        },
+        {
+          "level": 2,
+          "title": "0. Overview",
+          "line": 23
+        },
+        {
+          "level": 3,
+          "title": "0.1 One selected rooted calculation",
+          "line": 25
+        },
+        {
+          "level": 4,
+          "title": "0.1.1 Separate document execution within the rooted step",
+          "line": 47
+        },
+        {
+          "level": 3,
+          "title": "0.2 Processor boundary",
+          "line": 62
+        },
+        {
+          "level": 3,
+          "title": "0.3 Feeder and processor",
+          "line": 187
+        },
+        {
+          "level": 3,
+          "title": "0.4 Root-only public events",
+          "line": 218
+        },
+        {
+          "level": 3,
+          "title": "0.5 Lazy graph processing",
+          "line": 238
+        },
+        {
+          "level": 3,
+          "title": "0.6 Core invariants",
+          "line": 268
+        },
+        {
+          "level": 3,
+          "title": "0.7 One external event at a glance (informative)",
+          "line": 302
+        },
+        {
+          "level": 3,
+          "title": "0.8 Key terms (informative)",
+          "line": 341
+        },
+        {
+          "level": 3,
+          "title": "0.9 Reusable embedded process modules (informative)",
+          "line": 360
+        },
+        {
+          "level": 2,
+          "title": "1. Scope, Versioning, Registry, and Conformance",
+          "line": 379
+        },
+        {
+          "level": 3,
+          "title": "1.1 Goal",
+          "line": 381
+        },
+        {
+          "level": 3,
+          "title": "1.2 Out of scope",
+          "line": 401
+        },
+        {
+          "level": 3,
+          "title": "1.3 Version selection",
+          "line": 417
+        },
+        {
+          "level": 3,
+          "title": "1.4 Runtime registry",
+          "line": 434
+        },
+        {
+          "level": 3,
+          "title": "1.5 Conformance",
+          "line": 456
+        },
+        {
+          "level": 2,
+          "title": "2. Processing Inputs, Environment, Result, and Atomicity",
+          "line": 488
+        },
+        {
+          "level": 3,
+          "title": "2.1 Ordinary Processing Document",
+          "line": 490
+        },
+        {
+          "level": 3,
+          "title": "2.2 Closure Invocation Input and Affected Closure Snapshot",
+          "line": 496
+        },
+        {
+          "level": 4,
+          "title": "2.2.0 Root processing context and evidence roles (RCP-1)",
+          "line": 669
+        },
+        {
+          "level": 4,
+          "title": "2.2.1 Contracts 1.0 Root-scope closure profile",
+          "line": 679
+        },
+        {
+          "level": 4,
+          "title": "2.2.2 Managed document step boundary",
+          "line": 719
+        },
+        {
+          "level": 4,
+          "title": "2.2.3 Exact tentative resolution context",
+          "line": 791
+        },
+        {
+          "level": 3,
+          "title": "2.3 Processing Cause",
+          "line": 836
+        },
+        {
+          "level": 3,
+          "title": "2.3a Historical representation reconciliation (adopted dependency of the RCP-1 draft)",
+          "line": 1014
+        },
+        {
+          "level": 3,
+          "title": "2.4 Processing Environment",
+          "line": 1113
+        },
+        {
+          "level": 3,
+          "title": "2.4.1 Managed occurrence identity and exact-state binding",
+          "line": 1140
+        },
+        {
+          "level": 3,
+          "title": "2.4.2 Cyclic-member processing boundary",
+          "line": 1217
+        },
+        {
+          "level": 3,
+          "title": "2.5 ProcessResult, ClosureAttemptResult, and ClosureProcessResult",
+          "line": 1235
+        },
+        {
+          "level": 3,
+          "title": "2.6 Exact internal identities",
+          "line": 1576
+        },
+        {
+          "level": 3,
+          "title": "2.7 Atomic invocation",
+          "line": 2079
+        },
+        {
+          "level": 3,
+          "title": "2.8 Representation invariance",
+          "line": 2099
+        },
+        {
+          "level": 3,
+          "title": "2.9 Platform commit",
+          "line": 2114
+        },
+        {
+          "level": 2,
+          "title": "3. Managing Feeder, Subscriptions, and External Order",
+          "line": 2245
+        },
+        {
+          "level": 3,
+          "title": "3.1 Feeder responsibility",
+          "line": 2247
+        },
+        {
+          "level": 3,
+          "title": "3.2 External-channel snapshot",
+          "line": 2263
+        },
+        {
+          "level": 3,
+          "title": "3.3 Required external-channel functions",
+          "line": 2295
+        },
+        {
+          "level": 4,
+          "title": "3.3.1 Same-scope Channel dependencies",
+          "line": 2323
+        },
+        {
+          "level": 4,
+          "title": "3.3.2 Source Channel and handler Channel",
+          "line": 2360
+        },
+        {
+          "level": 4,
+          "title": "3.3.3 Logical delivery grouping",
+          "line": 2385
+        },
+        {
+          "level": 3,
+          "title": "3.4 Revision-complete subscription index",
+          "line": 2409
+        },
+        {
+          "level": 3,
+          "title": "3.5 Subscription activation intervals",
+          "line": 2426
+        },
+        {
+          "level": 3,
+          "title": "3.6 External completeness and canonical order",
+          "line": 2452
+        },
+        {
+          "level": 3,
+          "title": "3.7 Canonical delivery snapshot",
+          "line": 2489
+        },
+        {
+          "level": 3,
+          "title": "3.8 Revalidation and false positives",
+          "line": 2511
+        },
+        {
+          "level": 3,
+          "title": "3.9 Terminal delivery progress and poison events",
+          "line": 2528
+        },
+        {
+          "level": 2,
+          "title": "4. Contracts, Runtime Types, and Discovery",
+          "line": 2553
+        },
+        {
+          "level": 3,
+          "title": "4.1 `contracts` map",
+          "line": 2555
+        },
+        {
+          "level": 3,
+          "title": "4.2 Contract-map key grammar",
+          "line": 2584
+        },
+        {
+          "level": 3,
+          "title": "4.3 Runtime roles",
+          "line": 2597
+        },
+        {
+          "level": 3,
+          "title": "4.4 Effective contract snapshot",
+          "line": 2611
+        },
+        {
+          "level": 3,
+          "title": "4.5 Direct processor state first",
+          "line": 2633
+        },
+        {
+          "level": 3,
+          "title": "4.6 Must-understand preflight",
+          "line": 2647
+        },
+        {
+          "level": 3,
+          "title": "4.7 Deterministic ordering",
+          "line": 2665
+        },
+        {
+          "level": 3,
+          "title": "4.8 Dispatch snapshots",
+          "line": 2746
+        },
+        {
+          "level": 3,
+          "title": "4.9 Same-scope binding",
+          "line": 2754
+        },
+        {
+          "level": 3,
+          "title": "4.10 Effective protected state",
+          "line": 2779
+        },
+        {
+          "level": 3,
+          "title": "4.11 Execution context",
+          "line": 2810
+        },
+        {
+          "level": 3,
+          "title": "4.12 ContractExecutionResult",
+          "line": 2840
+        },
+        {
+          "level": 3,
+          "title": "4.13 Runtime body demand and meter",
+          "line": 2862
+        },
+        {
+          "level": 2,
+          "title": "5. Root and Embedded Scopes",
+          "line": 2870
+        },
+        {
+          "level": 3,
+          "title": "5.1 Managed document scope",
+          "line": 2872
+        },
+        {
+          "level": 3,
+          "title": "5.2 Process Embedded",
+          "line": 2885
+        },
+        {
+          "level": 3,
+          "title": "5.3 Concrete graph and component partition",
+          "line": 2967
+        },
+        {
+          "level": 3,
+          "title": "5.4 Entry graph snapshot",
+          "line": 2988
+        },
+        {
+          "level": 3,
+          "title": "5.5 Participating and dynamically expanding closure",
+          "line": 3005
+        },
+        {
+          "level": 3,
+          "title": "5.6 Occurrence continuity",
+          "line": 3054
+        },
+        {
+          "level": 3,
+          "title": "5.7 Component and graph generations",
+          "line": 3127
+        },
+        {
+          "level": 4,
+          "title": "5.7.1 Managed-document epochs",
+          "line": 3153
+        },
+        {
+          "level": 3,
+          "title": "5.8 Mutation boundaries",
+          "line": 3202
+        },
+        {
+          "level": 3,
+          "title": "5.9 Frozen target sets, removal, and cut-off",
+          "line": 3217
+        },
+        {
+          "level": 3,
+          "title": "5.10 One authoritative rooted result",
+          "line": 3250
+        },
+        {
+          "level": 3,
+          "title": "5.11 Participant bindings in reusable process occurrences (normative boundary; informative pattern)",
+          "line": 3262
+        },
+        {
+          "level": 3,
+          "title": "5.12 Addressing dynamic collection members (normative boundary; informative example)",
+          "line": 3268
+        },
+        {
+          "level": 2,
+          "title": "6. Events and Processor-Managed Channels",
+          "line": 3274
+        },
+        {
+          "level": 3,
+          "title": "6.1 Event and work occurrence model",
+          "line": 3276
+        },
+        {
+          "level": 3,
+          "title": "6.2 External Channel",
+          "line": 3306
+        },
+        {
+          "level": 3,
+          "title": "6.3 Document Update",
+          "line": 3322
+        },
+        {
+          "level": 3,
+          "title": "6.4 Immediate Document Update continuation",
+          "line": 3360
+        },
+        {
+          "level": 3,
+          "title": "6.5 Application event emission",
+          "line": 3375
+        },
+        {
+          "level": 3,
+          "title": "6.6 Triggered Event Channel",
+          "line": 3396
+        },
+        {
+          "level": 3,
+          "title": "6.7 Embedded Node Channel",
+          "line": 3402
+        },
+        {
+          "level": 3,
+          "title": "6.8 Lifecycle Event Channel",
+          "line": 3490
+        },
+        {
+          "level": 3,
+          "title": "6.9 Event queue order",
+          "line": 3501
+        },
+        {
+          "level": 3,
+          "title": "6.10 Processor-managed writes",
+          "line": 3521
+        },
+        {
+          "level": 2,
+          "title": "7. Normative Processing Algorithm",
+          "line": 3545
+        },
+        {
+          "level": 3,
+          "title": "7.1 Run state",
+          "line": 3547
+        },
+        {
+          "level": 3,
+          "title": "7.2 Phase A — admission and exact evidence",
+          "line": 3596
+        },
+        {
+          "level": 3,
+          "title": "7.3 Phase B — revalidate and classify direct deliveries",
+          "line": 3740
+        },
+        {
+          "level": 3,
+          "title": "7.4 Phase C — initial closure and must-understand preflight",
+          "line": 3777
+        },
+        {
+          "level": 3,
+          "title": "7.5 Phase D — canonical direct seeds",
+          "line": 3790
+        },
+        {
+          "level": 4,
+          "title": "7.5.1 Execute one document step",
+          "line": 3930
+        },
+        {
+          "level": 3,
+          "title": "7.5a Applying one historical representation step (adopted dependency of the RCP-1 draft)",
+          "line": 3962
+        },
+        {
+          "level": 3,
+          "title": "7.6 Applying one Handler result",
+          "line": 4024
+        },
+        {
+          "level": 3,
+          "title": "7.7 Tentative identity finalization",
+          "line": 4059
+        },
+        {
+          "level": 3,
+          "title": "7.8 Dynamic graph reclassification",
+          "line": 4128
+        },
+        {
+          "level": 3,
+          "title": "7.9 Internal event drain",
+          "line": 4176
+        },
+        {
+          "level": 3,
+          "title": "7.10 Activation initialization",
+          "line": 4237
+        },
+        {
+          "level": 3,
+          "title": "7.11 Checkpoint settlement",
+          "line": 4316
+        },
+        {
+          "level": 3,
+          "title": "7.12 Phase E — final soundness",
+          "line": 4390
+        },
+        {
+          "level": 3,
+          "title": "7.13 Result selection",
+          "line": 4423
+        },
+        {
+          "level": 3,
+          "title": "7.14 Several matching documents and scopes",
+          "line": 4443
+        },
+        {
+          "level": 3,
+          "title": "7.15 Exact locality",
+          "line": 4471
+        },
+        {
+          "level": 2,
+          "title": "8. Runtime Pointers, Patches, and Persistent Mutation",
+          "line": 4485
+        },
+        {
+          "level": 3,
+          "title": "8.1 Runtime Pointer",
+          "line": 4487
+        },
+        {
+          "level": 3,
+          "title": "8.2 Json Patch Entry",
+          "line": 4497
+        },
+        {
+          "level": 3,
+          "title": "8.3 Insertion normalization",
+          "line": 4539
+        },
+        {
+          "level": 3,
+          "title": "8.4 Persistent copy-on-write",
+          "line": 4550
+        },
+        {
+          "level": 3,
+          "title": "8.5 Object operations",
+          "line": 4564
+        },
+        {
+          "level": 3,
+          "title": "8.6 List operations",
+          "line": 4570
+        },
+        {
+          "level": 3,
+          "title": "8.7 Snapshots",
+          "line": 4579
+        },
+        {
+          "level": 3,
+          "title": "8.8 Boundary and cut-off validation",
+          "line": 4585
+        },
+        {
+          "level": 3,
+          "title": "8.9 Effective protected-state validation",
+          "line": 4602
+        },
+        {
+          "level": 3,
+          "title": "8.10 Contract-changing patches",
+          "line": 4615
+        },
+        {
+          "level": 3,
+          "title": "8.11 Direct-node limits",
+          "line": 4637
+        },
+        {
+          "level": 3,
+          "title": "8.12 Cyclic sets",
+          "line": 4643
+        },
+        {
+          "level": 2,
+          "title": "9. Initialization, Lifecycle, and Termination",
+          "line": 4671
+        },
+        {
+          "level": 3,
+          "title": "9.1 Initialization gate",
+          "line": 4673
+        },
+        {
+          "level": 3,
+          "title": "9.2 Initialization identity",
+          "line": 4691
+        },
+        {
+          "level": 3,
+          "title": "9.3 Initialization algorithm",
+          "line": 4706
+        },
+        {
+          "level": 3,
+          "title": "9.4 Initialization snapshot rule",
+          "line": 4742
+        },
+        {
+          "level": 3,
+          "title": "9.5 Termination request",
+          "line": 4773
+        },
+        {
+          "level": 3,
+          "title": "9.6 Termination algorithm",
+          "line": 4784
+        },
+        {
+          "level": 3,
+          "title": "9.7 Root termination",
+          "line": 4816
+        },
+        {
+          "level": 3,
+          "title": "9.8 Deterministic failures",
+          "line": 4830
+        },
+        {
+          "level": 2,
+          "title": "10. Checkpoints and Idempotency",
+          "line": 4838
+        },
+        {
+          "level": 3,
+          "title": "10.1 Checkpoint marker",
+          "line": 4840
+        },
+        {
+          "level": 3,
+          "title": "10.2 Checkpoint domain",
+          "line": 4864
+        },
+        {
+          "level": 3,
+          "title": "10.3 Virtual empty state",
+          "line": 4921
+        },
+        {
+          "level": 3,
+          "title": "10.4 Default exact-node subject",
+          "line": 4927
+        },
+        {
+          "level": 3,
+          "title": "10.5 Atomic checkpoint write",
+          "line": 4935
+        },
+        {
+          "level": 3,
+          "title": "10.6 Checkpoint cleanup and domain retirement",
+          "line": 4971
+        },
+        {
+          "level": 3,
+          "title": "10.7 Multiple occurrences and retry",
+          "line": 4992
+        },
+        {
+          "level": 2,
+          "title": "11. Type Soundness, Generalization, and Subscription Indexability",
+          "line": 5000
+        },
+        {
+          "level": 3,
+          "title": "11.1 Post-write soundness",
+          "line": 5002
+        },
+        {
+          "level": 3,
+          "title": "11.2 Root-spine validation",
+          "line": 5017
+        },
+        {
+          "level": 3,
+          "title": "11.3 Type Generalization Policy",
+          "line": 5023
+        },
+        {
+          "level": 3,
+          "title": "11.4 Nearest-valid-ancestor algorithm",
+          "line": 5036
+        },
+        {
+          "level": 3,
+          "title": "11.5 Generated write order",
+          "line": 5058
+        },
+        {
+          "level": 3,
+          "title": "11.6 Changed contract closure",
+          "line": 5072
+        },
+        {
+          "level": 3,
+          "title": "11.7 Subscription-delta validation",
+          "line": 5082
+        },
+        {
+          "level": 2,
+          "title": "12. Failure, Resource, Status, and Progress Semantics",
+          "line": 5101
+        },
+        {
+          "level": 3,
+          "title": "12.1 Statuses",
+          "line": 5103
+        },
+        {
+          "level": 3,
+          "title": "12.2 Diagnostic categories",
+          "line": 5124
+        },
+        {
+          "level": 3,
+          "title": "12.3 Admission and deterministic failure",
+          "line": 5128
+        },
+        {
+          "level": 3,
+          "title": "12.4 Resource acquisition boundary",
+          "line": 5150
+        },
+        {
+          "level": 3,
+          "title": "12.5 Definitive missing content and invalid evidence",
+          "line": 5209
+        },
+        {
+          "level": 3,
+          "title": "12.6 Gas exhaustion",
+          "line": 5215
+        },
+        {
+          "level": 3,
+          "title": "12.7 Portable limits",
+          "line": 5239
+        },
+        {
+          "level": 3,
+          "title": "12.8 Failure precedence",
+          "line": 5259
+        },
+        {
+          "level": 3,
+          "title": "12.9 Revision-bound progress",
+          "line": 5279
+        },
+        {
+          "level": 3,
+          "title": "12.10 External-event liveness",
+          "line": 5300
+        },
+        {
+          "level": 2,
+          "title": "13. Canonical Gas Accounting",
+          "line": 5314
+        },
+        {
+          "level": 3,
+          "title": "13.0 Schedule status",
+          "line": 5316
+        },
+        {
+          "level": 3,
+          "title": "13.0.1 Mandatory default execution limit",
+          "line": 5320
+        },
+        {
+          "level": 3,
+          "title": "13.1 Governing principle",
+          "line": 5339
+        },
+        {
+          "level": 3,
+          "title": "13.2 One disjoint ledger",
+          "line": 5362
+        },
+        {
+          "level": 3,
+          "title": "13.3 Canonical trace record",
+          "line": 5392
+        },
+        {
+          "level": 3,
+          "title": "13.4 Shared live-bounded meter",
+          "line": 5436
+        },
+        {
+          "level": 3,
+          "title": "13.5 Processor counters and weights",
+          "line": 5454
+        },
+        {
+          "level": 3,
+          "title": "13.6 Semantic counters and weights",
+          "line": 5507
+        },
+        {
+          "level": 3,
+          "title": "13.7 Manifest and immutable-read rules",
+          "line": 5529
+        },
+        {
+          "level": 3,
+          "title": "13.8 Text and scalar work",
+          "line": 5541
+        },
+        {
+          "level": 3,
+          "title": "13.9 Integer work",
+          "line": 5565
+        },
+        {
+          "level": 3,
+          "title": "13.10 Canonical sorting",
+          "line": 5580
+        },
+        {
+          "level": 3,
+          "title": "13.11 Type, contract, and validation work",
+          "line": 5595
+        },
+        {
+          "level": 3,
+          "title": "13.12 Identity establishment",
+          "line": 5619
+        },
+        {
+          "level": 3,
+          "title": "13.13 List identity",
+          "line": 5640
+        },
+        {
+          "level": 3,
+          "title": "13.14 Runtime ledger composition",
+          "line": 5651
+        },
+        {
+          "level": 3,
+          "title": "13.15 Patch trace",
+          "line": 5667
+        },
+        {
+          "level": 3,
+          "title": "13.16 Event and checkpoint trace",
+          "line": 5684
+        },
+        {
+          "level": 3,
+          "title": "13.17 Zero-gas physical work",
+          "line": 5722
+        },
+        {
+          "level": 3,
+          "title": "13.18 Representation example",
+          "line": 5743
+        },
+        {
+          "level": 3,
+          "title": "13.19 Worked processor subtotal (informative)",
+          "line": 5775
+        },
+        {
+          "level": 2,
+          "title": "14. Determinism, Security, and Portable Limits",
+          "line": 5811
+        },
+        {
+          "level": 3,
+          "title": "14.1 Deterministic execution",
+          "line": 5813
+        },
+        {
+          "level": 3,
+          "title": "14.2 Read-only values",
+          "line": 5830
+        },
+        {
+          "level": 3,
+          "title": "14.3 Trust boundary",
+          "line": 5836
+        },
+        {
+          "level": 3,
+          "title": "14.4 Portable limits",
+          "line": 5854
+        },
+        {
+          "level": 3,
+          "title": "14.5 Bounded feeder work",
+          "line": 5880
+        },
+        {
+          "level": 3,
+          "title": "14.6 Authoring guidance",
+          "line": 5895
+        },
+        {
+          "level": 3,
+          "title": "14.7 Locality conformance",
+          "line": 5925
+        },
+        {
+          "level": 2,
+          "title": "15. Conformance Vectors",
+          "line": 5937
+        },
+        {
+          "level": 3,
+          "title": "15.1 Existing ordinary core families",
+          "line": 5941
+        },
+        {
+          "level": 3,
+          "title": "15.2 Closure and cyclic families",
+          "line": 5986
+        },
+        {
+          "level": 4,
+          "title": "15.2.1 Full-lifecycle admission evidence",
+          "line": 6030
+        },
+        {
+          "level": 4,
+          "title": "15.2.2 Application contract-evolution evidence",
+          "line": 6068
+        },
+        {
+          "level": 3,
+          "title": "15.3 Gas and execution fixtures",
+          "line": 6122
+        },
+        {
+          "level": 3,
+          "title": "15.4 Machine-readable fixture package",
+          "line": 6134
+        },
+        {
+          "level": 2,
+          "title": "16. Worked Examples",
+          "line": 6196
+        },
+        {
+          "level": 3,
+          "title": "16.1 Lazy selected workflow",
+          "line": 6198
+        },
+        {
+          "level": 3,
+          "title": "16.2 Acyclic deepest-first delivery",
+          "line": 6202
+        },
+        {
+          "level": 3,
+          "title": "16.3 Dynamic A/B cycle formation and finite reaction",
+          "line": 6222
+        },
+        {
+          "level": 3,
+          "title": "16.4 Same-event nonterminating cycle",
+          "line": 6260
+        },
+        {
+          "level": 3,
+          "title": "16.5 One event directly targets both members",
+          "line": 6285
+        },
+        {
+          "level": 3,
+          "title": "16.6 Cycle formation during initialization",
+          "line": 6291
+        },
+        {
+          "level": 3,
+          "title": "16.7 Component merge and split",
+          "line": 6304
+        },
+        {
+          "level": 3,
+          "title": "16.8 Frozen edge behavior",
+          "line": 6328
+        },
+        {
+          "level": 3,
+          "title": "16.9 Known A at epoch 10; B attaches A at epoch 5",
+          "line": 6349
+        },
+        {
+          "level": 3,
+          "title": "16.10 Public events under an outer Root",
+          "line": 6401
+        },
+        {
+          "level": 3,
+          "title": "16.11 Order and Payment",
+          "line": 6411
+        },
+        {
+          "level": 3,
+          "title": "16.12 Representation and locality",
+          "line": 6417
+        },
+        {
+          "level": 3,
+          "title": "16.13 Durable MyOS decomposition",
+          "line": 6421
+        },
+        {
+          "level": 2,
+          "title": "Appendix A — Core Runtime Type Catalog",
+          "line": 6460
+        },
+        {
+          "level": 3,
+          "title": "A.1 Contract",
+          "line": 6464
+        },
+        {
+          "level": 3,
+          "title": "A.2 Channel",
+          "line": 6476
+        },
+        {
+          "level": 3,
+          "title": "A.3 Handler",
+          "line": 6482
+        },
+        {
+          "level": 3,
+          "title": "A.4 Marker",
+          "line": 6493
+        },
+        {
+          "level": 3,
+          "title": "A.5 Json Patch Entry",
+          "line": 6497
+        },
+        {
+          "level": 3,
+          "title": "A.6 Contract Execution Result",
+          "line": 6511
+        },
+        {
+          "level": 3,
+          "title": "A.7 Process Embedded",
+          "line": 6526
+        },
+        {
+          "level": 3,
+          "title": "A.8 Processing Initialized Marker",
+          "line": 6546
+        },
+        {
+          "level": 3,
+          "title": "A.9 Processing Terminated Marker",
+          "line": 6566
+        },
+        {
+          "level": 3,
+          "title": "A.10 Channel Event Checkpoint",
+          "line": 6580
+        },
+        {
+          "level": 3,
+          "title": "A.11 Type Generalization Rule",
+          "line": 6599
+        },
+        {
+          "level": 3,
+          "title": "A.12 Type Generalization Policy",
+          "line": 6613
+        },
+        {
+          "level": 3,
+          "title": "A.13 External Channel",
+          "line": 6628
+        },
+        {
+          "level": 3,
+          "title": "A.14 Document Update Channel",
+          "line": 6634
+        },
+        {
+          "level": 3,
+          "title": "A.15 Triggered Event Channel",
+          "line": 6646
+        },
+        {
+          "level": 3,
+          "title": "A.16 Lifecycle Event Channel",
+          "line": 6652
+        },
+        {
+          "level": 3,
+          "title": "A.17 Embedded Node Channel",
+          "line": 6656
+        },
+        {
+          "level": 3,
+          "title": "A.17a Embedded Collection Event Channel",
+          "line": 6674
+        },
+        {
+          "level": 3,
+          "title": "A.18 Document Update",
+          "line": 6701
+        },
+        {
+          "level": 3,
+          "title": "A.19 Embedded Event Delivery",
+          "line": 6715
+        },
+        {
+          "level": 3,
+          "title": "A.20 Document Processing Initiated",
+          "line": 6726
+        },
+        {
+          "level": 3,
+          "title": "A.21 Document Processing Terminated",
+          "line": 6739
+        },
+        {
+          "level": 3,
+          "title": "A.22 Reserved keys",
+          "line": 6748
+        },
+        {
+          "level": 2,
+          "title": "Appendix B — Status and Diagnostic Categories",
+          "line": 6766
+        },
+        {
+          "level": 3,
+          "title": "B.1 Statuses",
+          "line": 6768
+        },
+        {
+          "level": 3,
+          "title": "B.2 Diagnostics",
+          "line": 6772
+        },
+        {
+          "level": 2,
+          "title": "Appendix C — Canonical Gas Trace Pseudocode",
+          "line": 6849
+        },
+        {
+          "level": 2,
+          "title": "Appendix D — Common Implementer Mistakes",
+          "line": 6905
+        },
+        {
+          "level": 3,
+          "title": "D.1 Preserve the selected rooted result, not a host-wide observer transaction",
+          "line": 6909
+        },
+        {
+          "level": 3,
+          "title": "D.2 Do not publish child events",
+          "line": 6915
+        },
+        {
+          "level": 3,
+          "title": "D.3 Do not build a public effect log",
+          "line": 6922
+        },
+        {
+          "level": 3,
+          "title": "D.4 Do not rescan every embedded branch",
+          "line": 6928
+        },
+        {
+          "level": 3,
+          "title": "D.5 Do not make the feeder snapshot caller-authored Blue content",
+          "line": 6932
+        },
+        {
+          "level": 3,
+          "title": "D.6 Do not let External Channel acceptance read mutable Root state",
+          "line": 6936
+        },
+        {
+          "level": 3,
+          "title": "D.7 Do not expose reference wrappers",
+          "line": 6940
+        },
+        {
+          "level": 3,
+          "title": "D.8 Do not charge recursive payload size",
+          "line": 6944
+        },
+        {
+          "level": 3,
+          "title": "D.9 Do not skip ancestor validation",
+          "line": 6948
+        },
+        {
+          "level": 3,
+          "title": "D.10 Do not initialize on rejection or stale-only processing",
+          "line": 6952
+        },
+        {
+          "level": 3,
+          "title": "D.11 Do not write markers into replacement scopes",
+          "line": 6956
+        },
+        {
+          "level": 3,
+          "title": "D.12 Do not key checkpoint semantics by raw key alone",
+          "line": 6960
+        },
+        {
+          "level": 3,
+          "title": "D.13 Do not commit a Root that cannot be indexed",
+          "line": 6964
+        },
+        {
+          "level": 3,
+          "title": "D.14 Do not double-drain the event queue",
+          "line": 6968
+        },
+        {
+          "level": 3,
+          "title": "D.15 Do not confuse hosted work with portable gas",
+          "line": 6976
+        },
+        {
+          "level": 3,
+          "title": "D.16 Do not treat BlueId derivation paths as different identifier types",
+          "line": 6980
+        },
+        {
+          "level": 3,
+          "title": "D.17 Do not copy an authored upsert operation into Document Update blindly",
+          "line": 6984
+        },
+        {
+          "level": 3,
+          "title": "D.18 Do not merge independent external sources by arrival order",
+          "line": 6988
+        },
+        {
+          "level": 3,
+          "title": "D.19 Do not embed contract entries",
+          "line": 6992
+        },
+        {
+          "level": 3,
+          "title": "D.20 Do not interpret lists or wildcards as embedded collections",
+          "line": 6996
+        },
+        {
+          "level": 3,
+          "title": "D.20a Do not confuse a declared absent collection with a patch parent",
+          "line": 7005
+        },
+        {
+          "level": 3,
+          "title": "D.20b Do not implement collection-event matching with raw string prefixes",
+          "line": 7013
+        },
+        {
+          "level": 3,
+          "title": "D.21 Do not invent live parent-channel inheritance",
+          "line": 7019
+        },
+        {
+          "level": 3,
+          "title": "D.22 Do not use a visited-document set as the work queue",
+          "line": 7025
+        },
+        {
+          "level": 3,
+          "title": "D.23 Do not order cyclic work by current BlueId",
+          "line": 7029
+        },
+        {
+          "level": 3,
+          "title": "D.24 Do not defer exact cyclic identity until quiescence",
+          "line": 7033
+        },
+        {
+          "level": 3,
+          "title": "D.25 Do not expose `this#n` or ZERO_BLUEID",
+          "line": 7037
+        },
+        {
+          "level": 3,
+          "title": "D.26 Do not use wall-clock timeout as loop semantics",
+          "line": 7041
+        },
+        {
+          "level": 3,
+          "title": "D.27 Do not make a document aware of reverse containment",
+          "line": 7045
+        },
+        {
+          "level": 2,
+          "title": "Appendix E — Rooted checkpoint profile and conformance",
+          "line": 7055
+        }
+      ]
+    },
+    {
+      "path": "specifications/blue-coordination-specification-1.0-candidate.md",
+      "sha256": "f1396bf8197d1468791499107545e77271901d864c5f8cb2d8b4930b198ca6e5",
+      "bytes": 92416,
+      "headings": [
+        {
+          "level": 1,
+          "title": "Blue Coordination Specification 1.0 — rooted checkpoint candidate",
+          "line": 1
+        },
+        {
+          "level": 2,
+          "title": "1. Purpose",
+          "line": 12
+        },
+        {
+          "level": 2,
+          "title": "2. Normative language and exactness",
+          "line": 50
+        },
+        {
+          "level": 2,
+          "title": "3. Specification identity and type binding",
+          "line": 75
+        },
+        {
+          "level": 3,
+          "title": "3.1 The specification is one exact Markdown value",
+          "line": 77
+        },
+        {
+          "level": 3,
+          "title": "3.2 Coordination types reference the specification",
+          "line": 95
+        },
+        {
+          "level": 3,
+          "title": "3.3 The type BlueId selects concrete semantics",
+          "line": 125
+        },
+        {
+          "level": 3,
+          "title": "3.4 Mixed specification versions",
+          "line": 143
+        },
+        {
+          "level": 3,
+          "title": "3.5 Consequence of a normative change",
+          "line": 155
+        },
+        {
+          "level": 2,
+          "title": "4. Architectural boundaries",
+          "line": 165
+        },
+        {
+          "level": 3,
+          "title": "4.1 Blue document",
+          "line": 167
+        },
+        {
+          "level": 3,
+          "title": "4.2 Timeline Provider",
+          "line": 179
+        },
+        {
+          "level": 3,
+          "title": "4.3 Feeder",
+          "line": 187
+        },
+        {
+          "level": 3,
+          "title": "4.4 Blue Contracts processor",
+          "line": 199
+        },
+        {
+          "level": 3,
+          "title": "4.5 Host platform",
+          "line": 209
+        },
+        {
+          "level": 2,
+          "title": "5. Terminology",
+          "line": 217
+        },
+        {
+          "level": 2,
+          "title": "6. Timeline",
+          "line": 263
+        },
+        {
+          "level": 3,
+          "title": "6.1 Base shape",
+          "line": 265
+        },
+        {
+          "level": 3,
+          "title": "6.2 Exact Timeline identity",
+          "line": 282
+        },
+        {
+          "level": 3,
+          "title": "6.3 Meaning",
+          "line": 290
+        },
+        {
+          "level": 3,
+          "title": "6.4 Provider-specific extra fields",
+          "line": 309
+        },
+        {
+          "level": 2,
+          "title": "7. Timeline Entry",
+          "line": 327
+        },
+        {
+          "level": 3,
+          "title": "7.1 Base shape",
+          "line": 329
+        },
+        {
+          "level": 3,
+          "title": "7.2 Immutability",
+          "line": 369
+        },
+        {
+          "level": 3,
+          "title": "7.3 Timeline binding",
+          "line": 375
+        },
+        {
+          "level": 3,
+          "title": "7.4 Predecessor",
+          "line": 381
+        },
+        {
+          "level": 3,
+          "title": "7.5 Timestamp",
+          "line": 391
+        },
+        {
+          "level": 3,
+          "title": "7.6 Actor",
+          "line": 404
+        },
+        {
+          "level": 3,
+          "title": "7.7 Source",
+          "line": 410
+        },
+        {
+          "level": 3,
+          "title": "7.8 Authority",
+          "line": 418
+        },
+        {
+          "level": 3,
+          "title": "7.9 Message",
+          "line": 424
+        },
+        {
+          "level": 3,
+          "title": "7.10 Entry identity and append-once storage",
+          "line": 430
+        },
+        {
+          "level": 2,
+          "title": "8. Timeline Provider requirements and completeness",
+          "line": 440
+        },
+        {
+          "level": 3,
+          "title": "8.1 Universal provider duties",
+          "line": 442
+        },
+        {
+          "level": 3,
+          "title": "8.2 Binding completeness guarantee",
+          "line": 459
+        },
+        {
+          "level": 3,
+          "title": "8.3 Completeness evidence",
+          "line": 479
+        },
+        {
+          "level": 3,
+          "title": "8.4 Closed acquisition outcomes",
+          "line": 494
+        },
+        {
+          "level": 3,
+          "title": "8.5 Finality-backed providers",
+          "line": 520
+        },
+        {
+          "level": 3,
+          "title": "8.6 Service differences are not protocol profiles",
+          "line": 526
+        },
+        {
+          "level": 3,
+          "title": "8.7 Completeness is not approval",
+          "line": 543
+        },
+        {
+          "level": 2,
+          "title": "9. Canonical external order",
+          "line": 557
+        },
+        {
+          "level": 3,
+          "title": "9.1 Source-local order",
+          "line": 559
+        },
+        {
+          "level": 3,
+          "title": "9.2 Cross-Timeline order",
+          "line": 565
+        },
+        {
+          "level": 3,
+          "title": "9.3 Common safe window",
+          "line": 589
+        },
+        {
+          "level": 3,
+          "title": "9.4 Equal timestamps",
+          "line": 613
+        },
+        {
+          "level": 3,
+          "title": "9.5 Notifications",
+          "line": 619
+        },
+        {
+          "level": 2,
+          "title": "10. Timeline Channels",
+          "line": 625
+        },
+        {
+          "level": 3,
+          "title": "10.1 Base shape",
+          "line": 627
+        },
+        {
+          "level": 3,
+          "title": "10.2 Role binding",
+          "line": 648
+        },
+        {
+          "level": 3,
+          "title": "10.3 Scope-local keys",
+          "line": 656
+        },
+        {
+          "level": 3,
+          "title": "10.4 Exact matching",
+          "line": 669
+        },
+        {
+          "level": 3,
+          "title": "10.5 Active external source surface",
+          "line": 682
+        },
+        {
+          "level": 3,
+          "title": "10.6 Activation intervals",
+          "line": 707
+        },
+        {
+          "level": 3,
+          "title": "10.7 Same Timeline bound to several Channels",
+          "line": 715
+        },
+        {
+          "level": 2,
+          "title": "11. Composite Timeline Channel and All Timelines Channel",
+          "line": 725
+        },
+        {
+          "level": 3,
+          "title": "11.1 Composite Timeline Channel",
+          "line": 727
+        },
+        {
+          "level": 3,
+          "title": "11.2 All Timelines Channel",
+          "line": 748
+        },
+        {
+          "level": 3,
+          "title": "11.3 Completeness",
+          "line": 754
+        },
+        {
+          "level": 3,
+          "title": "11.4 Ordering",
+          "line": 758
+        },
+        {
+          "level": 2,
+          "title": "12. Operations and workflows at the Coordination boundary",
+          "line": 766
+        },
+        {
+          "level": 3,
+          "title": "12.1 Why Operations are included",
+          "line": 768
+        },
+        {
+          "level": 3,
+          "title": "12.2 Operation Request",
+          "line": 781
+        },
+        {
+          "level": 3,
+          "title": "12.3 Operation",
+          "line": 829
+        },
+        {
+          "level": 3,
+          "title": "12.4 Sequential Workflow Operation",
+          "line": 856
+        },
+        {
+          "level": 3,
+          "title": "12.5 Other Operation types",
+          "line": 864
+        },
+        {
+          "level": 3,
+          "title": "12.6 General messages",
+          "line": 875
+        },
+        {
+          "level": 2,
+          "title": "13. Actor Policy and direct authority",
+          "line": 883
+        },
+        {
+          "level": 3,
+          "title": "13.1 Attribution is not authority",
+          "line": 885
+        },
+        {
+          "level": 3,
+          "title": "13.2 Actor Policy",
+          "line": 889
+        },
+        {
+          "level": 3,
+          "title": "13.3 Direct operation",
+          "line": 897
+        },
+        {
+          "level": 3,
+          "title": "13.4 Target document precondition",
+          "line": 911
+        },
+        {
+          "level": 2,
+          "title": "14. Mandates and delegated authority",
+          "line": 921
+        },
+        {
+          "level": 3,
+          "title": "14.1 Mandate is a living Blue document",
+          "line": 923
+        },
+        {
+          "level": 3,
+          "title": "14.2 Lifecycle",
+          "line": 944
+        },
+        {
+          "level": 3,
+          "title": "14.3 Operation Mandate",
+          "line": 964
+        },
+        {
+          "level": 3,
+          "title": "14.4 Mandate Authority on a Timeline Entry",
+          "line": 986
+        },
+        {
+          "level": 3,
+          "title": "14.5 Direct-first rule",
+          "line": 1021
+        },
+        {
+          "level": 3,
+          "title": "14.6 Exact-time Mandate resolution",
+          "line": 1027
+        },
+        {
+          "level": 3,
+          "title": "14.7 Target feeder verifies independently",
+          "line": 1053
+        },
+        {
+          "level": 3,
+          "title": "14.8 Mandate outcomes",
+          "line": 1061
+        },
+        {
+          "level": 3,
+          "title": "14.9 Source and target Channels",
+          "line": 1087
+        },
+        {
+          "level": 3,
+          "title": "14.10 No recursive authority chain by default",
+          "line": 1101
+        },
+        {
+          "level": 3,
+          "title": "14.11 Provider-mediated and responder flows",
+          "line": 1107
+        },
+        {
+          "level": 2,
+          "title": "15. Feeder source discovery and safe-window planning",
+          "line": 1115
+        },
+        {
+          "level": 3,
+          "title": "15.1 Freeze the selected rooted views",
+          "line": 1117
+        },
+        {
+          "level": 3,
+          "title": "15.2 Runtime selection",
+          "line": 1133
+        },
+        {
+          "level": 3,
+          "title": "15.3 Candidate source groups",
+          "line": 1145
+        },
+        {
+          "level": 3,
+          "title": "15.4 Lower bounds",
+          "line": 1151
+        },
+        {
+          "level": 3,
+          "title": "15.5 Complete window",
+          "line": 1167
+        },
+        {
+          "level": 3,
+          "title": "15.6 Incremental replanning",
+          "line": 1171
+        },
+        {
+          "level": 3,
+          "title": "15.7 Notifications and polling",
+          "line": 1196
+        },
+        {
+          "level": 2,
+          "title": "16. Checkpoints and idempotency",
+          "line": 1202
+        },
+        {
+          "level": 3,
+          "title": "16.1 Checkpoint shape",
+          "line": 1204
+        },
+        {
+          "level": 3,
+          "title": "16.2 Checkpoint address",
+          "line": 1222
+        },
+        {
+          "level": 3,
+          "title": "16.3 Subject",
+          "line": 1235
+        },
+        {
+          "level": 3,
+          "title": "16.4 Why no Channel BlueId is stored",
+          "line": 1250
+        },
+        {
+          "level": 3,
+          "title": "16.5 Virtual empty state",
+          "line": 1269
+        },
+        {
+          "level": 3,
+          "title": "16.6 Timeline Channel newness",
+          "line": 1275
+        },
+        {
+          "level": 3,
+          "title": "16.7 Composite and All Timelines newness",
+          "line": 1288
+        },
+        {
+          "level": 3,
+          "title": "16.8 Multiple matching source occurrences",
+          "line": 1296
+        },
+        {
+          "level": 3,
+          "title": "16.9 Atomic write",
+          "line": 1304
+        },
+        {
+          "level": 3,
+          "title": "16.10 Source ownership in delegated calls",
+          "line": 1322
+        },
+        {
+          "level": 3,
+          "title": "16.11 Feeder terminal progress",
+          "line": 1328
+        },
+        {
+          "level": 3,
+          "title": "16.12 Retry",
+          "line": 1336
+        },
+        {
+          "level": 2,
+          "title": "17. Feeder eligibility algorithm",
+          "line": 1346
+        },
+        {
+          "level": 3,
+          "title": "17.1 Overview",
+          "line": 1348
+        },
+        {
+          "level": 3,
+          "title": "17.2 Step 1 — verify provider evidence",
+          "line": 1352
+        },
+        {
+          "level": 3,
+          "title": "17.3 Step 2 — derive source Channels",
+          "line": 1369
+        },
+        {
+          "level": 3,
+          "title": "17.4 Step 3 — checkpoint classification",
+          "line": 1375
+        },
+        {
+          "level": 3,
+          "title": "17.5 Step 4 — classify message",
+          "line": 1381
+        },
+        {
+          "level": 3,
+          "title": "17.6 Step 5 — resolve target Operation",
+          "line": 1387
+        },
+        {
+          "level": 3,
+          "title": "17.7 Step 6 — direct-first authority",
+          "line": 1400
+        },
+        {
+          "level": 3,
+          "title": "17.8 Step 7 — delegated authority",
+          "line": 1410
+        },
+        {
+          "level": 3,
+          "title": "17.9 Step 8 — preserve original entry",
+          "line": 1426
+        },
+        {
+          "level": 3,
+          "title": "17.10 Step 9 — invoke Contracts",
+          "line": 1432
+        },
+        {
+          "level": 3,
+          "title": "17.11 Step 10 — publish",
+          "line": 1446
+        },
+        {
+          "level": 3,
+          "title": "17.12 Recompute before next entry",
+          "line": 1462
+        },
+        {
+          "level": 2,
+          "title": "18. Processor boundary",
+          "line": 1468
+        },
+        {
+          "level": 3,
+          "title": "18.1 Processor inputs",
+          "line": 1470
+        },
+        {
+          "level": 3,
+          "title": "18.2 Excluded ambient inputs",
+          "line": 1476
+        },
+        {
+          "level": 3,
+          "title": "18.3 Internal reactions are not Timeline Entries",
+          "line": 1490
+        },
+        {
+          "level": 3,
+          "title": "18.4 Public output",
+          "line": 1496
+        },
+        {
+          "level": 2,
+          "title": "19. Activation, initialization, and historical catch-up",
+          "line": 1504
+        },
+        {
+          "level": 3,
+          "title": "19.1 Explicit birth versus source materialization",
+          "line": 1506
+        },
+        {
+          "level": 3,
+          "title": "19.2 Imported existing process",
+          "line": 1514
+        },
+        {
+          "level": 3,
+          "title": "19.3 Catch-up entry semantics",
+          "line": 1520
+        },
+        {
+          "level": 3,
+          "title": "19.4 Checkpoints do not prove completeness",
+          "line": 1531
+        },
+        {
+          "level": 3,
+          "title": "19.5 Readiness",
+          "line": 1537
+        },
+        {
+          "level": 3,
+          "title": "19.6 Source-surface changes during catch-up",
+          "line": 1553
+        },
+        {
+          "level": 3,
+          "title": "19.6a LIVE versus retained-application classification (RCP-1)",
+          "line": 1557
+        },
+        {
+          "level": 3,
+          "title": "19.7 Catch-up order",
+          "line": 1561
+        },
+        {
+          "level": 3,
+          "title": "19.8 Historical representation positions (adopted dependency of the RCP-1 draft)",
+          "line": 1569
+        },
+        {
+          "level": 2,
+          "title": "20. Other Channel specifications and extensibility",
+          "line": 1638
+        },
+        {
+          "level": 3,
+          "title": "20.1 Exact type classification",
+          "line": 1640
+        },
+        {
+          "level": 3,
+          "title": "20.2 Channels defined by another specification",
+          "line": 1648
+        },
+        {
+          "level": 3,
+          "title": "20.3 Deterministic composition",
+          "line": 1665
+        },
+        {
+          "level": 3,
+          "title": "20.4 Unknown unrelated contracts",
+          "line": 1679
+        },
+        {
+          "level": 3,
+          "title": "20.5 Extension conformance",
+          "line": 1685
+        },
+        {
+          "level": 2,
+          "title": "21. Entry decisions and public dispositions",
+          "line": 1693
+        },
+        {
+          "level": 3,
+          "title": "21.1 Provider acquisition result",
+          "line": 1695
+        },
+        {
+          "level": 3,
+          "title": "21.2 Feeder eligibility result",
+          "line": 1699
+        },
+        {
+          "level": 3,
+          "title": "21.3 Meaning",
+          "line": 1715
+        },
+        {
+          "level": 3,
+          "title": "21.4 Processor result",
+          "line": 1744
+        },
+        {
+          "level": 3,
+          "title": "21.5 Public entry disposition",
+          "line": 1748
+        },
+        {
+          "level": 3,
+          "title": "21.6 Terminality",
+          "line": 1768
+        },
+        {
+          "level": 2,
+          "title": "22. Failure, replay, and recovery",
+          "line": 1778
+        },
+        {
+          "level": 3,
+          "title": "22.1 Unknown is not allowed",
+          "line": 1780
+        },
+        {
+          "level": 3,
+          "title": "22.2 Unknown is not permanent denial",
+          "line": 1784
+        },
+        {
+          "level": 3,
+          "title": "22.3 Duplicate delivery",
+          "line": 1788
+        },
+        {
+          "level": 3,
+          "title": "22.4 Invalid Timeline history",
+          "line": 1794
+        },
+        {
+          "level": 3,
+          "title": "22.5 Provider unavailability",
+          "line": 1808
+        },
+        {
+          "level": 3,
+          "title": "22.6 Mandate unavailability",
+          "line": 1814
+        },
+        {
+          "level": 3,
+          "title": "22.7 Processor failure",
+          "line": 1818
+        },
+        {
+          "level": 3,
+          "title": "22.8 Crash after commit",
+          "line": 1824
+        },
+        {
+          "level": 3,
+          "title": "22.9 Poison entries",
+          "line": 1840
+        },
+        {
+          "level": 2,
+          "title": "23. Audit, security, and privacy",
+          "line": 1848
+        },
+        {
+          "level": 3,
+          "title": "23.1 Causal audit chain",
+          "line": 1850
+        },
+        {
+          "level": 3,
+          "title": "23.2 Preserve attribution",
+          "line": 1869
+        },
+        {
+          "level": 3,
+          "title": "23.3 Least disclosure",
+          "line": 1873
+        },
+        {
+          "level": 3,
+          "title": "23.4 No authority from descriptive fields",
+          "line": 1879
+        },
+        {
+          "level": 3,
+          "title": "23.5 Provider accountability",
+          "line": 1883
+        },
+        {
+          "level": 2,
+          "title": "24. Conformance claims",
+          "line": 1891
+        },
+        {
+          "level": 3,
+          "title": "24.1 Coordination Core",
+          "line": 1893
+        },
+        {
+          "level": 3,
+          "title": "24.2 Multi-Timeline Completeness",
+          "line": 1910
+        },
+        {
+          "level": 3,
+          "title": "24.3 Mandate-Aware Coordination",
+          "line": 1923
+        },
+        {
+          "level": 3,
+          "title": "24.4 Managed-History Coordination",
+          "line": 1940
+        },
+        {
+          "level": 3,
+          "title": "24.5 Durable Coordination",
+          "line": 1954
+        },
+        {
+          "level": 2,
+          "title": "25. Required conformance fixture families",
+          "line": 1960
+        },
+        {
+          "level": 3,
+          "title": "25.1 Specification and type binding",
+          "line": 1964
+        },
+        {
+          "level": 3,
+          "title": "25.2 Timeline and entry integrity",
+          "line": 1972
+        },
+        {
+          "level": 3,
+          "title": "25.3 Completeness and order",
+          "line": 1984
+        },
+        {
+          "level": 3,
+          "title": "25.4 Timeline Channels",
+          "line": 1995
+        },
+        {
+          "level": 3,
+          "title": "25.5 Operations",
+          "line": 2007
+        },
+        {
+          "level": 3,
+          "title": "25.6 Mandates",
+          "line": 2019
+        },
+        {
+          "level": 3,
+          "title": "25.7 Checkpoints",
+          "line": 2036
+        },
+        {
+          "level": 3,
+          "title": "25.8 Feeder and topology",
+          "line": 2052
+        },
+        {
+          "level": 3,
+          "title": "25.9 Historical catch-up",
+          "line": 2070
+        },
+        {
+          "level": 3,
+          "title": "25.10 Other specifications",
+          "line": 2082
+        },
+        {
+          "level": 3,
+          "title": "25.11 Recovery and audit",
+          "line": 2089
+        },
+        {
+          "level": 2,
+          "title": "26. Worked example: direct operation",
+          "line": 2099
+        },
+        {
+          "level": 2,
+          "title": "27. Worked example: delegated agent operation",
+          "line": 2166
+        },
+        {
+          "level": 2,
+          "title": "28. Worked example: two providers and one safe order",
+          "line": 2232
+        },
+        {
+          "level": 2,
+          "title": "29. Worked example: a Channel from another specification",
+          "line": 2263
+        },
+        {
+          "level": 2,
+          "title": "30. Required alignment with Blue Contracts",
+          "line": 2290
+        },
+        {
+          "level": 2,
+          "title": "Appendix A. Normative feeder pseudocode",
+          "line": 2311
+        },
+        {
+          "level": 2,
+          "title": "Appendix B. Normative checkpoint pseudocode",
+          "line": 2367
+        },
+        {
+          "level": 2,
+          "title": "Appendix C. Migration from the former projected checkpoint subject",
+          "line": 2416
+        },
+        {
+          "level": 2,
+          "title": "Appendix D. Final normative statement",
+          "line": 2451
+        },
+        {
+          "level": 2,
+          "title": "Appendix E. Rooted checkpoint processing revision",
+          "line": 2476
+        }
+      ]
+    },
+    {
+      "path": "specifications/blue-language-specification-1.0.md",
+      "sha256": "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
+      "bytes": 217483,
+      "headings": [
+        {
+          "level": 1,
+          "title": "Blue Language Specification 1.0",
+          "line": 1
+        },
+        {
+          "level": 2,
+          "title": "Conventions",
+          "line": 13
+        },
+        {
+          "level": 2,
+          "title": "0. Overview",
+          "line": 21
+        },
+        {
+          "level": 2,
+          "title": "1. Scope, Goals, Versioning, and Conformance",
+          "line": 137
+        },
+        {
+          "level": 3,
+          "title": "1.1 Goal",
+          "line": 139
+        },
+        {
+          "level": 3,
+          "title": "1.2 Out of scope",
+          "line": 153
+        },
+        {
+          "level": 3,
+          "title": "1.3 Versioning and specification selection",
+          "line": 168
+        },
+        {
+          "level": 3,
+          "title": "1.4 Conformance",
+          "line": 186
+        },
+        {
+          "level": 3,
+          "title": "1.5 Core registry and release artifacts",
+          "line": 213
+        },
+        {
+          "level": 2,
+          "title": "2. Serialization and Data Model",
+          "line": 250
+        },
+        {
+          "level": 3,
+          "title": "2.1 JSON data model (normative)",
+          "line": 252
+        },
+        {
+          "level": 3,
+          "title": "2.2 YAML restrictions (normative)",
+          "line": 265
+        },
+        {
+          "level": 3,
+          "title": "2.3 Duplicate keys (normative)",
+          "line": 288
+        },
+        {
+          "level": 3,
+          "title": "2.4 Number tokens and large integers (normative)",
+          "line": 292
+        },
+        {
+          "level": 3,
+          "title": "2.5 Numeric token inference (normative)",
+          "line": 367
+        },
+        {
+          "level": 3,
+          "title": "2.6 String and multiline scalar identity (normative)",
+          "line": 385
+        },
+        {
+          "level": 2,
+          "title": "3. Blue Graph, Blue Documents, and References",
+          "line": 397
+        },
+        {
+          "level": 3,
+          "title": "3.1 The Blue Graph (normative)",
+          "line": 399
+        },
+        {
+          "level": 3,
+          "title": "3.2 Blue Documents as graph slices (normative)",
+          "line": 410
+        },
+        {
+          "level": 3,
+          "title": "3.3 Pure references (normative)",
+          "line": 424
+        },
+        {
+          "level": 3,
+          "title": "3.4 Document identity (normative)",
+          "line": 468
+        },
+        {
+          "level": 3,
+          "title": "3.5 Exact-node equivalence and materialization state (normative)",
+          "line": 476
+        },
+        {
+          "level": 3,
+          "title": "3.6 Identity-preserving implementation values (normative behavior)",
+          "line": 500
+        },
+        {
+          "level": 2,
+          "title": "4. Node Model and Reserved Fields",
+          "line": 508
+        },
+        {
+          "level": 3,
+          "title": "4.1 Node anatomy (normative)",
+          "line": 510
+        },
+        {
+          "level": 3,
+          "title": "4.1.1 Unconstrained field declarations (normative)",
+          "line": 546
+        },
+        {
+          "level": 3,
+          "title": "4.2 Reserved language keys (normative)",
+          "line": 581
+        },
+        {
+          "level": 3,
+          "title": "4.3 Reserved field value types (normative)",
+          "line": 619
+        },
+        {
+          "level": 3,
+          "title": "4.4 `contracts` boundary (normative)",
+          "line": 641
+        },
+        {
+          "level": 3,
+          "title": "4.5 `name` and `description`: identity vs field semantics (normative)",
+          "line": 657
+        },
+        {
+          "level": 3,
+          "title": "4.6 Document identity vs field semantics for labels (normative)",
+          "line": 670
+        },
+        {
+          "level": 2,
+          "title": "5. Authoring Forms and Wrapper Equivalence",
+          "line": 682
+        },
+        {
+          "level": 3,
+          "title": "5.1 Wrapper equivalence (normative)",
+          "line": 684
+        },
+        {
+          "level": 3,
+          "title": "5.2 Sugar vs explicit metadata (normative)",
+          "line": 714
+        },
+        {
+          "level": 3,
+          "title": "5.3 Object nodes (normative)",
+          "line": 741
+        },
+        {
+          "level": 3,
+          "title": "5.4 Identity over forms (normative)",
+          "line": 753
+        },
+        {
+          "level": 2,
+          "title": "6. Preprocessing and the `blue` Directive",
+          "line": 761
+        },
+        {
+          "level": 3,
+          "title": "6.1 Purpose and governing model (normative)",
+          "line": 763
+        },
+        {
+          "level": 3,
+          "title": "6.2 Portable preprocessing-directive node (normative)",
+          "line": 802
+        },
+        {
+          "level": 3,
+          "title": "6.3 Imports (normative)",
+          "line": 834
+        },
+        {
+          "level": 3,
+          "title": "6.4 Transformations (normative)",
+          "line": 869
+        },
+        {
+          "level": 3,
+          "title": "6.5 Exact preprocessing order (normative)",
+          "line": 914
+        },
+        {
+          "level": 4,
+          "title": "Stage 1 — Parse the Source Document",
+          "line": 918
+        },
+        {
+          "level": 4,
+          "title": "Stage 2 — Establish the effective directive without mutating the Source Document",
+          "line": 922
+        },
+        {
+          "level": 4,
+          "title": "Stage 3 — Remove `blue`",
+          "line": 935
+        },
+        {
+          "level": 4,
+          "title": "Stage 4 — Execute declared transformations",
+          "line": 939
+        },
+        {
+          "level": 4,
+          "title": "Stage 5 — Apply mandatory baseline preprocessing",
+          "line": 945
+        },
+        {
+          "level": 3,
+          "title": "6.6 Identity and provenance (normative/informative)",
+          "line": 964
+        },
+        {
+          "level": 3,
+          "title": "6.7 Security and acquisition (normative)",
+          "line": 991
+        },
+        {
+          "level": 3,
+          "title": "6.8 General preprocessing rules (normative)",
+          "line": 1003
+        },
+        {
+          "level": 2,
+          "title": "7. BlueId: One Identifier, Two Calculation Paths",
+          "line": 1017
+        },
+        {
+          "level": 3,
+          "title": "7.1 One BlueId (normative)",
+          "line": 1019
+        },
+        {
+          "level": 3,
+          "title": "7.2 Two calculation paths (normative)",
+          "line": 1037
+        },
+        {
+          "level": 4,
+          "title": "Direct BlueId calculation",
+          "line": 1039
+        },
+        {
+          "level": 4,
+          "title": "Source Document BlueId calculation",
+          "line": 1052
+        },
+        {
+          "level": 3,
+          "title": "7.2.1 What the Source-derived BlueId identifies (normative)",
+          "line": 1072
+        },
+        {
+          "level": 3,
+          "title": "7.2.2 Intermediate forms and direct hashing (normative)",
+          "line": 1100
+        },
+        {
+          "level": 3,
+          "title": "7.3 Identity preservation across forms (normative)",
+          "line": 1121
+        },
+        {
+          "level": 3,
+          "title": "7.4 BlueId Input (normative)",
+          "line": 1131
+        },
+        {
+          "level": 3,
+          "title": "7.5 Allowed BlueId forms (normative)",
+          "line": 1150
+        },
+        {
+          "level": 2,
+          "title": "8. Types, Overlays, and Subtyping",
+          "line": 1180
+        },
+        {
+          "level": 3,
+          "title": "8.1 Any node can be a type (normative)",
+          "line": 1184
+        },
+        {
+          "level": 3,
+          "title": "8.1.1 Definition preparation and completed-value certification (proposed normative)",
+          "line": 1197
+        },
+        {
+          "level": 3,
+          "title": "8.2 Fixed-value invariant (normative)",
+          "line": 1218
+        },
+        {
+          "level": 3,
+          "title": "8.3 Fixed-value equality (normative)",
+          "line": 1236
+        },
+        {
+          "level": 3,
+          "title": "8.4 Subtyping and Liskov substitutability (normative)",
+          "line": 1301
+        },
+        {
+          "level": 3,
+          "title": "8.4.1 Formal subtype relation (normative)",
+          "line": 1316
+        },
+        {
+          "level": 3,
+          "title": "8.4.2 Nominal core type identity (normative)",
+          "line": 1335
+        },
+        {
+          "level": 3,
+          "title": "8.5 Instance-as-type (normative)",
+          "line": 1349
+        },
+        {
+          "level": 3,
+          "title": "8.6 Requirement overlays (normative)",
+          "line": 1360
+        },
+        {
+          "level": 3,
+          "title": "8.7 Specialization versus expansion (normative distinction)",
+          "line": 1388
+        },
+        {
+          "level": 2,
+          "title": "9. Schema Constraints",
+          "line": 1419
+        },
+        {
+          "level": 3,
+          "title": "9.1 Attaching schema (normative)",
+          "line": 1421
+        },
+        {
+          "level": 3,
+          "title": "9.2 Schema vocabulary (normative)",
+          "line": 1427
+        },
+        {
+          "level": 3,
+          "title": "9.2.1 Schema keyword value types (normative)",
+          "line": 1444
+        },
+        {
+          "level": 3,
+          "title": "9.2.2 Schema applicability (normative)",
+          "line": 1456
+        },
+        {
+          "level": 3,
+          "title": "9.2.3 Required fields (normative)",
+          "line": 1469
+        },
+        {
+          "level": 3,
+          "title": "9.2.4 Field counting (normative)",
+          "line": 1488
+        },
+        {
+          "level": 3,
+          "title": "9.2.5 Deferred constraints and semantic presence (proposed normative)",
+          "line": 1496
+        },
+        {
+          "level": 3,
+          "title": "9.3 Presence",
+          "line": 1510
+        },
+        {
+          "level": 3,
+          "title": "9.4 Lists",
+          "line": 1518
+        },
+        {
+          "level": 3,
+          "title": "9.5 Objects",
+          "line": 1530
+        },
+        {
+          "level": 3,
+          "title": "9.5.1 Dictionary direct encoding validation (normative)",
+          "line": 1541
+        },
+        {
+          "level": 3,
+          "title": "9.6 Numerics",
+          "line": 1553
+        },
+        {
+          "level": 3,
+          "title": "9.7 Strings",
+          "line": 1605
+        },
+        {
+          "level": 3,
+          "title": "9.8 Enumerations",
+          "line": 1614
+        },
+        {
+          "level": 3,
+          "title": "9.8.1 Enumeration normalization (normative)",
+          "line": 1643
+        },
+        {
+          "level": 3,
+          "title": "9.9 Schema merge rules (normative)",
+          "line": 1667
+        },
+        {
+          "level": 2,
+          "title": "10. Resolution",
+          "line": 1692
+        },
+        {
+          "level": 3,
+          "title": "10.1 Resolution (normative)",
+          "line": 1694
+        },
+        {
+          "level": 3,
+          "title": "10.2 Complete resolution algorithm (normative)",
+          "line": 1706
+        },
+        {
+          "level": 3,
+          "title": "10.2.1 Type-chain cycle detection (normative)",
+          "line": 1727
+        },
+        {
+          "level": 3,
+          "title": "10.2.2 Complete resolution pseudocode (informative)",
+          "line": 1749
+        },
+        {
+          "level": 3,
+          "title": "10.3 Limited resolution (normative)",
+          "line": 1779
+        },
+        {
+          "level": 3,
+          "title": "10.4 Resolution provenance (normative)",
+          "line": 1802
+        },
+        {
+          "level": 3,
+          "title": "10.5 Identity guarantee (normative)",
+          "line": 1816
+        },
+        {
+          "level": 3,
+          "title": "10.6 Provider failures (normative)",
+          "line": 1824
+        },
+        {
+          "level": 3,
+          "title": "10.7 Limits (normative)",
+          "line": 1830
+        },
+        {
+          "level": 3,
+          "title": "10.8 Demand-limited operation outcomes (normative)",
+          "line": 1839
+        },
+        {
+          "level": 3,
+          "title": "10.9 Cache neutrality and diagnostic information (normative)",
+          "line": 1861
+        },
+        {
+          "level": 2,
+          "title": "11. Lists, Merge Policies, and List Control Forms",
+          "line": 1869
+        },
+        {
+          "level": 3,
+          "title": "11.1 Authoring model (normative)",
+          "line": 1871
+        },
+        {
+          "level": 3,
+          "title": "11.2 Allowed item forms inside `items` (normative)",
+          "line": 1896
+        },
+        {
+          "level": 4,
+          "title": "Normal element",
+          "line": 1900
+        },
+        {
+          "level": 4,
+          "title": "Append anchor",
+          "line": 1908
+        },
+        {
+          "level": 4,
+          "title": "Positional overlay",
+          "line": 1921
+        },
+        {
+          "level": 4,
+          "title": "Placeholder element",
+          "line": 1973
+        },
+        {
+          "level": 3,
+          "title": "11.3 Scope of list control keys (normative)",
+          "line": 1983
+        },
+        {
+          "level": 3,
+          "title": "11.4 Default merge policy (normative)",
+          "line": 1993
+        },
+        {
+          "level": 3,
+          "title": "11.5 Semantics of `null`, `{}`, `[]`, and `$empty` (normative)",
+          "line": 2013
+        },
+        {
+          "level": 4,
+          "title": "Object fields",
+          "line": 2018
+        },
+        {
+          "level": 4,
+          "title": "List elements",
+          "line": 2050
+        },
+        {
+          "level": 3,
+          "title": "11.6 Merge semantics (normative)",
+          "line": 2083
+        },
+        {
+          "level": 4,
+          "title": "`append-only`",
+          "line": 2087
+        },
+        {
+          "level": 4,
+          "title": "`positional`",
+          "line": 2104
+        },
+        {
+          "level": 3,
+          "title": "11.7 `$previous` validation (normative)",
+          "line": 2124
+        },
+        {
+          "level": 3,
+          "title": "11.8 List conformance checklist (normative)",
+          "line": 2136
+        },
+        {
+          "level": 3,
+          "title": "11.9 Worked examples (informative)",
+          "line": 2156
+        },
+        {
+          "level": 2,
+          "title": "12. References, Providers, Expansion, and Collapse",
+          "line": 2250
+        },
+        {
+          "level": 3,
+          "title": "12.1 Providers (informative)",
+          "line": 2252
+        },
+        {
+          "level": 3,
+          "title": "12.2 Provider trust model (normative/informative)",
+          "line": 2258
+        },
+        {
+          "level": 3,
+          "title": "12.3 Provider content form (normative)",
+          "line": 2264
+        },
+        {
+          "level": 3,
+          "title": "12.4 Plain BlueId provider verification (normative)",
+          "line": 2287
+        },
+        {
+          "level": 3,
+          "title": "12.5 Cyclic-set member provider verification (normative)",
+          "line": 2295
+        },
+        {
+          "level": 3,
+          "title": "12.6 Expansion (normative)",
+          "line": 2301
+        },
+        {
+          "level": 3,
+          "title": "12.7 Collapse (normative)",
+          "line": 2322
+        },
+        {
+          "level": 3,
+          "title": "12.8 Expansion, resolution, and limits (normative)",
+          "line": 2332
+        },
+        {
+          "level": 3,
+          "title": "12.9 Graph boundary (normative)",
+          "line": 2344
+        },
+        {
+          "level": 3,
+          "title": "12.10 Blue Language operation paths (normative when exposed)",
+          "line": 2350
+        },
+        {
+          "level": 3,
+          "title": "12.11 Direct-node materialization pattern (informative)",
+          "line": 2363
+        },
+        {
+          "level": 3,
+          "title": "12.12 Provider and storage guidance (informative)",
+          "line": 2371
+        },
+        {
+          "level": 2,
+          "title": "13. Canonicalization and Minimization",
+          "line": 2388
+        },
+        {
+          "level": 3,
+          "title": "13.1 Distinction (normative)",
+          "line": 2390
+        },
+        {
+          "level": 3,
+          "title": "13.2 Canonical Identity Input (normative)",
+          "line": 2433
+        },
+        {
+          "level": 3,
+          "title": "13.3 Minimized Overlay (normative)",
+          "line": 2443
+        },
+        {
+          "level": 3,
+          "title": "13.3.1 Why list minimization and canonicalization differ (informative)",
+          "line": 2453
+        },
+        {
+          "level": 3,
+          "title": "13.4 Canonicalization requirements (normative)",
+          "line": 2494
+        },
+        {
+          "level": 3,
+          "title": "13.5 Canonicalization as deterministic diff (normative)",
+          "line": 2527
+        },
+        {
+          "level": 3,
+          "title": "13.5.1 Canonicalization tie-breakers (normative)",
+          "line": 2542
+        },
+        {
+          "level": 3,
+          "title": "13.6 Canonical list rules (normative)",
+          "line": 2562
+        },
+        {
+          "level": 3,
+          "title": "13.7 Deterministic collapse during minimization (normative)",
+          "line": 2576
+        },
+        {
+          "level": 2,
+          "title": "14. BlueId Algorithm",
+          "line": 2591
+        },
+        {
+          "level": 3,
+          "title": "14.1 Hash function (normative)",
+          "line": 2593
+        },
+        {
+          "level": 3,
+          "title": "14.2 Context-sensitive cleaning and placeholder normalization (normative)",
+          "line": 2603
+        },
+        {
+          "level": 4,
+          "title": "Object-field rules",
+          "line": 2608
+        },
+        {
+          "level": 4,
+          "title": "List-element rules",
+          "line": 2618
+        },
+        {
+          "level": 4,
+          "title": "Root normalization",
+          "line": 2631
+        },
+        {
+          "level": 3,
+          "title": "14.3 Canonical BlueId input normalization (normative)",
+          "line": 2641
+        },
+        {
+          "level": 3,
+          "title": "14.4 Scalars (normative)",
+          "line": 2670
+        },
+        {
+          "level": 3,
+          "title": "14.4.1 Payload normalization before hashing (normative)",
+          "line": 2684
+        },
+        {
+          "level": 3,
+          "title": "14.5 Map hashing (normative)",
+          "line": 2736
+        },
+        {
+          "level": 3,
+          "title": "14.6 Object fields with `null` (normative)",
+          "line": 2767
+        },
+        {
+          "level": 3,
+          "title": "14.7 List hashing (normative)",
+          "line": 2798
+        },
+        {
+          "level": 4,
+          "title": "14.7.1 Empty-list seed, fold step, and recursive prefix identity (normative)",
+          "line": 2804
+        },
+        {
+          "level": 4,
+          "title": "14.7.2 Incremental append (normative)",
+          "line": 2858
+        },
+        {
+          "level": 4,
+          "title": "14.7.3 Replacement, insertion, and removal (normative)",
+          "line": 2891
+        },
+        {
+          "level": 4,
+          "title": "14.7.4 Identity calculation versus physical storage (informative)",
+          "line": 2921
+        },
+        {
+          "level": 4,
+          "title": "14.7.5 Metadata-bearing list nodes (normative)",
+          "line": 2937
+        },
+        {
+          "level": 4,
+          "title": "14.7.6 Worked calculation (informative)",
+          "line": 2977
+        },
+        {
+          "level": 3,
+          "title": "14.8 List control normalization before hashing (normative)",
+          "line": 3024
+        },
+        {
+          "level": 3,
+          "title": "14.8.1 Canonical JSON examples (informative but behavior-defining through referenced rules)",
+          "line": 3038
+        },
+        {
+          "level": 4,
+          "title": "Large Integer scalar node",
+          "line": 3040
+        },
+        {
+          "level": 4,
+          "title": "Double negative zero",
+          "line": 3067
+        },
+        {
+          "level": 4,
+          "title": "Integer-looking Double",
+          "line": 3073
+        },
+        {
+          "level": 4,
+          "title": "List fold helper map ordering",
+          "line": 3077
+        },
+        {
+          "level": 3,
+          "title": "14.9 Storage rule (normative)",
+          "line": 3087
+        },
+        {
+          "level": 3,
+          "title": "14.10 Inputs containing `blue` (normative)",
+          "line": 3093
+        },
+        {
+          "level": 3,
+          "title": "14.11 Identity locality and direct-container cost (normative)",
+          "line": 3099
+        },
+        {
+          "level": 2,
+          "title": "15. Circular Reference Sets",
+          "line": 3115
+        },
+        {
+          "level": 3,
+          "title": "15.1 Purpose",
+          "line": 3117
+        },
+        {
+          "level": 3,
+          "title": "15.2 ZERO_BLUEID sentinel (normative)",
+          "line": 3121
+        },
+        {
+          "level": 3,
+          "title": "15.3 Cyclic-set input (normative)",
+          "line": 3131
+        },
+        {
+          "level": 3,
+          "title": "15.4 Cyclic-set algorithm (normative)",
+          "line": 3147
+        },
+        {
+          "level": 3,
+          "title": "15.5 BlueId grammar for cyclic sets (normative)",
+          "line": 3212
+        },
+        {
+          "level": 3,
+          "title": "15.6 Example (informative)",
+          "line": 3224
+        },
+        {
+          "level": 2,
+          "title": "16. Conformance Vectors",
+          "line": 3251
+        },
+        {
+          "level": 3,
+          "title": "16.1 BlueId algorithm vectors",
+          "line": 3263
+        },
+        {
+          "level": 3,
+          "title": "16.2 Resolution and canonicalization vectors",
+          "line": 3301
+        },
+        {
+          "level": 3,
+          "title": "16.3 Provider, expansion, and collapse vectors",
+          "line": 3390
+        },
+        {
+          "level": 3,
+          "title": "16.4 Machine-readable fixtures (normative)",
+          "line": 3415
+        },
+        {
+          "level": 2,
+          "title": "17. Worked Examples",
+          "line": 3564
+        },
+        {
+          "level": 3,
+          "title": "17.1 Content-addressable types (informative)",
+          "line": 3568
+        },
+        {
+          "level": 3,
+          "title": "17.2 `blue` directive (informative)",
+          "line": 3602
+        },
+        {
+          "level": 3,
+          "title": "17.3 Large integer (informative)",
+          "line": 3644
+        },
+        {
+          "level": 3,
+          "title": "17.4 Same image, different meaning (informative)",
+          "line": 3667
+        },
+        {
+          "level": 3,
+          "title": "17.5 Requirement overlay followed by type binding (informative)",
+          "line": 3687
+        },
+        {
+          "level": 3,
+          "title": "17.6 Lists: refine and append (informative)",
+          "line": 3704
+        },
+        {
+          "level": 3,
+          "title": "17.7 Null list element as placeholder (informative)",
+          "line": 3732
+        },
+        {
+          "level": 3,
+          "title": "17.8 Expansion with limits (informative)",
+          "line": 3752
+        },
+        {
+          "level": 3,
+          "title": "17.9 Canonicalization and minimization (informative)",
+          "line": 3774
+        },
+        {
+          "level": 3,
+          "title": "17.10 Contracts merge as content (informative)",
+          "line": 3805
+        },
+        {
+          "level": 3,
+          "title": "17.11 Incremental list BlueId calculation (informative)",
+          "line": 3824
+        },
+        {
+          "level": 3,
+          "title": "17.12 Common invalid forms (informative)",
+          "line": 3856
+        },
+        {
+          "level": 2,
+          "title": "Appendix A — Core Primitive and Collection Types",
+          "line": 3896
+        },
+        {
+          "level": 3,
+          "title": "A.1 Canonical core type nodes",
+          "line": 3910
+        },
+        {
+          "level": 4,
+          "title": "Text",
+          "line": 3912
+        },
+        {
+          "level": 4,
+          "title": "Integer",
+          "line": 3926
+        },
+        {
+          "level": 4,
+          "title": "Double",
+          "line": 3942
+        },
+        {
+          "level": 4,
+          "title": "Boolean",
+          "line": 3959
+        },
+        {
+          "level": 4,
+          "title": "Dictionary",
+          "line": 3970
+        },
+        {
+          "level": 4,
+          "title": "List",
+          "line": 3993
+        },
+        {
+          "level": 3,
+          "title": "A.2 Editorial and registry rules",
+          "line": 4013
+        },
+        {
+          "level": 2,
+          "title": "Appendix B — Reserved Extension Boundary",
+          "line": 4021
+        },
+        {
+          "level": 2,
+          "title": "Appendix C — Common Implementer Mistakes",
+          "line": 4027
+        },
+        {
+          "level": 3,
+          "title": "C.1 Do not delete list positions",
+          "line": 4031
+        },
+        {
+          "level": 3,
+          "title": "C.1a Do not treat `{}` as absence",
+          "line": 4035
+        },
+        {
+          "level": 3,
+          "title": "C.2 Do not hash `blue`",
+          "line": 4039
+        },
+        {
+          "level": 3,
+          "title": "C.3 Do not treat `value` as a generic replacement field",
+          "line": 4043
+        },
+        {
+          "level": 3,
+          "title": "C.4 Do not let `$pos` reach BlueId input",
+          "line": 4047
+        },
+        {
+          "level": 3,
+          "title": "C.5 Do not trust provider content without verification",
+          "line": 4051
+        },
+        {
+          "level": 3,
+          "title": "C.6 Do not treat `name` and `description` as comments",
+          "line": 4055
+        },
+        {
+          "level": 3,
+          "title": "C.7 Use only the schema keywords defined in §9",
+          "line": 4059
+        },
+        {
+          "level": 3,
+          "title": "C.8 Do not use reserved language keys as ordinary object fields",
+          "line": 4063
+        },
+        {
+          "level": 3,
+          "title": "C.9 Do not expose the pure-reference wrapper as semantic content",
+          "line": 4069
+        },
+        {
+          "level": 3,
+          "title": "C.10 Do not let physical representation change semantic results",
+          "line": 4073
+        },
+        {
+          "level": 3,
+          "title": "C.11 Do not confuse expansion with specialization",
+          "line": 4077
+        },
+        {
+          "level": 3,
+          "title": "C.12 Do not minimize before hashing",
+          "line": 4081
+        },
+        {
+          "level": 3,
+          "title": "C.13 Do not confuse semantic canonicalization with JSON serialization",
+          "line": 4085
+        },
+        {
+          "level": 3,
+          "title": "C.14 Do not require transitive expansion to verify a direct node",
+          "line": 4089
+        },
+        {
+          "level": 3,
+          "title": "C.15 Do not confuse incremental list identity with reversible storage",
+          "line": 4093
+        },
+        {
+          "level": 2,
+          "title": "Appendix D — Error Categories",
+          "line": 4097
+        },
+        {
+          "level": 2,
+          "title": "Appendix E — Informative Direct-Node Storage Guidance",
+          "line": 4129
+        },
+        {
+          "level": 3,
+          "title": "E.1 Admission",
+          "line": 4133
+        },
+        {
+          "level": 3,
+          "title": "E.2 Retrieval",
+          "line": 4137
+        },
+        {
+          "level": 3,
+          "title": "E.3 Path navigation",
+          "line": 4141
+        },
+        {
+          "level": 3,
+          "title": "E.4 Direct-node limitation",
+          "line": 4145
+        },
+        {
+          "level": 3,
+          "title": "E.5 Provider chains",
+          "line": 4149
+        },
+        {
+          "level": 3,
+          "title": "E.6 Exact graph fragments",
+          "line": 4153
+        },
+        {
+          "level": 3,
+          "title": "E.7 Cyclic-member edges in fragments",
+          "line": 4169
+        }
+      ]
+    },
+    {
+      "path": "specifications/rooted-checkpoint-processing-1.0-draft.md",
+      "sha256": "e2c35e81677ba6f343d7acc146514452572e782b3ab1c21a942ca8a93d223932",
+      "bytes": 45274,
+      "headings": [
+        {
+          "level": 1,
+          "title": "Blue rooted checkpoint processing — RCP-1",
+          "line": 1
+        },
+        {
+          "level": 2,
+          "title": "1. The algorithm",
+          "line": 7
+        },
+        {
+          "level": 3,
+          "title": "1.1 One processing step",
+          "line": 9
+        },
+        {
+          "level": 3,
+          "title": "1.2 The driver",
+          "line": 23
+        },
+        {
+          "level": 2,
+          "title": "2. Normative rooted scope",
+          "line": 38
+        },
+        {
+          "level": 2,
+          "title": "3. Progress and receiving contexts",
+          "line": 52
+        },
+        {
+          "level": 2,
+          "title": "4. Selecting the earliest input",
+          "line": 64
+        },
+        {
+          "level": 2,
+          "title": "5. Forward graphs, repeated occurrences and internal delivery",
+          "line": 87
+        },
+        {
+          "level": 2,
+          "title": "6. Historical attachment and A10/A5",
+          "line": 99
+        },
+        {
+          "level": 2,
+          "title": "7. Creation, discovery and suspension",
+          "line": 126
+        },
+        {
+          "level": 2,
+          "title": "8. One rooted operation: exact ownership and gas",
+          "line": 140
+        },
+        {
+          "level": 3,
+          "title": "8.1 What remains unchanged",
+          "line": 142
+        },
+        {
+          "level": 3,
+          "title": "8.2 Derive the owned result, without a caller-supplied allowlist",
+          "line": 148
+        },
+        {
+          "level": 3,
+          "title": "8.3 Choose LIVE versus historical application before examining storage warmth",
+          "line": 170
+        },
+        {
+          "level": 3,
+          "title": "8.4 Shared live meter; no sibling debit",
+          "line": 182
+        },
+        {
+          "level": 3,
+          "title": "8.5 Constructive shared-source outcome table",
+          "line": 190
+        },
+        {
+          "level": 3,
+          "title": "8.6 Refined output shape (internal, not a new business API)",
+          "line": 207
+        },
+        {
+          "level": 3,
+          "title": "8.7 Dynamic-graph fences and crash recovery",
+          "line": 219
+        },
+        {
+          "level": 2,
+          "title": "9. Stable step, ready document and liveness",
+          "line": 226
+        },
+        {
+          "level": 2,
+          "title": "10. Closed history-basis and operation-identity construction",
+          "line": 238
+        },
+        {
+          "level": 3,
+          "title": "10.1 Status and common encoding",
+          "line": 240
+        },
+        {
+          "level": 3,
+          "title": "10.2 A document's stable history basis",
+          "line": 254
+        },
+        {
+          "level": 3,
+          "title": "10.3 Canonical owner context for an existing live group",
+          "line": 281
+        },
+        {
+          "level": 3,
+          "title": "10.4 Canonical base input and delivery identity",
+          "line": 304
+        },
+        {
+          "level": 3,
+          "title": "10.5 Existing cycles, merge, split and retry",
+          "line": 336
+        },
+        {
+          "level": 3,
+          "title": "10.6 Compatibility and finite identity obligations",
+          "line": 342
+        },
+        {
+          "level": 2,
+          "title": "11. Conformance and migration",
+          "line": 349
+        },
+        {
+          "level": 2,
+          "title": "12. Informative proof and implementation freedom",
+          "line": 359
+        }
+      ]
+    }
+  ]
+}

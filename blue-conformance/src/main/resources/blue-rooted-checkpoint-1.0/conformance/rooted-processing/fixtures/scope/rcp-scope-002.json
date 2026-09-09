@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-002",
+  "category": "SCOPE",
+  "title": "Chain root B does not pull its parent A",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "A",
+      "B",
+      "C"
+    ],
+    "edges": [
+      [
+        "A",
+        "B"
+      ],
+      [
+        "B",
+        "C"
+      ]
+    ],
+    "root": "B"
+  },
+  "expected": {
+    "reachable": [
+      "B",
+      "C"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

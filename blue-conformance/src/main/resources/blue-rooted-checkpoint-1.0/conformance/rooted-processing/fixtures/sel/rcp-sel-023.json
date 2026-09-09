@@ -1,0 +1,38 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-023",
+  "category": "SEL",
+  "title": "Feeder rejection advances operational progress without forging checkpoint",
+  "kind": "terminal-progress",
+  "requirements": [
+    "RCP-PROGRESS-04"
+  ],
+  "input": {
+    "checkpoint": null,
+    "entries": [
+      {
+        "timestamp": 1,
+        "timeline": "T",
+        "entry": "T:1"
+      },
+      {
+        "timestamp": 2,
+        "timeline": "T",
+        "entry": "T:2"
+      }
+    ],
+    "terminalEntries": [
+      "T:1"
+    ]
+  },
+  "expected": {
+    "next": "T:2",
+    "checkpoint": null
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

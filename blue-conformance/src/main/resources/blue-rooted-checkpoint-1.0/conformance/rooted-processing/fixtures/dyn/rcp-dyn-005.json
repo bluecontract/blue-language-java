@@ -1,0 +1,78 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-005",
+  "category": "DYN",
+  "title": "Removed binding cannot receive its later input",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "R",
+            "entry": "remove"
+          },
+          {
+            "timestamp": 3,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/x",
+        "entries": [
+          {
+            "timestamp": 2,
+            "timeline": "X",
+            "entry": "X:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "remove": [
+        {
+          "kind": "remove",
+          "address": "R/x",
+          "entries": [],
+          "cursor": 0
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "remove",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

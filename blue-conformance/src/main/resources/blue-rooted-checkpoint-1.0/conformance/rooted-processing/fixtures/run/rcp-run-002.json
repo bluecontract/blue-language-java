@@ -1,0 +1,92 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-002",
+  "category": "RUN",
+  "title": "Adding a sibling observer cannot change source results",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-OWN-01",
+    "RCP-OWN-02",
+    "RCP-OWN-04",
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "Q",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-002.json"
+      }
+    ],
+    "variants": [
+      "no-extra-observer",
+      "one-extra-observer",
+      "cold-repeat",
+      "reference-repeat"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-002.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "requiredEvents": 1,
+      "equalAcrossVariants": [
+        "after.S",
+        "events",
+        "ownedWrites",
+        "gas.charges",
+        "gas.total",
+        "semanticReceipts"
+      ],
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        }
+      ]
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

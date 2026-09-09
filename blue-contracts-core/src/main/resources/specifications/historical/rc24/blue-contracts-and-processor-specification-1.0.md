@@ -1,12 +1,10 @@
-# Blue Contracts and Processor Specification 1.0 — rooted checkpoint candidate
+# Blue Contracts and Processor Specification 1.0
 
-> **Current revision:** `blue-rooted-checkpoint/1.0-draft.2`. The [RCP-1 companion](rooted-checkpoint-processing-1.0-draft.md) is normative for this draft. This candidate preserves the current repository baseline and explicitly narrows processing scope to the selected rooted calculation. It retains one shared meter and atomic result per supplied invocation; it does not adopt own-work-only gas or independent SCC commits as a storage optimization. RCP-1 governs the listed changed boundaries; earlier profile identities and fixture outputs remain historical. No implementation-conformance or release pass is claimed.
-
-> **Status.** Proposed rooted-processing candidate, not a published release. The selected repository baseline already contains the empty-object, typed-definition, BEX null-boundary, collection-listener and historical-representation work. This iteration changes the root/ownership/cause/identity contract and its fixtures, not those Language/BEX value semantics. Regenerate only genuinely affected profile/implementation/fixture bindings after implementation; do not rotate core or catalog types without an actual dependency change.
+> **Status.** Proposed release-candidate revision; not a published release. This draft is based on the current inline-type identity-evidence worktree and adds exact empty-object semantics, a corrected BEX-to-Blue null boundary, absent-collection semantics, and an explicit collection-scoped embedded-event Channel. Runtime registry BlueIds, fixture identities, gas expectations/package manifests, and release bindings MUST be regenerated after implementation; earlier exact values are not authoritative for this draft.
 
 > **Scope.** This document defines contracts, Channels, Handlers, exact processing inputs, managed document boundaries, finite directed `Process Embedded` graphs, deterministic activation initialization, dynamic graph formation, cyclic processing, patches, Document Updates, internal events, checkpoints, lifecycle, termination, gas, exact failure semantics, and atomic publication. Blue content, BlueId, typing, resolution, canonicalization, and cyclic-set identity are defined by **Blue Language Specification 1.0**. Concrete business runtimes and external coordination policies are selected separately by exact identity.
 
-> **Compatibility.** RCP-1 draft.2 uses new semantic operation/identity domains and is not a silent replay policy for old sessions. Earlier exact profiles, registries and receipts remain immutable. The baseline already adopted its `{}`/absence/null and Embedded Collection Event Channel semantics; they are preserved here. New runtime and conformance bindings must identify the revised rooted contract, while unchanged type/value definitions retain their genuine identities.
+> **Compatibility.** This is an incompatible pre-stable RC revision. The Language empty-object change rotates affected content identities transitively. BEX execution-time `null` no longer converts unconditionally to Blue `{}`: object-member null is omitted, list null becomes `{ $empty: true }`, and root/patch/event null fails Blue output admission. `Process Embedded` also receives revised absent-collection semantics and its canonical registry description/BlueId MUST be rebuilt; no old affected identity may be silently aliased to the new one. The existing `Embedded Node Channel` keeps its current exact-path behavior, while `Embedded Collection Event Channel` is a new runtime type. Runtime-registry, fixture, implementation, gas-expectation, and release-package identities MUST be regenerated from the completed implementation.
 
 Blue Language defines exact content and identity. Blue Contracts defines how exact content changes deterministically when one exact cause is processed.
 
@@ -22,42 +20,70 @@ The term **Language** means Blue Language Specification 1.0.
 
 ## 0. Overview
 
-### 0.1 One selected rooted calculation
+### 0.1 One affected closure is one reality
 
-An invocation starts with one selected document and the exact graph it declares through `Process Embedded`. It does not start with every connected document present in the host.
-
-```text
-A -> B -> C
-
-selected A: A, B, C
-selected B:    B, C
-selected C:       C
-
-Order1 -> Agreement <- Order2
-
-selected Order1 does not discover Order2 through the incoming edge.
-```
-
-The finite forward graph may contain cycles. A real live cycle requires the existing complete cyclic proof, deterministic document-step scheduling and exact component finalization. Distinct occurrences and selected historical views remain distinct; a historical A5 is not replaced by a cached A10 merely because they name the same lineage.
-
-The term **affected closure** in this candidate means the exact required processing/evidence closure **inside the selected rooted domain**, extended only by new forward dependencies and authenticated lifecycle/historical/cyclic obligations. A containing ancestor belongs only when already inside that domain or necessarily co-owned by a reached live-cycle join. Reverse indexes identify other roots with work; they do not add those roots to the present transaction.
-
-A successful invocation publishes one coherent root result under RCP-1 §8. Unrelated one-way observers do not influence its result, gas or success. Read-only committed source history cannot be overwritten or rolled back by a consumer. Ordinary and cyclic Blue identities continue to use Language's existing algorithms.
-
-#### 0.1.1 Separate document execution within the rooted step
+The ordinary case changes one authoritative object Root:
 
 ```text
-input-selection unit: the selected rooted graph and its local progress
-execution unit:      one managed document step
-settlement unit:     the immediate work of one supplied invocation
-publication unit:    its complete rooted result under RCP-1 §8
+Root
+├── Customer
+├── Payment
+└── Delivery
 ```
 
-Each application runtime call receives one target document as `$document`, its registered inputs and exact context. It receives no ambient reverse parent, observer count, host-wide component object or caller-selected graph expansion.
+`Process Embedded` declares processable document boundaries inside that reality. The concrete graph is finite and directed. Most graphs are acyclic and use the ordinary deepest-first fast path.
 
-The existing orchestrator owns internal work order, local effects, exact identity finalization, shared invocation gas and atomic result publication. A cycle uses the same document-step runtime. Its complete-set finalization occurs before later affected reads; no `PROCESS_CYCLIC_DOCUMENT` or Handler-visible SCC object is introduced.
+A graph may also contain a finite strongly connected region:
 
-Materializing the rooted graph and storing/reusing its constituent exact results are equivalent only under RCP-1's read-view, event, progress, gas and publication obligations. Database rows do not define smaller semantic commits, and physical host connectivity does not define a larger one.
+```text
+Order A  ──/payment──▶  Payment B
+   ▲                       │
+   └──────/order───────────┘
+```
+
+A strongly connected region is one **cyclic processing component**. Every member may have its own contracts, local state, Timeline-facing Channels, lifecycle state, and checkpoints, but the members are not independently publishable while one cause is being processed through that component.
+
+One invocation operates on one exact **affected closure**: the directly addressed managed document occurrences, every document and occurrence required by `Process Embedded` causality, every containing document whose exact reference must change, and every dynamically admitted member required before the invocation can finish. The closure may contain one or more acyclic documents and one or more cyclic components connected by an acyclic condensation graph.
+
+A successful invocation publishes one coherent resulting closure. An acyclic changed document receives a new ordinary BlueId. A cyclic component receives one exact cyclic-set `MASTER` and exact `MASTER#index` member identities calculated by Blue Language §15. Every required containing reference and changed ancestor spine is rebuilt before publication. Unchanged branches retain their existing exact identities.
+
+Physical separation, lazy loading, caching, stable application `DocumentId` values, or invocation-local data structures do not create independent semantic commit boundaries.
+
+#### 0.1.1 Separate document execution inside one closure
+
+Contracts distinguishes three units:
+
+```text
+execution unit:   one managed document step
+scheduling unit:  one affected closure
+publication unit: one successful closure result
+```
+
+Every application runtime call in an affected closure targets exactly one
+managed `DocumentId`. That call receives that document as `$document`, uses `/`
+as its managed-document Root scope under the Contracts 1.0 closure profile, and
+returns effects for that document only. The call does not receive the documents
+that contain it, reverse embedding paths, a count of containing documents, or an
+ambient parent/component object.
+
+The closure orchestrator owns graph traversal, work ordering, occurrence
+bindings, shared gas, exact identity finalization, and atomic publication. It
+may schedule the same document more than once when distinct exact work
+occurrences reach it. It stages each document result separately and publishes
+the complete required closure only after all work is quiescent and valid.
+
+A cyclic component does not use a different document runtime. A member is
+processed by the same one-document step used in an acyclic graph. Cyclicity
+changes only the orchestrator's scheduling and the identity boundary: after an
+identity-affecting member step, the orchestrator re-finalizes the complete
+component before the next document step observes it. There is no
+`PROCESS_CYCLIC_DOCUMENT`, no ambient cycle binding, and no Handler-visible SCC
+object.
+
+Thus **documents are processed separately, while the required closure is
+published together**. This is implementable by an in-memory engine or by a
+durable host such as MyOS that stores one current head and epoch history per
+managed document and installs all staged heads in one closure commit.
 
 ### 0.2 Processor boundary
 
@@ -94,7 +120,7 @@ ADMIT_CLOSURE(invocationInput) -> ClosureAttemptResult
 ```
 
 `invocationInput` is the one closed §2.2 value. It contains one authoritative
-state-only rooted affected-closure snapshot and one set of invocation adjuncts, including the required RCP-1 root context. The
+state-only affected-closure snapshot and one set of invocation adjuncts. The
 external event is carried exactly once by `ExternalCause`; an admission cause
 is carried exactly once by the admission form; a managed-revision invocation
 carries exactly one `ManagedRevisionCause` and no event. An API MUST NOT accept
@@ -108,7 +134,7 @@ legacy exact-BlueId list is only a projection of exact-node demands. No closure
 API returns a bare `ClosureProcessResult` across the resource-acquisition
 boundary.
 
-`PROCESS` is the selected-root entrypoint for the same laws. A root without required embedded processing can use the ordinary one-document fast path. A conforming implementation MAY materialize the rooted graph or route it through the closure engine, but the same rooted result, exact gas/failure behavior and applicable ordinary fixture semantics MUST be preserved.
+`PROCESS` is the optimized one-document special case of the same laws. A conforming implementation MAY internally route an ordinary invocation through the closure engine, but existing ordinary result, gas, and fixture behavior MUST remain unchanged.
 
 For `PROCESS`:
 
@@ -131,7 +157,7 @@ Contracts MUST NOT reinterpret BEX `null` as `{}`, bypass the BEX boundary, or l
 
 For `PROCESS_CLOSURE`:
 
-- `invocationInput.snapshot` contains the complete exact managed-document state required for one selected rooted calculation under RCP-1, including occurrence bindings, graph generation, current component partition, current complete cyclic proofs where applicable, and public-Root declarations;
+- `invocationInput.snapshot` contains the complete exact managed-document state required for one connected atomic reality, including occurrence bindings, graph generation, current component partition, current complete cyclic proofs where applicable, and public-Root declarations;
 - `invocationInput.directDeliveries` is the one frozen direct logical-delivery
   sequence and is empty for a managed-revision invocation;
 - `invocationInput.cause` is either the external cause whose event is the
@@ -502,8 +528,6 @@ to that durable state identity. The conceptual grouping is:
 
 ```text
 ClosureInvocationInput {
-    rootProcessingContext              # required RCP-1 adjunct; see §2.2.0
-    rootProcessingContextIdentity      # recomputed RCP-1 assertion
     snapshot: AffectedClosureSnapshot {
         closureIdentity
         graphGeneration
@@ -662,19 +686,9 @@ order over that admitted string.
 
 The managed `documentId` is platform lineage evidence. It is not inferred from an arbitrary application property named `documentId`. When an exact document also contains a property with that name, the property is ordinary identity-bearing Blue content unless a separately selected host/profile rule gives it additional meaning. The feeder MUST establish the closure-record `documentId` and MUST reject any mismatch required by its selected identity policy before the processor accepts the snapshot. Contracts scheduling, occurrence binding, checkpoints, and work identity use the verified closure-record value.
 
-A closure MUST be finite and rooted under the selected forward occurrence and exact-proof obligations. Shared immutable read evidence does not merge two selected root invocations. No reverse-observer walk may enlarge the selected domain. Different root invocations use their own verified context and results, even when their exact read sets intersect.
+A closure MUST be finite and connected under required active occurrence and containing-reference obligations. A host processes disconnected closures as independent invocations.
 
 The initial snapshot MAY be acyclic. Ordinary patches may expand the active occurrence set, merge components, form a new cycle, split a component, or dissolve a cycle. Dynamic expansion uses §5.5 and §7; it does not restart the invocation.
-
-#### 2.2.0 Root processing context and evidence roles (RCP-1)
-
-The verified `RootProcessingContext` has exactly `canonicalRootDocumentId` and `operationOwnerIdentity`, derived by RCP-1 §10 from the requested root's entry live component and the closed document-history bases. They are not application-visible Blue fields. A public request to view A or B in one existing cycle does not choose a different operation owner; a genuinely different target Operation Request remains a different exact cause. Their exact identity wraps the base §2.6 invocation identity and the §2.9 companion in the new candidate domains listed in `../conformance/rooted-processing/identity-constructors.json`.
-
-`managedDocuments`, active/prospective occurrence rows, component records, direct deliveries and `publicRootDocumentIds` are scoped to the selected rooted input. Immutable external history witnesses and complete owning proofs do not become mutable members merely because their bytes were supplied. Root-local selected historical values retain their occurrence positions; a single latest-state map MUST NOT replace them.
-
-Graph/component generations and state identities refer to this semantic rooted projection, not a host-wide counter advanced by an unrelated observer registration. Inputs claiming an extra unrelated reverse observer, missing a required forward member, or treating a retained read witness as a writable head are invalid under this profile.
-
-RCP-1 OWN-01..06 define the complete authoritative write-set derivation and distinguish it from root-local dependency views and immutable source witnesses. CAUSE-01..03 classify LIVE versus historical application before cache inspection. ID-01..05 define the exact history basis, canonical entry owner, delivery basis and wrappers. Use those rules, not an arbitrary caller allowlist or a different transaction boundary inferred from storage. Internal component canonicalization does not merge distinct semantic input causes. Checkpoint/cursor staleness and retained terminal companions still prevent duplicate consumption.
 
 #### 2.2.1 Contracts 1.0 Root-scope closure profile
 
@@ -1011,9 +1025,10 @@ require the empty array and its recomputed empty-snapshot identity.
 
 A cyclic-set member identity MUST NOT be used as a top-level external event.
 
-### 2.3a Historical representation reconciliation (adopted dependency of the RCP-1 draft)
+### 2.3a Historical representation reconciliation (proposed amendment)
 
-This section is mandatory in the separately versioned RCP-1 draft.2 candidate. Its cause and position records are not accepted by an unamended historical Contracts 1.0 processor. A candidate specification does not assert implementation or published-release conformance.
+This section is a proposed, separately versioned extension. Its cause and
+position records are not accepted by an unamended Contracts 1.0 processor.
 `ManagedRevisionCause` retains its exact `toEpoch = fromEpoch + 1` rule.
 
 A `ManagedRepresentationCause` processes exactly one previously committed,
@@ -2078,7 +2093,7 @@ contain every non-release input needed to recompute each identity it asserts.
 
 ### 2.7 Atomic invocation
 
-All mutable state of the selected rooted invocation is tentative until final success. Independently committed source receipts and historical read views are inputs, not tentative effects of their consumer (RCP-1 §8):
+All invocation state is tentative until final success:
 
 - ordinary and member patches;
 - dynamically expanded closure members and occurrence bindings;
@@ -2098,7 +2113,7 @@ Transient missing exact resources returns `NeedsResources` from an attempt API a
 
 ### 2.8 Representation invariance
 
-For graph-equivalent selected Roots and their exact view/progress contexts under the same environment, a conforming implementation MUST return:
+For graph-equivalent ordinary Roots or closure snapshots under the same environment, a conforming implementation MUST return:
 
 - the same status and diagnostic category;
 - the same final ordinary Root BlueId or closure document, component, and component-state identities;
@@ -2109,13 +2124,11 @@ For graph-equivalent selected Roots and their exact view/progress contexts under
 - the same exact counter trace and total gas;
 - the same semantic provider demands.
 
-Adding an unrelated one-way incoming observer while preserving all relevant root inputs MUST also preserve these results and semantic identities. Physical fetch count, cache hits, allocation, storage layout, batching, and temporary handle representation are nonportable.
+Physical fetch count, cache hits, allocation, storage layout, batching, and temporary handle representation are nonportable.
 
 ### 2.9 Platform commit
 
-**RCP-1 publication projection.** `resultingDocuments` and component data describe the full calculated rooted result needed for exact validation. They are not a bulk-upsert permission for every independently stored `documentId`. Derive the owned set with RCP OWN-01..06 and project authoritative head/receipt/public-outbox writes only for those owners. Preserve unowned child results as exact root-local embedded view/progress evidence; preserve independently committed source witnesses as immutable reads. The companion binds the exact distinction and its existing result fields. Do not write an independent source head or source public outbox from an unowned calculated dependency. This qualification applies to “all resulting” records below and does not weaken atomicity of the complete owned result.
-
-A committing rooted result is installed only after verifying every exact dependency and applying compare-and-swap to its actual writable input heads, root-relevant graph/binding generations and current cyclic ownership. Immutable retained read positions are verified as those positions; they need not equal a newer source database head. RCP-1 §8 forbids writes outside the verified rooted publication set.
+A committing result is installed only through compare-and-swap against every exact input document state, graph generation, stable component identity, component-state identity, and current cyclic `MASTER` on which the result depends.
 
 The transaction MUST atomically persist every applicable item below:
 
@@ -2132,8 +2145,9 @@ terminal progress for the original cause
 commit companion and gas trace identity
 ```
 
-For every RCP-1 operation, including `ADMIT_CLOSURE`, `terminal progress for the
-original cause` is host-internal idempotency evidence under the rooted terminal-key constructor. It binds the verified stable root execution context and exact `causeIdentity`; the earlier cause-only key remains part of the legacy profile. The compare-and-swap dependency set fences installation
+For every operation, including `ADMIT_CLOSURE`, `terminal progress for the
+original cause` is host-internal idempotency evidence keyed exclusively by the
+exact `causeIdentity`. The compare-and-swap dependency set fences installation
 but does not become part of that key. This terminal record is never Timeline
 position, source-occurrence progress, delivery progress, a Channel checkpoint,
 a checkpoint domain or subject, or lifecycle-marker state, and a platform MUST
@@ -2238,7 +2252,7 @@ companion contains the compare-and-swap expectations necessary to prove that
 all effects were installed together; a schema MUST NOT replace any identity
 with a count, Boolean, stage name, or host object.
 
-A platform MUST NOT publish only a subset of the selected rooted result’s required mutable documents or live component members. It MUST NOT add other roots merely because they share a read dependency or receive a later notification. The RCP-1 companion wrapper authenticates the root context, immutable-read evidence and declared publication set.
+A platform MUST NOT publish only a subset of closure documents or component members.
 
 For a nonmutating terminal result, progress is compare-and-swapped against the exact unchanged state. A conflict commits nothing and requires re-derivation. Host contention and persistence retry are not portable Contracts gas.
 
@@ -3004,15 +3018,12 @@ Direct external deliveries are frozen from pre-event state. A new edge created b
 
 ### 5.5 Participating and dynamically expanding closure
 
-The initial affected closure is selected from the one rooted domain and contains:
+The initial affected closure contains:
 
-- the selected Root and its required forward embedded document/view occurrences;
-- each complete reached live cyclic component and exact proof required by this calculation;
-- direct-delivery targets and containing ancestor spines **within that rooted domain**;
-- verified prospective/historical bindings and immutable witnesses required by the prescribed step; and
-- the scopes required for this invocation’s initialization, lifecycle, update, event, checkpoint, validation or public Root result.
-
-An incoming observer outside the forward domain is not added. Opening that observer and its other children is not closure completion. Immutable evidence presence does not authorize a write or a delivery. The root context is recomputed and independently verified before acceptance.
+- every direct-delivery target managed document;
+- every component required to process those targets;
+- every active containing document and ancestor component whose exact reference may change;
+- every scope required for initialization, lifecycle, update, event, checkpoint, validation, or public Root publication.
 
 A Handler patch, initialization result, generated type write, or
 processor-managed write may add, remove, replace, or otherwise change the
@@ -3029,7 +3040,7 @@ After each such identity-affecting change, the processor MUST:
 4. only when the aggregate is empty, reconcile every Root from exact resulting
    Blue content and verified occurrence evidence, including one atomic active
    cross-lineage `REBIND` when permitted by §5.6;
-5. expand the closure only to newly required forward targets, exact proofs and containers inside the selected rooted domain;
+5. expand the closure only to newly required exact targets and containers;
 6. preflight every newly expanded document, runtime type, proof, and limit
    before its first semantic work;
 7. recompute the affected strongly connected partition;
@@ -3037,7 +3048,9 @@ After each such identity-affecting change, the processor MUST:
    ordinals, and admitted gas when continuing a complete attempt; and
 9. continue under the new partition without replaying the external delivery.
 
-The all-Root demand preflight is an atomicity boundary for Roots/scopes participating in this selected rooted invocation. A demand prevents that invocation’s reconciliation, including its participants whose evidence is complete. It does not block an unrelated incoming observer or an independent source invocation. Tentative application effects before this boundary may be
+The all-Root demand preflight is an atomicity boundary. A demand in one Root
+prevents reconciliation of every other Root, including Roots whose evidence is
+already complete. Tentative application effects before this boundary may be
 reproduced on retry but are not published by the suspended attempt.
 
 Closure expansion may merge two existing cyclic components, create a new cycle from an acyclic region, split a component, or dissolve a cycle.
@@ -3247,9 +3260,9 @@ boundary creates a new activation generation. Same-invocation
 remove-then-re-add is unsupported. Old work, checkpoints, occurrence
 identities, and binding identities are never transferred to the new generation.
 
-### 5.10 One authoritative rooted result
+### 5.10 One authoritative closure
 
-No required mutable cyclic member or changed containing document inside the selected rooted publication set is separately authoritative during that invocation. Independently committed read-only source history remains authoritative and is not rolled back. A successful result publishes every required changed document, component proof, occurrence binding, checkpoint, subscription delta, and public event together.
+No cyclic member or changed containing document is separately authoritative during one closure invocation. A successful result publishes every required changed document, component proof, occurrence binding, checkpoint, subscription delta, and public event together.
 
 This atomic publication rule does not permit multi-document Handler execution.
 Each document has already been processed in isolation; only the staged commit is
@@ -3959,7 +3972,7 @@ A document step never enumerates documents that contain `D`. Reverse delivery
 is performed by the orchestrator from the verified occurrence index after the
 step returns.
 
-### 7.5a Applying one historical representation step (adopted dependency of the RCP-1 draft)
+### 7.5a Applying one historical representation step (proposed amendment)
 
 A valid `ManagedRepresentationCause` creates exactly one ordinary
 `CONTAINING_REFERENCE_UPDATE` work for the containing source document. It
@@ -4442,7 +4455,7 @@ applicable, remain.
 
 ### 7.14 Several matching documents and scopes
 
-Within one selected rooted domain, when one exact cause affects several managed documents, the processor executes
+When one exact cause affects several managed documents, the processor executes
 one isolated step per logical delivery/document target. The host may execute
 those steps sequentially; Contracts 1.0 requires no parallelism. Each step has
 its own before identity and local-result evidence. The orchestrator supplies
@@ -4466,7 +4479,7 @@ Each earlier seed and all caused work reaches quiescence before the next seed. A
 
 Inside one cyclic component there is no deepest member. Use the canonical member/direct seed order in §4.7. Each seed's causal closure reaches quiescence before the next seed.
 
-When an event directly targets a cyclic component and an acyclic containing Root inside the selected rooted invocation, the component settles and exact containing-reference updates precede that containing Root's direct seed. Other independently selected roots do not join through shared read dependencies.
+When an event directly targets a cyclic component and an acyclic containing Root, the component settles and exact containing-reference updates are processed before the containing Root's direct seed.
 
 ### 7.15 Exact locality
 
@@ -5325,7 +5338,7 @@ Every invocation MUST nevertheless bind one exact finite default maximum from th
 
 A host or document-specific policy MAY lower the maximum only when the lowered policy has an exact identity included in invocation and receipt evidence. It MUST NOT silently raise the release maximum.
 
-All work in one **selected-root** `PROCESS_CLOSURE` or `ADMIT_CLOSURE` invocation shares one meter. A member-local cap is a lower ceiling over that same ledger, not a new meter. Unrelated incoming observers contribute no work to this invocation. RCP-1 §8 preserves cold/warm equivalence and does not adopt own-work-only metering. Separately supplied retained-successor applications keep their existing separate meter boundaries.
+All work in one `PROCESS_CLOSURE` or `ADMIT_CLOSURE` invocation shares one meter. A member-local cap is a lower ceiling over that same ledger, not a new meter.
 
 Full-lifecycle admission retains every admission-specific initial edge,
 component, proof-verification, and finalization charge before its queued work.
@@ -5867,7 +5880,7 @@ closureWorkOccurrencesPerInvocation:     8192
 closureTentativeFinalizationsPerInvocation: 8192
 ```
 
-Existing ordinary limits and numeric weights remain unchanged. The named closure limits count the selected rooted invocation and its prescribed work, not all reverse observers or all documents in the host. A fan-out of 5,000 independent Orders consuming Agreement is not automatically one 5,001-document Agreement invocation. A root with that many actually required forward managed members is still subject to the exact limit.
+Existing ordinary limits remain unchanged.
 
 For each closure-specific limit, the conformance package contains: (a) an exact boundary microfixture proving `observed == configured` is admitted by that named guard and `observed == configured + 1` is rejected with its named diagnostic before the disallowed step; and (b) at least one executable closure fixture proving the counter's owner and increment point. Passing an at-bound guard does not imply that the enclosing invocation can complete before another independently applicable guard or the shared gas limit. A boundary microfixture reports its limit decision separately from any later invocation status and MUST NOT pretend that a numeric `limitProbe` is a successfully executed closure.
 
@@ -5902,7 +5915,7 @@ Authors SHOULD:
 - put mutable business conditions in Handlers, not External Channel acceptance;
 - avoid broad events matching thousands of scopes;
 - preserve event/gas headroom for ancestor reactions;
-- distinguish one selected rooted calculation from unrelated incoming observers; explicit forward dependencies and live cyclic ownership, not physical co-location, determine the required state;
+- use separate top-level Roots only when the states are not one atomic `Process Embedded` reality; physical separation or BlueId reuse alone does not imply autonomy;
 - use stable object keys for dynamic embedded collections;
 - avoid list positions as process-occurrence identities;
 - instantiate reusable process modules with explicit local Channel bindings rather than implicit parent lookup.
@@ -6347,8 +6360,6 @@ Cross-invocation remove/re-add creates a new activation generation;
 same-invocation remove-then-re-add is unsupported in Contracts 1.0.
 
 ### 16.9 Known A at epoch 10; B attaches A at epoch 5
-
-**RCP-1 applicability.** This example is preserved for the selected B rooted calculation. Applying old selected positions uses the same one-input processor through separate successor invocations; it is not a second business algorithm. Historical A5 may retain an exact B2 view without resolving it to current B. The terminal live join may reach the real A/B ownership cycle through that forward relationship; unrelated external parent observers do not join the publication. A loop that replaces every historical lineage reference with its latest head is invalid.
 
 `DocumentId` and BlueId are distinct. A current managed lineage may be at epoch 10 while B contains an exact historical state from epoch 5.
 
@@ -6904,13 +6915,21 @@ Provider acquisition and verification happen before an exact node is inserted in
 
 ## Appendix D — Common Implementer Mistakes
 
-The RCP-1 companion qualifies every reference to “closure,” “all Roots” and “containing spines” in this appendix to the selected rooted invocation. Existing local invariants are not permission for host-wide reverse expansion.
+### D.1 Process documents separately; do not publish a required closure partially
 
-### D.1 Preserve the selected rooted result, not a host-wide observer transaction
+Every managed document MUST execute in its own isolated document step. Do not
+run a Handler against a synthetic multi-document `$document`, do not inject
+parent/reverse-containment context, and do not use a different Handler runtime
+for cyclic members.
 
-Separate physical document steps do not choose semantic publication boundaries. RCP-1 §8 defines the one-input rooted result and its shared meter. Do not publish half of that result or a partial live cycle. Do not enlarge it to every one-way parent observer merely because that observer is stored on the host.
+Separate execution is not separate same-cause publication. Do not publish one
+cyclic component member, changed containing document, checkpoint, or occurrence
+binding independently when it belongs to the same required closure. One closure
+transition has one shared gas ledger, complete-set proof where cyclic, event
+result, and atomic publication boundary.
 
-An immutable committed source receipt is input evidence, not a tentative child effect to roll back. A root-local child view is not permission to overwrite an independently authoritative source head. Cache reuse and physical staging must refine the same selected-root step, including failures and gas; SCC-only commits or own-work-only charging are not silently selected by this revision.
+For acyclic embedded documents, physical storage by BlueId or a separate
+document-step evaluation does not authorize an early current-head commit.
 
 ### D.2 Do not publish child events
 
@@ -7051,9 +7070,3 @@ document and input must produce the same document-step result regardless of
 how many containing occurrences exist.
 
 *End of Blue Contracts and Processor Specification 1.0.*
-
-## Appendix E — Rooted checkpoint profile and conformance
-
-The normative companion [RCP-1](rooted-checkpoint-processing-1.0-draft.md) defines selected-root discovery, checkpoint-driven next-input selection, history and evidence roles, gas/publication qualification and the candidate identity wrappers. Its fixture obligations are in `../conformance/rooted-processing/`.
-
-The simple contract is: driver selects the earliest pending input across the selected root's exact views; processor settles that one supplied input. This does not move Timeline completeness or authority into Contracts. The unchanged lower-level rules remain required. Legacy exact fixture results are preserved as legacy inputs, not automatically re-certified for this changed scope.

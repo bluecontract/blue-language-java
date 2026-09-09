@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independently pinned actual candidate build lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifactSha256",
+    "sourceCommits",
+    "dependencies",
+    "specificationSetSha256"
+  ],
+  "properties": {
+    "artifactSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "specificationSetSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sourceCommits": {
+      "type": "object",
+      "required": [
+        "language",
+        "bex",
+        "coordination",
+        "myos"
+      ],
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{40}$"
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  }
+}

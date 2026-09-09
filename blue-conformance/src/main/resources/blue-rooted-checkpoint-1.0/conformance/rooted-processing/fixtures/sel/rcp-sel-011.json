@@ -1,0 +1,171 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-011",
+  "category": "SEL",
+  "title": "Root-local duplicate source positions select different suffixes",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/left@5",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          },
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          },
+          {
+            "timestamp": 3,
+            "timeline": "T",
+            "entry": "T:3"
+          },
+          {
+            "timestamp": 4,
+            "timeline": "T",
+            "entry": "T:4"
+          },
+          {
+            "timestamp": 5,
+            "timeline": "T",
+            "entry": "T:5"
+          },
+          {
+            "timestamp": 6,
+            "timeline": "T",
+            "entry": "T:6"
+          },
+          {
+            "timestamp": 7,
+            "timeline": "T",
+            "entry": "T:7"
+          },
+          {
+            "timestamp": 8,
+            "timeline": "T",
+            "entry": "T:8"
+          },
+          {
+            "timestamp": 9,
+            "timeline": "T",
+            "entry": "T:9"
+          },
+          {
+            "timestamp": 10,
+            "timeline": "T",
+            "entry": "T:10"
+          }
+        ],
+        "cursor": 5,
+        "active": true
+      },
+      {
+        "address": "R/right@8",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          },
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          },
+          {
+            "timestamp": 3,
+            "timeline": "T",
+            "entry": "T:3"
+          },
+          {
+            "timestamp": 4,
+            "timeline": "T",
+            "entry": "T:4"
+          },
+          {
+            "timestamp": 5,
+            "timeline": "T",
+            "entry": "T:5"
+          },
+          {
+            "timestamp": 6,
+            "timeline": "T",
+            "entry": "T:6"
+          },
+          {
+            "timestamp": 7,
+            "timeline": "T",
+            "entry": "T:7"
+          },
+          {
+            "timestamp": 8,
+            "timeline": "T",
+            "entry": "T:8"
+          },
+          {
+            "timestamp": 9,
+            "timeline": "T",
+            "entry": "T:9"
+          },
+          {
+            "timestamp": 10,
+            "timeline": "T",
+            "entry": "T:10"
+          }
+        ],
+        "cursor": 8,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "T:6",
+        "receivers": [
+          "R/left@5"
+        ]
+      },
+      {
+        "entry": "T:7",
+        "receivers": [
+          "R/left@5"
+        ]
+      },
+      {
+        "entry": "T:8",
+        "receivers": [
+          "R/left@5"
+        ]
+      },
+      {
+        "entry": "T:9",
+        "receivers": [
+          "R/left@5",
+          "R/right@8"
+        ]
+      },
+      {
+        "entry": "T:10",
+        "receivers": [
+          "R/left@5",
+          "R/right@8"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-003",
+  "category": "RUN",
+  "title": "An out-of-gas sibling cannot veto source or another root",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-OWN-05",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "Q",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-003.json"
+      }
+    ],
+    "variants": [
+      "baseline",
+      "failed-sibling"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-003.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.seen": 1,
+        "P.child.counter": 1
+      },
+      "requiredEvents": 0,
+      "equalAcrossVariants": [
+        "after.P",
+        "ownedWrites",
+        "gas.charges",
+        "gas.total",
+        "semanticReceipts"
+      ],
+      "extraChecks": {
+        "failed-sibling": {
+          "failedSibling.status": "GAS_LIMIT_EXCEEDED",
+          "failedSibling.ownedWrites": []
+        }
+      },
+      "preserveSource": true
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

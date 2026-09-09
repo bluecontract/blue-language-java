@@ -1,0 +1,1886 @@
+{
+  "schema": "blue-rooted-requirement-coverage/1.0-draft.2",
+  "rules": [
+    {
+      "id": "RCP-SCOPE-01",
+      "fixtures": [
+        "RCP-SCOPE-001",
+        "RCP-SCOPE-002",
+        "RCP-SCOPE-003",
+        "RCP-SCOPE-004",
+        "RCP-SCOPE-005",
+        "RCP-SCOPE-006",
+        "RCP-SCOPE-007",
+        "RCP-SCOPE-008",
+        "RCP-SCOPE-009",
+        "RCP-SCOPE-010",
+        "RCP-SCOPE-011",
+        "RCP-RUN-002"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SCOPE-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-011",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-002",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-SCOPE-02",
+      "fixtures": [
+        "RCP-SCOPE-001",
+        "RCP-SCOPE-002",
+        "RCP-SCOPE-003",
+        "RCP-SCOPE-004",
+        "RCP-SCOPE-005",
+        "RCP-SCOPE-006",
+        "RCP-SCOPE-007",
+        "RCP-SCOPE-008",
+        "RCP-SCOPE-009",
+        "RCP-SCOPE-010",
+        "RCP-SCOPE-011",
+        "RCP-SCOPE-012",
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-032"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SCOPE-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-011",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-012",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-002",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-003",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-032",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-SCOPE-03",
+      "fixtures": [
+        "RCP-RUN-007",
+        "RCP-RUN-023",
+        "RCP-RUN-024",
+        "RCP-SCOPE-003"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "fixtures/scope/rcp-scope-003.json",
+          "scope": "STATIC_REACHABILITY_ONLY",
+          "covers": "not dynamic expansion"
+        },
+        {
+          "source": "tools/test_iteration2.py",
+          "method": "OwnershipTests.test_new_cycle_expands_but_split_does_not_shrink_step",
+          "scope": "FINITE_MODEL_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-007.json",
+          "assertion": "positionSequence + source receipt prefix + liveCycle + restart",
+          "scope": "PRODUCTION_NOT_RUN"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "additionalPhase split, context freeze, exact prior receipt preservation",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-SCOPE-04",
+      "fixtures": [
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-030",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-SCOPE-05",
+      "fixtures": [
+        "RCP-RUN-027",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-027",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-030",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-SCOPE-06",
+      "fixtures": [
+        "RCP-RUN-020",
+        "RCP-RUN-031"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-020",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-031",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-PROGRESS-01",
+      "fixtures": [
+        "RCP-SEL-001",
+        "RCP-SEL-002",
+        "RCP-SEL-003",
+        "RCP-SEL-004",
+        "RCP-SEL-005",
+        "RCP-SEL-006",
+        "RCP-SEL-007",
+        "RCP-SEL-008",
+        "RCP-SEL-009",
+        "RCP-SEL-010",
+        "RCP-SEL-011",
+        "RCP-SEL-012",
+        "RCP-SEL-013",
+        "RCP-SEL-014",
+        "RCP-SEL-015",
+        "RCP-SEL-016",
+        "RCP-SEL-017",
+        "RCP-SEL-018",
+        "RCP-SEL-019",
+        "RCP-SEL-020",
+        "RCP-RUN-005"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SEL-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-011",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-012",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-013",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-014",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-015",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-016",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-017",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-018",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-019",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-020",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-005",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-PROGRESS-02",
+      "fixtures": [
+        "RCP-DYN-001",
+        "RCP-DYN-002",
+        "RCP-DYN-003",
+        "RCP-DYN-004",
+        "RCP-DYN-005",
+        "RCP-DYN-006",
+        "RCP-DYN-007",
+        "RCP-DYN-008",
+        "RCP-DYN-009",
+        "RCP-DYN-010",
+        "RCP-RUN-004"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-DYN-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-004",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-PROGRESS-03",
+      "fixtures": [
+        "RCP-HIST-001",
+        "RCP-HIST-002",
+        "RCP-HIST-003",
+        "RCP-HIST-004",
+        "RCP-HIST-005",
+        "RCP-HIST-006",
+        "RCP-HIST-007",
+        "RCP-HIST-008",
+        "RCP-RUN-006",
+        "RCP-RUN-016"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-HIST-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-006",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-016",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-PROGRESS-04",
+      "fixtures": [
+        "RCP-SEL-023"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SEL-023",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-PROGRESS-05",
+      "fixtures": [
+        "RCP-RUN-001",
+        "RCP-RUN-027",
+        "RCP-RUN-028",
+        "RCP-RUN-029"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-001",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-027",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-028",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-029",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-01",
+      "fixtures": [
+        "RCP-SEL-001",
+        "RCP-SEL-002",
+        "RCP-SEL-003",
+        "RCP-SEL-004",
+        "RCP-SEL-005",
+        "RCP-SEL-006",
+        "RCP-SEL-007",
+        "RCP-SEL-008",
+        "RCP-SEL-009",
+        "RCP-SEL-010",
+        "RCP-SEL-011",
+        "RCP-SEL-012",
+        "RCP-SEL-013",
+        "RCP-SEL-014",
+        "RCP-SEL-015",
+        "RCP-SEL-016",
+        "RCP-SEL-017",
+        "RCP-SEL-018",
+        "RCP-SEL-019",
+        "RCP-SEL-020",
+        "RCP-SEL-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SEL-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-011",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-012",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-013",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-014",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-015",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-016",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-017",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-018",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-019",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-020",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-024",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-02",
+      "fixtures": [
+        "RCP-SEL-021",
+        "RCP-SEL-022"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SEL-021",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SEL-022",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-03",
+      "fixtures": [
+        "RCP-SEL-008"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SEL-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-04",
+      "fixtures": [
+        "RCP-RUN-008"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-008",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-05",
+      "fixtures": [
+        "RCP-WORK-001",
+        "RCP-WORK-002",
+        "RCP-WORK-003",
+        "RCP-WORK-004",
+        "RCP-WORK-005",
+        "RCP-WORK-006",
+        "RCP-WORK-007",
+        "RCP-WORK-008",
+        "RCP-RUN-014"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-WORK-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-014",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ORDER-06",
+      "fixtures": [
+        "RCP-DYN-001",
+        "RCP-DYN-002",
+        "RCP-DYN-003",
+        "RCP-DYN-004",
+        "RCP-DYN-005",
+        "RCP-DYN-006",
+        "RCP-DYN-007",
+        "RCP-DYN-008",
+        "RCP-DYN-009",
+        "RCP-DYN-010"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-DYN-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-GRAPH-01",
+      "fixtures": [
+        "RCP-SCOPE-006",
+        "RCP-SCOPE-007"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SCOPE-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-GRAPH-02",
+      "fixtures": [
+        "RCP-WORK-001",
+        "RCP-WORK-002",
+        "RCP-WORK-003",
+        "RCP-WORK-004",
+        "RCP-WORK-005",
+        "RCP-WORK-006",
+        "RCP-WORK-007",
+        "RCP-WORK-008",
+        "RCP-RUN-015"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-WORK-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-015",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-GRAPH-03",
+      "fixtures": [
+        "RCP-RUN-009",
+        "RCP-RUN-010"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-009",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-010",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-GRAPH-04",
+      "fixtures": [
+        "RCP-RUN-011"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-011",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-GRAPH-05",
+      "fixtures": [
+        "RCP-DYN-001",
+        "RCP-DYN-002",
+        "RCP-DYN-003",
+        "RCP-DYN-004",
+        "RCP-DYN-005",
+        "RCP-DYN-006",
+        "RCP-DYN-007",
+        "RCP-DYN-008",
+        "RCP-DYN-009",
+        "RCP-DYN-010",
+        "RCP-RUN-012",
+        "RCP-RUN-013",
+        "RCP-RUN-019",
+        "RCP-RUN-023"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-DYN-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-DYN-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-012",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-013",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-019",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-023",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-01",
+      "fixtures": [
+        "RCP-RUN-033"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-033",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-02",
+      "fixtures": [
+        "RCP-HIST-001",
+        "RCP-HIST-002",
+        "RCP-HIST-003",
+        "RCP-HIST-004",
+        "RCP-HIST-005",
+        "RCP-HIST-006",
+        "RCP-HIST-007",
+        "RCP-HIST-008"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-HIST-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-03",
+      "fixtures": [
+        "RCP-HIST-001",
+        "RCP-HIST-002",
+        "RCP-HIST-003",
+        "RCP-HIST-004",
+        "RCP-HIST-005",
+        "RCP-HIST-006",
+        "RCP-HIST-007",
+        "RCP-HIST-008",
+        "RCP-RUN-006",
+        "RCP-RUN-007",
+        "RCP-RUN-008"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-HIST-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-006",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-007",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-008",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-04",
+      "fixtures": [
+        "RCP-HIST-009",
+        "RCP-RUN-007",
+        "RCP-RUN-013"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-HIST-009",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-007",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-013",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-05",
+      "fixtures": [
+        "RCP-RUN-007",
+        "RCP-RUN-018"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-007",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-018",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-06",
+      "fixtures": [
+        "RCP-HIST-010",
+        "RCP-HIST-011",
+        "RCP-RUN-017"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-HIST-010",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-HIST-011",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-017",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-HISTORY-07",
+      "fixtures": [
+        "RCP-RUN-019",
+        "RCP-RUN-021"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-019",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-021",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-BIRTH-01",
+      "fixtures": [
+        "RCP-RUN-025"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-025",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-BIRTH-02",
+      "fixtures": [
+        "RCP-RUN-026"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-026",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-BIRTH-03",
+      "fixtures": [
+        "RCP-RUN-025",
+        "RCP-RUN-026"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-025",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-026",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-BIRTH-04",
+      "fixtures": [
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-024",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-BIRTH-05",
+      "fixtures": [
+        "RCP-RUN-025"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-025",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-01",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-02",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-03",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-04",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-05",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-OWN-06",
+      "fixtures": [
+        "RCP-RUN-002",
+        "RCP-RUN-003",
+        "RCP-RUN-007",
+        "RCP-RUN-021",
+        "RCP-RUN-023",
+        "RCP-RUN-024"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methodFamily": "OwnershipTests",
+          "scope": "FINITE_MODEL_ONLY",
+          "covers": "owned result sets, fixed-entry merge/split, parent/source order and failure; not Blue runtime execution"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract: live below/at/above budget and per-variant owned result",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-CAUSE-01",
+      "fixtures": [
+        "RCP-RUN-007",
+        "RCP-RUN-020",
+        "RCP-RUN-025",
+        "RCP-RUN-026"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methods": [
+            "OwnershipTests.test_live_kind_independent_of_cache",
+            "OwnershipTests.test_historical_kind_is_semantic_interval"
+          ],
+          "scope": "FINITE_MODEL_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract.causeKind + expectedBySuffix + compareWithinBoundary",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-CAUSE-02",
+      "fixtures": [
+        "RCP-RUN-007",
+        "RCP-RUN-020",
+        "RCP-RUN-025",
+        "RCP-RUN-026"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methods": [
+            "OwnershipTests.test_live_kind_independent_of_cache",
+            "OwnershipTests.test_historical_kind_is_semantic_interval"
+          ],
+          "scope": "FINITE_MODEL_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract.causeKind + expectedBySuffix + compareWithinBoundary",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-CAUSE-03",
+      "fixtures": [
+        "RCP-RUN-007",
+        "RCP-RUN-020",
+        "RCP-RUN-025",
+        "RCP-RUN-026"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "tools/test_iteration2.py",
+          "methods": [
+            "OwnershipTests.test_live_kind_independent_of_cache",
+            "OwnershipTests.test_historical_kind_is_semantic_interval"
+          ],
+          "scope": "FINITE_MODEL_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-020.json",
+          "assertion": "outputContract.causeKind + expectedBySuffix + compareWithinBoundary",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-READY-01",
+      "fixtures": [
+        "RCP-RUN-034"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-034",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-READY-02",
+      "fixtures": [
+        "RCP-RUN-034"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-034",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-READY-03",
+      "fixtures": [
+        "RCP-RUN-021",
+        "RCP-RUN-034"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-RUN-021",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-034",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-READY-04",
+      "fixtures": [
+        "RCP-WORK-001",
+        "RCP-WORK-002",
+        "RCP-WORK-003",
+        "RCP-WORK-004",
+        "RCP-WORK-005",
+        "RCP-WORK-006",
+        "RCP-WORK-007",
+        "RCP-WORK-008",
+        "RCP-RUN-022"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-WORK-001",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-002",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-003",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-004",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-005",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-006",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-007",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-WORK-008",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-022",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-READY-05",
+      "fixtures": [
+        "RCP-SCOPE-012",
+        "RCP-SCOPE-013",
+        "RCP-RUN-032"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "fixture": "RCP-SCOPE-012",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-SCOPE-013",
+          "scope": "ABSTRACT_ASSERTIONS_ONLY",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        },
+        {
+          "fixture": "RCP-RUN-032",
+          "scope": "PRODUCTION_NOT_RUN",
+          "covers": "See fixture exact expected fields; this link does not claim all combinations or implementation correctness"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ID-01",
+      "fixtures": [
+        "RCP-RUN-023",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "identity/vectors.json",
+          "assertion": "exact canonicalValue and expected envelope hashes",
+          "scope": "ENVELOPE_UNIT_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "same-context/delivery/invocation/terminal identity across view-A/view-B; split freeze",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ID-02",
+      "fixtures": [
+        "RCP-RUN-023",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "identity/vectors.json",
+          "assertion": "exact canonicalValue and expected envelope hashes",
+          "scope": "ENVELOPE_UNIT_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "same-context/delivery/invocation/terminal identity across view-A/view-B; split freeze",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ID-03",
+      "fixtures": [
+        "RCP-RUN-023",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "identity/vectors.json",
+          "assertion": "exact canonicalValue and expected envelope hashes",
+          "scope": "ENVELOPE_UNIT_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "same-context/delivery/invocation/terminal identity across view-A/view-B; split freeze",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ID-04",
+      "fixtures": [
+        "RCP-RUN-023",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "identity/vectors.json",
+          "assertion": "exact canonicalValue and expected envelope hashes",
+          "scope": "ENVELOPE_UNIT_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "same-context/delivery/invocation/terminal identity across view-A/view-B; split freeze",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    },
+    {
+      "id": "RCP-ID-05",
+      "fixtures": [
+        "RCP-RUN-023",
+        "RCP-RUN-030"
+      ],
+      "status": "MAPPED_NOT_CERTIFIED",
+      "assertionEvidence": [
+        {
+          "source": "identity/vectors.json",
+          "assertion": "exact canonicalValue and expected envelope hashes",
+          "scope": "ENVELOPE_UNIT_ONLY"
+        },
+        {
+          "source": "plans/rcp-run-023.json",
+          "assertion": "same-context/delivery/invocation/terminal identity across view-A/view-B; split freeze",
+          "scope": "PRODUCTION_NOT_RUN"
+        }
+      ]
+    }
+  ],
+  "completeImplementationCoverageClaimed": false,
+  "caveat": "Each scope is evidence-specific. Static reachability does not certify historical join, identity units do not certify base receipt verification, and production mappings are NOT_RUN."
+}

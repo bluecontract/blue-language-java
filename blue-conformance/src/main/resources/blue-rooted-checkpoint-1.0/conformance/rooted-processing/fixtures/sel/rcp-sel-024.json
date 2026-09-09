@@ -1,0 +1,60 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-024",
+  "category": "SEL",
+  "title": "External cause identities preserve large exact microsecond timestamps",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 9007199254740990,
+            "timeline": "A",
+            "entry": "a"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "B",
+        "entries": [
+          {
+            "timestamp": 9007199254740991,
+            "timeline": "B",
+            "entry": "b"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "a",
+        "receivers": [
+          "A"
+        ]
+      },
+      {
+        "entry": "b",
+        "receivers": [
+          "B"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

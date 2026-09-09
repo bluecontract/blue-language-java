@@ -1,0 +1,1064 @@
+{
+  "schema": "blue-rooted-processing-index/1.0-draft.2",
+  "fixtures": [
+    {
+      "id": "RCP-SEL-001",
+      "path": "fixtures/sel/rcp-sel-001.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-002",
+      "path": "fixtures/sel/rcp-sel-002.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-003",
+      "path": "fixtures/sel/rcp-sel-003.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-004",
+      "path": "fixtures/sel/rcp-sel-004.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-005",
+      "path": "fixtures/sel/rcp-sel-005.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-006",
+      "path": "fixtures/sel/rcp-sel-006.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-007",
+      "path": "fixtures/sel/rcp-sel-007.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-008",
+      "path": "fixtures/sel/rcp-sel-008.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-ORDER-03",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-009",
+      "path": "fixtures/sel/rcp-sel-009.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-010",
+      "path": "fixtures/sel/rcp-sel-010.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-011",
+      "path": "fixtures/sel/rcp-sel-011.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-012",
+      "path": "fixtures/sel/rcp-sel-012.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-013",
+      "path": "fixtures/sel/rcp-sel-013.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-014",
+      "path": "fixtures/sel/rcp-sel-014.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-015",
+      "path": "fixtures/sel/rcp-sel-015.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-016",
+      "path": "fixtures/sel/rcp-sel-016.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-017",
+      "path": "fixtures/sel/rcp-sel-017.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-018",
+      "path": "fixtures/sel/rcp-sel-018.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-019",
+      "path": "fixtures/sel/rcp-sel-019.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-020",
+      "path": "fixtures/sel/rcp-sel-020.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01",
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-021",
+      "path": "fixtures/sel/rcp-sel-021.json",
+      "kind": "safe-window",
+      "requirements": [
+        "RCP-ORDER-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-022",
+      "path": "fixtures/sel/rcp-sel-022.json",
+      "kind": "safe-window",
+      "requirements": [
+        "RCP-ORDER-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-023",
+      "path": "fixtures/sel/rcp-sel-023.json",
+      "kind": "terminal-progress",
+      "requirements": [
+        "RCP-PROGRESS-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SEL-024",
+      "path": "fixtures/sel/rcp-sel-024.json",
+      "kind": "selector",
+      "requirements": [
+        "RCP-ORDER-01"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-001",
+      "path": "fixtures/scope/rcp-scope-001.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-002",
+      "path": "fixtures/scope/rcp-scope-002.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-003",
+      "path": "fixtures/scope/rcp-scope-003.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02",
+        "RCP-SCOPE-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-004",
+      "path": "fixtures/scope/rcp-scope-004.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-005",
+      "path": "fixtures/scope/rcp-scope-005.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-006",
+      "path": "fixtures/scope/rcp-scope-006.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-GRAPH-01",
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-007",
+      "path": "fixtures/scope/rcp-scope-007.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-GRAPH-01",
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-008",
+      "path": "fixtures/scope/rcp-scope-008.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-009",
+      "path": "fixtures/scope/rcp-scope-009.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-010",
+      "path": "fixtures/scope/rcp-scope-010.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-011",
+      "path": "fixtures/scope/rcp-scope-011.json",
+      "kind": "graph",
+      "requirements": [
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-012",
+      "path": "fixtures/scope/rcp-scope-012.json",
+      "kind": "graph-generated",
+      "requirements": [
+        "RCP-SCOPE-02",
+        "RCP-READY-05"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-SCOPE-013",
+      "path": "fixtures/scope/rcp-scope-013.json",
+      "kind": "graph-generated",
+      "requirements": [
+        "RCP-READY-05"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-001",
+      "path": "fixtures/dyn/rcp-dyn-001.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-002",
+      "path": "fixtures/dyn/rcp-dyn-002.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-003",
+      "path": "fixtures/dyn/rcp-dyn-003.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-004",
+      "path": "fixtures/dyn/rcp-dyn-004.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-005",
+      "path": "fixtures/dyn/rcp-dyn-005.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-006",
+      "path": "fixtures/dyn/rcp-dyn-006.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-007",
+      "path": "fixtures/dyn/rcp-dyn-007.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-008",
+      "path": "fixtures/dyn/rcp-dyn-008.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-009",
+      "path": "fixtures/dyn/rcp-dyn-009.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-DYN-010",
+      "path": "fixtures/dyn/rcp-dyn-010.json",
+      "kind": "dynamic",
+      "requirements": [
+        "RCP-ORDER-06",
+        "RCP-GRAPH-05",
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-001",
+      "path": "fixtures/hist/rcp-hist-001.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-002",
+      "path": "fixtures/hist/rcp-hist-002.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-003",
+      "path": "fixtures/hist/rcp-hist-003.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-004",
+      "path": "fixtures/hist/rcp-hist-004.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-005",
+      "path": "fixtures/hist/rcp-hist-005.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-006",
+      "path": "fixtures/hist/rcp-hist-006.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-007",
+      "path": "fixtures/hist/rcp-hist-007.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-008",
+      "path": "fixtures/hist/rcp-hist-008.json",
+      "kind": "history",
+      "requirements": [
+        "RCP-HISTORY-02",
+        "RCP-HISTORY-03",
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-009",
+      "path": "fixtures/hist/rcp-hist-009.json",
+      "kind": "historical-read",
+      "requirements": [
+        "RCP-HISTORY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-010",
+      "path": "fixtures/hist/rcp-hist-010.json",
+      "kind": "position-chain",
+      "requirements": [
+        "RCP-HISTORY-06"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-HIST-011",
+      "path": "fixtures/hist/rcp-hist-011.json",
+      "kind": "position-chain",
+      "requirements": [
+        "RCP-HISTORY-06"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-001",
+      "path": "fixtures/work/rcp-work-001.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-002",
+      "path": "fixtures/work/rcp-work-002.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-003",
+      "path": "fixtures/work/rcp-work-003.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-004",
+      "path": "fixtures/work/rcp-work-004.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-005",
+      "path": "fixtures/work/rcp-work-005.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-006",
+      "path": "fixtures/work/rcp-work-006.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-007",
+      "path": "fixtures/work/rcp-work-007.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-WORK-008",
+      "path": "fixtures/work/rcp-work-008.json",
+      "kind": "reaction",
+      "requirements": [
+        "RCP-ORDER-05",
+        "RCP-GRAPH-02",
+        "RCP-READY-04"
+      ],
+      "verificationScope": "ABSTRACT_MODEL"
+    },
+    {
+      "id": "RCP-RUN-001",
+      "path": "fixtures/run/rcp-run-001.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-002",
+      "path": "fixtures/run/rcp-run-002.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-OWN-01",
+        "RCP-OWN-02",
+        "RCP-OWN-04",
+        "RCP-SCOPE-01",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-003",
+      "path": "fixtures/run/rcp-run-003.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-OWN-05",
+        "RCP-SCOPE-02"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-004",
+      "path": "fixtures/run/rcp-run-004.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-02"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-005",
+      "path": "fixtures/run/rcp-run-005.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-01"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-006",
+      "path": "fixtures/run/rcp-run-006.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-03",
+        "RCP-HISTORY-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-007",
+      "path": "fixtures/run/rcp-run-007.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-CAUSE-01",
+        "RCP-CAUSE-02",
+        "RCP-HISTORY-03",
+        "RCP-HISTORY-04",
+        "RCP-HISTORY-05",
+        "RCP-OWN-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-008",
+      "path": "fixtures/run/rcp-run-008.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-ORDER-04",
+        "RCP-HISTORY-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-009",
+      "path": "fixtures/run/rcp-run-009.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-010",
+      "path": "fixtures/run/rcp-run-010.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-011",
+      "path": "fixtures/run/rcp-run-011.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-04"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-012",
+      "path": "fixtures/run/rcp-run-012.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-013",
+      "path": "fixtures/run/rcp-run-013.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-05",
+        "RCP-HISTORY-04"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-014",
+      "path": "fixtures/run/rcp-run-014.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-ORDER-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-015",
+      "path": "fixtures/run/rcp-run-015.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-02"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-016",
+      "path": "fixtures/run/rcp-run-016.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-017",
+      "path": "fixtures/run/rcp-run-017.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-HISTORY-06"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-018",
+      "path": "fixtures/run/rcp-run-018.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-HISTORY-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-019",
+      "path": "fixtures/run/rcp-run-019.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-HISTORY-07",
+        "RCP-GRAPH-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-020",
+      "path": "fixtures/run/rcp-run-020.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-CAUSE-03",
+        "RCP-OWN-02",
+        "RCP-SCOPE-06"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-021",
+      "path": "fixtures/run/rcp-run-021.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-HISTORY-07",
+        "RCP-OWN-05",
+        "RCP-READY-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-022",
+      "path": "fixtures/run/rcp-run-022.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-READY-04"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-023",
+      "path": "fixtures/run/rcp-run-023.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-GRAPH-05",
+        "RCP-ID-02",
+        "RCP-ID-03",
+        "RCP-ID-04",
+        "RCP-OWN-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-024",
+      "path": "fixtures/run/rcp-run-024.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-BIRTH-04",
+        "RCP-OWN-06"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-025",
+      "path": "fixtures/run/rcp-run-025.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-BIRTH-01",
+        "RCP-BIRTH-03",
+        "RCP-BIRTH-05",
+        "RCP-CAUSE-01",
+        "RCP-ID-01"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "LITERAL_CRITICAL"
+    },
+    {
+      "id": "RCP-RUN-026",
+      "path": "fixtures/run/rcp-run-026.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-BIRTH-02",
+        "RCP-BIRTH-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-027",
+      "path": "fixtures/run/rcp-run-027.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-SCOPE-05",
+        "RCP-PROGRESS-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-028",
+      "path": "fixtures/run/rcp-run-028.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-029",
+      "path": "fixtures/run/rcp-run-029.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-PROGRESS-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-030",
+      "path": "fixtures/run/rcp-run-030.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-ID-01",
+        "RCP-ID-02",
+        "RCP-ID-03",
+        "RCP-ID-05",
+        "RCP-SCOPE-04",
+        "RCP-SCOPE-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-031",
+      "path": "fixtures/run/rcp-run-031.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-SCOPE-06"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-032",
+      "path": "fixtures/run/rcp-run-032.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-SCOPE-02",
+        "RCP-READY-05"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-033",
+      "path": "fixtures/run/rcp-run-033.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-HISTORY-01"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    },
+    {
+      "id": "RCP-RUN-034",
+      "path": "fixtures/run/rcp-run-034.json",
+      "kind": "runtime",
+      "requirements": [
+        "RCP-READY-01",
+        "RCP-READY-02",
+        "RCP-READY-03"
+      ],
+      "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
+      "qualification": "RECIPE_ONLY"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-010",
+  "category": "SEL",
+  "title": "Distinct occurrence generations retain separate cursors",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/o#g1/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          },
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          }
+        ],
+        "cursor": 2,
+        "active": true
+      },
+      {
+        "address": "R/o#g2/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          },
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "T:1",
+        "receivers": [
+          "R/o#g2/in"
+        ]
+      },
+      {
+        "entry": "T:2",
+        "receivers": [
+          "R/o#g2/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

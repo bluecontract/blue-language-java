@@ -1,0 +1,54 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-017",
+  "category": "RUN",
+  "title": "Same-epoch representation chain uses exact predecessors",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-06"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "REPRESENTATION_CHAIN_AND_FORGERIES",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.validChainApplied",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.forgedSkippedReorderedChainsRejected",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.oldReceiptsUnchanged",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

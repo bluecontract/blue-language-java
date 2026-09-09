@@ -1,0 +1,56 @@
+name: RCP2 Diamond Root
+log: []
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+    - /b
+    - /c
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/diamond-root
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  fromB:
+    type: Embedded Node Channel
+    sourcePath: /b
+    event:
+      type: Coordination/Event
+      kind: RCP2/Relay
+  receiveB:
+    type: Coordination/Sequential Workflow
+    channel: fromB
+    event:
+      type: Coordination/Event
+      kind: RCP2/Relay
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /log/-
+          val: B
+      - $return: true
+  fromC:
+    type: Embedded Node Channel
+    sourcePath: /c
+    event:
+      type: Coordination/Event
+      kind: RCP2/Relay
+  receiveC:
+    type: Coordination/Sequential Workflow
+    channel: fromC
+    event:
+      type: Coordination/Event
+      kind: RCP2/Relay
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /log/-
+          val: C
+      - $return: true

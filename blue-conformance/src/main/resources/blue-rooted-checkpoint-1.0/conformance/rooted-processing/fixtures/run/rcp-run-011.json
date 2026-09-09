@@ -1,0 +1,79 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-011",
+  "category": "RUN",
+  "title": "Initially empty Orders collection receives later members",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-04"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "orders",
+        "source": "examples/empty-orders.yaml"
+      },
+      {
+        "alias": "orderA",
+        "source": "examples/collection-order-a.yaml"
+      },
+      {
+        "alias": "orderB",
+        "source": "examples/collection-order-b.yaml"
+      },
+      {
+        "alias": "payment",
+        "source": "examples/collection-payment.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "EMPTY_COLLECTION_THEN_TWO_ORDERS",
+        "bind": "s"
+      },
+      {
+        "op": "restartAndCompare",
+        "target": "s",
+        "bind": "restart"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.initialOrders",
+        "op": "equals",
+        "expected": {}
+      },
+      {
+        "actual": "s.directMemberEvents",
+        "op": "equals",
+        "expected": 2
+      },
+      {
+        "actual": "s.descendantEvents",
+        "op": "equals",
+        "expected": 3
+      },
+      {
+        "actual": "s.irrelevantPathDeliveries",
+        "op": "equals",
+        "expected": 0
+      },
+      {
+        "actual": "restart.exactStateAndHistoryEqual",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

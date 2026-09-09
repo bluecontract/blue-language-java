@@ -1,0 +1,82 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-008",
+  "category": "DYN",
+  "title": "Already-current attachment contributes no old input",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "attach": [
+        {
+          "kind": "attach",
+          "address": "R/a",
+          "entries": [
+            {
+              "timestamp": 1,
+              "timeline": "T",
+              "entry": "T:1"
+            },
+            {
+              "timestamp": 2,
+              "timeline": "T",
+              "entry": "T:2"
+            },
+            {
+              "timestamp": 3,
+              "timeline": "T",
+              "entry": "T:3"
+            }
+          ],
+          "cursor": 3
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "attach",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

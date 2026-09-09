@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-020",
+  "category": "SEL",
+  "title": "Entry tie breaker does not legalize duplicate timestamps in one Timeline",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 5,
+            "timeline": "T",
+            "entry": "one"
+          },
+          {
+            "timestamp": 5,
+            "timeline": "T",
+            "entry": "two"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "error": "INVALID_TIMELINE"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

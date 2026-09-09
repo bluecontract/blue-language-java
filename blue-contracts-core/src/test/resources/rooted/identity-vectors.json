@@ -1,0 +1,341 @@
+{
+  "schema": "blue-rooted-identity-vectors/1.0-draft.2",
+  "status": "ENVELOPE_UNIT_VECTORS_ONLY",
+  "note": "The known List BlueId is used only as an exact-text operand. These vectors do not claim List content is a managed document or that the synthetic runtime/cause hashes authorize production. Expected bytes/hashes were authored by a separate restricted serializer, not the tested constructor functions.",
+  "vectors": [
+    {
+      "id": "HISTORY-A",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FULL_HISTORY"
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+    },
+    {
+      "id": "HISTORY-B",
+      "constructor": "history",
+      "input": {
+        "documentId": "B",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FULL_HISTORY"
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+    },
+    {
+      "id": "HISTORY-é",
+      "constructor": "history",
+      "input": {
+        "documentId": "é",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FULL_HISTORY"
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:4bdbbd474269c15a04cb5c1fab109b16eb1b3dbbda0a83bd4b7bb5e78db49120"
+    },
+    {
+      "id": "HISTORY-FROM_NOW",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "timestampUs": "15",
+            "timelineBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+            "entryBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          }
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:7778153f9d1210c41aae65eb24987645892d0b9c33bf3f167e90652f9c5b8f35"
+    },
+    {
+      "id": "HISTORY-FROM_FRONTIER",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_FRONTIER",
+          "lowerExclusiveOrder": {
+            "timestampUs": "15",
+            "timelineBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+            "entryBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          }
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:e14d7f1fcaacebcb2d08e2300b7ed1a56d4c32501b980181c3a6f0d6c9fa2842"
+    },
+    {
+      "id": "HISTORY-CREATED_IN_OPERATION",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "CREATED_IN_OPERATION",
+          "lowerExclusiveOrder": {
+            "timestampUs": "15",
+            "timelineBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+            "entryBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          },
+          "creatorOperationIdentity": "sha256:bc6bfd848ebd7819c9a82bf124d65e7f739d08e002601e23bb906aacd40a3d81",
+          "birthOccurrenceIdentity": "sha256:f7a18611f42eff8d5fba80546da0ef7d14b8fabaa96b421081ec5e571057ab73"
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:7be406a73a19f989ae200a2be68658d8476568bf469559a46305304e64873154"
+    },
+    {
+      "id": "OWNER-ordered",
+      "constructor": "owner",
+      "input": {
+        "members": [
+          {
+            "documentId": "A",
+            "historyBasisIdentity": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+          },
+          {
+            "documentId": "B",
+            "historyBasisIdentity": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+          }
+        ],
+        "internalEdges": [
+          {
+            "occurrenceIdentity": "sha256:29366c02af0a01efaeb49329e2ea43def2e155c44dc4f0086ca321d877bca493",
+            "parentDocumentId": "A",
+            "sourcePath": "/peer",
+            "childDocumentId": "B",
+            "activationGeneration": "1"
+          },
+          {
+            "occurrenceIdentity": "sha256:cc48701d0db389f08302e010b33210888d78cc314b533fe36b38c5b79cd92e8c",
+            "parentDocumentId": "B",
+            "sourcePath": "/peer",
+            "childDocumentId": "A",
+            "activationGeneration": "1"
+          }
+        ]
+      },
+      "canonicalValue": {
+        "members": [
+          {
+            "documentId": "A",
+            "historyBasisIdentity": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+          },
+          {
+            "documentId": "B",
+            "historyBasisIdentity": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+          }
+        ],
+        "internalEdges": [
+          {
+            "occurrenceIdentity": "sha256:29366c02af0a01efaeb49329e2ea43def2e155c44dc4f0086ca321d877bca493",
+            "parentDocumentId": "A",
+            "sourcePath": "/peer",
+            "childDocumentId": "B",
+            "activationGeneration": "1"
+          },
+          {
+            "occurrenceIdentity": "sha256:cc48701d0db389f08302e010b33210888d78cc314b533fe36b38c5b79cd92e8c",
+            "parentDocumentId": "B",
+            "sourcePath": "/peer",
+            "childDocumentId": "A",
+            "activationGeneration": "1"
+          }
+        ]
+      },
+      "expected": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78"
+    },
+    {
+      "id": "OWNER-reversed",
+      "constructor": "owner",
+      "input": {
+        "members": [
+          {
+            "documentId": "B",
+            "historyBasisIdentity": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+          },
+          {
+            "documentId": "A",
+            "historyBasisIdentity": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+          }
+        ],
+        "internalEdges": [
+          {
+            "occurrenceIdentity": "sha256:cc48701d0db389f08302e010b33210888d78cc314b533fe36b38c5b79cd92e8c",
+            "parentDocumentId": "B",
+            "sourcePath": "/peer",
+            "childDocumentId": "A",
+            "activationGeneration": "1"
+          },
+          {
+            "occurrenceIdentity": "sha256:29366c02af0a01efaeb49329e2ea43def2e155c44dc4f0086ca321d877bca493",
+            "parentDocumentId": "A",
+            "sourcePath": "/peer",
+            "childDocumentId": "B",
+            "activationGeneration": "1"
+          }
+        ]
+      },
+      "canonicalValue": {
+        "members": [
+          {
+            "documentId": "A",
+            "historyBasisIdentity": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+          },
+          {
+            "documentId": "B",
+            "historyBasisIdentity": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+          }
+        ],
+        "internalEdges": [
+          {
+            "occurrenceIdentity": "sha256:29366c02af0a01efaeb49329e2ea43def2e155c44dc4f0086ca321d877bca493",
+            "parentDocumentId": "A",
+            "sourcePath": "/peer",
+            "childDocumentId": "B",
+            "activationGeneration": "1"
+          },
+          {
+            "occurrenceIdentity": "sha256:cc48701d0db389f08302e010b33210888d78cc314b533fe36b38c5b79cd92e8c",
+            "parentDocumentId": "B",
+            "sourcePath": "/peer",
+            "childDocumentId": "A",
+            "activationGeneration": "1"
+          }
+        ]
+      },
+      "expected": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78"
+    },
+    {
+      "id": "CONTEXT",
+      "constructor": "context",
+      "input": {
+        "members": [
+          {
+            "documentId": "A",
+            "historyBasisIdentity": "sha256:43df28be4fe7f150e53aa6d49fb691f1bb9b32d4f3d0a1bd0a19398cfca3711e"
+          },
+          {
+            "documentId": "B",
+            "historyBasisIdentity": "sha256:efa545aac948610fdccad0d91696996dd57b56b02c8c9ec568b7175d192c7d5b"
+          }
+        ],
+        "internalEdges": [
+          {
+            "occurrenceIdentity": "sha256:29366c02af0a01efaeb49329e2ea43def2e155c44dc4f0086ca321d877bca493",
+            "parentDocumentId": "A",
+            "sourcePath": "/peer",
+            "childDocumentId": "B",
+            "activationGeneration": "1"
+          },
+          {
+            "occurrenceIdentity": "sha256:cc48701d0db389f08302e010b33210888d78cc314b533fe36b38c5b79cd92e8c",
+            "parentDocumentId": "B",
+            "sourcePath": "/peer",
+            "childDocumentId": "A",
+            "activationGeneration": "1"
+          }
+        ]
+      },
+      "canonicalValue": {
+        "canonicalRootDocumentId": "A",
+        "operationOwnerIdentity": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78"
+      },
+      "expected": "sha256:502dbc6db51009f643d729a2a9a98c4f4e4da1a8d18704283ac0fd558ca2f734"
+    },
+    {
+      "id": "DELIVERY",
+      "constructor": "delivery",
+      "input": {
+        "operationOwnerIdentity": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78",
+        "causeIdentity": "sha256:8db4984f310522c56a5f4aa887eea4b7f23c268aa9591e2f7d52c94c431c5676",
+        "kind": "LIVE",
+        "receivingBindings": [
+          {
+            "documentId": "A",
+            "scopePath": "",
+            "activationGeneration": "1",
+            "channelKey": "owner",
+            "occurrenceIdentity": "sha256:6cd1eaefda29cd38576a30a95454b2f65d1a802e7d41be398fe0f08e02222473"
+          }
+        ],
+        "sourcePositionIdentity": {
+          "kind": "NONE"
+        }
+      },
+      "canonicalValue": {
+        "operationOwnerIdentity": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78",
+        "causeIdentity": "sha256:8db4984f310522c56a5f4aa887eea4b7f23c268aa9591e2f7d52c94c431c5676",
+        "kind": "LIVE",
+        "receivingBindings": [
+          {
+            "documentId": "A",
+            "scopePath": "",
+            "activationGeneration": "1",
+            "channelKey": "owner",
+            "occurrenceIdentity": "sha256:6cd1eaefda29cd38576a30a95454b2f65d1a802e7d41be398fe0f08e02222473"
+          }
+        ],
+        "sourcePositionIdentity": {
+          "kind": "NONE"
+        }
+      },
+      "expected": "sha256:72854b7a8b4575dde2186ac11ddc89a1684c121cfaaed4a2d92e7f808b33a706"
+    },
+    {
+      "id": "rootedInvocationIdentity",
+      "constructor": "wrapper",
+      "name": "rootedInvocationIdentity",
+      "domain": "blue-contracts-rooted-invocation/1.0-draft.2",
+      "input": {
+        "baseInvocationIdentity": "sha256:1293f78a345be262f8bc92772894f6c688aa38bb18d70e97158d5c4aaf282575",
+        "rootProcessingContextIdentity": "sha256:502dbc6db51009f643d729a2a9a98c4f4e4da1a8d18704283ac0fd558ca2f734",
+        "deliveryBasisIdentity": "sha256:72854b7a8b4575dde2186ac11ddc89a1684c121cfaaed4a2d92e7f808b33a706"
+      },
+      "expected": "sha256:22f2284110e39442fe617d19712bb6a2429a4323925e3b735d9c447aedc25689"
+    },
+    {
+      "id": "rootedTerminalKey",
+      "constructor": "wrapper",
+      "name": "rootedTerminalKey",
+      "domain": "blue-coordination-rooted-terminal-key/1.0-draft.2",
+      "input": {
+        "operationOwnerIdentity": "sha256:03c79a5616af28abfe55ca15c2012374ec2470dfe82d4b21e3773b37a646ff78",
+        "deliveryBasisIdentity": "sha256:72854b7a8b4575dde2186ac11ddc89a1684c121cfaaed4a2d92e7f808b33a706"
+      },
+      "expected": "sha256:f97d6526efdbd1f28db90181ff4e44b6f616f32ff3c8582e351c544ca00b6bbc"
+    },
+    {
+      "id": "rootedCommitCompanionIdentity",
+      "constructor": "wrapper",
+      "name": "rootedCommitCompanionIdentity",
+      "domain": "blue-contracts-rooted-commit-companion/1.0-draft.2",
+      "input": {
+        "baseCommitCompanionIdentity": "sha256:752b556a42ff0d908a4cb28c6ee18d36ad0693d54a0f851ae4fb7730aed52449",
+        "rootedInvocationIdentity": "sha256:22f2284110e39442fe617d19712bb6a2429a4323925e3b735d9c447aedc25689",
+        "rootProcessingContextIdentity": "sha256:502dbc6db51009f643d729a2a9a98c4f4e4da1a8d18704283ac0fd558ca2f734"
+      },
+      "expected": "sha256:26120b9e8162b0ddfa4f9101638b9fcc8f3bf0a25427c81ab30de1c9598604c2"
+    }
+  ]
+}

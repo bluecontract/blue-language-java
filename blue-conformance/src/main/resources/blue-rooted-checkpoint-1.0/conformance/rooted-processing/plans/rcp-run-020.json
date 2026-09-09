@@ -1,0 +1,757 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-020",
+  "title": "Live cause and exact tight budgets despite precomputation",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "cold-below": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cold-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cold-below-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-below-003"
+      }
+    ],
+    "cold-at": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cold-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cold-at-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-at-003"
+      }
+    ],
+    "cold-above": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cold-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cold-above-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-above-003"
+      }
+    ],
+    "cached-below": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cached-below-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "cached-below-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cached-below-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-below-004"
+      }
+    ],
+    "cached-at": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cached-at-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "cached-at-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cached-at-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-at-004"
+      }
+    ],
+    "cached-above": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cached-above-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "cached-above-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cached-above-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-above-004"
+      }
+    ],
+    "evicted-below": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "evicted-below-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "evicted-below-002"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "S",
+        "stepId": "evicted-below-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "evicted-below-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-below-005"
+      }
+    ],
+    "evicted-at": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "evicted-at-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "evicted-at-002"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "S",
+        "stepId": "evicted-at-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "evicted-at-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-at-005"
+      }
+    ],
+    "evicted-above": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "evicted-above-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "input": {
+          "$capture": "E100"
+        },
+        "publish": false,
+        "stepId": "evicted-above-002"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "S",
+        "stepId": "evicted-above-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "evicted-above-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-above-005"
+      }
+    ],
+    "source-committed-below": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "source-committed-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "source",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-below-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-below-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "source-committed-below-004"
+      }
+    ],
+    "source-committed-at": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "source-committed-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "source",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-at-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-at-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "source-committed-at-004"
+      }
+    ],
+    "source-committed-above": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "source-committed-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "source",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-above-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "source-committed-above-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "source-committed-above-004"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "GAS_BOUNDARY",
+    "causeKind": "LIVE",
+    "afterEqualsOnSuccess": {
+      "P.seen": 1,
+      "P.child.counter": 1
+    },
+    "writesOnSuccess": [
+      "P"
+    ],
+    "referenceCalibration": {
+      "root": "P",
+      "input": "E100",
+      "implementation": "independently reviewed uncached materialized reference path",
+      "sameArtifactRequired": true,
+      "label": "G",
+      "mustSucceedWithinUnchangedReleaseMaximum": true
+    },
+    "expectedBySuffix": {
+      "below": "GAS_LIMIT_EXCEEDED",
+      "at": "SUCCESS",
+      "above": "SUCCESS"
+    },
+    "compareWithinBoundary": [
+      "after.P",
+      "gas",
+      "semanticReceipts",
+      "ownedWrites"
+    ],
+    "preserveSource": true
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

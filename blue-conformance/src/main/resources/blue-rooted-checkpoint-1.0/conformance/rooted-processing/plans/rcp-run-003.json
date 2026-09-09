@@ -1,0 +1,245 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-003",
+  "title": "An explicitly failed sibling cannot change source/P",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "source",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-004"
+      }
+    ],
+    "failed-sibling": [
+      {
+        "op": "start",
+        "alias": "Q",
+        "source": "examples/iteration2/parent.yaml",
+        "bindings": {
+          "/name": "RCP2 Failing Observer",
+          "/contracts/owner/timeline/timelineId": "rcp2/failing",
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "failed-sibling-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "failed-sibling-002"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "source",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "failed-sibling-003"
+      },
+      {
+        "op": "processNext",
+        "root": "Q",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": 1,
+        "capture": "failedSibling",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "failed-sibling-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "failed-sibling-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P",
+          "Q"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "failed-sibling-006"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.seen": 1,
+      "P.child.counter": 1
+    },
+    "requiredEvents": 0,
+    "equalAcrossVariants": [
+      "after.P",
+      "ownedWrites",
+      "gas.charges",
+      "gas.total",
+      "semanticReceipts"
+    ],
+    "extraChecks": {
+      "failed-sibling": {
+        "failedSibling.status": "GAS_LIMIT_EXCEEDED",
+        "failedSibling.ownedWrites": []
+      }
+    },
+    "preserveSource": true
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

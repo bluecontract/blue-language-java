@@ -1,0 +1,287 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-025",
+  "title": "Literal source-discovery suspension invariance",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/name": "RCP2 Discovery A",
+        "/contracts/owner/timeline/timelineId": "rcp2/discovery-a"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/name": "RCP2 Discovery B",
+        "/contracts/owner/timeline/timelineId": "rcp2/discovery-b"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "normal": [
+      {
+        "op": "append",
+        "targetSource": "examples/iteration2/source.yaml",
+        "timeline": "rcp2/source",
+        "timestampUs": "15",
+        "operation": "setCounter",
+        "channel": "owner",
+        "request": {
+          "value": 5
+        },
+        "capture": "E15",
+        "stepId": "normal-001"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "10",
+        "request": {
+          "child": {
+            "$source": "examples/iteration2/source.yaml"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E10",
+        "stepId": "normal-002"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "20",
+        "request": {
+          "child": {
+            "$source": "examples/iteration2/source.yaml"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E20",
+        "stepId": "normal-003"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E10"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachA",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "normal-004"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E20"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachB",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "normal-005"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "untilLogicalOrder": "20",
+        "capture": "subject",
+        "stepId": "normal-006"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "normal-007"
+      }
+    ],
+    "A-suspended": [
+      {
+        "op": "append",
+        "targetSource": "examples/iteration2/source.yaml",
+        "timeline": "rcp2/source",
+        "timestampUs": "15",
+        "operation": "setCounter",
+        "channel": "owner",
+        "request": {
+          "value": 5
+        },
+        "capture": "E15",
+        "stepId": "A-suspended-001"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "10",
+        "request": {
+          "child": {
+            "$source": "examples/iteration2/source.yaml"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E10",
+        "stepId": "A-suspended-002"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "20",
+        "request": {
+          "child": {
+            "$source": "examples/iteration2/source.yaml"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E20",
+        "stepId": "A-suspended-003"
+      },
+      {
+        "op": "setWait",
+        "root": "A",
+        "reason": "required exact evidence temporarily unavailable",
+        "stepId": "A-suspended-004"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E20"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachB",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "A-suspended-005"
+      },
+      {
+        "op": "releaseWait",
+        "root": "A",
+        "stepId": "A-suspended-006"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E10"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachA",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "A-suspended-007"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "untilLogicalOrder": "20",
+        "capture": "subject",
+        "stepId": "A-suspended-008"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "A-suspended-009"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "B.child.counter": 5,
+      "B.seen": 5
+    },
+    "equalAcrossVariants": [
+      "after.B",
+      "sourceHistoryBasis",
+      "sourceHistoryThrough20"
+    ],
+    "requiredEvents": 0,
+    "explicitNoRowIsNotBirth": true
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

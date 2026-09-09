@@ -1,0 +1,79 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-025",
+  "category": "RUN",
+  "title": "Suspending early materialization cannot change source history",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-BIRTH-01",
+    "RCP-BIRTH-03",
+    "RCP-BIRTH-05",
+    "RCP-CAUSE-01",
+    "RCP-ID-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "A",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-025.json"
+      }
+    ],
+    "variants": [
+      "normal",
+      "A-suspended"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-025.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "MANAGED_REVISION"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "B.child.counter": 5,
+        "B.seen": 5
+      },
+      "equalAcrossVariants": [
+        "after.B",
+        "sourceHistoryBasis",
+        "sourceHistoryThrough20"
+      ],
+      "requiredEvents": 0,
+      "explicitNoRowIsNotBirth": true
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

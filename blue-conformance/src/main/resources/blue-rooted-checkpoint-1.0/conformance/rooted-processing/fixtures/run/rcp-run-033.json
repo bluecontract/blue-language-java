@@ -1,0 +1,85 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-033",
+  "category": "RUN",
+  "title": "All four explicit attachment starting positions preserve their intended suffixes",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "FOUR_ATTACHMENT_POSITIONS",
+        "sourceEpochs": [
+          0,
+          1,
+          2
+        ],
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.appliedPositionsByMode",
+        "op": "equals",
+        "expected": {
+          "authored": [
+            0,
+            1,
+            2
+          ],
+          "epochZero": [
+            1,
+            2
+          ],
+          "retainedEpochOne": [
+            2
+          ],
+          "current": []
+        }
+      },
+      {
+        "actual": "s.initializationCount",
+        "op": "equals",
+        "expected": 1
+      },
+      {
+        "actual": "s.allSelectedFinalChildValues",
+        "op": "equals",
+        "expected": [
+          2,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "actual": "s.sourceReceiptsUnchanged",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

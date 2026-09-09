@@ -1,0 +1,44 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-010",
+  "category": "HIST",
+  "title": "Representation positions cannot be collapsed by equal epoch number",
+  "kind": "position-chain",
+  "requirements": [
+    "RCP-HISTORY-06"
+  ],
+  "input": {
+    "start": "5:base",
+    "steps": [
+      {
+        "from": "5:base",
+        "to": "5:r1",
+        "epoch": 5
+      },
+      {
+        "from": "5:r1",
+        "to": "5:r2",
+        "epoch": 5
+      },
+      {
+        "from": "5:r2",
+        "to": "6:base",
+        "epoch": 6
+      }
+    ]
+  },
+  "expected": {
+    "positions": [
+      "5:r1",
+      "5:r2",
+      "6:base"
+    ],
+    "finalEpoch": 6
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

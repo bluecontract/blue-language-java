@@ -1,0 +1,47 @@
+name: RCP2 Source
+counter: 0
+contracts:
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/source
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  tick:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: replace
+          path: /counter
+          val:
+            $add:
+            - $document: /counter
+            - 1
+      - $appendEvent:
+          type: Coordination/Event
+          kind: RCP2/Tick
+      - $return: true
+  setCounter:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request:
+      value:
+        type: Integer
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: replace
+          path: /counter
+          val:
+            $binding: event/message/request/value
+      - $appendEvent:
+          type: Coordination/Event
+          kind: RCP2/Tick
+      - $return: true

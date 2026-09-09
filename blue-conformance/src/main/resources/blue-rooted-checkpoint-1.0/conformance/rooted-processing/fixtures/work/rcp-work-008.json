@@ -1,0 +1,36 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-WORK-008",
+  "category": "WORK",
+  "title": "Inert target handles one supplied work",
+  "kind": "reaction",
+  "requirements": [
+    "RCP-ORDER-05",
+    "RCP-GRAPH-02",
+    "RCP-READY-04"
+  ],
+  "input": {
+    "route": {},
+    "start": "A",
+    "ttl": 0,
+    "budget": 1,
+    "costModel": "ONE_UNIT_PER_DELIVERY_NOT_BLUE_GAS"
+  },
+  "expected": {
+    "status": "COMMITTED",
+    "committed": [
+      [
+        "A",
+        0,
+        0
+      ]
+    ],
+    "gas": 1
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

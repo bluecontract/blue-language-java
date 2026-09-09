@@ -1,0 +1,56 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-012",
+  "category": "SEL",
+  "title": "Unicode address enumeration has a stable logical receiver set",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/ż/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/a/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "T:1",
+        "receivers": [
+          "R/a/in",
+          "R/ż/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

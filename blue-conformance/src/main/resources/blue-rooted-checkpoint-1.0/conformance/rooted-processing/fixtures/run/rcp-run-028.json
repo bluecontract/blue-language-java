@@ -1,0 +1,62 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-028",
+  "category": "RUN",
+  "title": "Crash around publication does not lose state or duplicate events",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "CRASH_AND_LOST_RESPONSE_MATRIX",
+        "cuts": [
+          "beforeCommit",
+          "afterCommitBeforeAck",
+          "beforeNotification",
+          "afterCursorWriteAttempt"
+        ],
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.partialResultsPublished",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.allRecoveredSemanticsMatch",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.duplicatePublicEmissions",
+        "op": "equals",
+        "expected": 0
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

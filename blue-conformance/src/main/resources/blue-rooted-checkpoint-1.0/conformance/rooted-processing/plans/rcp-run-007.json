@@ -1,0 +1,544 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-007",
+  "title": "Literal A10/B attaches retained A5",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/historical-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/historical-a.yaml",
+      "bindings": {
+        "/peer": {
+          "$capture": "B.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "101",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E101",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E101"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-1",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 1,
+      "capture": "A1",
+      "requireActualEpoch": true,
+      "stepId": "setup-005"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "102",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E102",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E102"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-2",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-007"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 2,
+      "capture": "A2",
+      "requireActualEpoch": true,
+      "stepId": "setup-008"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "103",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E103",
+      "stepId": "setup-009"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E103"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-3",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-010"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 3,
+      "capture": "A3",
+      "requireActualEpoch": true,
+      "stepId": "setup-011"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "104",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E104",
+      "stepId": "setup-012"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E104"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-4",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-013"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 4,
+      "capture": "A4",
+      "requireActualEpoch": true,
+      "stepId": "setup-014"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "105",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E105",
+      "stepId": "setup-015"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E105"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-5",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-016"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 5,
+      "capture": "A5",
+      "requireActualEpoch": true,
+      "stepId": "setup-017"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "106",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E106",
+      "stepId": "setup-018"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E106"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-6",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-019"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 6,
+      "capture": "A6",
+      "requireActualEpoch": true,
+      "stepId": "setup-020"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "107",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E107",
+      "stepId": "setup-021"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E107"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-7",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-022"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 7,
+      "capture": "A7",
+      "requireActualEpoch": true,
+      "stepId": "setup-023"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "108",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E108",
+      "stepId": "setup-024"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E108"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-8",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-025"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 8,
+      "capture": "A8",
+      "requireActualEpoch": true,
+      "stepId": "setup-026"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "109",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E109",
+      "stepId": "setup-027"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E109"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-9",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-028"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 9,
+      "capture": "A9",
+      "requireActualEpoch": true,
+      "stepId": "setup-029"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "110",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E110",
+      "stepId": "setup-030"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "E110"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-10",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-031"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 10,
+      "capture": "A10",
+      "requireActualEpoch": true,
+      "stepId": "setup-032"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "A5.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachment",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "repeat": 5,
+        "mustConsumePositions": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "orderedEvents",
+          "sourceReceipts",
+          "occurrencePositions",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "read",
+        "target": "A",
+        "capture": "sourceAfter",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-005"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_SEQUENCE",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "A.counter": 10,
+      "B.seen": 10,
+      "B.log": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    "positionSequence": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "preserveSourceReceiptPrefix": true,
+    "newSourceEvents": 0,
+    "sourceEpochMinimum": 10,
+    "requireLiveCycle": [
+      "A",
+      "B"
+    ],
+    "requiredApplicationCount": 5
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

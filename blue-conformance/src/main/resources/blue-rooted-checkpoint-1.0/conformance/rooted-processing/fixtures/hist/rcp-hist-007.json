@@ -1,0 +1,50 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-007",
+  "category": "HIST",
+  "title": "Exact retry resumes from remaining position",
+  "kind": "history",
+  "requirements": [
+    "RCP-HISTORY-02",
+    "RCP-HISTORY-03",
+    "RCP-PROGRESS-03"
+  ],
+  "input": {
+    "position": 6,
+    "value": 6,
+    "receipts": [
+      {
+        "position": 7,
+        "before": 6,
+        "after": 7,
+        "events": [
+          "e7"
+        ]
+      },
+      {
+        "position": 8,
+        "before": 7,
+        "after": 8,
+        "events": [
+          "e8"
+        ]
+      }
+    ],
+    "failAt": null
+  },
+  "expected": {
+    "position": 8,
+    "value": 8,
+    "events": [
+      "e7",
+      "e8"
+    ],
+    "status": "APPLIED"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

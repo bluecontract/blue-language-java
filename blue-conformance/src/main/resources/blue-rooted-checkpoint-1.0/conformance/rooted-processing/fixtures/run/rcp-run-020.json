@@ -1,0 +1,94 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-020",
+  "category": "RUN",
+  "title": "Cold/warm reuse preserves full live-root charge trace and failure",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-CAUSE-03",
+    "RCP-OWN-02",
+    "RCP-SCOPE-06"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-020.json"
+      }
+    ],
+    "variants": [
+      "cold-below",
+      "cold-at",
+      "cold-above",
+      "cached-below",
+      "cached-at",
+      "cached-above",
+      "evicted-below",
+      "evicted-at",
+      "evicted-above",
+      "source-committed-below",
+      "source-committed-at",
+      "source-committed-above"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-020.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      }
+    ],
+    "contract": {
+      "scope": "GAS_BOUNDARY",
+      "causeKind": "LIVE",
+      "afterEqualsOnSuccess": {
+        "P.seen": 1,
+        "P.child.counter": 1
+      },
+      "writesOnSuccess": [
+        "P"
+      ],
+      "referenceCalibration": {
+        "root": "P",
+        "input": "E100",
+        "implementation": "independently reviewed uncached materialized reference path",
+        "sameArtifactRequired": true,
+        "label": "G",
+        "mustSucceedWithinUnchangedReleaseMaximum": true
+      },
+      "expectedBySuffix": {
+        "below": "GAS_LIMIT_EXCEEDED",
+        "at": "SUCCESS",
+        "above": "SUCCESS"
+      },
+      "compareWithinBoundary": [
+        "after.P",
+        "gas",
+        "semanticReceipts",
+        "ownedWrites"
+      ],
+      "preserveSource": true
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

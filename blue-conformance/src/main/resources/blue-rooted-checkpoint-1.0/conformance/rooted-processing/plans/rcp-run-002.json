@@ -1,0 +1,280 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-002",
+  "title": "Literal sibling source noninterference",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "no-extra-observer": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "no-extra-observer-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "no-extra-observer-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "no-extra-observer-003"
+      }
+    ],
+    "one-extra-observer": [
+      {
+        "op": "start",
+        "alias": "Q",
+        "source": "examples/iteration2/parent.yaml",
+        "bindings": {
+          "/name": "RCP2 Extra Observer",
+          "/contracts/owner/timeline/timelineId": "rcp2/extra",
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "one-extra-observer-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "one-extra-observer-002"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "one-extra-observer-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "one-extra-observer-004"
+      }
+    ],
+    "cold-repeat": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "cold-repeat-001"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "S",
+        "stepId": "cold-repeat-002"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "cold-repeat-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-repeat-004"
+      }
+    ],
+    "reference-repeat": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "reference-repeat-001"
+      },
+      {
+        "op": "cache",
+        "target": "S",
+        "representation": "VERIFIED_REFERENCE",
+        "publish": false,
+        "stepId": "reference-repeat-002"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "reference-repeat-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "reference-repeat-004"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "S"
+    ],
+    "afterEquals": {
+      "S.counter": 1
+    },
+    "requiredEvents": 1,
+    "equalAcrossVariants": [
+      "after.S",
+      "events",
+      "ownedWrites",
+      "gas.charges",
+      "gas.total",
+      "semanticReceipts"
+    ],
+    "eventAnchors": [
+      {
+        "origin": "S",
+        "ordinal": 0,
+        "kind": "RCP2/Tick"
+      }
+    ]
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

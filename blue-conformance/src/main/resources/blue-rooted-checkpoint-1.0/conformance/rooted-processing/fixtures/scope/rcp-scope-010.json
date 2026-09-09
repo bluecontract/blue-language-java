@@ -1,0 +1,46 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-010",
+  "category": "SCOPE",
+  "title": "Disconnected stored graph is irrelevant",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "A",
+      "B",
+      "X",
+      "Y"
+    ],
+    "edges": [
+      [
+        "A",
+        "B"
+      ],
+      [
+        "X",
+        "Y"
+      ],
+      [
+        "Y",
+        "X"
+      ]
+    ],
+    "root": "A"
+  },
+  "expected": {
+    "reachable": [
+      "A",
+      "B"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}
