@@ -13,49 +13,100 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "LAGGING_OBSERVER_FORWARD_READINESS",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-034.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-034.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.sourceNextInputCommitted",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.consumerStillPending",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.consumerClaimsUnappliedFrontier",
+        "actual": "status",
         "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.consumerOldReadyViewRemainsExact",
-        "op": "isTrue"
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "S.counter": 2,
+        "P.seen": 2,
+        "P.log": [
+          1,
+          2
+        ],
+        "P.child.counter": 2
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "laggingObserver": {
+        "observer": "P",
+        "source": "S",
+        "original": "oldP",
+        "lagging": [
+          "lag1P",
+          "lag2P",
+          "restartP"
+        ],
+        "sourceReads": [
+          "source1",
+          "source2"
+        ],
+        "firstPending": "E100",
+        "secondPending": "E150",
+        "afterFirst": "after1P",
+        "final": "finalP",
+        "finalSource": "finalS"
+      },
+      "extraChecks": {
+        "baseline": {
+          "firstSource.ownedWrites": [
+            "S"
+          ],
+          "firstSource.after.S.counter": 1,
+          "firstSource.after.P.seen": 0,
+          "secondSource.ownedWrites": [
+            "S"
+          ],
+          "secondSource.after.S.counter": 2,
+          "secondSource.after.P.seen": 0,
+          "firstObserver.ownedWrites": [
+            "P"
+          ],
+          "firstObserver.after.P.seen": 1,
+          "firstObserver.after.S.counter": 2
+        }
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-034.json",
+    "sha256": "b1cc12db9e4bb39841864d585007040349cf584bc5b4d2b3e11f1fab95dea90a"
   }
 }

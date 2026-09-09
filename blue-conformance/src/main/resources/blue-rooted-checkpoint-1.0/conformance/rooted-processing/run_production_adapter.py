@@ -247,7 +247,7 @@ def check_calibration(cal,weights):
     require(o['gas']['total']>0,'CALIBRATION_ZERO')
     return o['gas']['total']
 
-def check_multiple_history(o,contract,weights,document_ids):
+def check_multiple_history(o,contract,weights,document_ids,initial_references=None):
     """Exact occurrence suffixes and cross-source ordering, independent of the adapter."""
     hist=o.get('applications');expected=contract['occurrenceSuffixes']
     require(isinstance(hist,list) and len(hist)==contract['requiredApplicationCount'],'MULTI_APPLICATION_COUNT')
@@ -268,7 +268,14 @@ def check_multiple_history(o,contract,weights,document_ids):
         require(retained in o['sourceBefore'][source]['receipts'],'MULTI_UNRETAINED_SOURCE')
         require(work['sourceReceiptIdentity']==receipt['sourceReceiptIdentity']==retained['receiptIdentity'],'MULTI_SOURCE_RECEIPT')
         require(cause['sourceRevisionReceiptIdentity']==transition['transitionReceiptIdentity']==retained['contractsTransitionReceiptIdentity'],'MULTI_TRANSITION_RECEIPT')
-        require(cause['beforeBlueId']==transition['beforeBlueId']==retained['beforeBlueId'] and cause['afterBlueId']==transition['afterBlueId']==retained['afterBlueId'],'MULTI_EXACT_SUCCESSOR')
+        if h['to']==0:
+            require(initial_references and source in initial_references,'MULTI_INITIAL_REFERENCE_REQUIRED')
+            require(h['from']==-1 and retained.get('kind')=='INITIALIZATION' and retained['beforeBlueId'] is None
+                    and retained.get('sourceEntry') is None,'MULTI_INITIAL_RECEIPT')
+            require(cause['beforeBlueId']==transition['beforeBlueId']==initial_references[source],'MULTI_EXACT_INITIAL_REFERENCE')
+        else:
+            require(cause['beforeBlueId']==transition['beforeBlueId']==retained['beforeBlueId'],'MULTI_EXACT_SUCCESSOR')
+        require(cause['afterBlueId']==transition['afterBlueId']==retained['afterBlueId'],'MULTI_EXACT_SUCCESSOR')
         require(cause['originalSourceCauseIdentity']==transition['originalCauseIdentity']==retained['originalCauseIdentity'],'MULTI_ORIGINAL_CAUSE')
         require(h['sourceOrder']==retained['sourceOrder']['components'] and len(h['sourceOrder'])==3,'MULTI_SOURCE_ORDER')
         gas_check(h['gas'],h['budget'],weights);require(h['gas']['charges'] and h['gas']['rejected'] is None,'MULTI_GAS')
@@ -462,6 +469,75 @@ def check_phase_events(phases,anchors,weights):
             for key,value in anchor.items():
                 require(key in actual and exact_equal(actual[key],value),'PHASE_EVENT_ANCHOR:'+name+'.'+key)
 
+def check_four_attachment_positions(record,rule,variant,weights):
+    """Bind each literal starting reference to its genuine retained application suffix."""
+    completed=[row for row in record['transcript'] if row.get('completed') is True]
+    reads={row['request']['capture']:row['response'] for row in completed if row['request']['op']=='read'}
+    before=reads[rule['sourceBefore']];after=reads[rule['sourceAfter']];parent=reads[rule['finalParent']]
+    require(exact_equal(before,after),'FOUR_SOURCE_CHANGED')
+    require(before['documentId']==record['documentIds'][rule['source']] and before['epoch']==2,'FOUR_SOURCE_POSITION')
+    require([r['epoch'] for r in before['receipts']]==[0,1,2],'FOUR_INITIALIZATION_COUNT')
+    require(parent['documentId']==record['documentIds'][rule['consumer']],'FOUR_CONSUMER_ID')
+    require(lookup(parent,'projection.child.counter')==2,'FOUR_FINAL_CHILD')
+    require(lookup(parent,'projection.log')==rule['logsByVariant'][variant],'FOUR_EVENT_SUFFIX')
+    attachments=[row for row in completed if row['request']['op']=='append' and row['request'].get('capture')=='ATTACH']
+    require(len(attachments)==1 and attachments[0]['request']['request']['child']=={'$capture':rule['referencesByVariant'][variant]},'FOUR_SAVED_REFERENCE')
+    captures={}
+    for row in completed:
+        request=row['request']
+        if request['op']=='start':captures[request['alias']]=row['response']
+        elif request['op']=='captureEpoch':captures[request['capture']]=row['response']
+    reference=lookup(captures,rule['referencesByVariant'][variant])
+    require(lookup(attachments[0]['response'],'exactEntry.message.request.child.blueId')==reference,'FOUR_EXACT_REQUEST_REFERENCE')
+    require(captures[rule['source']]['epoch0Receipt']==before['receipts'][0],'FOUR_INITIAL_RECEIPT_CHANGED')
+    positions=rule['positionsByVariant'][variant];imports=record.get('phaseRecords',{}).get(rule['imports'])
+    if positions:
+        require(isinstance(imports,dict),'FOUR_MISSING_IMPORTS');structured_output(imports,weights)
+        require(imports['ownedWrites']==[rule['consumer']] and imports['causeKind']=='MANAGED_REVISION','FOUR_IMPORT_OWNERS')
+        require(imports['sourceBefore']==imports['sourceAfter'] and imports['sourceBefore'][rule['source']]==before,'FOUR_IMPORT_SOURCE')
+        check_multiple_history(imports,{'requiredApplicationCount':len(positions),'sourceAliases':[rule['source']],
+            'occurrenceSuffixes':{'/child':{'source':rule['source'],'positions':positions}}},weights,record['documentIds'],
+            {rule['source']:captures[rule['source']]['initialBlueId']})
+    else:
+        require(imports is None,'FOUR_CURRENT_REAPPLIED')
+    rows=[r for r in parent['occurrences'] if r['sourceDocumentId']['value']==parent['documentId'] and r['sourcePath']=='/child']
+    require(len(rows)==1 and rows[0]['active'] and rows[0]['pendingHistoricalEpoch'] is None,'FOUR_NOT_ACTIVE')
+
+def check_lagging_observer(record,rule):
+    """Compare exact read evidence and pending entry identities, not adapter verdicts."""
+    reads={};entries={}
+    for row in record['transcript']:
+        if row.get('completed') is not True:continue
+        request=row['request'];response=row['response'];capture=request.get('capture')
+        if request.get('op')=='read' and request.get('recordReadiness'):
+            require(response.get('documentId')==record['documentIds'].get(request.get('target')),'READY_DOCUMENT_BINDING')
+            require(capture not in reads,'READY_DUPLICATE_READ');reads[capture]=response
+        if request.get('op')=='append':entries[capture]=response['entryBlueId']
+    def get(name):
+        require(name in reads,'READY_MISSING_READ');value=reads[name]
+        require(value.get('readyStatus')=='READY','READY_STATUS')
+        require(isinstance(value.get('readyThrough'),dict),'READY_FRONTIER')
+        return value
+    def state(value):return {k:v for k,v in value.items() if k not in ('readyThrough','nextLiveInput','readyStatus')}
+    old=get(rule['original']);require(old.get('nextLiveInput') is None,'READY_INITIAL_PENDING')
+    first=entries.get(rule['firstPending']);second=entries.get(rule['secondPending'])
+    require(isinstance(first,str) and isinstance(second,str) and first!=second,'READY_ENTRY_IDENTITIES')
+    for name in rule['lagging']:
+        value=get(name)
+        require(exact_equal(state(old),state(value)),'READY_OLD_VIEW_CHANGED')
+        require(value['readyThrough']==old['readyThrough'],'READY_UNAPPLIED_FRONTIER')
+        require(value.get('nextLiveInput')==first,'READY_MISSING_PENDING')
+    source1,source2=[get(name) for name in rule['sourceReads']]
+    require(old['readyThrough']['components']<source1['readyThrough']['components'],'READY_INITIAL_FRONTIER')
+    for source,entry,time in ((source1,first,100),(source2,second,150)):
+        components=source['readyThrough'].get('components')
+        require(isinstance(components,list) and len(components)==3 and components[0]==time and components[2]==entry,'READY_SOURCE_FRONTIER')
+    require(source1['blueId']!=source2['blueId'] and source2['epoch']==source1['epoch']+1,'READY_SOURCE_DID_NOT_ADVANCE')
+    after=get(rule['afterFirst']);final=get(rule['final']);sourceFinal=get(rule['finalSource'])
+    require(after['readyThrough']==source1['readyThrough'] and after.get('nextLiveInput')==second,'READY_FIRST_PROGRESS')
+    require(final['readyThrough']==source2['readyThrough'] and final.get('nextLiveInput') is None,'READY_FINAL_PROGRESS')
+    require(exact_equal(source2,sourceFinal),'READY_SOURCE_REWRITTEN')
+
 def check_runs(f,run_records,weights,calibration=None):
     require(f['input'].get('qualification')=='LITERAL_CRITICAL','RECIPE_ONLY_NOT_QUALIFIED')
     require(f['expected'].get('oracleVersion')==2,'ORACLE_VERSION')
@@ -547,6 +623,10 @@ def check_runs(f,run_records,weights,calibration=None):
             check_distinct_channel_progress(rec,contract['distinctChannelProgress'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
+        if contract.get('laggingObserver'):
+            check_lagging_observer(rec,contract['laggingObserver'])
+        if contract.get('fourAttachmentPositions'):
+            check_four_attachment_positions(rec,contract['fourAttachmentPositions'],name,weights)
         if contract.get('derivedAfter'):
             for path,rule in contract['derivedAfter'].items():
                 require(rule['function']=='canonicalComponentOrder','UNKNOWN_ORACLE')

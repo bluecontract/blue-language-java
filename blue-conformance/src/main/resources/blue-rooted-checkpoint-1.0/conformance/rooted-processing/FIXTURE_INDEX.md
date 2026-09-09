@@ -1,6 +1,6 @@
 # Iteration 2 fixture index
 
-100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. Nine production obligations have literal plans; 25 remain recipe-level. All production runtime results are NOT_RUN.
+100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. 23 production obligations have literal plans; 11 remain recipe-level. All production runtime results are NOT_RUN.
 
 | ID | Kind | Qualification | Title |
 |---|---|---|---|
@@ -73,25 +73,25 @@
 | [RCP-RUN-001](fixtures/run/rcp-run-001.json) | runtime | LITERAL_CRITICAL | Counter baseline remains valid through public API |
 | [RCP-RUN-002](fixtures/run/rcp-run-002.json) | runtime | LITERAL_CRITICAL | Adding a sibling observer cannot change source results |
 | [RCP-RUN-003](fixtures/run/rcp-run-003.json) | runtime | LITERAL_CRITICAL | An out-of-gas sibling cannot veto source or another root |
-| [RCP-RUN-004](fixtures/run/rcp-run-004.json) | runtime | RECIPE_ONLY | Root direct checkpoint stays ahead while historical child advances |
-| [RCP-RUN-005](fixtures/run/rcp-run-005.json) | runtime | RECIPE_ONLY | Two channels in one document retain distinct progress |
-| [RCP-RUN-006](fixtures/run/rcp-run-006.json) | runtime | RECIPE_ONLY | Two occurrences of A5 and A8 apply distinct successor suffixes |
+| [RCP-RUN-004](fixtures/run/rcp-run-004.json) | runtime | LITERAL_CRITICAL | Root direct checkpoint stays ahead while historical child advances |
+| [RCP-RUN-005](fixtures/run/rcp-run-005.json) | runtime | LITERAL_CRITICAL | Two channels in one document retain distinct progress |
+| [RCP-RUN-006](fixtures/run/rcp-run-006.json) | runtime | LITERAL_CRITICAL | Two occurrences of A5 and A8 apply distinct successor suffixes |
 | [RCP-RUN-007](fixtures/run/rcp-run-007.json) | runtime | LITERAL_CRITICAL | Exact A10/B-attaches-A5 and live cycle join |
-| [RCP-RUN-008](fixtures/run/rcp-run-008.json) | runtime | RECIPE_ONLY | Two historical sources interleave by cause order |
-| [RCP-RUN-009](fixtures/run/rcp-run-009.json) | runtime | RECIPE_ONLY | No listener still permits required reference advancement |
-| [RCP-RUN-010](fixtures/run/rcp-run-010.json) | runtime | RECIPE_ONLY | Descendant listener survives a silent intermediate document |
-| [RCP-RUN-011](fixtures/run/rcp-run-011.json) | runtime | RECIPE_ONLY | Initially empty Orders collection receives later members |
-| [RCP-RUN-012](fixtures/run/rcp-run-012.json) | runtime | RECIPE_ONLY | Removed/re-added key has a distinct occurrence and correct later event |
-| [RCP-RUN-013](fixtures/run/rcp-run-013.json) | runtime | RECIPE_ONLY | Historical retarget does not read the retired or latest wrong source |
+| [RCP-RUN-008](fixtures/run/rcp-run-008.json) | runtime | LITERAL_CRITICAL | Two historical sources interleave by cause order |
+| [RCP-RUN-009](fixtures/run/rcp-run-009.json) | runtime | LITERAL_CRITICAL | No listener still permits required reference advancement |
+| [RCP-RUN-010](fixtures/run/rcp-run-010.json) | runtime | LITERAL_CRITICAL | Descendant listener survives a silent intermediate document |
+| [RCP-RUN-011](fixtures/run/rcp-run-011.json) | runtime | LITERAL_CRITICAL | Initially empty Orders collection receives later members |
+| [RCP-RUN-012](fixtures/run/rcp-run-012.json) | runtime | LITERAL_CRITICAL | Removed/re-added key has a distinct occurrence and correct later event |
+| [RCP-RUN-013](fixtures/run/rcp-run-013.json) | runtime | LITERAL_CRITICAL | Historical retarget does not read the retired or latest wrong source |
 | [RCP-RUN-014](fixtures/run/rcp-run-014.json) | runtime | LITERAL_CRITICAL | Diamond preserves canonical event and Handler-visible read order |
-| [RCP-RUN-015](fixtures/run/rcp-run-015.json) | runtime | RECIPE_ONLY | Equal payload events remain distinct occurrences |
+| [RCP-RUN-015](fixtures/run/rcp-run-015.json) | runtime | LITERAL_CRITICAL | Equal payload events remain distinct occurrences |
 | [RCP-RUN-016](fixtures/run/rcp-run-016.json) | runtime | LITERAL_CRITICAL | An event-only source step survives restart without duplication |
 | [RCP-RUN-017](fixtures/run/rcp-run-017.json) | runtime | RECIPE_ONLY | Same-epoch representation chain uses exact predecessors |
 | [RCP-RUN-018](fixtures/run/rcp-run-018.json) | runtime | RECIPE_ONLY | Saved-original pair then ring forms without rewriting history |
 | [RCP-RUN-019](fixtures/run/rcp-run-019.json) | runtime | RECIPE_ONLY | Breaking/advancing/reconnecting preserves missed history |
 | [RCP-RUN-020](fixtures/run/rcp-run-020.json) | runtime | LITERAL_CRITICAL | Cold/warm reuse preserves full live-root charge trace and failure |
 | [RCP-RUN-021](fixtures/run/rcp-run-021.json) | runtime | LITERAL_CRITICAL | Already committed source is not rolled back by failed consumer |
-| [RCP-RUN-022](fixtures/run/rcp-run-022.json) | runtime | RECIPE_ONLY | Cycle gas failure rolls back its required result without meter reset |
+| [RCP-RUN-022](fixtures/run/rcp-run-022.json) | runtime | LITERAL_CRITICAL | Cycle gas failure rolls back its required result without meter reset |
 | [RCP-RUN-023](fixtures/run/rcp-run-023.json) | runtime | LITERAL_CRITICAL | Cycle formation and split do not change gas ownership midway |
 | [RCP-RUN-024](fixtures/run/rcp-run-024.json) | runtime | RECIPE_ONLY | New child birth failure cannot publish a half-created graph |
 | [RCP-RUN-025](fixtures/run/rcp-run-025.json) | runtime | LITERAL_CRITICAL | Suspending early materialization cannot change source history |
@@ -102,7 +102,7 @@
 | [RCP-RUN-030](fixtures/run/rcp-run-030.json) | runtime | RECIPE_ONLY | False and mutated root contexts must be rejected |
 | [RCP-RUN-031](fixtures/run/rcp-run-031.json) | runtime | RECIPE_ONLY | Foo/Gender/empty-schema identity remain correct under the new profile |
 | [RCP-RUN-032](fixtures/run/rcp-run-032.json) | runtime | RECIPE_ONLY | Large fan-out is scheduled as independent rooted obligations |
-| [RCP-RUN-033](fixtures/run/rcp-run-033.json) | runtime | RECIPE_ONLY | All four explicit attachment starting positions preserve their intended suffixes |
-| [RCP-RUN-034](fixtures/run/rcp-run-034.json) | runtime | RECIPE_ONLY | Source advances while a one-way observer stays behind without false readiness |
+| [RCP-RUN-033](fixtures/run/rcp-run-033.json) | runtime | LITERAL_CRITICAL | All four explicit attachment starting positions preserve their intended suffixes |
+| [RCP-RUN-034](fixtures/run/rcp-run-034.json) | runtime | LITERAL_CRITICAL | Source advances while a one-way observer stays behind without false readiness |
 
 Additional finite ownership/cause tests and 13 exact internal-envelope vectors are separate from these 100 records; see `tools/test_iteration2.py`, `model/operation_model.py` and `identity/vectors.json`. Passing these does not increment the production denominator.

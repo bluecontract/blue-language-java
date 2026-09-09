@@ -549,4 +549,87 @@ class DistinctChannelProgressTests(unittest.TestCase):
         self.record['transcript'][-1]['request']['root']='another'
         with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_ROOT'):self.check()
 
+class InitialHistoryTests(unittest.TestCase):
+    """Epoch zero keeps both host absence and the exact authored Contracts predecessor."""
+    def setUp(self):
+        base=MultipleHistoryTests();base.setUp();self.o=base.o;self.ids=base.ids;self.contract=base.contract
+        self.o['applications']=self.o['applications'][:1];self.contract['requiredApplicationCount']=1
+        self.contract['occurrenceSuffixes']['/left']['positions']=[0]
+        self.contract['applicationOrder']=[['A',60]]
+        h=self.o['applications'][0];h['from']=-1;h['to']=0;h['exactCause']['fromEpoch']=-1;h['exactCause']['toEpoch']=0
+        h['work']['sourceEpoch']=0;h['retainedSource'].update(epoch=0,beforeBlueId=None,kind='INITIALIZATION',sourceEntry=None)
+        self.o['sourceBefore']['A']['receipts']=[copy.deepcopy(h['retainedSource'])]
+        self.references={'A':h['exactCause']['beforeBlueId']}
+    def check(self):P.check_multiple_history(self.o,self.contract,T.WEIGHTS,self.ids,self.references)
+    def test_complete_initialization_passes(self):self.check()
+    def test_missing_authored_reference_rejects(self):
+        self.references={}
+        with self.assertRaisesRegex(ValueError,'MULTI_INITIAL_REFERENCE_REQUIRED'):self.check()
+    def test_wrong_authored_reference_rejects(self):
+        self.references['A']='current-state-substitution'
+        with self.assertRaisesRegex(ValueError,'MULTI_EXACT_INITIAL_REFERENCE'):self.check()
+    def change_retained(self,key,value):
+        self.o['applications'][0]['retainedSource'][key]=value
+        self.o['sourceBefore']['A']['receipts'][0][key]=value
+    def test_invented_prior_managed_state_rejects(self):
+        self.change_retained('beforeBlueId','invented')
+        with self.assertRaisesRegex(ValueError,'MULTI_INITIAL_RECEIPT'):self.check()
+    def test_non_initialization_kind_rejects(self):
+        self.change_retained('kind','PROCESSING')
+        with self.assertRaisesRegex(ValueError,'MULTI_INITIAL_RECEIPT'):self.check()
+    def test_forged_external_source_entry_rejects(self):
+        self.change_retained('sourceEntry',{'blueId':'invented'})
+        with self.assertRaisesRegex(ValueError,'MULTI_INITIAL_RECEIPT'):self.check()
+    def test_changed_contracts_predecessor_rejects(self):
+        self.o['applications'][0]['sourceReceipt']['beforeBlueId']='wrong'
+        with self.assertRaisesRegex(ValueError,'MULTI_EXACT_INITIAL_REFERENCE'):self.check()
+    def test_changed_initial_successor_rejects(self):
+        self.o['applications'][0]['sourceReceipt']['afterBlueId']='wrong'
+        with self.assertRaisesRegex(ValueError,'MULTI_EXACT_SUCCESSOR'):self.check()
+
+class LaggingReadinessTests(unittest.TestCase):
+    """Synthetic verifier negatives; actual SDK execution is recorded separately."""
+    def setUp(self):
+        self.rule=T.fixture(34)['expected']['contract']['laggingObserver']
+        self.record={'documentIds':{'P':'parent','S':'source'},'transcript':[]}
+        def state(target,epoch,time,next_input):
+            return {'documentId':self.record['documentIds'][target],'blueId':target+str(epoch),
+                    'epoch':epoch,'exactDocument':{'counter':epoch},'receipts':[str(n) for n in range(epoch+1)],
+                    'readyStatus':'READY','readyThrough':{'components':[time,'timeline','entry'+str(time)]},'nextLiveInput':next_input}
+        def read(capture,target,value):
+            self.record['transcript'].append({'completed':True,'request':{'op':'read','target':target,'recordReadiness':True,'capture':capture},'response':value})
+        read('oldP','P',state('P',0,0,None))
+        for time in [100,150]:self.record['transcript'].append({'completed':True,'request':{'op':'append','capture':'E'+str(time)},'response':{'entryBlueId':'entry'+str(time)}})
+        for name in ['lag1P','lag2P','restartP']:read(name,'P',state('P',0,0,'entry100'))
+        read('source1','S',state('S',1,100,'entry150'));read('source2','S',state('S',2,150,None))
+        read('after1P','P',state('P',1,100,'entry150'));read('finalP','P',state('P',2,150,None))
+        read('finalS','S',state('S',2,150,None))
+    def value(self,name):return next(r['response'] for r in self.record['transcript'] if r['request'].get('capture')==name)
+    def check(self):P.check_lagging_observer(self.record,self.rule)
+    def test_exact_old_ready_then_ordered_progress_passes(self):self.check()
+    def test_false_unapplied_frontier_rejects(self):
+        self.value('lag2P')['readyThrough']=copy.deepcopy(self.value('source2')['readyThrough'])
+        with self.assertRaisesRegex(ValueError,'READY_UNAPPLIED_FRONTIER'):self.check()
+    def test_missing_pending_input_rejects(self):
+        self.value('restartP')['nextLiveInput']=None
+        with self.assertRaisesRegex(ValueError,'READY_MISSING_PENDING'):self.check()
+    def test_changed_old_exact_bytes_rejects(self):
+        self.value('lag1P')['exactDocument']['counter']=1
+        with self.assertRaisesRegex(ValueError,'READY_OLD_VIEW_CHANGED'):self.check()
+    def test_skipping_first_observer_entry_rejects(self):
+        self.value('after1P')['nextLiveInput']=None
+        with self.assertRaisesRegex(ValueError,'READY_FIRST_PROGRESS'):self.check()
+    def test_final_lag_rejects(self):
+        self.value('finalP')['readyThrough']=copy.deepcopy(self.value('source1')['readyThrough'])
+        with self.assertRaisesRegex(ValueError,'READY_FINAL_PROGRESS'):self.check()
+    def test_source_receipt_rewrite_rejects(self):
+        self.value('finalS')['receipts'][0]='forged'
+        with self.assertRaisesRegex(ValueError,'READY_SOURCE_REWRITTEN'):self.check()
+    def test_wrong_document_rejects(self):
+        self.value('lag1P')['documentId']='source'
+        with self.assertRaisesRegex(ValueError,'READY_DOCUMENT_BINDING'):self.check()
+    def test_source_frontier_uses_wrong_entry_rejects(self):
+        self.value('source1')['readyThrough']['components'][2]='wrong'
+        with self.assertRaisesRegex(ValueError,'READY_SOURCE_FRONTIER'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -1047,7 +1047,8 @@
         "RCP-HISTORY-01"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL",
+      "literalPlan": "plans/rcp-run-033.json"
     },
     {
       "id": "RCP-RUN-034",
@@ -1059,7 +1060,8 @@
         "RCP-READY-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL",
+      "literalPlan": "plans/rcp-run-034.json"
     }
   ]
 }
