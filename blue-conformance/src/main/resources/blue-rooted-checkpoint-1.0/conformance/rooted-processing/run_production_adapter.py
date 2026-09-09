@@ -10,9 +10,22 @@ from __future__ import annotations
 from check_host_timestamp import check_host_timestamp
 from check_incoming_fanout import check_incoming_fanout
 from verify_packaged_application import verify as verify_packaged_application
-import argparse,copy,hashlib,json,re,secrets,subprocess,sys,time,zipfile
+import argparse,copy,hashlib,json,os,re,secrets,signal,subprocess,sys,time,zipfile
 from pathlib import Path
 HEX=re.compile(r'[0-9a-f]{64}\Z');COMMIT=re.compile(r'[0-9a-f]{40}\Z')
+
+def run_adapter(command,request,timeout):
+    """Keep timeout cleanup inside the adapter's own process group, including its JVM."""
+    with subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                          text=True,start_new_session=True) as process:
+        try:
+            stdout,stderr=process.communicate(json.dumps(request),timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:os.killpg(process.pid,signal.SIGKILL)
+            except ProcessLookupError:pass
+            stdout,stderr=process.communicate()
+            raise subprocess.TimeoutExpired(command,timeout,output=stdout,stderr=stderr) from None
+        return subprocess.CompletedProcess(command,process.returncode,stdout,stderr)
 
 def exact_equal(a,b):
     if type(a) is not type(b):return False
@@ -1583,7 +1596,7 @@ def provenance(rec,request,artifact):
     if 'sourceCommits' in request:require(commits==request['sourceCommits'],'SOURCE_COMMIT_MISMATCH')
 
 def main():
-    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--adapter-command');ap.add_argument('--artifact',type=Path);ap.add_argument('--artifact-sha256');ap.add_argument('--source-lock',type=Path);ap.add_argument('--source-lock-sha256');ap.add_argument('--output',type=Path);ap.add_argument('--id',action='append',default=[]);ap.add_argument('--list',action='store_true');ap.add_argument('--timeout',type=int,default=300)
+    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--adapter-command');ap.add_argument('--artifact',type=Path);ap.add_argument('--artifact-sha256');ap.add_argument('--source-lock',type=Path);ap.add_argument('--source-lock-sha256');ap.add_argument('--output',type=Path);ap.add_argument('--id',action='append',default=[]);ap.add_argument('--list',action='store_true');ap.add_argument('--timeout',type=int,default=300);ap.add_argument('--observer-timeout',type=int,default=1800,help='RCP-RUN-032 only: full 5000-observer wall-clock allowance')
     a=ap.parse_args();suite=Path(__file__).resolve().parent;package=suite.parents[1]
     index=json.loads((suite/'fixture-index.json').read_text())['fixtures'];rows=[x for x in index if x['kind']=='runtime' and (not a.id or x['id'] in a.id)]
     if not rows or set(a.id)-{r['id'] for r in rows}:ap.error('unknown/empty/non-runtime selection')
@@ -1607,7 +1620,7 @@ def main():
         request['requestSha256']=digest_bytes(json.dumps(request,sort_keys=True,separators=(',',':')).encode())
         (out/'request.json').write_text(json.dumps(request,indent=2)+'\n');start=time.perf_counter()
         try:
-            cp=subprocess.run(command,input=json.dumps(request),text=True,capture_output=True,timeout=a.timeout)
+            cp=run_adapter(command,request,a.observer_timeout if f['id']=='RCP-RUN-032' else a.timeout)
             (out/'stdout.txt').write_text(cp.stdout);(out/'stderr.txt').write_text(cp.stderr)
             require(cp.returncode==0,'ADAPTER_EXIT')
             response=json.loads(cp.stdout);provenance(response,request,art)

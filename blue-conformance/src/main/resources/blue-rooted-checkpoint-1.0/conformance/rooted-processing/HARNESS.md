@@ -105,3 +105,10 @@ python3 run_production_adapter.py --id RCP-RUN-020   --adapter-command '["java",
 ```
 
 The evidence directory must be new. Do not overwrite an older run. Candidate runtime/profile conformance, complete MyOS acceptance and source/manifest reproduction remain separate final gates.
+
+
+## Operational allowance for the full 5,000-observer workload
+
+`run_production_adapter.py` uses `--observer-timeout` (default 1,800 seconds) for RCP-RUN-032 only. All other fixtures retain `--timeout` (default 300 seconds), and fixture-specific command/restart limits remain unchanged. The user authorized this scoped allowance after the complete test exceeded 300 seconds. The later 1,800-second run at a 768 MiB test heap also timed out around 2,000 actual admissions, spending almost 20 minutes in full garbage collection; those failures and progress records are retained in the MyOS campaign evidence.
+
+These are host execution bounds, not semantic gas. The 5,000 literal admissions, complete source/observer evidence, standalone equivalence, exact gas and restart assertions remain mandatory. An adapter timeout terminates its isolated process group, including child JVMs, and remains a failed run; it does not become a processor gas result or a successful partial fixture.

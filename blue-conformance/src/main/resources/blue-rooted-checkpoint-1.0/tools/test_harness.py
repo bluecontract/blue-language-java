@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Negative tests for the package's abstract/adapter harness; not Blue tests."""
-import importlib.util, json, sys, unittest
+import importlib.util, json, subprocess, sys, time, unittest
 from pathlib import Path
 R=Path(__file__).resolve().parents[1];S=R/'conformance/rooted-processing'
 sys.path.insert(0,str(S));sys.path.insert(0,str(S/'model'))
@@ -9,6 +9,25 @@ import run_production_adapter as P
 import checkpoint_model as M
 
 class HarnessTests(unittest.TestCase):
+    def test_real_adapter_preserves_input_and_successful_output(self):
+        code="import sys; sys.stdout.write(sys.stdin.read()); sys.stderr.write('diagnostic')"
+        result=P.run_adapter([sys.executable,'-c',code],{'exact': ['value',17]},10)
+        self.assertEqual(result.returncode,0)
+        self.assertEqual(json.loads(result.stdout),{'exact': ['value',17]})
+        self.assertEqual(result.stderr,'diagnostic')
+    def test_real_adapter_preserves_nonzero_exit(self):
+        result=P.run_adapter([sys.executable,'-c',"import sys; print('failed'); sys.exit(7)"],{},10)
+        self.assertEqual(result.returncode,7)
+        self.assertEqual(result.stdout,'failed\n')
+    def test_timeout_closes_the_adapter_child_output_pipe(self):
+        child="import time; print('CHILD_STARTED',flush=True); time.sleep(10)"
+        parent="import subprocess,sys; subprocess.run([sys.executable,'-c',"+repr(child)+"])"
+        started=time.monotonic()
+        with self.assertRaises(subprocess.TimeoutExpired) as caught:
+            P.run_adapter([sys.executable,'-c',parent],{},1)
+        self.assertIn('CHILD_STARTED',caught.exception.stdout)
+        self.assertLess(time.monotonic()-started,5,
+                        'Timeout must not leave the child holding the capture pipe for its full lifetime')
     def test_boolean_is_not_integer(self):self.assertFalse(P.exact_equal(True,1))
     def test_nested_boolean_is_not_integer(self):self.assertFalse(P.exact_equal({'x':[True]},{'x':[1]}))
     def test_missing_observation_fails(self):
