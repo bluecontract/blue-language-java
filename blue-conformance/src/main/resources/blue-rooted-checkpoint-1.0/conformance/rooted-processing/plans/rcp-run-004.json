@@ -1,0 +1,230 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-004",
+  "title": "Root direct checkpoint at 20 remains unchanged while the saved child imports 10",
+  "inputIdentityPolicy": "Save the exact A state after input 5; P attaches it with its direct input 20 and imports only retained input 10.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/historical-a.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/direct-checkpoint-parent.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "5",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "A5",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "A5"
+      },
+      "budget": "DEFAULT",
+      "capture": "source5",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 1,
+      "capture": "sourceAt5",
+      "requireActualEpoch": true,
+      "stepId": "setup-005"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "10",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "A10",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "A10"
+      },
+      "budget": "DEFAULT",
+      "capture": "source10",
+      "stepId": "setup-007"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "20",
+        "request": {
+          "child": {
+            "$capture": "sourceAt5.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "P20",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "P20"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachment",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "subject",
+        "mustConsumePositions": [
+          2
+        ],
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "A"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-006"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_MULTIPLE",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "A.counter": 2,
+      "P.child.counter": 2,
+      "P.seen": 2,
+      "P.log": [
+        2
+      ],
+      "P.directCount": 1
+    },
+    "requiredApplicationCount": 1,
+    "occurrenceSuffixes": {
+      "/child": {
+        "source": "A",
+        "positions": [
+          2
+        ]
+      }
+    },
+    "applicationOrder": [
+      [
+        "A",
+        10
+      ]
+    ],
+    "preserveSource": true,
+    "sourceAliases": [
+      "A"
+    ],
+    "requiredEvents": 1,
+    "channelCheckpointHistory": {
+      "owner": "P",
+      "channel": "owner",
+      "before": "attachment",
+      "after": "subject",
+      "entryCapture": "P20",
+      "timestamp": 20,
+      "selectedSource": {
+        "source": "A",
+        "capture": "sourceAt5",
+        "epoch": 1,
+        "path": "child",
+        "afterDocumentEquals": {
+          "counter.value": 1
+        }
+      }
+    },
+    "phaseEventAnchors": {
+      "attachment": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "RCP4/Direct"
+        }
+      ],
+      "subject": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "RCP4/Embedded"
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "attachment.after.P.directCount": 1,
+        "attachment.after.P.log": []
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "captureEpoch",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-004.json",
+    "sha256": "071aed921b3077afd13681bc05293284955ef6e248722f9ac10fa71e8c4a40f0"
+  }
+}

@@ -142,7 +142,10 @@ class HarnessV2Tests(unittest.TestCase):
         for x in r.values():x['output']['after']['S']['counter']=True
         with self.assertRaisesRegex(ValueError,'ANCHOR'):P.check_runs(fixture(2),r,WEIGHTS)
     def test_recipe_cannot_be_passed(self):
-        with self.assertRaisesRegex(ValueError,'RECIPE'):P.check_runs(fixture(4),{},WEIGHTS)
+        # RUN-004 now has an executed literal; its unchanged original recipe
+        # must still fail qualification independently of future literal work.
+        original=json.loads((S/'provenance/recipe-inputs/rcp-run-004.json').read_text())
+        with self.assertRaisesRegex(ValueError,'RECIPE'):P.check_runs(original,{},WEIGHTS)
     def test_gas_boundary_positive_synthetic_harness_only(self):self.assertGreater(P.check_runs(fixture(20),gas_runs(),WEIGHTS,calibration()),0)
     def test_all_success_gas_bug_rejected(self):
         r=gas_runs()

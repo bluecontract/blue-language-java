@@ -1,0 +1,62 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-004",
+  "category": "RUN",
+  "title": "Root direct checkpoint stays ahead while historical child advances",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "ROOT_E20_CHILD_E5_E10",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.rootDirectDeliveryCount",
+        "op": "equals",
+        "expected": 1
+      },
+      {
+        "actual": "s.childRequiredE10DeliveryCount",
+        "op": "equals",
+        "expected": 1
+      },
+      {
+        "actual": "s.rootDirectCheckpointChangedByOldE10",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.embeddedEventCount",
+        "op": "equals",
+        "expected": 1
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

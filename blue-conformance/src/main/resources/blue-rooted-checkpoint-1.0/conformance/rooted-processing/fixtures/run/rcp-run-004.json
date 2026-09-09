@@ -11,52 +11,109 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/direct-checkpoint-parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "ROOT_E20_CHILD_E5_E10",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-004.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-004.json"
   },
   "expected": {
-    "assertions": [
-      {
-        "actual": "s.rootDirectDeliveryCount",
-        "op": "equals",
-        "expected": 1
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "A.counter": 2,
+        "P.child.counter": 2,
+        "P.seen": 2,
+        "P.log": [
+          2
+        ],
+        "P.directCount": 1
       },
-      {
-        "actual": "s.childRequiredE10DeliveryCount",
-        "op": "equals",
-        "expected": 1
+      "requiredApplicationCount": 1,
+      "occurrenceSuffixes": {
+        "/child": {
+          "source": "A",
+          "positions": [
+            2
+          ]
+        }
       },
-      {
-        "actual": "s.rootDirectCheckpointChangedByOldE10",
-        "op": "equals",
-        "expected": false
+      "applicationOrder": [
+        [
+          "A",
+          10
+        ]
+      ],
+      "preserveSource": true,
+      "sourceAliases": [
+        "A"
+      ],
+      "requiredEvents": 1,
+      "channelCheckpointHistory": {
+        "owner": "P",
+        "channel": "owner",
+        "before": "attachment",
+        "after": "subject",
+        "entryCapture": "P20",
+        "timestamp": 20,
+        "selectedSource": {
+          "source": "A",
+          "capture": "sourceAt5",
+          "epoch": 1,
+          "path": "child",
+          "afterDocumentEquals": {
+            "counter.value": 1
+          }
+        }
       },
-      {
-        "actual": "s.embeddedEventCount",
-        "op": "equals",
-        "expected": 1
+      "phaseEventAnchors": {
+        "attachment": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "RCP4/Direct"
+          }
+        ],
+        "subject": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "RCP4/Embedded"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "attachment.after.P.directCount": 1,
+          "attachment.after.P.log": []
+        }
       }
-    ]
+    },
+    "oracleVersion": 2
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-004.json",
+    "sha256": "071aed921b3077afd13681bc05293284955ef6e248722f9ac10fa71e8c4a40f0"
   }
 }

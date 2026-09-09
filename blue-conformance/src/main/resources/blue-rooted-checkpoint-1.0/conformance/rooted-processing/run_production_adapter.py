@@ -278,6 +278,43 @@ def check_multiple_history(o,contract,weights,document_ids):
     require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
     if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
 
+def check_channel_checkpoint_history(record,rule):
+    """Compare actual retained checkpoint bytes with the exact later direct entry."""
+    def completion(capture,operation):
+        rows=[t for t in record['transcript'] if t.get('request',{}).get('capture')==capture]
+        require(len(rows)==1 and rows[0].get('completed') is True,'CHECKPOINT_COMPLETION')
+        row=rows[0];require(row['request'].get('op')==operation,'CHECKPOINT_OPERATION')
+        return row
+    owner=rule['owner'];entry=completion(rule['entryCapture'],'append')
+    require(entry['request'].get('target')==owner
+            and str(entry['request'].get('timestampUs'))==str(rule['timestamp']),'CHECKPOINT_DIRECT_INPUT')
+    checkpoints=[]
+    for phase in [rule['before'],rule['after']]:
+        row=completion(phase,'processNext');require(row['request'].get('root')==owner,'CHECKPOINT_ROOT')
+        state=row['response'].get('retainedRecords',{}).get(owner,{})
+        require(state.get('documentId')==record['documentIds'][owner],'CHECKPOINT_OWNER')
+        checkpoint=state.get('exactDocument',{}).get('contracts',{}).get('checkpoint',{}).get('entries',{}).get(rule['channel'])
+        require(isinstance(checkpoint,dict) and isinstance(checkpoint.get('domain',{}).get('blueId'),str),'CHECKPOINT_REQUIRED')
+        subject=checkpoint.get('subject',{})
+        require(subject.get('entryBlueId',{}).get('value')==entry['response'].get('entryBlueId')
+                and isinstance(entry['response'].get('entryBlueId'),str),'CHECKPOINT_EXACT_DIRECT_ENTRY')
+        require(subject.get('timestamp',{}).get('value')==rule['timestamp'],'CHECKPOINT_DIRECT_TIMESTAMP')
+        checkpoints.append(checkpoint)
+    require(exact_equal(*checkpoints),'CHECKPOINT_CHANGED_BY_HISTORY')
+    if rule.get('selectedSource'):
+        selected=rule['selectedSource'];saved=completion(selected['capture'],'captureEpoch')
+        require(saved['request'].get('target')==selected['source']
+                and saved['request'].get('epoch')==selected['epoch'],'CHECKPOINT_SELECTED_EPOCH')
+        receipt=dict(saved['response']);captured_id=receipt.pop('blueId',None)
+        require(captured_id==receipt.get('afterBlueId') and isinstance(captured_id,str),'CHECKPOINT_SELECTED_CAPTURE')
+        before=completion(rule['before'],'processNext')['response']['retainedRecords']
+        require(receipt.get('documentId',{}).get('value')==record['documentIds'][selected['source']]
+                and receipt in before[selected['source']]['receipts'],'CHECKPOINT_SELECTED_RECEIPT')
+        require(lookup(before[owner]['exactDocument'],selected['path'])=={'blueId':receipt['afterBlueId']},
+                'CHECKPOINT_SELECTED_EXACT_REFERENCE')
+        for path,value in selected['afterDocumentEquals'].items():
+            require(exact_equal(lookup(receipt['afterDocument'],path),value),'CHECKPOINT_SELECTED_VALUE')
+
 def check_recreated_occurrence(output,phases,rule,document_ids):
     owner=rule['owner'];source=document_ids[rule['source']]
     def rows(phase):
@@ -453,6 +490,8 @@ def check_runs(f,run_records,weights,calibration=None):
         if scope=='EQUAL_PAYLOAD_OCCURRENCES':check_equal_occurrences(o,contract,rec['documentIds'])
         if contract.get('recreatedOccurrence'):
             check_recreated_occurrence(o,rec.get('phaseRecords',{}),contract['recreatedOccurrence'],rec['documentIds'])
+        if contract.get('channelCheckpointHistory'):
+            check_channel_checkpoint_history(rec,contract['channelCheckpointHistory'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):

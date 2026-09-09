@@ -343,6 +343,66 @@ class EqualOccurrenceTests(unittest.TestCase):
         self.work[1]=copy.deepcopy(self.work[0])
         with self.assertRaisesRegex(ValueError,'EQUAL_DELIVERY_OCCURRENCES'):self.check()
 
+class ChannelCheckpointHistoryTests(unittest.TestCase):
+    def setUp(self):
+        self.rule=dict(owner='P',channel='owner',before='attachment',after='subject',entryCapture='P20',timestamp=20)
+        checkpoint={'domain':{'blueId':'domain'},'subject':{'entryBlueId':{'value':'entry-20'},'timestamp':{'value':20}}}
+        self.rows=[]
+        for phase in ['attachment','subject']:
+            self.rows.append(dict(completed=True,request=dict(op='processNext',root='P',capture=phase),response=dict(
+                retainedRecords={'P':dict(documentId='parent',exactDocument={'contracts':{'checkpoint':{'entries':{'owner':copy.deepcopy(checkpoint)}}}})})))
+        self.record=dict(documentIds={'P':'parent'},transcript=[dict(completed=True,request=dict(op='append',target='P',capture='P20',timestampUs='20'),response=dict(entryBlueId='entry-20'))]+self.rows)
+    def checkpoint(self,index):return self.rows[index]['response']['retainedRecords']['P']['exactDocument']['contracts']['checkpoint']['entries']['owner']
+    def check(self):P.check_channel_checkpoint_history(self.record,self.rule)
+    def test_unchanged_exact_direct_checkpoint_passes(self):self.check()
+    def test_missing_checkpoint_rejects(self):
+        self.rows[1]['response']['retainedRecords']['P']['exactDocument']={}
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_REQUIRED'):self.check()
+    def test_rewound_checkpoint_rejects(self):
+        self.checkpoint(1)['subject']['timestamp']['value']=10
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_DIRECT_TIMESTAMP'):self.check()
+    def test_identically_wrong_entry_before_and_after_rejects(self):
+        for i in [0,1]:self.checkpoint(i)['subject']['entryBlueId']['value']='entry-10'
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_EXACT_DIRECT_ENTRY'):self.check()
+    def test_changed_domain_rejects(self):
+        self.checkpoint(1)['domain']['blueId']='other-domain'
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_CHANGED_BY_HISTORY'):self.check()
+    def test_duplicate_completion_rejects(self):
+        self.record['transcript'].append(copy.deepcopy(self.rows[1]))
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_COMPLETION'):self.check()
+    def test_incomplete_history_step_rejects(self):
+        self.rows[1]['completed']=False
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_COMPLETION'):self.check()
+    def test_foreign_root_rejects(self):
+        self.rows[1]['request']['root']='A'
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_ROOT'):self.check()
+    def add_selection(self):
+        self.rule['selectedSource']=dict(source='A',capture='sourceAt5',epoch=1,path='child',afterDocumentEquals={'counter.value':1})
+        self.record['documentIds']['A']='source'
+        receipt=dict(documentId={'value':'source'},afterBlueId='saved-5',afterDocument={'counter':{'value':1}})
+        self.record['transcript'].append(dict(completed=True,request=dict(op='captureEpoch',capture='sourceAt5',target='A',epoch=1),response=receipt))
+        before=self.rows[0]['response']['retainedRecords'];before['A']={'receipts':[copy.deepcopy(receipt)]}
+        before['P']['exactDocument']['child']={'blueId':'saved-5'}
+        receipt['blueId']='saved-5'
+        return receipt,before
+    def test_exact_saved_selection_passes(self):self.add_selection();self.check()
+    def test_current_head_substitution_rejects(self):
+        _,before=self.add_selection();before['P']['exactDocument']['child']={'blueId':'current-10'}
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_SELECTED_EXACT_REFERENCE'):self.check()
+    def test_unretained_selection_rejects(self):
+        _,before=self.add_selection();before['A']['receipts']=[]
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_SELECTED_RECEIPT'):self.check()
+    def test_wrong_saved_value_rejects(self):
+        receipt,before=self.add_selection();receipt['afterDocument']['counter']['value']=2
+        before['A']['receipts']=[{k:copy.deepcopy(v) for k,v in receipt.items() if k!='blueId'}]
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_SELECTED_VALUE'):self.check()
+    def test_wrong_capture_alias_rejects(self):
+        receipt,_=self.add_selection();receipt['blueId']='other'
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_SELECTED_CAPTURE'):self.check()
+    def test_wrong_selected_epoch_rejects(self):
+        self.add_selection();self.record['transcript'][-1]['request']['epoch']=2
+        with self.assertRaisesRegex(ValueError,'CHECKPOINT_SELECTED_EPOCH'):self.check()
+
 class RecreatedOccurrenceTests(unittest.TestCase):
     def setUp(self):
         self.ids={'P':'parent','S':'source'}
