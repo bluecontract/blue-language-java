@@ -585,12 +585,173 @@ def _identifier_occurrences(path: str, text: str) -> list[tuple[str, int]]:
     return sorted(result, key=lambda value: (value[1], value[0]))
 
 
+# One mixed-source historical variant. These are immutable provenance operands,
+# not a file/prefix exclusion or permission for arbitrary old declarations.
+CCLO34_HISTORICAL_PROVENANCE = "3ee576244a1951583e42eec3a8c29a4f703a73e9"
+CCLO34_HISTORICAL_SOURCE_SHA256 = "0edb2a5247bf17b62eb82cc3c35d3ccd220d5fd50e9a91cbca0a939044a49818"
+CCLO34_HISTORICAL_SPEC = (
+    "blue-contracts-core/src/main/resources/specifications/historical/rc24/"
+    "blue-contracts-and-processor-specification-1.0.md"
+)
+CCLO34_HISTORICAL_RELEASE = (
+    "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/"
+    "historical/rc24/release-manifest.yaml"
+)
+CCLO34_RUNTIME_DESCRIPTOR = (
+    "blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java"
+)
+
+
+def _cclo34_source_slice(text: str, symbol: str, method: bool) -> tuple[str, int]:
+    """Extract one direct class member, retaining its complete line context."""
+    code = _java_code_mask(text)
+    if not re.search(r"(?m)^package blue\.language\.processor\.closure;\s*$", code):
+        raise ValueError("Historical C-CLO-34 declaring package changed")
+    classes = list(re.finditer(r"(?m)^final class ClosureInvocationVerifierTest\s*\{", code))
+    if len(classes) != 1:
+        raise ValueError("Historical C-CLO-34 declaring class changed")
+    if method:
+        pattern = (r"(?m)^    (?:private static )?[^\n;={}]+\b" + re.escape(symbol)
+                   + r"\s*\([^;{}]*\)\s*\{")
+    else:
+        pattern = r"(?m)^    private static final [^\n;=]+\b" + re.escape(symbol) + r"\s*="
+    matches = list(re.finditer(pattern, code))
+    if len(matches) != 1:
+        raise ValueError("Historical C-CLO-34 ambiguous/missing member: " + symbol)
+    match = matches[0]
+    if code[:match.start()].count("{") - code[:match.start()].count("}") != 1:
+        raise ValueError("Historical C-CLO-34 member is not in the exact declaring class: " + symbol)
+    start = match.start()
+    if method:
+        depth = 1
+        end = match.end()
+        while end < len(code) and depth:
+            depth += (code[end] == "{") - (code[end] == "}")
+            end += 1
+        if depth:
+            raise ValueError("Historical C-CLO-34 unclosed member: " + symbol)
+        if symbol == "shouldMatchReleasedCclo34FullInvocationIdentity":
+            previous = text.rfind("\n", 0, start - 1) + 1
+            if text[previous:start] != "    @Test\n":
+                raise ValueError("Historical C-CLO-34 test annotation changed")
+            start = previous
+    else:
+        end = code.find(";", match.end()) + 1
+        if not end:
+            raise ValueError("Historical C-CLO-34 unclosed field: " + symbol)
+    line_end = text.find("\n", end)
+    line_end = len(text) if line_end < 0 else line_end + 1
+    if text[end:line_end].strip():
+        raise ValueError("Historical C-CLO-34 extra same-line source: " + symbol)
+    return text[start:line_end], text[:start].count("\n") + 1
+
+
+def _cclo34_current_envelope(repository: Path) -> bytes:
+    """Keep the current YAML vector independently bound to current runtime inputs."""
+    from jcs import dumps as canonical
+    fixture_bytes = _current_bytes(repository, C_CLO_34_FIXTURE)
+    fixture = _yaml(fixture_bytes)
+    manifest = _yaml(_current_bytes(repository, CLOSURE_FIXTURES))
+    relative = C_CLO_34_FIXTURE.removeprefix(str(Path(CLOSURE_FIXTURES).parent) + "/")
+    rows = [row for row in manifest["files"] if row["path"] == relative]
+    if len(rows) != 1 or rows[0]["sha256"] != _sha256(fixture_bytes) or rows[0]["bytes"] != len(fixture_bytes):
+        raise ValueError("Current C-CLO-34 fixture manifest binding changed")
+    data = fixture["input"]
+    environment = data["environment"]
+    runtime = _current_bytes(repository, CCLO34_RUNTIME_DESCRIPTOR)
+    release = _yaml(_current_bytes(repository, CONTRACTS_RELEASE))
+    expected = {
+        "blueLanguageSpecificationIdentity": "sha256:" + _sha256(_current_bytes(repository, LANGUAGE_SPEC)),
+        "contractsSpecificationIdentity": "sha256:" + _sha256(_current_bytes(repository, CONTRACTS_SPEC)),
+        "runtimeRegistryIdentity": _yaml(_current_bytes(repository, CONTRACTS_REGISTRY))["packageIdentity"],
+        "gasManifestIdentity": "sha256:" + _sha256(_current_bytes(repository, CONTRACTS_GAS)),
+        "cyclicFinalizerIdentity": _java_string_constant(runtime, "CYCLIC_FINALIZER_IDENTITY"),
+        "cyclicProofVerifierIdentity": _java_string_constant(runtime, "CYCLIC_PROOF_VERIFIER_IDENTITY"),
+    }
+    if any(environment[name] != value for name, value in expected.items()):
+        raise ValueError("Current C-CLO-34 runtime/specification binding changed")
+    if (expected["cyclicFinalizerIdentity"] != release["languageDependency"]["cyclicSetFinalizerBaselineIdentity"]
+            or expected["cyclicProofVerifierIdentity"] != release["languageDependency"]["cyclicSetProofVerifierBaselineIdentity"]):
+        raise ValueError("Current C-CLO-34 implementation release binding changed")
+    value = dict(expected)
+    value.update({
+        "operation": fixture["operation"], "causeIdentity": data["cause"]["causeIdentity"],
+        "admissionCandidateIdentity": data["admissionCandidateIdentity"],
+        "inputGraphGeneration": data["graphGeneration"], "inputClosureIdentity": data["closureIdentity"],
+        "directDeliverySnapshotIdentity": data["directDeliverySnapshotIdentity"],
+        "occurrenceBindingSetIdentity": data["occurrenceBindingSetIdentity"],
+        "gasPolicyIdentity": data["gasPolicy"]["policyIdentity"],
+        "documents": [dict(documentId=name, **{key: record[key] for key in
+            ("blueId", "initialized", "terminated", "publicRoot", "epoch", "componentGeneration")})
+            for name, record in sorted(data["documents"].items())],
+    })
+    for field in ("managedDocumentIdentityPolicy", "managedBindingPolicy", "exactNodeProviderDomain", "externalOrderPolicy", "portableLimitPolicy"):
+        value[field + "Identity"] = environment[field]["identity"]
+    encoded = canonical({"domain": "blue-contracts-invocation/1.0", "value": value})
+    if data["invocationIdentity"] != "sha256:" + hashlib.sha256(encoded).hexdigest():
+        raise ValueError("Current C-CLO-34 invocation constructor changed")
+    return encoded
+
+
+def _cclo34_historical_reference(repository: Path) -> dict[str, Any] | None:
+    """Authenticate only the exact historical digest declaration occurrence."""
+    from jcs import dumps as canonical
+    current = _current_bytes(repository, C_CLO_34_JAVA_TEST)
+    digest = _java_string_constant(current, "C_CLO_34_INVOCATION_IDENTITY")
+    envelope = _java_string_constant(current, "C_CLO_34_CANONICAL_INVOCATION_ENVELOPE")
+    current_envelope = _cclo34_current_envelope(repository)
+    # The original current-fixture mode gains no historical disposition.
+    rooted = b"blue-rooted-checkpoint/1.0-draft.2" in _current_bytes(repository, CONTRACTS_SPEC)
+    if (not rooted and envelope is not None and envelope.encode("utf-8") == current_envelope
+            and digest == "sha256:" + hashlib.sha256(current_envelope).hexdigest()):
+        return None
+    provenance = _baseline_bytes(repository, CCLO34_HISTORICAL_PROVENANCE, C_CLO_34_JAVA_TEST)
+    if _sha256(provenance) != CCLO34_HISTORICAL_SOURCE_SHA256:
+        raise ValueError("Historical C-CLO-34 provenance source identity changed")
+    if current is None or envelope is None or digest is None:
+        raise ValueError("Historical C-CLO-34 declarations missing")
+    text = current.decode("utf-8")
+    original = provenance.decode("utf-8")
+    fields = ("IDENTITIES", "BINDING_POLICY", "EXTERNAL_ORDER_POLICY", "BLUE_A", "BLUE_B",
+              "C_CLO_34_INVOCATION_IDENTITY", "C_CLO_34_CANONICAL_INVOCATION_ENVELOPE")
+    methods = ("shouldMatchReleasedCclo34FullInvocationIdentity", "cclo34Input", "releasedEnvironment",
+               "frozenCclo34Envelope", "independentlyCanonicalize", "independentSha256Identity")
+    for method, names in ((False, fields), (True, methods)):
+        for name in names:
+            if _cclo34_source_slice(text, name, method)[0] != _cclo34_source_slice(original, name, method)[0]:
+                raise ValueError("Historical C-CLO-34 anchored source changed: " + name)
+    value = json.loads(envelope)
+    encoded = canonical(value)
+    if encoded != envelope.encode("utf-8") or len(encoded) != 2131 or digest != "sha256:" + hashlib.sha256(encoded).hexdigest():
+        raise ValueError("Historical C-CLO-34 complete canonical envelope/digest changed")
+    for path in (CCLO34_HISTORICAL_SPEC, CCLO34_HISTORICAL_RELEASE):
+        if _current_bytes(repository, path) != _baseline_bytes(repository, CCLO34_HISTORICAL_PROVENANCE, path):
+            raise ValueError("Historical C-CLO-34 retained provenance operand changed: " + path)
+    release = _yaml(_current_bytes(repository, CCLO34_HISTORICAL_RELEASE))
+    operands = value["value"]
+    if (operands["contractsSpecificationIdentity"] != "sha256:" + _sha256(_current_bytes(repository, CCLO34_HISTORICAL_SPEC))
+            or operands["contractsSpecificationIdentity"] != "sha256:" + release["specificationDocument"]["sha256"]
+            or operands["cyclicFinalizerIdentity"] != release["languageDependency"]["cyclicSetFinalizerBaselineIdentity"]
+            or operands["cyclicProofVerifierIdentity"] != release["languageDependency"]["cyclicSetProofVerifierBaselineIdentity"]):
+        raise ValueError("Historical C-CLO-34 specification/implementation operands changed")
+    declaration, first_line = _cclo34_source_slice(text, "C_CLO_34_INVOCATION_IDENTITY", False)
+    occurrences = _identifier_occurrences(C_CLO_34_JAVA_TEST, declaration)
+    if len(occurrences) != 1 or occurrences[0][0] != digest:
+        raise ValueError("Historical C-CLO-34 digest declaration is not exact")
+    return {"path": C_CLO_34_JAVA_TEST, "line": first_line + occurrences[0][1] - 1,
+            "identity": digest, "symbol": "ClosureInvocationVerifierTest#C_CLO_34_INVOCATION_IDENTITY",
+            "provenanceCommit": CCLO34_HISTORICAL_PROVENANCE,
+            "canonicalEnvelopeSha256": hashlib.sha256(encoded).hexdigest(),
+            "canonicalEnvelopeBytes": len(encoded)}
+
+
 def _reference_index(
     repository: Path,
     baseline: str,
 ) -> dict[str, list[dict[str, Any]]]:
     """Indexes every exact identifier once and proves history is immutable."""
     result: dict[str, list[dict[str, Any]]] = {}
+    historical = _cclo34_historical_reference(repository)
     for path in _tracked_text_files(repository):
         data = _current_bytes(repository, path)
         if data is None:
@@ -607,13 +768,12 @@ def _reference_index(
         )
         text = data.decode("utf-8", errors="replace")
         for identity, number in _identifier_occurrences(path, text):
-            result.setdefault(identity, []).append(
-                {
-                    "path": path,
-                    "line": number,
-                    "disposition": disposition,
-                }
-            )
+            entry = {"path": path, "line": number, "disposition": disposition}
+            if historical is not None and (path, number, identity) == (
+                    historical["path"], historical["line"], historical["identity"]):
+                entry["disposition"] = "retained-immutable-history"
+                entry["historicalDeclarationProof"] = dict(historical)
+            result.setdefault(identity, []).append(entry)
     return result
 
 

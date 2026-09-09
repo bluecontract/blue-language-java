@@ -932,5 +932,122 @@ class IdentityImpactInventoryTest(unittest.TestCase):
         self.assertFalse(inventory._is_identity_surface("src/main/java/Example.java"))
 
 
+
+class Cclo34HistoricalProjectionTest(unittest.TestCase):
+    """Source mutations cross the real scanner proof and its existing partitions."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.repository = TOOLS.parents[3]
+        cls.source = (cls.repository / inventory.C_CLO_34_JAVA_TEST).read_bytes()
+        cls.digest = inventory._java_string_constant(cls.source, "C_CLO_34_INVOCATION_IDENTITY")
+
+    def proof(self, changed=None):
+        from unittest.mock import patch
+        original = inventory._current_bytes
+        with patch.object(inventory, "_current_bytes", side_effect=lambda root, path:
+                changed[path] if changed and path in changed else original(root, path)):
+            return inventory._cclo34_historical_reference(self.repository)
+
+    def test_exact_historical_declaration_and_current_constructor_both_verify(self):
+        proof = self.proof()
+        self.assertEqual(self.digest, proof["identity"])
+        self.assertEqual(2131, proof["canonicalEnvelopeBytes"])
+        self.assertEqual("ClosureInvocationVerifierTest#C_CLO_34_INVOCATION_IDENTITY", proof["symbol"])
+        self.assertEqual(43, proof["line"])
+        current = inventory._cclo34_current_envelope(self.repository)
+        self.assertNotEqual(self.digest, "sha256:" + hashlib.sha256(current).hexdigest())
+
+    def test_changed_frozen_envelope_digest_and_source_context_reject(self):
+        changes = {
+            "digest": self.source.replace(self.digest.encode(), b"sha256:" + b"f" * 64, 1),
+            "envelope": self.source.replace(b'\\"inputGraphGeneration\\":1', b'\\"inputGraphGeneration\\":2', 1),
+            "assertion": self.source.replace(b"assertEquals(2131,", b"assertEquals(2132,", 1),
+            "annotation": self.source.replace(b"    @Test\n    void shouldMatchReleasedCclo34FullInvocationIdentity", b"    void shouldMatchReleasedCclo34FullInvocationIdentity", 1),
+            "class": self.source.replace(b"final class ClosureInvocationVerifierTest {", b"final class AnotherTest {", 1),
+            "package": self.source.replace(b"package blue.language.processor.closure;", b"package blue.language.processor.other;", 1),
+            "same-line": self.source.replace(self.digest.encode() + b'";', self.digest.encode() + b'"; // ' + self.digest.encode(), 1),
+        }
+        for name, data in changes.items():
+            with self.subTest(name=name):
+                self.assertNotEqual(self.source, data)
+                with self.assertRaisesRegex(ValueError, "Historical C-CLO-34"):
+                    self.proof({inventory.C_CLO_34_JAVA_TEST: data})
+
+    def test_historical_provenance_specification_and_implementation_operands_reject(self):
+        for path in (inventory.CCLO34_HISTORICAL_SPEC, inventory.CCLO34_HISTORICAL_RELEASE):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "retained provenance operand"):
+                self.proof({path: (self.repository / path).read_bytes() + b"\n"})
+        text = self.source.decode()
+        selected, _ = inventory._cclo34_source_slice(text, "releasedEnvironment", True)
+        for name in ("contractsSpecificationIdentity", "cyclicFinalizerIdentity", "cyclicProofVerifierIdentity"):
+            envelope = json.loads(inventory._java_string_constant(self.source, "C_CLO_34_CANONICAL_INVOCATION_ENVELOPE"))
+            old = envelope["value"][name]
+            modified = selected.replace(old, "sha256:" + "f" * 64, 1)
+            self.assertNotEqual(selected, modified)
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "anchored source changed: releasedEnvironment"):
+                self.proof({inventory.C_CLO_34_JAVA_TEST: text.replace(selected, modified, 1).encode()})
+        from unittest.mock import patch
+        original = inventory._baseline_bytes
+        with patch.object(inventory, "_baseline_bytes", side_effect=lambda root, revision, path:
+                self.source + b"\n" if revision == inventory.CCLO34_HISTORICAL_PROVENANCE and path == inventory.C_CLO_34_JAVA_TEST
+                else original(root, revision, path)):
+            with self.assertRaisesRegex(ValueError, "provenance source identity"):
+                self.proof()
+
+    def fixture_changes(self, change, rebind):
+        import yaml
+        data = yaml.safe_load((self.repository / inventory.C_CLO_34_FIXTURE).read_text())
+        change(data)
+        encoded = yaml.safe_dump(data, sort_keys=False).encode()
+        result = {inventory.C_CLO_34_FIXTURE: encoded}
+        if rebind:
+            manifest = yaml.safe_load((self.repository / inventory.CLOSURE_FIXTURES).read_text())
+            row = next(row for row in manifest["files"] if row["path"] == "closure/c-clo-34-separate-document-steps.yaml")
+            row.update(sha256=hashlib.sha256(encoded).hexdigest(), bytes=len(encoded))
+            result[inventory.CLOSURE_FIXTURES] = yaml.safe_dump(manifest, sort_keys=False).encode()
+        return result
+
+    def test_current_yaml_runtime_and_constructor_drift_remain_rejected(self):
+        changes = [
+            self.fixture_changes(lambda data: data["input"]["gasPolicy"].update(sharedLimit=100001), False),
+            self.fixture_changes(lambda data: data["input"]["environment"].update(contractsSpecificationIdentity="sha256:" + "f" * 64), True),
+            self.fixture_changes(lambda data: data["input"].update(invocationIdentity="sha256:" + "f" * 64), True),
+        ]
+        runtime = (self.repository / inventory.CCLO34_RUNTIME_DESCRIPTOR).read_bytes()
+        finalizer = inventory._java_string_constant(runtime, "CYCLIC_FINALIZER_IDENTITY")
+        changes.append({inventory.CCLO34_RUNTIME_DESCRIPTOR: runtime.replace(finalizer.encode(), b"sha256:" + b"f" * 64, 1)})
+        changes.append({inventory.CONTRACTS_SPEC: (self.repository / inventory.CONTRACTS_SPEC).read_bytes() + b"\n"})
+        for index, changed in enumerate(changes):
+            with self.subTest(index=index), self.assertRaisesRegex(ValueError, "Current C-CLO-34"):
+                self.proof(changed)
+
+    def test_coherent_current_substitution_cannot_replace_rooted_historical_vector(self):
+        text = self.source.decode()
+        current = inventory._cclo34_current_envelope(self.repository)
+        field, _ = inventory._cclo34_source_slice(text, "C_CLO_34_CANONICAL_INVOCATION_ENVELOPE", False)
+        replacement = "    private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =\n            " + json.dumps(current.decode()) + ";\n"
+        changed = text.replace(field, replacement, 1).replace(self.digest, "sha256:" + hashlib.sha256(current).hexdigest(), 1)
+        with self.assertRaisesRegex(ValueError, "Historical C-CLO-34 anchored source changed"):
+            self.proof({inventory.C_CLO_34_JAVA_TEST: changed.encode()})
+
+    def test_only_reviewed_occurrence_is_historical_extra_same_identity_stays_active(self):
+        from unittest.mock import patch
+        extra = self.source.replace(b"final class ClosureInvocationVerifierTest {", b"final class ClosureInvocationVerifierTest {\n    private static final String CURRENT_BINDING = \"" + self.digest.encode() + b"\";", 1)
+        original = inventory._current_bytes
+        with patch.object(inventory, "_current_bytes", side_effect=lambda root, path:
+                extra if path == inventory.C_CLO_34_JAVA_TEST else original(root, path)), patch.object(
+                inventory, "_tracked_text_files", return_value=[inventory.C_CLO_34_JAVA_TEST]):
+            references = inventory._reference_index(self.repository, inventory.DEFAULT_BASELINE)[self.digest]
+        partitions = inventory._reference_partitions(references)
+        self.assertEqual(1, len(partitions["historical"]))
+        self.assertEqual(1, len(partitions["active"]))
+        self.assertEqual(44, partitions["historical"][0]["line"])
+        self.assertEqual(31, partitions["active"][0]["line"])
+        with self.assertRaisesRegex(ValueError, "active old-identity references=1"):
+            inventory._validate_upstream_report({"summary": {"unresolvedArtifactCount": 0, "mirrorMismatchCount": 0,
+                "activeStoredReferenceCount": len(partitions["active"])}, "noCompatibilityAliases": False})
+
+
 if __name__ == "__main__":
     unittest.main()
