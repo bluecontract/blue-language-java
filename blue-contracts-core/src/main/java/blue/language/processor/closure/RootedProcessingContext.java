@@ -165,6 +165,51 @@ public final class RootedProcessingContext {
     }
 
     /**
+     * Binds one authenticated retained application to its exact occurrence position.
+     * The synthetic cause address uses the existing processor cause-family wire tag,
+     * not an authored Channel. Its path, generation and occurrence are the selected
+     * application binding; sourcePositionIdentity must be authenticated by the host.
+     *
+     * @param cause exact revision or representation cause
+     * @param target exact pre-input historical occurrence
+     * @param sourcePositionIdentity verified predecessor/ordinal position
+     * @return closed draft.2 retained delivery identity
+     */
+    public String retainedDeliveryBasisIdentity(ProcessingCause cause, ManagedOccurrenceBinding target,
+            String sourcePositionIdentity) {
+        Objects.requireNonNull(cause, "cause");
+        Objects.requireNonNull(target, "target");
+        String occurrence;
+        DocumentId child;
+        String before;
+        String kind;
+        long epoch;
+        if (cause instanceof ManagedRevisionCause) {
+            ManagedRevisionCause revision = (ManagedRevisionCause) cause;
+            occurrence = revision.targetOccurrenceIdentity(); child = revision.childDocumentId();
+            before = revision.beforeBlueId(); kind = "MANAGED_REVISION"; epoch = revision.fromEpoch();
+        } else if (cause instanceof ManagedRepresentationCause) {
+            ManagedRepresentationCause representation = (ManagedRepresentationCause) cause;
+            occurrence = representation.targetOccurrenceIdentity(); child = representation.childDocumentId();
+            before = representation.beforeBlueId(); kind = "MANAGED_REPRESENTATION"; epoch = representation.fromEpoch();
+        } else {
+            throw new IllegalArgumentException("Retained delivery requires a processor-managed historical cause");
+        }
+        if (!target.occurrenceIdentity().equals(occurrence) || !target.targetDocumentId().equals(child)
+                || !target.expectedTargetBlueId().equals(before) || target.active()
+                || target.pendingHistoricalEpoch() == null || target.pendingHistoricalEpoch().longValue() != epoch) {
+            throw new IllegalArgumentException("Retained delivery does not own the exact historical occurrence");
+        }
+        Map<String, Object> receiving = object("documentId", target.sourceDocumentId().value(),
+                "scopePath", target.sourcePath(), "activationGeneration", Long.toString(target.activationGeneration()),
+                "channelKey", cause.kind().wireValue(), "occurrenceIdentity", target.occurrenceIdentity());
+        return RootedIdentity.deliveryIdentity(object("operationOwnerIdentity", operationOwnerIdentity(),
+                "causeIdentity", cause.causeIdentity(), "kind", kind,
+                "receivingBindings", Collections.singletonList(receiving),
+                "sourcePositionIdentity", object("kind", "POSITION", "identity", sourcePositionIdentity)));
+    }
+
+    /**
      * Wraps the unchanged base invocation identity.
      * @param baseInvocationIdentity existing base constructor result
      * @param deliveryBasisIdentity authenticated frozen delivery identity

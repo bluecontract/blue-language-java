@@ -60,6 +60,30 @@ final class RootedProcessingContextTest {
         assertThrows(UnsupportedOperationException.class, () -> context.ownerDescriptor().clear());
     }
 
+    @Test void retainedDeliveryBindsTheExactApplicationAndHistoricalPosition() {
+        RootedProcessingContext context = RootedProcessingContext.derive(graph(false, false, 1L), A, histories(A));
+        Node after = new Node().name("historical successor");
+        String afterId = CompositionCampaignFixture.id(after);
+        ManagedOccurrenceBinding target = ManagedOccurrenceBinding.derived(SHA, A,
+                ScopeAddress.embedded("/child", 1L), B, BLUE, false, 0L);
+        ManagedRevisionCause cause = ClosureEvidenceFactory.managedRevisionCause(target.occurrenceIdentity(), B,
+                0L, 1L, BLUE, afterId, after, SHA, null);
+        String delivery = context.retainedDeliveryBasisIdentity(cause, target, SHA);
+        assertTrue(delivery.matches("sha256:[0-9a-f]{64}"));
+        assertNotEquals(delivery, context.retainedDeliveryBasisIdentity(cause, target, CompositionCampaignFixture.hash('b')));
+        ManagedOccurrenceBinding wrongPredecessor = ManagedOccurrenceBinding.derived(SHA, A,
+                ScopeAddress.embedded("/child", 1L), B, afterId, false, 0L);
+        assertThrows(IllegalArgumentException.class, () -> context.retainedDeliveryBasisIdentity(cause, wrongPredecessor, SHA));
+        assertThrows(IllegalArgumentException.class, () -> context.retainedDeliveryBasisIdentity(cause, row(A, B, 1L), SHA));
+        ManagedOccurrenceBinding wrongGeneration = ManagedOccurrenceBinding.derived(SHA, A,
+                ScopeAddress.embedded("/child", 2L), B, BLUE, false, 0L);
+        assertThrows(IllegalArgumentException.class, () -> context.retainedDeliveryBasisIdentity(cause, wrongGeneration, SHA));
+        ManagedOccurrenceBinding wrongEpoch = ManagedOccurrenceBinding.derived(SHA, A,
+                ScopeAddress.embedded("/child", 1L), B, BLUE, false, 1L);
+        assertThrows(IllegalArgumentException.class, () -> context.retainedDeliveryBasisIdentity(cause, wrongEpoch, SHA));
+        assertThrows(IllegalArgumentException.class, () -> context.retainedDeliveryBasisIdentity(cause, target, null));
+    }
+
     private static Map<DocumentId, String> histories(DocumentId... ids) {
         Map<DocumentId, String> result = new LinkedHashMap<>();
         for (DocumentId id : ids) result.put(id, SHA);
