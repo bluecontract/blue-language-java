@@ -448,4 +448,48 @@ class RecreatedOccurrenceTests(unittest.TestCase):
         self.rows('later')[0]['occurrenceIdentity']='occurrence-1'
         with self.assertRaisesRegex(ValueError,'RECREATED_LATER_BINDING'):self.check()
 
+class RetainedRollbackRetryTests(unittest.TestCase):
+    def setUp(self):
+        retained={'A':{'blueId':'A0','receipts':['A0'],'checkpoint':20},'B':{'blueId':'B0','receipts':['B0']}}
+        self.output=dict(status='GAS_LIMIT_EXCEEDED',entryOwners=['A','B'],retainedBefore=copy.deepcopy(retained),
+            retainedAfter=copy.deepcopy(retained),rollbackToInput=True,commitCompanion=None,checkpointWrites=[],
+            publicationIdentity='terminal',gas={'charges':[1,2],'rejected':{'sequence':2},'total':3})
+        self.response=dict(before=copy.deepcopy(retained),after=copy.deepcopy(retained),originalPublication='terminal',
+            returnedPublication='terminal',originalGas=copy.deepcopy(self.output['gas']),returnedGas=copy.deepcopy(self.output['gas']),
+            outcome=dict(disposition='GAS_LIMIT_EXCEEDED',closures=[{'closureId':'terminal'}]))
+        self.row=dict(completed=True,request={'op':'retry'},response=self.response)
+        self.record={'transcript':[self.row]}
+    def check(self):P.check_retained_rollback_retry(self.record,self.output)
+    def test_complete_atomic_failure_and_retained_retry_pass(self):self.check()
+    def test_one_owner_is_missing_rejects(self):
+        self.output['entryOwners']=['A']
+        with self.assertRaisesRegex(ValueError,'CYCLE_FROZEN_OWNERS'):self.check()
+    def test_checkpoint_write_on_failure_rejects(self):
+        self.output['checkpointWrites']=[{'forged':1}]
+        with self.assertRaisesRegex(ValueError,'CYCLE_ROLLBACK_EVIDENCE'):self.check()
+    def test_failure_receipt_mutation_rejects(self):
+        self.output['retainedAfter']['B']['receipts'].append('B1')
+        with self.assertRaisesRegex(ValueError,'CYCLE_FAILED_RETAINED_MUTATION'):self.check()
+    def test_failure_companion_rejects(self):
+        self.output['commitCompanion']={'identity':'forged'}
+        with self.assertRaisesRegex(ValueError,'CYCLE_ROLLBACK_EVIDENCE'):self.check()
+    def test_unexecuted_retry_rejects(self):
+        self.row['completed']=False
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_REQUIRED'):self.check()
+    def test_duplicate_retry_completion_rejects(self):
+        self.record['transcript'].append(copy.deepcopy(self.row))
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_REQUIRED'):self.check()
+    def test_retry_new_publication_rejects(self):
+        self.response['returnedPublication']='another'
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_PUBLICATION'):self.check()
+    def test_retry_checkpoint_change_rejects(self):
+        self.response['after']['A']['checkpoint']=21
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_MUTATION'):self.check()
+    def test_retry_reordered_trace_rejects(self):
+        self.response['returnedGas']['charges'].reverse()
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_TRACE'):self.check()
+    def test_retry_different_result_rejects(self):
+        self.response['outcome']['disposition']='APPLIED'
+        with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_OUTCOME'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

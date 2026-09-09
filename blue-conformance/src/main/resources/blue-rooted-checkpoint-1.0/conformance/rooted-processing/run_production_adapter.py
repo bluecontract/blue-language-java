@@ -401,6 +401,26 @@ def check_silent_middle(output,contract,document_ids):
     normalized={k:v for k,v in event.items() if k not in ('origin','kind','transitionReceiptIdentity')}
     require(exact_equal(receipt.get('emittedRootEvents'),[normalized]),'SILENT_SOURCE_RECEIPT_EVENTS')
 
+def check_retained_rollback_retry(record,output):
+    require(sorted(output.get('entryOwners',[]))==['A','B'],'CYCLE_FROZEN_OWNERS')
+    before=output.get('retainedBefore');after=output.get('retainedAfter')
+    require(isinstance(before,dict) and set(before)==set(after)=={'A','B'},'CYCLE_RETAINED_RECORDS')
+    if output['status']=='GAS_LIMIT_EXCEEDED':
+        require(output.get('rollbackToInput') is True and output.get('commitCompanion') is None
+                and output.get('checkpointWrites')==[],'CYCLE_ROLLBACK_EVIDENCE')
+        require(exact_equal(before,after),'CYCLE_FAILED_RETAINED_MUTATION')
+    rows=[r for r in record['transcript'] if r.get('request',{}).get('op')=='retry']
+    require(len(rows)==1 and rows[0].get('completed') is True,'CYCLE_RETRY_REQUIRED')
+    response=rows[0]['response'];publication=output.get('publicationIdentity')
+    require(isinstance(publication,str) and publication
+            and response.get('originalPublication')==response.get('returnedPublication')==publication,'CYCLE_RETRY_PUBLICATION')
+    require(exact_equal(response.get('before'),after) and exact_equal(response.get('after'),after),'CYCLE_RETRY_MUTATION')
+    require(exact_equal(response.get('originalGas'),output['gas'])
+            and exact_equal(response.get('returnedGas'),output['gas']),'CYCLE_RETRY_TRACE')
+    outcome=response.get('outcome',{});closures=outcome.get('closures',[])
+    require(outcome.get('disposition')==('APPLIED' if output['status']=='SUCCESS' else 'GAS_LIMIT_EXCEEDED')
+            and len(closures)==1 and closures[0].get('closureId')==publication,'CYCLE_RETRY_OUTCOME')
+
 def check_phase_events(phases,anchors,weights):
     """Bind every named phase to its complete ordered literal event inventory."""
     for name,expected in anchors.items():
@@ -452,6 +472,7 @@ def check_runs(f,run_records,weights,calibration=None):
                 r=o['gas']['rejected'];n=full[len(pref)]
                 require(all(r[k]==n[k] for k in ('sequence','label','quantity','weight','amount')),'WRONG_REJECTED_NEXT_CHARGE')
         require(o['status']==expected_status,'MISSING_EXPECTED_ANCHOR_STATUS')
+        if contract.get('retainedRollbackAndRetry'):check_retained_rollback_retry(rec,o)
         if writes is not None:
             require(sorted(o['ownedWrites'])==sorted(writes),'WRONG_OWNED_WRITES')
             require(all(r['owner'] in writes for r in o['semanticReceipts']),'WRONG_RECEIPT_OWNER')
