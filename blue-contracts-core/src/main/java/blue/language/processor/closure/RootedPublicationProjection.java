@@ -28,6 +28,7 @@ public final class RootedPublicationProjection {
     private final List<CheckpointWrite> ownedCheckpointWrites;
     private final List<PublicEventOccurrence> ownedPublicEvents;
     private final List<SubscriptionDelta> ownedSubscriptionDeltas;
+    private final java.util.Map<DocumentId, String> checkpointReferenceProofs;
 
     RootedPublicationProjection(ClosureProcessResult result, RootedOwnershipTracker.Snapshot ownership) {
         if (!result.commits() || result.commitCompanion() == null || ownership.boundaries.isEmpty()) {
@@ -97,6 +98,33 @@ public final class RootedPublicationProjection {
             if (owns(representative.channelOccurrence().managedDocumentId())) subscriptions.add(delta);
         }
         this.ownedSubscriptionDeltas = Collections.unmodifiableList(subscriptions);
+        java.util.Map<DocumentId, String> proofs = new java.util.LinkedHashMap<>();
+        for (DocumentId document : ownership.checkpointPredecessors.keySet()) {
+            AffectedClosureSnapshot previous = ownership.checkpointPredecessors.get(document);
+            AffectedClosureSnapshot next = ownership.checkpointSuccessors.get(document);
+            ManagedDocumentSnapshot before = inputSnapshot.managedDocument(document);
+            ManagedDocumentSnapshot after = resultingSnapshot.managedDocument(document);
+            if (next == null || before == null || after == null
+                    || !before.blueId().equals(previous.managedDocument(document).blueId())
+                    || !after.blueId().equals(next.managedDocument(document).blueId())
+                    || before.epoch() != after.epoch() || !before.initialized() || !after.initialized()
+                    || before.terminated() || after.terminated() || before.publicRoot() != after.publicRoot()
+                    || !result.graphChanges().isEmpty()
+                    || result.checkpointWrites().stream().anyMatch(write -> write.targetManagedScopeKey().documentId().equals(document))
+                    || result.managedTransitionReceipts().stream().noneMatch(receipt -> receipt.documentId().equals(document)
+                            && receipt.emittedRootEvents().isEmpty())) continue;
+            java.util.Map<String, Object> proof = new java.util.LinkedHashMap<>();
+            proof.put("documentId", document.value());
+            proof.put("beforeBlueId", before.blueId()); proof.put("afterBlueId", after.blueId());
+            proof.put("checkpointInputClosureIdentity", previous.closureIdentity());
+            proof.put("checkpointOutputClosureIdentity", next.closureIdentity());
+            proof.put("rootProcessingContextIdentity", context.identity());
+            proof.put("rootedInvocationIdentity", invocationIdentity);
+            proof.put("rootedCommitCompanionIdentity", companionIdentity);
+            proofs.put(document, ClosureIdentityService.INSTANCE.identity(
+                    ClosureIdentityService.Constructor.ROOTED_CHECKPOINT_REFERENCE_PROOF, proof));
+        }
+        this.checkpointReferenceProofs = Collections.unmodifiableMap(proofs);
     }
 
     /** Returns the original entry context.
@@ -123,6 +151,16 @@ public final class RootedPublicationProjection {
      * @param documentId exact lineage
      * @return whether this lineage is owned by the invocation */
     public boolean owns(DocumentId documentId) { return ownedDocumentIds.contains(documentId); }
+
+    /**
+     * Returns the processor-produced proof for an entry owner's sole checkpoint-finalizer change.
+     * This hash is not external authority; historical use must authenticate the original rooted publication.
+     * @param documentId original owned document
+     * @return exact proof bound to its real typed boundary and rooted companion, or empty
+     */
+    public java.util.Optional<String> checkpointReferenceProofIdentity(DocumentId documentId) {
+        return java.util.Optional.ofNullable(checkpointReferenceProofs.get(documentId));
+    }
 
     /** Returns exact owner results, including unchanged owners.
      * @return owner results */

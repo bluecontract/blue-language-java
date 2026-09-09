@@ -933,8 +933,8 @@
     },
     {
       "path": "specifications/blue-contracts-and-processor-specification-1.0.md",
-      "sha256": "527ed42f6ccac62a05918fac493ecc3729ec6f57d97b0cf1814d9ab752a6d523",
-      "bytes": 364520,
+      "sha256": "08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172",
+      "bytes": 367842,
       "headings": [
         {
           "level": 1,
@@ -1077,1189 +1077,1194 @@
           "line": 1014
         },
         {
+          "level": 4,
+          "title": "2.3a.1 Rooted checkpoint-only representation positions (RCP-1 draft.2)",
+          "line": 1089
+        },
+        {
           "level": 3,
           "title": "2.4 Processing Environment",
-          "line": 1113
+          "line": 1157
         },
         {
           "level": 3,
           "title": "2.4.1 Managed occurrence identity and exact-state binding",
-          "line": 1140
+          "line": 1184
         },
         {
           "level": 3,
           "title": "2.4.2 Cyclic-member processing boundary",
-          "line": 1217
+          "line": 1261
         },
         {
           "level": 3,
           "title": "2.5 ProcessResult, ClosureAttemptResult, and ClosureProcessResult",
-          "line": 1235
+          "line": 1279
         },
         {
           "level": 3,
           "title": "2.6 Exact internal identities",
-          "line": 1576
+          "line": 1620
         },
         {
           "level": 3,
           "title": "2.7 Atomic invocation",
-          "line": 2079
+          "line": 2123
         },
         {
           "level": 3,
           "title": "2.8 Representation invariance",
-          "line": 2099
+          "line": 2143
         },
         {
           "level": 3,
           "title": "2.9 Platform commit",
-          "line": 2114
+          "line": 2158
         },
         {
           "level": 2,
           "title": "3. Managing Feeder, Subscriptions, and External Order",
-          "line": 2245
+          "line": 2289
         },
         {
           "level": 3,
           "title": "3.1 Feeder responsibility",
-          "line": 2247
+          "line": 2291
         },
         {
           "level": 3,
           "title": "3.2 External-channel snapshot",
-          "line": 2263
+          "line": 2307
         },
         {
           "level": 3,
           "title": "3.3 Required external-channel functions",
-          "line": 2295
+          "line": 2339
         },
         {
           "level": 4,
           "title": "3.3.1 Same-scope Channel dependencies",
-          "line": 2323
+          "line": 2367
         },
         {
           "level": 4,
           "title": "3.3.2 Source Channel and handler Channel",
-          "line": 2360
+          "line": 2404
         },
         {
           "level": 4,
           "title": "3.3.3 Logical delivery grouping",
-          "line": 2385
+          "line": 2429
         },
         {
           "level": 3,
           "title": "3.4 Revision-complete subscription index",
-          "line": 2409
+          "line": 2453
         },
         {
           "level": 3,
           "title": "3.5 Subscription activation intervals",
-          "line": 2426
+          "line": 2470
         },
         {
           "level": 3,
           "title": "3.6 External completeness and canonical order",
-          "line": 2452
+          "line": 2496
         },
         {
           "level": 3,
           "title": "3.7 Canonical delivery snapshot",
-          "line": 2489
+          "line": 2533
         },
         {
           "level": 3,
           "title": "3.8 Revalidation and false positives",
-          "line": 2511
-        },
-        {
-          "level": 3,
-          "title": "3.9 Terminal delivery progress and poison events",
-          "line": 2528
-        },
-        {
-          "level": 2,
-          "title": "4. Contracts, Runtime Types, and Discovery",
-          "line": 2553
-        },
-        {
-          "level": 3,
-          "title": "4.1 `contracts` map",
           "line": 2555
         },
         {
           "level": 3,
-          "title": "4.2 Contract-map key grammar",
-          "line": 2584
+          "title": "3.9 Terminal delivery progress and poison events",
+          "line": 2572
         },
         {
-          "level": 3,
-          "title": "4.3 Runtime roles",
+          "level": 2,
+          "title": "4. Contracts, Runtime Types, and Discovery",
           "line": 2597
         },
         {
           "level": 3,
+          "title": "4.1 `contracts` map",
+          "line": 2599
+        },
+        {
+          "level": 3,
+          "title": "4.2 Contract-map key grammar",
+          "line": 2628
+        },
+        {
+          "level": 3,
+          "title": "4.3 Runtime roles",
+          "line": 2641
+        },
+        {
+          "level": 3,
           "title": "4.4 Effective contract snapshot",
-          "line": 2611
+          "line": 2655
         },
         {
           "level": 3,
           "title": "4.5 Direct processor state first",
-          "line": 2633
+          "line": 2677
         },
         {
           "level": 3,
           "title": "4.6 Must-understand preflight",
-          "line": 2647
+          "line": 2691
         },
         {
           "level": 3,
           "title": "4.7 Deterministic ordering",
-          "line": 2665
+          "line": 2709
         },
         {
           "level": 3,
           "title": "4.8 Dispatch snapshots",
-          "line": 2746
+          "line": 2790
         },
         {
           "level": 3,
           "title": "4.9 Same-scope binding",
-          "line": 2754
+          "line": 2798
         },
         {
           "level": 3,
           "title": "4.10 Effective protected state",
-          "line": 2779
+          "line": 2823
         },
         {
           "level": 3,
           "title": "4.11 Execution context",
-          "line": 2810
+          "line": 2854
         },
         {
           "level": 3,
           "title": "4.12 ContractExecutionResult",
-          "line": 2840
+          "line": 2884
         },
         {
           "level": 3,
           "title": "4.13 Runtime body demand and meter",
-          "line": 2862
+          "line": 2906
         },
         {
           "level": 2,
           "title": "5. Root and Embedded Scopes",
-          "line": 2870
+          "line": 2914
         },
         {
           "level": 3,
           "title": "5.1 Managed document scope",
-          "line": 2872
+          "line": 2916
         },
         {
           "level": 3,
           "title": "5.2 Process Embedded",
-          "line": 2885
+          "line": 2929
         },
         {
           "level": 3,
           "title": "5.3 Concrete graph and component partition",
-          "line": 2967
+          "line": 3011
         },
         {
           "level": 3,
           "title": "5.4 Entry graph snapshot",
-          "line": 2988
+          "line": 3032
         },
         {
           "level": 3,
           "title": "5.5 Participating and dynamically expanding closure",
-          "line": 3005
+          "line": 3049
         },
         {
           "level": 3,
           "title": "5.6 Occurrence continuity",
-          "line": 3054
+          "line": 3098
         },
         {
           "level": 3,
           "title": "5.7 Component and graph generations",
-          "line": 3127
+          "line": 3171
         },
         {
           "level": 4,
           "title": "5.7.1 Managed-document epochs",
-          "line": 3153
+          "line": 3197
         },
         {
           "level": 3,
           "title": "5.8 Mutation boundaries",
-          "line": 3202
+          "line": 3246
         },
         {
           "level": 3,
           "title": "5.9 Frozen target sets, removal, and cut-off",
-          "line": 3217
+          "line": 3261
         },
         {
           "level": 3,
           "title": "5.10 One authoritative rooted result",
-          "line": 3250
+          "line": 3294
         },
         {
           "level": 3,
           "title": "5.11 Participant bindings in reusable process occurrences (normative boundary; informative pattern)",
-          "line": 3262
-        },
-        {
-          "level": 3,
-          "title": "5.12 Addressing dynamic collection members (normative boundary; informative example)",
-          "line": 3268
-        },
-        {
-          "level": 2,
-          "title": "6. Events and Processor-Managed Channels",
-          "line": 3274
-        },
-        {
-          "level": 3,
-          "title": "6.1 Event and work occurrence model",
-          "line": 3276
-        },
-        {
-          "level": 3,
-          "title": "6.2 External Channel",
           "line": 3306
         },
         {
           "level": 3,
+          "title": "5.12 Addressing dynamic collection members (normative boundary; informative example)",
+          "line": 3312
+        },
+        {
+          "level": 2,
+          "title": "6. Events and Processor-Managed Channels",
+          "line": 3318
+        },
+        {
+          "level": 3,
+          "title": "6.1 Event and work occurrence model",
+          "line": 3320
+        },
+        {
+          "level": 3,
+          "title": "6.2 External Channel",
+          "line": 3350
+        },
+        {
+          "level": 3,
           "title": "6.3 Document Update",
-          "line": 3322
+          "line": 3366
         },
         {
           "level": 3,
           "title": "6.4 Immediate Document Update continuation",
-          "line": 3360
+          "line": 3404
         },
         {
           "level": 3,
           "title": "6.5 Application event emission",
-          "line": 3375
+          "line": 3419
         },
         {
           "level": 3,
           "title": "6.6 Triggered Event Channel",
-          "line": 3396
+          "line": 3440
         },
         {
           "level": 3,
           "title": "6.7 Embedded Node Channel",
-          "line": 3402
+          "line": 3446
         },
         {
           "level": 3,
           "title": "6.8 Lifecycle Event Channel",
-          "line": 3490
+          "line": 3534
         },
         {
           "level": 3,
           "title": "6.9 Event queue order",
-          "line": 3501
-        },
-        {
-          "level": 3,
-          "title": "6.10 Processor-managed writes",
-          "line": 3521
-        },
-        {
-          "level": 2,
-          "title": "7. Normative Processing Algorithm",
           "line": 3545
         },
         {
           "level": 3,
+          "title": "6.10 Processor-managed writes",
+          "line": 3565
+        },
+        {
+          "level": 2,
+          "title": "7. Normative Processing Algorithm",
+          "line": 3589
+        },
+        {
+          "level": 3,
           "title": "7.1 Run state",
-          "line": 3547
+          "line": 3591
         },
         {
           "level": 3,
           "title": "7.2 Phase A — admission and exact evidence",
-          "line": 3596
+          "line": 3640
         },
         {
           "level": 3,
           "title": "7.3 Phase B — revalidate and classify direct deliveries",
-          "line": 3740
+          "line": 3784
         },
         {
           "level": 3,
           "title": "7.4 Phase C — initial closure and must-understand preflight",
-          "line": 3777
+          "line": 3821
         },
         {
           "level": 3,
           "title": "7.5 Phase D — canonical direct seeds",
-          "line": 3790
+          "line": 3834
         },
         {
           "level": 4,
           "title": "7.5.1 Execute one document step",
-          "line": 3930
+          "line": 3974
         },
         {
           "level": 3,
           "title": "7.5a Applying one historical representation step (adopted dependency of the RCP-1 draft)",
-          "line": 3962
+          "line": 4006
         },
         {
           "level": 3,
           "title": "7.6 Applying one Handler result",
-          "line": 4024
+          "line": 4068
         },
         {
           "level": 3,
           "title": "7.7 Tentative identity finalization",
-          "line": 4059
+          "line": 4103
         },
         {
           "level": 3,
           "title": "7.8 Dynamic graph reclassification",
-          "line": 4128
+          "line": 4172
         },
         {
           "level": 3,
           "title": "7.9 Internal event drain",
-          "line": 4176
+          "line": 4220
         },
         {
           "level": 3,
           "title": "7.10 Activation initialization",
-          "line": 4237
+          "line": 4281
         },
         {
           "level": 3,
           "title": "7.11 Checkpoint settlement",
-          "line": 4316
+          "line": 4360
         },
         {
           "level": 3,
           "title": "7.12 Phase E — final soundness",
-          "line": 4390
+          "line": 4434
         },
         {
           "level": 3,
           "title": "7.13 Result selection",
-          "line": 4423
+          "line": 4467
         },
         {
           "level": 3,
           "title": "7.14 Several matching documents and scopes",
-          "line": 4443
-        },
-        {
-          "level": 3,
-          "title": "7.15 Exact locality",
-          "line": 4471
-        },
-        {
-          "level": 2,
-          "title": "8. Runtime Pointers, Patches, and Persistent Mutation",
-          "line": 4485
-        },
-        {
-          "level": 3,
-          "title": "8.1 Runtime Pointer",
           "line": 4487
         },
         {
           "level": 3,
+          "title": "7.15 Exact locality",
+          "line": 4515
+        },
+        {
+          "level": 2,
+          "title": "8. Runtime Pointers, Patches, and Persistent Mutation",
+          "line": 4529
+        },
+        {
+          "level": 3,
+          "title": "8.1 Runtime Pointer",
+          "line": 4531
+        },
+        {
+          "level": 3,
           "title": "8.2 Json Patch Entry",
-          "line": 4497
+          "line": 4541
         },
         {
           "level": 3,
           "title": "8.3 Insertion normalization",
-          "line": 4539
+          "line": 4583
         },
         {
           "level": 3,
           "title": "8.4 Persistent copy-on-write",
-          "line": 4550
+          "line": 4594
         },
         {
           "level": 3,
           "title": "8.5 Object operations",
-          "line": 4564
+          "line": 4608
         },
         {
           "level": 3,
           "title": "8.6 List operations",
-          "line": 4570
+          "line": 4614
         },
         {
           "level": 3,
           "title": "8.7 Snapshots",
-          "line": 4579
+          "line": 4623
         },
         {
           "level": 3,
           "title": "8.8 Boundary and cut-off validation",
-          "line": 4585
+          "line": 4629
         },
         {
           "level": 3,
           "title": "8.9 Effective protected-state validation",
-          "line": 4602
+          "line": 4646
         },
         {
           "level": 3,
           "title": "8.10 Contract-changing patches",
-          "line": 4615
+          "line": 4659
         },
         {
           "level": 3,
           "title": "8.11 Direct-node limits",
-          "line": 4637
+          "line": 4681
         },
         {
           "level": 3,
           "title": "8.12 Cyclic sets",
-          "line": 4643
+          "line": 4687
         },
         {
           "level": 2,
           "title": "9. Initialization, Lifecycle, and Termination",
-          "line": 4671
+          "line": 4715
         },
         {
           "level": 3,
           "title": "9.1 Initialization gate",
-          "line": 4673
+          "line": 4717
         },
         {
           "level": 3,
           "title": "9.2 Initialization identity",
-          "line": 4691
+          "line": 4735
         },
         {
           "level": 3,
           "title": "9.3 Initialization algorithm",
-          "line": 4706
+          "line": 4750
         },
         {
           "level": 3,
           "title": "9.4 Initialization snapshot rule",
-          "line": 4742
+          "line": 4786
         },
         {
           "level": 3,
           "title": "9.5 Termination request",
-          "line": 4773
+          "line": 4817
         },
         {
           "level": 3,
           "title": "9.6 Termination algorithm",
-          "line": 4784
+          "line": 4828
         },
         {
           "level": 3,
           "title": "9.7 Root termination",
-          "line": 4816
+          "line": 4860
         },
         {
           "level": 3,
           "title": "9.8 Deterministic failures",
-          "line": 4830
+          "line": 4874
         },
         {
           "level": 2,
           "title": "10. Checkpoints and Idempotency",
-          "line": 4838
+          "line": 4882
         },
         {
           "level": 3,
           "title": "10.1 Checkpoint marker",
-          "line": 4840
+          "line": 4884
         },
         {
           "level": 3,
           "title": "10.2 Checkpoint domain",
-          "line": 4864
+          "line": 4908
         },
         {
           "level": 3,
           "title": "10.3 Virtual empty state",
-          "line": 4921
+          "line": 4965
         },
         {
           "level": 3,
           "title": "10.4 Default exact-node subject",
-          "line": 4927
-        },
-        {
-          "level": 3,
-          "title": "10.5 Atomic checkpoint write",
-          "line": 4935
-        },
-        {
-          "level": 3,
-          "title": "10.6 Checkpoint cleanup and domain retirement",
           "line": 4971
         },
         {
           "level": 3,
+          "title": "10.5 Atomic checkpoint write",
+          "line": 4979
+        },
+        {
+          "level": 3,
+          "title": "10.6 Checkpoint cleanup and domain retirement",
+          "line": 5015
+        },
+        {
+          "level": 3,
           "title": "10.7 Multiple occurrences and retry",
-          "line": 4992
+          "line": 5036
         },
         {
           "level": 2,
           "title": "11. Type Soundness, Generalization, and Subscription Indexability",
-          "line": 5000
+          "line": 5044
         },
         {
           "level": 3,
           "title": "11.1 Post-write soundness",
-          "line": 5002
+          "line": 5046
         },
         {
           "level": 3,
           "title": "11.2 Root-spine validation",
-          "line": 5017
+          "line": 5061
         },
         {
           "level": 3,
           "title": "11.3 Type Generalization Policy",
-          "line": 5023
+          "line": 5067
         },
         {
           "level": 3,
           "title": "11.4 Nearest-valid-ancestor algorithm",
-          "line": 5036
+          "line": 5080
         },
         {
           "level": 3,
           "title": "11.5 Generated write order",
-          "line": 5058
+          "line": 5102
         },
         {
           "level": 3,
           "title": "11.6 Changed contract closure",
-          "line": 5072
+          "line": 5116
         },
         {
           "level": 3,
           "title": "11.7 Subscription-delta validation",
-          "line": 5082
+          "line": 5126
         },
         {
           "level": 2,
           "title": "12. Failure, Resource, Status, and Progress Semantics",
-          "line": 5101
+          "line": 5145
         },
         {
           "level": 3,
           "title": "12.1 Statuses",
-          "line": 5103
+          "line": 5147
         },
         {
           "level": 3,
           "title": "12.2 Diagnostic categories",
-          "line": 5124
+          "line": 5168
         },
         {
           "level": 3,
           "title": "12.3 Admission and deterministic failure",
-          "line": 5128
+          "line": 5172
         },
         {
           "level": 3,
           "title": "12.4 Resource acquisition boundary",
-          "line": 5150
+          "line": 5194
         },
         {
           "level": 3,
           "title": "12.5 Definitive missing content and invalid evidence",
-          "line": 5209
+          "line": 5253
         },
         {
           "level": 3,
           "title": "12.6 Gas exhaustion",
-          "line": 5215
-        },
-        {
-          "level": 3,
-          "title": "12.7 Portable limits",
-          "line": 5239
-        },
-        {
-          "level": 3,
-          "title": "12.8 Failure precedence",
           "line": 5259
         },
         {
           "level": 3,
+          "title": "12.7 Portable limits",
+          "line": 5283
+        },
+        {
+          "level": 3,
+          "title": "12.8 Failure precedence",
+          "line": 5303
+        },
+        {
+          "level": 3,
           "title": "12.9 Revision-bound progress",
-          "line": 5279
+          "line": 5323
         },
         {
           "level": 3,
           "title": "12.10 External-event liveness",
-          "line": 5300
+          "line": 5344
         },
         {
           "level": 2,
           "title": "13. Canonical Gas Accounting",
-          "line": 5314
+          "line": 5358
         },
         {
           "level": 3,
           "title": "13.0 Schedule status",
-          "line": 5316
+          "line": 5360
         },
         {
           "level": 3,
           "title": "13.0.1 Mandatory default execution limit",
-          "line": 5320
+          "line": 5364
         },
         {
           "level": 3,
           "title": "13.1 Governing principle",
-          "line": 5339
+          "line": 5383
         },
         {
           "level": 3,
           "title": "13.2 One disjoint ledger",
-          "line": 5362
+          "line": 5406
         },
         {
           "level": 3,
           "title": "13.3 Canonical trace record",
-          "line": 5392
-        },
-        {
-          "level": 3,
-          "title": "13.4 Shared live-bounded meter",
           "line": 5436
         },
         {
           "level": 3,
+          "title": "13.4 Shared live-bounded meter",
+          "line": 5480
+        },
+        {
+          "level": 3,
           "title": "13.5 Processor counters and weights",
-          "line": 5454
+          "line": 5498
         },
         {
           "level": 3,
           "title": "13.6 Semantic counters and weights",
-          "line": 5507
+          "line": 5551
         },
         {
           "level": 3,
           "title": "13.7 Manifest and immutable-read rules",
-          "line": 5529
+          "line": 5573
         },
         {
           "level": 3,
           "title": "13.8 Text and scalar work",
-          "line": 5541
+          "line": 5585
         },
         {
           "level": 3,
           "title": "13.9 Integer work",
-          "line": 5565
+          "line": 5609
         },
         {
           "level": 3,
           "title": "13.10 Canonical sorting",
-          "line": 5580
+          "line": 5624
         },
         {
           "level": 3,
           "title": "13.11 Type, contract, and validation work",
-          "line": 5595
+          "line": 5639
         },
         {
           "level": 3,
           "title": "13.12 Identity establishment",
-          "line": 5619
+          "line": 5663
         },
         {
           "level": 3,
           "title": "13.13 List identity",
-          "line": 5640
-        },
-        {
-          "level": 3,
-          "title": "13.14 Runtime ledger composition",
-          "line": 5651
-        },
-        {
-          "level": 3,
-          "title": "13.15 Patch trace",
-          "line": 5667
-        },
-        {
-          "level": 3,
-          "title": "13.16 Event and checkpoint trace",
           "line": 5684
         },
         {
           "level": 3,
+          "title": "13.14 Runtime ledger composition",
+          "line": 5695
+        },
+        {
+          "level": 3,
+          "title": "13.15 Patch trace",
+          "line": 5711
+        },
+        {
+          "level": 3,
+          "title": "13.16 Event and checkpoint trace",
+          "line": 5728
+        },
+        {
+          "level": 3,
           "title": "13.17 Zero-gas physical work",
-          "line": 5722
+          "line": 5766
         },
         {
           "level": 3,
           "title": "13.18 Representation example",
-          "line": 5743
+          "line": 5787
         },
         {
           "level": 3,
           "title": "13.19 Worked processor subtotal (informative)",
-          "line": 5775
+          "line": 5819
         },
         {
           "level": 2,
           "title": "14. Determinism, Security, and Portable Limits",
-          "line": 5811
+          "line": 5855
         },
         {
           "level": 3,
           "title": "14.1 Deterministic execution",
-          "line": 5813
+          "line": 5857
         },
         {
           "level": 3,
           "title": "14.2 Read-only values",
-          "line": 5830
+          "line": 5874
         },
         {
           "level": 3,
           "title": "14.3 Trust boundary",
-          "line": 5836
-        },
-        {
-          "level": 3,
-          "title": "14.4 Portable limits",
-          "line": 5854
-        },
-        {
-          "level": 3,
-          "title": "14.5 Bounded feeder work",
           "line": 5880
         },
         {
           "level": 3,
+          "title": "14.4 Portable limits",
+          "line": 5898
+        },
+        {
+          "level": 3,
+          "title": "14.5 Bounded feeder work",
+          "line": 5924
+        },
+        {
+          "level": 3,
           "title": "14.6 Authoring guidance",
-          "line": 5895
+          "line": 5939
         },
         {
           "level": 3,
           "title": "14.7 Locality conformance",
-          "line": 5925
+          "line": 5969
         },
         {
           "level": 2,
           "title": "15. Conformance Vectors",
-          "line": 5937
+          "line": 5981
         },
         {
           "level": 3,
           "title": "15.1 Existing ordinary core families",
-          "line": 5941
+          "line": 5985
         },
         {
           "level": 3,
           "title": "15.2 Closure and cyclic families",
-          "line": 5986
-        },
-        {
-          "level": 4,
-          "title": "15.2.1 Full-lifecycle admission evidence",
           "line": 6030
         },
         {
           "level": 4,
+          "title": "15.2.1 Full-lifecycle admission evidence",
+          "line": 6074
+        },
+        {
+          "level": 4,
           "title": "15.2.2 Application contract-evolution evidence",
-          "line": 6068
+          "line": 6112
         },
         {
           "level": 3,
           "title": "15.3 Gas and execution fixtures",
-          "line": 6122
+          "line": 6166
         },
         {
           "level": 3,
           "title": "15.4 Machine-readable fixture package",
-          "line": 6134
+          "line": 6178
         },
         {
           "level": 2,
           "title": "16. Worked Examples",
-          "line": 6196
+          "line": 6240
         },
         {
           "level": 3,
           "title": "16.1 Lazy selected workflow",
-          "line": 6198
+          "line": 6242
         },
         {
           "level": 3,
           "title": "16.2 Acyclic deepest-first delivery",
-          "line": 6202
+          "line": 6246
         },
         {
           "level": 3,
           "title": "16.3 Dynamic A/B cycle formation and finite reaction",
-          "line": 6222
+          "line": 6266
         },
         {
           "level": 3,
           "title": "16.4 Same-event nonterminating cycle",
-          "line": 6260
-        },
-        {
-          "level": 3,
-          "title": "16.5 One event directly targets both members",
-          "line": 6285
-        },
-        {
-          "level": 3,
-          "title": "16.6 Cycle formation during initialization",
-          "line": 6291
-        },
-        {
-          "level": 3,
-          "title": "16.7 Component merge and split",
           "line": 6304
         },
         {
           "level": 3,
+          "title": "16.5 One event directly targets both members",
+          "line": 6329
+        },
+        {
+          "level": 3,
+          "title": "16.6 Cycle formation during initialization",
+          "line": 6335
+        },
+        {
+          "level": 3,
+          "title": "16.7 Component merge and split",
+          "line": 6348
+        },
+        {
+          "level": 3,
           "title": "16.8 Frozen edge behavior",
-          "line": 6328
+          "line": 6372
         },
         {
           "level": 3,
           "title": "16.9 Known A at epoch 10; B attaches A at epoch 5",
-          "line": 6349
+          "line": 6393
         },
         {
           "level": 3,
           "title": "16.10 Public events under an outer Root",
-          "line": 6401
+          "line": 6445
         },
         {
           "level": 3,
           "title": "16.11 Order and Payment",
-          "line": 6411
+          "line": 6455
         },
         {
           "level": 3,
           "title": "16.12 Representation and locality",
-          "line": 6417
+          "line": 6461
         },
         {
           "level": 3,
           "title": "16.13 Durable MyOS decomposition",
-          "line": 6421
+          "line": 6465
         },
         {
           "level": 2,
           "title": "Appendix A — Core Runtime Type Catalog",
-          "line": 6460
+          "line": 6504
         },
         {
           "level": 3,
           "title": "A.1 Contract",
-          "line": 6464
+          "line": 6508
         },
         {
           "level": 3,
           "title": "A.2 Channel",
-          "line": 6476
+          "line": 6520
         },
         {
           "level": 3,
           "title": "A.3 Handler",
-          "line": 6482
-        },
-        {
-          "level": 3,
-          "title": "A.4 Marker",
-          "line": 6493
-        },
-        {
-          "level": 3,
-          "title": "A.5 Json Patch Entry",
-          "line": 6497
-        },
-        {
-          "level": 3,
-          "title": "A.6 Contract Execution Result",
-          "line": 6511
-        },
-        {
-          "level": 3,
-          "title": "A.7 Process Embedded",
           "line": 6526
         },
         {
           "level": 3,
+          "title": "A.4 Marker",
+          "line": 6537
+        },
+        {
+          "level": 3,
+          "title": "A.5 Json Patch Entry",
+          "line": 6541
+        },
+        {
+          "level": 3,
+          "title": "A.6 Contract Execution Result",
+          "line": 6555
+        },
+        {
+          "level": 3,
+          "title": "A.7 Process Embedded",
+          "line": 6570
+        },
+        {
+          "level": 3,
           "title": "A.8 Processing Initialized Marker",
-          "line": 6546
+          "line": 6590
         },
         {
           "level": 3,
           "title": "A.9 Processing Terminated Marker",
-          "line": 6566
+          "line": 6610
         },
         {
           "level": 3,
           "title": "A.10 Channel Event Checkpoint",
-          "line": 6580
+          "line": 6624
         },
         {
           "level": 3,
           "title": "A.11 Type Generalization Rule",
-          "line": 6599
+          "line": 6643
         },
         {
           "level": 3,
           "title": "A.12 Type Generalization Policy",
-          "line": 6613
+          "line": 6657
         },
         {
           "level": 3,
           "title": "A.13 External Channel",
-          "line": 6628
+          "line": 6672
         },
         {
           "level": 3,
           "title": "A.14 Document Update Channel",
-          "line": 6634
+          "line": 6678
         },
         {
           "level": 3,
           "title": "A.15 Triggered Event Channel",
-          "line": 6646
+          "line": 6690
         },
         {
           "level": 3,
           "title": "A.16 Lifecycle Event Channel",
-          "line": 6652
+          "line": 6696
         },
         {
           "level": 3,
           "title": "A.17 Embedded Node Channel",
-          "line": 6656
+          "line": 6700
         },
         {
           "level": 3,
           "title": "A.17a Embedded Collection Event Channel",
-          "line": 6674
+          "line": 6718
         },
         {
           "level": 3,
           "title": "A.18 Document Update",
-          "line": 6701
+          "line": 6745
         },
         {
           "level": 3,
           "title": "A.19 Embedded Event Delivery",
-          "line": 6715
+          "line": 6759
         },
         {
           "level": 3,
           "title": "A.20 Document Processing Initiated",
-          "line": 6726
+          "line": 6770
         },
         {
           "level": 3,
           "title": "A.21 Document Processing Terminated",
-          "line": 6739
+          "line": 6783
         },
         {
           "level": 3,
           "title": "A.22 Reserved keys",
-          "line": 6748
+          "line": 6792
         },
         {
           "level": 2,
           "title": "Appendix B — Status and Diagnostic Categories",
-          "line": 6766
+          "line": 6810
         },
         {
           "level": 3,
           "title": "B.1 Statuses",
-          "line": 6768
+          "line": 6812
         },
         {
           "level": 3,
           "title": "B.2 Diagnostics",
-          "line": 6772
+          "line": 6816
         },
         {
           "level": 2,
           "title": "Appendix C — Canonical Gas Trace Pseudocode",
-          "line": 6849
+          "line": 6893
         },
         {
           "level": 2,
           "title": "Appendix D — Common Implementer Mistakes",
-          "line": 6905
+          "line": 6949
         },
         {
           "level": 3,
           "title": "D.1 Preserve the selected rooted result, not a host-wide observer transaction",
-          "line": 6909
+          "line": 6953
         },
         {
           "level": 3,
           "title": "D.2 Do not publish child events",
-          "line": 6915
+          "line": 6959
         },
         {
           "level": 3,
           "title": "D.3 Do not build a public effect log",
-          "line": 6922
+          "line": 6966
         },
         {
           "level": 3,
           "title": "D.4 Do not rescan every embedded branch",
-          "line": 6928
+          "line": 6972
         },
         {
           "level": 3,
           "title": "D.5 Do not make the feeder snapshot caller-authored Blue content",
-          "line": 6932
-        },
-        {
-          "level": 3,
-          "title": "D.6 Do not let External Channel acceptance read mutable Root state",
-          "line": 6936
-        },
-        {
-          "level": 3,
-          "title": "D.7 Do not expose reference wrappers",
-          "line": 6940
-        },
-        {
-          "level": 3,
-          "title": "D.8 Do not charge recursive payload size",
-          "line": 6944
-        },
-        {
-          "level": 3,
-          "title": "D.9 Do not skip ancestor validation",
-          "line": 6948
-        },
-        {
-          "level": 3,
-          "title": "D.10 Do not initialize on rejection or stale-only processing",
-          "line": 6952
-        },
-        {
-          "level": 3,
-          "title": "D.11 Do not write markers into replacement scopes",
-          "line": 6956
-        },
-        {
-          "level": 3,
-          "title": "D.12 Do not key checkpoint semantics by raw key alone",
-          "line": 6960
-        },
-        {
-          "level": 3,
-          "title": "D.13 Do not commit a Root that cannot be indexed",
-          "line": 6964
-        },
-        {
-          "level": 3,
-          "title": "D.14 Do not double-drain the event queue",
-          "line": 6968
-        },
-        {
-          "level": 3,
-          "title": "D.15 Do not confuse hosted work with portable gas",
           "line": 6976
         },
         {
           "level": 3,
-          "title": "D.16 Do not treat BlueId derivation paths as different identifier types",
+          "title": "D.6 Do not let External Channel acceptance read mutable Root state",
           "line": 6980
         },
         {
           "level": 3,
-          "title": "D.17 Do not copy an authored upsert operation into Document Update blindly",
+          "title": "D.7 Do not expose reference wrappers",
           "line": 6984
         },
         {
           "level": 3,
-          "title": "D.18 Do not merge independent external sources by arrival order",
+          "title": "D.8 Do not charge recursive payload size",
           "line": 6988
         },
         {
           "level": 3,
-          "title": "D.19 Do not embed contract entries",
+          "title": "D.9 Do not skip ancestor validation",
           "line": 6992
         },
         {
           "level": 3,
-          "title": "D.20 Do not interpret lists or wildcards as embedded collections",
+          "title": "D.10 Do not initialize on rejection or stale-only processing",
           "line": 6996
         },
         {
           "level": 3,
+          "title": "D.11 Do not write markers into replacement scopes",
+          "line": 7000
+        },
+        {
+          "level": 3,
+          "title": "D.12 Do not key checkpoint semantics by raw key alone",
+          "line": 7004
+        },
+        {
+          "level": 3,
+          "title": "D.13 Do not commit a Root that cannot be indexed",
+          "line": 7008
+        },
+        {
+          "level": 3,
+          "title": "D.14 Do not double-drain the event queue",
+          "line": 7012
+        },
+        {
+          "level": 3,
+          "title": "D.15 Do not confuse hosted work with portable gas",
+          "line": 7020
+        },
+        {
+          "level": 3,
+          "title": "D.16 Do not treat BlueId derivation paths as different identifier types",
+          "line": 7024
+        },
+        {
+          "level": 3,
+          "title": "D.17 Do not copy an authored upsert operation into Document Update blindly",
+          "line": 7028
+        },
+        {
+          "level": 3,
+          "title": "D.18 Do not merge independent external sources by arrival order",
+          "line": 7032
+        },
+        {
+          "level": 3,
+          "title": "D.19 Do not embed contract entries",
+          "line": 7036
+        },
+        {
+          "level": 3,
+          "title": "D.20 Do not interpret lists or wildcards as embedded collections",
+          "line": 7040
+        },
+        {
+          "level": 3,
           "title": "D.20a Do not confuse a declared absent collection with a patch parent",
-          "line": 7005
+          "line": 7049
         },
         {
           "level": 3,
           "title": "D.20b Do not implement collection-event matching with raw string prefixes",
-          "line": 7013
+          "line": 7057
         },
         {
           "level": 3,
           "title": "D.21 Do not invent live parent-channel inheritance",
-          "line": 7019
+          "line": 7063
         },
         {
           "level": 3,
           "title": "D.22 Do not use a visited-document set as the work queue",
-          "line": 7025
+          "line": 7069
         },
         {
           "level": 3,
           "title": "D.23 Do not order cyclic work by current BlueId",
-          "line": 7029
+          "line": 7073
         },
         {
           "level": 3,
           "title": "D.24 Do not defer exact cyclic identity until quiescence",
-          "line": 7033
+          "line": 7077
         },
         {
           "level": 3,
           "title": "D.25 Do not expose `this#n` or ZERO_BLUEID",
-          "line": 7037
+          "line": 7081
         },
         {
           "level": 3,
           "title": "D.26 Do not use wall-clock timeout as loop semantics",
-          "line": 7041
+          "line": 7085
         },
         {
           "level": 3,
           "title": "D.27 Do not make a document aware of reverse containment",
-          "line": 7045
+          "line": 7089
         },
         {
           "level": 2,
           "title": "Appendix E — Rooted checkpoint profile and conformance",
-          "line": 7055
+          "line": 7099
         }
       ]
     },
@@ -4369,8 +4374,8 @@
     },
     {
       "path": "specifications/rooted-checkpoint-processing-1.0-draft.md",
-      "sha256": "e2c35e81677ba6f343d7acc146514452572e782b3ab1c21a942ca8a93d223932",
-      "bytes": 45274,
+      "sha256": "7f2ae53757f51bca7e8d0f66b0cdbac05591cdc6b468770b22c60dd9226fad38",
+      "bytes": 48197,
       "headings": [
         {
           "level": 1,
@@ -4420,97 +4425,97 @@
         {
           "level": 2,
           "title": "7. Creation, discovery and suspension",
-          "line": 126
+          "line": 132
         },
         {
           "level": 2,
           "title": "8. One rooted operation: exact ownership and gas",
-          "line": 140
+          "line": 146
         },
         {
           "level": 3,
           "title": "8.1 What remains unchanged",
-          "line": 142
-        },
-        {
-          "level": 3,
-          "title": "8.2 Derive the owned result, without a caller-supplied allowlist",
           "line": 148
         },
         {
           "level": 3,
+          "title": "8.2 Derive the owned result, without a caller-supplied allowlist",
+          "line": 154
+        },
+        {
+          "level": 3,
           "title": "8.3 Choose LIVE versus historical application before examining storage warmth",
-          "line": 170
+          "line": 176
         },
         {
           "level": 3,
           "title": "8.4 Shared live meter; no sibling debit",
-          "line": 182
+          "line": 188
         },
         {
           "level": 3,
           "title": "8.5 Constructive shared-source outcome table",
-          "line": 190
+          "line": 196
         },
         {
           "level": 3,
           "title": "8.6 Refined output shape (internal, not a new business API)",
-          "line": 207
+          "line": 213
         },
         {
           "level": 3,
           "title": "8.7 Dynamic-graph fences and crash recovery",
-          "line": 219
+          "line": 225
         },
         {
           "level": 2,
           "title": "9. Stable step, ready document and liveness",
-          "line": 226
+          "line": 232
         },
         {
           "level": 2,
           "title": "10. Closed history-basis and operation-identity construction",
-          "line": 238
+          "line": 244
         },
         {
           "level": 3,
           "title": "10.1 Status and common encoding",
-          "line": 240
+          "line": 246
         },
         {
           "level": 3,
           "title": "10.2 A document's stable history basis",
-          "line": 254
+          "line": 260
         },
         {
           "level": 3,
           "title": "10.3 Canonical owner context for an existing live group",
-          "line": 281
+          "line": 323
         },
         {
           "level": 3,
           "title": "10.4 Canonical base input and delivery identity",
-          "line": 304
+          "line": 346
         },
         {
           "level": 3,
           "title": "10.5 Existing cycles, merge, split and retry",
-          "line": 336
+          "line": 378
         },
         {
           "level": 3,
           "title": "10.6 Compatibility and finite identity obligations",
-          "line": 342
+          "line": 384
         },
         {
           "level": 2,
           "title": "11. Conformance and migration",
-          "line": 349
+          "line": 391
         },
         {
           "level": 2,
           "title": "12. Informative proof and implementation freedom",
-          "line": 359
+          "line": 401
         }
       ]
     }

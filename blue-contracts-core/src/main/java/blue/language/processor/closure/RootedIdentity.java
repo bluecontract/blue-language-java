@@ -42,7 +42,12 @@ final class RootedIdentity {
         String mode = text(admission.get("mode"));
         if ("FULL_HISTORY".equals(mode)) {
             closed(admission, "mode");
-        } else if ("FROM_NOW".equals(mode) || "FROM_FRONTIER".equals(mode)) {
+        } else if ("FROM_NOW".equals(mode)) {
+            closed(admission, "mode", "lowerExclusiveOrder");
+            Map<String, Object> bound = object(admission.get("lowerExclusiveOrder"));
+            if ("BEGINNING".equals(bound.get("kind"))) closed(bound, "kind");
+            else order(bound);
+        } else if ("FROM_FRONTIER".equals(mode)) {
             closed(admission, "mode", "lowerExclusiveOrder");
             order(object(admission.get("lowerExclusiveOrder")));
         } else if ("CREATED_IN_OPERATION".equals(mode)) {

@@ -1096,93 +1096,9 @@ def check_saved_original_graph(rec, contract, weights):
     captures = observation['captures']
     require(set(captures) == set(starts) | set(appends), 'GRAPH_CAPTURE_INVENTORY')
 
-    def did(value):
-        require(isinstance(value, dict) and set(value) == {'value'} and isinstance(value['value'], str), 'GRAPH_RAW_DOCUMENT_ID')
-        return value['value']
-
-    def scalar(value):
-        return value['value'] if isinstance(value, dict) and 'value' in value else value
-
-    def by_id(values, field='documentId'):
-        result = {did(v[field]): v for v in values}
-        require(len(result) == len(values), 'GRAPH_DUPLICATE_DOCUMENT_ROW')
-        return result
-
-    def receipt_prefix(before, after):
-        require(set(before) == set(after) == set(aliases), 'GRAPH_RECORD_INVENTORY')
-        for alias in aliases:
-            old, new = before[alias], after[alias]
-            require(new['documentId'] == ids[alias] and old['documentId'] == ids[alias], 'GRAPH_RECORD_OWNER')
-            require(exact_equal(old['historyBasis'], new['historyBasis']), 'GRAPH_HISTORY_BASIS_CHANGED')
-            require(exact_equal(old['receipts'], new['receipts'][:len(old['receipts'])]), 'GRAPH_RECEIPT_PREFIX')
-            history = new['receipts']
-            require(history and [r['epoch'] for r in history] == list(range(len(history))), 'GRAPH_RECEIPT_EPOCHS')
-            require(new['epoch'] == history[-1]['epoch'], 'GRAPH_HOST_EPOCH')
-            require(len({r['receiptIdentity'] for r in history}) == len(history), 'GRAPH_DUPLICATE_RECEIPT')
-            require(sum(r['kind'] == 'INITIALIZATION' for r in history) == 1, 'GRAPH_INITIALIZATION_COUNT')
-            require(exact_equal(history[0], starts[alias]['epoch0Receipt']), 'GRAPH_INITIAL_RECEIPT_CHANGED')
-            require(all(did(r['documentId']) == ids[alias] for r in history), 'GRAPH_RECEIPT_OWNER')
-            require(exact_equal(new['events'], [e for r in history for e in r['emittedEvents']]), 'GRAPH_RETAINED_EVENTS')
-
-    def sccs(snapshot):
-        documents = by_id(snapshot['managedDocuments'])
-        edges = {d: set() for d in documents}
-        for edge in snapshot['occurrences']:
-            if edge['active']:
-                a, b = did(edge['sourceDocumentId']), did(edge['targetDocumentId'])
-                require(a in documents and b in documents, 'GRAPH_ACTIVE_EDGE_ENDPOINT')
-                edges[a].add(b)
-        def reach(start):
-            seen, todo = set(), [start]
-            while todo:
-                item = todo.pop()
-                if item in seen: continue
-                seen.add(item); todo.extend(edges[item] - seen)
-            return seen
-        reachable = {d: reach(d) for d in documents}
-        return [set(group) for group in sorted({tuple(sorted(e for e in documents if e in reachable[d] and d in reachable[e])) for d in documents})]
-
-    def expand_member(value, master):
-        if isinstance(value, list): return [expand_member(v, master) for v in value]
-        if isinstance(value, dict):
-            return {k: master + v[4:] if k == 'blueId' and isinstance(v, str) and v.startswith('this#')
-                    else expand_member(v, master) for k, v in value.items()}
-        return value
-
-    def snapshot_check(snapshot):
-        documents = by_id(snapshot['managedDocuments'])
-        derived = {frozenset(s) for s in sccs(snapshot)}
-        components = snapshot['components']
-        require({frozenset(did(d) for d in c['orderedMemberDocumentIds']) for c in components} == derived
-                and len(components) == len(derived), 'GRAPH_COMPONENT_SCC')
-        for component in components:
-            members = [did(d) for d in component['orderedMemberDocumentIds']]
-            blueids = component['orderedMemberBlueIds']
-            require(len(members) == len(blueids) and len(set(members)) == len(members), 'GRAPH_COMPONENT_MEMBERS')
-            require(blueids == [documents[d]['blueId'] for d in members], 'GRAPH_COMPONENT_EXACT_IDS')
-            if component['kind'] == 'CYCLIC':
-                master = component['masterBlueId']
-                proof = component['completeCyclicProof']['declaredPlaceholderSet']
-                require(len(proof) == len(members) and component['cyclicProofIdentity'], 'GRAPH_COMPLETE_CYCLIC_PROOF')
-                indices = []
-                for owner, blueid in zip(members, blueids):
-                    require(blueid.startswith(master + '#'), 'GRAPH_CYCLIC_MEMBER_ID')
-                    index = int(blueid.rsplit('#', 1)[1]); indices.append(index)
-                    require(0 <= index < len(proof), 'GRAPH_CYCLIC_MEMBER_INDEX')
-                    require(exact_equal(expand_member(proof[index], master), documents[owner]['document']), 'GRAPH_CYCLIC_PROOF_BYTES')
-                require(sorted(indices) == list(range(len(proof))), 'GRAPH_CYCLIC_MEMBER_BIJECTION')
-            else:
-                require(component['kind'] == 'ACYCLIC' and len(members) == 1
-                        and component['completeCyclicProof'] is None, 'GRAPH_ACYCLIC_COMPONENT')
-        return documents
-
-    def trace_check(gas, full, budget):
-        gas_check(gas, budget, weights)
-        require(gas['rejected'] is None and len(full) == len(gas['charges']), 'GRAPH_GAS_TRACE_LENGTH')
-        for raw, charge in zip(full, gas['charges']):
-            normalized = {'sequence':raw['sequence'], 'label':raw['namespace'].lower()+'.'+raw['counter'],
-                          'quantity':raw['quantity'], 'weight':raw['weight'], 'amount':raw['subtotal']}
-            require(exact_equal(normalized, charge), 'GRAPH_GAS_TRACE_BINDING')
+    from rooted_graph_checks import graph_checks
+    did, scalar, by_id, receipt_prefix, sccs, snapshot_check, trace_check = graph_checks(
+        aliases, ids, starts, weights, require, exact_equal, gas_check)
 
     publications = set()
     source_applications = set()
@@ -1500,11 +1416,21 @@ def check_runs(f,run_records,weights,calibration=None):
     observations={};count=0
     for name in names:
         rec=run_records[name]
-        require(isinstance(rec,dict) and set(rec)>={'transcript','output','restart'},'RUN_RECORD_FIELDS')
+        if contract.get('faultCuts'):
+            require(isinstance(rec,dict) and set(rec)>={'transcript','output'},'RUN_RECORD_FIELDS')
+        else:
+            require(isinstance(rec,dict) and set(rec)>={'transcript','output','restart'},'RUN_RECORD_FIELDS')
         tr=rec['transcript'];require(isinstance(tr,list) and tr,'EMPTY_TRANSCRIPT')
         for t in tr:
             require(isinstance(t,dict) and t.get('kind') in ('SDK_CALL','HTTP','HARNESS_CONTROL') and isinstance(t.get('request'),dict) and isinstance(t.get('response'),dict),'BAD_TRANSCRIPT')
-        o=rec['output'];structured_output(o,weights)
+        o=rec['output']
+        if contract.get('faultCuts'):
+            require(scope=='PACKAGED_PROCESS_FAULT_MATRIX' and names==['baseline'],'FAULT_MATRIX_CONTRACT_SCOPE')
+            from check_fault_cuts import check_fault_cuts
+            check_fault_cuts(rec,contract['faultCuts'],weights,require,exact_equal,gas_check)
+            observations[name]=o;count+=8
+            continue
+        structured_output(o,weights)
         require(o['causeKind']==contract['causeKind'],'WRONG_CAUSE_KIND')
         if contract.get('verifyIdentityEnvelopes'):identity_check(o)
         restart=rec['restart']
@@ -1583,6 +1509,15 @@ def check_runs(f,run_records,weights,calibration=None):
             check_host_timestamp(rec,contract['hostTimestamp'],require,exact_equal)
         if contract.get('savedOriginalGraph'):
             check_saved_original_graph(rec,contract,weights)
+        if contract.get('sourceDiscovery'):
+            from check_source_discovery import check_source_discovery
+            check_source_discovery(rec,contract['sourceDiscovery'],weights,name,require,exact_equal,gas_check)
+        if contract.get('reconnect'):
+            from check_reconnect import check_reconnect
+            check_reconnect(rec,contract,weights,name,require,exact_equal,gas_check,structured_output,identity_check)
+        if contract.get('representationHistory'):
+            from check_representation import check_representation
+            check_representation(rec,contract,weights,name,require,exact_equal,gas_check)
         if contract.get('birthRollback'):
             check_birth_rollback(rec,contract['birthRollback'],name,calibration)
         if contract.get('createdChildPreBirth'):
@@ -1660,6 +1595,7 @@ def main():
         out=evidenceRoot/f['id'];out.mkdir()
         plan=json.loads((suite/f['input']['literalPlan']).read_text())
         request={'schema':'blue-rooted-adapter-request/1.0-draft.2','fixture':f,'plan':plan,'sourceFiles':literal_sources(suite,f,plan),'artifactPath':str(a.artifact.resolve()),'artifactSha256':art,'embeddedDependencies':deps,'sourceCommits':lock['sourceCommits'],'sourceLockSha256':a.source_lock_sha256,'specificationSetSha256':spec,'requestNonce':secrets.token_hex(16),'evidenceDirectory':str(out.resolve())}
+        if f['id']=='RCP-RUN-028':request['sourceLockPath']=str(a.source_lock.resolve())
         request['requestSha256']=digest_bytes(json.dumps(request,sort_keys=True,separators=(',',':')).encode())
         (out/'request.json').write_text(json.dumps(request,indent=2)+'\n');start=time.perf_counter()
         try:
@@ -1680,6 +1616,10 @@ def main():
                 columns=verify_packaged_application(a.artifact,art,runtime/'packaged-app',runtime/'packaged-application-identities.json',runtime/'classes',origins)
                 require(columns==sorted(f['expected']['contract']['hostTimestamp']['expectedTimestampColumns']),'TIME_V22_ARTIFACT_COLUMN_BINDING')
             rec['assertionsPassed']=check_runs(f,runs,weights,cal);rec['status']='PASS'
+        except subprocess.TimeoutExpired as e:
+            for filename,value in [('stdout.txt',e.stdout),('stderr.txt',e.stderr)]:
+                if value is not None:(out/filename).write_text(value.decode('utf-8',errors='replace') if isinstance(value,bytes) else value)
+            rec.update(status='FAIL',error=f'{type(e).__name__}: {e}')
         except Exception as e:rec.update(status='FAIL',error=f'{type(e).__name__}: {e}')
         rec['seconds']=time.perf_counter()-start;results.append(rec)
     status='FAIL' if any(r['status']=='FAIL' for r in results) else ('INCOMPLETE' if any(r['status']=='NOT_RUN' for r in results) else 'PASS')

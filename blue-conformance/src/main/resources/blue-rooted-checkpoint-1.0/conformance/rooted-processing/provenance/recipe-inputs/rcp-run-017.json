@@ -1,0 +1,90 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-017",
+  "category": "RUN",
+  "title": "Same-epoch pending-target and rooted checkpoint chains use exact predecessors",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-06",
+    "RCP-OWN-02",
+    "RCP-OWN-04",
+    "RCP-CAUSE-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "REPRESENTATION_CHAIN_AND_FORGERIES",
+        "bind": "s"
+      },
+      {
+        "op": "scenario",
+        "name": "ROOTED_CHECKPOINT_REPRESENTATION_CHAIN",
+        "bind": "checkpoint"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.validChainApplied",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.forgedSkippedReorderedChainsRejected",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.oldReceiptsUnchanged",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.actualTailAndIntermediateChainApplied",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.originalRootedCheckpointProofAuthenticated",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.forgedRootedOwnershipAndCompanionsRejected",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.businessChangesAndSourceEventsCannotMasquerade",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.oldPendingTargetPositionsAndChecksUnchanged",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.committedConsumerReactionExactlyOnce",
+        "op": "isTrue"
+      },
+      {
+        "actual": "checkpoint.fixedPositionsNoOvertakeAndRestartPreserved",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

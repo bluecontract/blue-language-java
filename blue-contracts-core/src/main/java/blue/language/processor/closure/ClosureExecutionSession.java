@@ -2594,7 +2594,7 @@ final class ClosureExecutionSession
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
         if (rootedOwnership != null) {
-            rootedOwnership.finalized(currentSnapshot);
+            rootedOwnership.finalized(currentSnapshot, boundary.kind());
         }
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);

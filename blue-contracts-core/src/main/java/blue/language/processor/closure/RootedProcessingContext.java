@@ -23,7 +23,7 @@ import java.util.Set;
 public final class RootedProcessingContext {
     /** Exact reviewed Contracts specification for this draft.2 profile. */
     public static final String CONTRACTS_SPECIFICATION_IDENTITY =
-            "sha256:527ed42f6ccac62a05918fac493ecc3729ec6f57d97b0cf1814d9ab752a6d523";
+            "sha256:08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172";
 
     private final List<DocumentId> entryOwners;
     private final Map<String, Object> ownerDescriptor;

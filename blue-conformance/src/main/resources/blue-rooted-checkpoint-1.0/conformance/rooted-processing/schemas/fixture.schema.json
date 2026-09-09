@@ -97,6 +97,24 @@
           "const": true
         }
       }
+    },
+    "recipeProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^provenance/recipe-inputs/rcp-run-[0-9]{3}\\.json$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
   },
   "allOf": [
@@ -125,27 +143,192 @@
                 "type": "array"
               },
               "steps": {
-                "type": "array",
-                "minItems": 1
+                "type": "array"
               },
               "variants": {
                 "type": "array"
               }
-            }
-          },
-          "expected": {
-            "required": [
-              "assertions"
-            ],
-            "properties": {
-              "assertions": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "$ref": "#/$defs/assertion"
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "qualification",
+                    "literalPlan"
+                  ],
+                  "properties": {
+                    "qualification": {
+                      "const": "LITERAL_CRITICAL"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "literalPlan": {
+                      "type": "string",
+                      "pattern": "^plans/rcp-run-[0-9]{3}\\.json$"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "steps": {
+                      "minItems": 1
+                    }
+                  }
                 }
               }
-            }
+            ]
+          },
+          "expected": {
+            "oneOf": [
+              {
+                "required": [
+                  "assertions"
+                ],
+                "properties": {
+                  "assertions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "$ref": "#/$defs/assertion"
+                    }
+                  }
+                },
+                "not": {
+                  "required": [
+                    "oracleVersion"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "oracleVersion",
+                  "contract"
+                ],
+                "properties": {
+                  "oracleVersion": {
+                    "const": 2
+                  },
+                  "assertions": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                      "$ref": "#/$defs/assertion"
+                    }
+                  },
+                  "contract": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "minProperties": 3,
+                        "required": [
+                          "scope",
+                          "causeKind"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "enum": [
+                              "SUCCESSFUL_ROOT",
+                              "FAILED_ROOT",
+                              "HISTORY_SEQUENCE",
+                              "HISTORY_MULTIPLE",
+                              "GAS_BOUNDARY",
+                              "COLLECTION_SEQUENCE",
+                              "SILENT_MIDDLE",
+                              "EQUAL_PAYLOAD_OCCURRENCES"
+                            ]
+                          },
+                          "causeKind": {
+                            "enum": [
+                              "LIVE",
+                              "MANAGED_REVISION"
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "scope",
+                          "faultCuts"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "const": "PACKAGED_PROCESS_FAULT_MATRIX"
+                          },
+                          "faultCuts": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "lanes",
+                              "cuts",
+                              "maxConcurrentLanes",
+                              "startupSeconds",
+                              "cutSeconds",
+                              "commandSeconds",
+                              "freshJvmInstances",
+                              "control",
+                              "termination",
+                              "coldRead",
+                              "duplicates",
+                              "gas"
+                            ],
+                            "properties": {
+                              "lanes": {
+                                "const": [
+                                  "LIVE",
+                                  "OWNED_RETAINED"
+                                ]
+                              },
+                              "cuts": {
+                                "const": [
+                                  "beforeCommit",
+                                  "afterCommitBeforeAck",
+                                  "beforeNotification",
+                                  "afterCursorWriteAttempt"
+                                ]
+                              },
+                              "maxConcurrentLanes": {
+                                "const": 1
+                              },
+                              "startupSeconds": {
+                                "const": 60
+                              },
+                              "cutSeconds": {
+                                "const": 60
+                              },
+                              "commandSeconds": {
+                                "const": 45
+                              },
+                              "freshJvmInstances": {
+                                "const": 36
+                              },
+                              "control": {
+                                "const": "fork of actual PROCESSING claim H2 backup"
+                              },
+                              "termination": {
+                                "const": "owned Popen SIGKILL after exact fsynced cut marker"
+                              },
+                              "coldRead": {
+                                "const": "separate read-only JDBC JVM before Spring recovery"
+                              },
+                              "duplicates": {
+                                "const": "same command UUID, key and exact request"
+                              },
+                              "gas": {
+                                "const": "each actual invocation separately checked against unchanged tariff and full trace"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
           }
         }
       },

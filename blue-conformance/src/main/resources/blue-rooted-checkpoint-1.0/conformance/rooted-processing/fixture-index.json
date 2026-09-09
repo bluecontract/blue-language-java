@@ -726,7 +726,7 @@
         "RCP-PROGRESS-02"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-005",
@@ -736,7 +736,7 @@
         "RCP-PROGRESS-01"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-006",
@@ -747,7 +747,7 @@
         "RCP-HISTORY-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-007",
@@ -773,7 +773,7 @@
         "RCP-HISTORY-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-009",
@@ -783,7 +783,7 @@
         "RCP-GRAPH-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-010",
@@ -793,7 +793,7 @@
         "RCP-GRAPH-03"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-011",
@@ -803,7 +803,7 @@
         "RCP-GRAPH-04"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-012",
@@ -813,7 +813,7 @@
         "RCP-GRAPH-05"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-013",
@@ -824,7 +824,7 @@
         "RCP-HISTORY-04"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-014",
@@ -844,7 +844,7 @@
         "RCP-GRAPH-02"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-016",
@@ -862,10 +862,13 @@
       "path": "fixtures/run/rcp-run-017.json",
       "kind": "runtime",
       "requirements": [
-        "RCP-HISTORY-06"
+        "RCP-HISTORY-06",
+        "RCP-OWN-02",
+        "RCP-OWN-04",
+        "RCP-CAUSE-01"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-018",
@@ -886,7 +889,7 @@
         "RCP-GRAPH-05"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-020",
@@ -920,7 +923,7 @@
         "RCP-READY-04"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-023",
@@ -992,7 +995,7 @@
         "RCP-PROGRESS-05"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-029",

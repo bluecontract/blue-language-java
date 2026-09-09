@@ -52,7 +52,12 @@ class IdentityTests(unittest.TestCase):
     def test_distinct_actual_cause_not_coalesced(self):
         x=copy.deepcopy(next(v['input'] for v in V if v['id']=='DELIVERY'));a=I.delivery(x)[1];x['causeIdentity']='sha256:'+'f'*64;self.assertNotEqual(a,I.delivery(x)[1])
     def test_distinct_admission_is_distinct_history(self):
-        ids={v['expected'] for v in V if v['id'].startswith('HISTORY-')};self.assertEqual(len(ids),6)
+        ids={v['expected'] for v in V if v['id'].startswith('HISTORY-')};self.assertEqual(len(ids),7)
+    def test_beginning_is_closed_and_only_from_now(self):
+        negatives=json.loads((S/'identity/beginning-negative-vectors.json').read_text())['vectors']
+        self.assertEqual(len(negatives),15)
+        for vector in negatives:
+            with self.subTest(vector=vector['id']),self.assertRaises(ValueError):I.history(vector['input'])
     def test_extra_history_field_rejected(self):
         x=copy.deepcopy(V[0]['input']);x['worker']='ignored'
         with self.assertRaises(ValueError):I.history(x)

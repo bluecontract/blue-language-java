@@ -9876,9 +9876,8 @@ def validate_static_package_laws() -> None:
         in demand_constructor.get("value", {}).get("order", ""),
         "closure resource-demand registry does not forbid kind ordering",
     )
-    require(not any("bex" in path.name.lower() or "blue-bex" in path.as_posix().lower() for path in ROOT.rglob("*") if path.is_file()), "BEX file included in Contracts package")
-    specs = sorted(path.name for path in (ROOT / "specifications").glob("*.md"))
-    require(specs == ["blue-contracts-and-processor-specification-1.0.md"], f"unexpected specification documents: {specs}")
+    from rooted_release_layout import validate_release_layout
+    validate_release_layout(ROOT, SPEC, require)
 
 
 def validate_manifests() -> dict[str, Any]:
@@ -10092,6 +10091,9 @@ def main() -> None:
     reference_output = run_command([sys.executable, str(ROOT / "tools/reference_scenarios.py")])
     reference = json.loads(reference_output)
     require(reference["status"] == "SEMANTIC_REFERENCE_VALID", "semantic reference scenarios failed")
+    progress("rooted companion package/checker/model validation")
+    from rooted_release_layout import validate_rooted_companion_checks
+    rooted_companion = validate_rooted_companion_checks(ROOT, run_command, require)
     progress("Java templates")
     java = validate_java_templates()
     progress("source archive provenance")
@@ -10121,6 +10123,7 @@ def main() -> None:
         "managedRevisionSequenceFixtures": managed_revision_fixtures,
         "removeReaddFixtures": remove_readd_fixtures,
         "javaTemplates": java,
+        "rootedCompanion": rooted_companion,
         "sourceArchive": source,
         "implementationConformanceClaimed": False,
     }

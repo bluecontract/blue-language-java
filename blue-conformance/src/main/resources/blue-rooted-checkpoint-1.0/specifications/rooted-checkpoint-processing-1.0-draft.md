@@ -121,6 +121,12 @@ A checkpointed/retained attachment changes the selected view of the new occurren
 
 **RCP-HISTORY-06.** Preserve immutable receipts and the one-epoch predecessor rule. Same-epoch representation transitions use the separately authenticated representation domain; they are not fabricated numbered epochs. Captured representation goals are not expanded by newly generated representation-only feedback. The ordinary target-advancement policy is not silently replaced with the representation-tail rule.
 
+The profile additionally requires C §2.3a.1's independently authenticated
+checkpoint-only containing-reference positions. They retain the original rooted
+publication proof and use their separate closed position domain; no generic
+eventless or equal-epoch acceptance is introduced. Legacy pending-target
+positions, numbered epochs, ordinary gas and source publication remain unchanged.
+
 **RCP-HISTORY-07.** A failed required application remains outstanding and blocks dependent later work. It does not invalidate its already committed source receipt. A terminally rejected live input and a failed import of committed history are different outcomes and retain their existing disposition rules.
 
 ## 7. Creation, discovery and suspension
@@ -268,11 +274,47 @@ admission                   one of the closed objects below
 {"mode":"FULL_HISTORY"}
 {"mode":"FROM_FRONTIER", "lowerExclusiveOrder": OrderKey}
 {"mode":"FROM_NOW", "lowerExclusiveOrder": OrderKey}
+{"mode":"FROM_NOW", "lowerExclusiveOrder": {"kind":"BEGINNING"}}
 {"mode":"CREATED_IN_OPERATION", "creatorOperationIdentity": SHA,
  "birthOccurrenceIdentity": SHA, "lowerExclusiveOrder": OrderKey}
 ```
 
 `OrderKey` is exactly `{timestampUs, timelineBlueId, entryBlueId}`. `timestampUs` is the canonical unsigned decimal string of the existing safe-integer microsecond value (no signs, leading zeroes except "0", or exponent); comparison uses its numeric value and then Q9's ASCII BlueIds. The explicit modes retain distinct admission claims even where lower bounds happen to coincide. `FROM_NOW` is bound to the original logical activation entry, never a later worker's wall clock.
+
+**RCP-ID-01a — authenticated beginning admission.** The additional closed
+`FROM_NOW` bound `{"kind":"BEGINNING"}` applies only when no logical activation
+entry exists because the applicable input history is positively established at
+its beginning at the original admission boundary. It is not an OrderKey, a
+Timeline Entry, a successful input checkpoint, or an invented timestamp. It is
+below every real OrderKey, including a real OrderKey with timestamp `"0"`.
+Only this FROM_NOW form accepts it; FROM_FRONTIER and CREATED_IN_OPERATION
+continue to require the existing exact three-field OrderKey. Nonempty FROM_NOW
+admission keeps the exact original activation entry. FULL_HISTORY and FROM_NOW
+at beginning remain different admission claims and history-basis identities.
+
+The admission owner MUST derive the complete required external source surface
+from the authenticated admission input and successful result, including newly
+initialized source Channels. For every required Timeline, its installed exact
+provider verifier MUST positively establish the beginning-of-history fact at
+that frozen boundary. A provider-authoritative empty journal may establish this
+fact only while it owns the complete admitted history of every such exact
+Timeline and preserves that boundary through atomic admission. An exact,
+verified source surface with no required Timelines has an empty obligation set;
+a missing or incompletely resolved source surface does not. A finite empty
+interval that does not prove beginning, absence from a cache or local mirror,
+an unregistered or unknown provider, NOT_FOUND, DEFERRED_UNAVAILABLE,
+INVALID_EVIDENCE and INCOMPATIBLE_FRONTIER MUST NOT establish BEGINNING.
+
+The verified fact and complete source-surface binding MUST be retained with the
+exact successful admission evidence and atomic publication. A supplied tagged
+object or recomputed wrapper hash alone grants no admission authority. A retry
+or restart uses the original retained admission fact, not a newly observed
+empty/nonempty journal or wall clock. Newly admitted later inputs still require
+ordinary provider completeness, authority, newness and checkpoint validation;
+BEGINNING does not certify readiness through a future boundary. Failure leaves
+no published admission, history basis, accepted checkpoint, initialization
+emission or owned state. This addition does not change §8 ownership or gas,
+§9 readiness, any existing admission form or any retained historical receipt.
 
 Hash the record with domain `blue-document-history-basis/1.0-draft.2`. The selected runtime profile and admission evidence are independently checked. Creation refers to an already fixed entry operation identity and deterministic birth-occurrence identity; it must not hash a parent result or newborn-dependent value recursively. The current source head, SQL/session ID, cache residency, observer set and physical first-loader are absent.
 

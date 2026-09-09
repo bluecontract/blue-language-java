@@ -25,7 +25,7 @@ class RootedIdentityTest {
     @TestFactory
     Stream<DynamicTest> matchesEveryFrozenDraftTwoVector() throws IOException {
         List<Map<String, Object>> vectors = vectors();
-        assertEquals(13, vectors.size());
+        assertEquals(14, vectors.size());
         return vectors.stream().map(vector -> DynamicTest.dynamicTest((String) vector.get("id"), () -> {
             Map<String, Object> input = object(vector.get("input"));
             String constructor = (String) vector.get("constructor");
@@ -103,6 +103,28 @@ class RootedIdentityTest {
         position.put("identity", "sha256:" + repeat('a', 64));
         delivery.put("sourcePositionIdentity", position);
         assertThrows(IllegalArgumentException.class, () -> RootedIdentity.deliveryIdentity(delivery));
+    }
+
+    @Test
+    void beginningIsClosedFromNowOnlyAndDistinctFromOtherAdmissions() throws IOException {
+        Map<String, Object> history = input("HISTORY-FROM_NOW-BEGINNING");
+        String beginning = RootedIdentity.history(history);
+        assertNotEquals(RootedIdentity.history(input("HISTORY-A")), beginning);
+        assertNotEquals(RootedIdentity.history(input("HISTORY-FROM_NOW")), beginning);
+        Map<String, Object> admission = object(history.get("admission"));
+        Map<String, Object> bound = object(admission.get("lowerExclusiveOrder"));
+        bound.put("timestampUs", "0");
+        assertThrows(IllegalArgumentException.class, () -> RootedIdentity.history(history));
+        bound.remove("timestampUs");
+        bound.put("kind", "beginning");
+        assertThrows(IllegalArgumentException.class, () -> RootedIdentity.history(history));
+        bound.put("kind", "BEGINNING");
+        admission.put("mode", "FROM_FRONTIER");
+        assertThrows(IllegalArgumentException.class, () -> RootedIdentity.history(history));
+        admission.put("mode", "CREATED_IN_OPERATION");
+        admission.put("creatorOperationIdentity", "sha256:" + repeat('a', 64));
+        admission.put("birthOccurrenceIdentity", "sha256:" + repeat('b', 64));
+        assertThrows(IllegalArgumentException.class, () -> RootedIdentity.history(history));
     }
 
     private List<Map<String, Object>> vectors() throws IOException {

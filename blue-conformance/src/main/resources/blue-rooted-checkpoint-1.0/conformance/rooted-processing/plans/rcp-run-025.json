@@ -2,7 +2,7 @@
   "schema": "blue-rooted-literal-plan/1.0-draft.2",
   "fixtureId": "RCP-RUN-025",
   "title": "Literal source-discovery suspension invariance",
-  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "inputIdentityPolicy": "Identity is computed in a disposable resolver. The unchanged authored S BlueId is submitted while no managed source exists; a real A suspension proves absence in the live exact provider. Supply exact S content only at the explicit provider step, then issue separate actual source admission and LIVE prerequisites. No draft/birth annotation or current-state substitution.",
   "setup": [
     {
       "op": "start",
@@ -37,37 +37,57 @@
         "epoch0Receipt"
       ],
       "stepId": "setup-002"
+    },
+    {
+      "op": "prepareAuthoredSource",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "capture": "S",
+      "stepId": "setup-003"
     }
   ],
   "variants": {
     "normal": [
       {
         "op": "append",
-        "targetSource": "examples/iteration2/source.yaml",
-        "timeline": "rcp2/source",
-        "timestampUs": "15",
+        "authoredSource": "S",
         "operation": "setCounter",
         "channel": "owner",
+        "timestampUs": "15",
         "request": {
           "counterValue": 5
         },
+        "exactDocumentPrecondition": false,
         "capture": "E15",
         "stepId": "normal-001"
       },
       {
         "op": "append",
+        "authoredSource": "S",
+        "operation": "setCounter",
+        "channel": "owner",
+        "timestampUs": "50",
+        "request": {
+          "counterValue": 99
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E50",
+        "stepId": "normal-002"
+      },
+      {
+        "op": "append",
         "target": "A",
         "operation": "attach",
         "channel": "owner",
         "timestampUs": "10",
         "request": {
           "child": {
-            "$source": "examples/iteration2/source.yaml"
+            "$capture": "S.initialBlueId"
           }
         },
         "exactDocumentPrecondition": false,
         "capture": "E10",
-        "stepId": "normal-002"
+        "stepId": "normal-003"
       },
       {
         "op": "append",
@@ -77,12 +97,38 @@
         "timestampUs": "20",
         "request": {
           "child": {
-            "$source": "examples/iteration2/source.yaml"
+            "$capture": "S.initialBlueId"
           }
         },
         "exactDocumentPrecondition": false,
         "capture": "E20",
-        "stepId": "normal-003"
+        "stepId": "normal-004"
+      },
+      {
+        "op": "provideAuthoredSource",
+        "sourceAlias": "S",
+        "capture": "sourceBody",
+        "stepId": "normal-005"
+      },
+      {
+        "op": "awaitSourceHistory",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E10"
+        },
+        "expectedPrerequisite": "ADMISSION",
+        "capture": "sourceNeedsAdmission",
+        "stepId": "normal-006"
+      },
+      {
+        "op": "sourcePrerequisite",
+        "root": "A",
+        "sourceAlias": "S",
+        "expectedKind": "ADMISSION",
+        "retryCommitted": true,
+        "capture": "sourceAdmission",
+        "stepId": "normal-007",
+        "inspectForgedSource": true
       },
       {
         "op": "processNext",
@@ -92,16 +138,36 @@
         },
         "budget": "DEFAULT",
         "capture": "attachA",
-        "collect": [
-          "exactBeforeAfter",
-          "channelCheckpoints",
-          "ownedRecords",
-          "orderedEvents",
-          "receipts",
-          "gasTrace",
-          "inputContext"
-        ],
-        "stepId": "normal-004"
+        "stepId": "normal-008"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "untilLogicalOrder": "10",
+        "repeat": 1,
+        "capture": "aCatchUp",
+        "stepId": "normal-009"
+      },
+      {
+        "op": "awaitSourceHistory",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E20"
+        },
+        "expectedPrerequisite": "LIVE",
+        "capture": "sourceNeedsEarlierInput",
+        "stepId": "normal-010"
+      },
+      {
+        "op": "sourcePrerequisite",
+        "root": "B",
+        "sourceAlias": "S",
+        "expectedKind": "LIVE",
+        "retryCommitted": false,
+        "capture": "source15",
+        "stepId": "normal-011",
+        "inspectForgedSource": true
       },
       {
         "op": "processNext",
@@ -111,49 +177,67 @@
         },
         "budget": "DEFAULT",
         "capture": "attachB",
-        "collect": [
-          "exactBeforeAfter",
-          "channelCheckpoints",
-          "ownedRecords",
-          "orderedEvents",
-          "receipts",
-          "gasTrace",
-          "inputContext"
-        ],
-        "stepId": "normal-005"
+        "stepId": "normal-012"
       },
       {
         "op": "processNext",
         "root": "B",
         "inputFamily": "RETAINED_SUCCESSOR",
         "untilLogicalOrder": "20",
+        "repeat": 2,
         "capture": "subject",
-        "stepId": "normal-006"
+        "stepId": "normal-013"
+      },
+      {
+        "op": "observeSourceHistory",
+        "sourceAlias": "S",
+        "capture": "sourceHistoryBeforeRestart",
+        "stepId": "normal-014"
       },
       {
         "op": "restart",
         "roots": [
           "A",
-          "B"
+          "B",
+          "S"
         ],
         "submitNewEntries": false,
         "assertExactRetainedState": true,
-        "stepId": "normal-007"
+        "stepId": "normal-015"
+      },
+      {
+        "op": "observeSourceHistory",
+        "sourceAlias": "S",
+        "capture": "sourceHistoryAfterRestart",
+        "stepId": "normal-016"
       }
     ],
     "A-suspended": [
       {
         "op": "append",
-        "targetSource": "examples/iteration2/source.yaml",
-        "timeline": "rcp2/source",
-        "timestampUs": "15",
+        "authoredSource": "S",
         "operation": "setCounter",
         "channel": "owner",
+        "timestampUs": "15",
         "request": {
           "counterValue": 5
         },
+        "exactDocumentPrecondition": false,
         "capture": "E15",
         "stepId": "A-suspended-001"
+      },
+      {
+        "op": "append",
+        "authoredSource": "S",
+        "operation": "setCounter",
+        "channel": "owner",
+        "timestampUs": "50",
+        "request": {
+          "counterValue": 99
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E50",
+        "stepId": "A-suspended-002"
       },
       {
         "op": "append",
@@ -163,12 +247,12 @@
         "timestampUs": "10",
         "request": {
           "child": {
-            "$source": "examples/iteration2/source.yaml"
+            "$capture": "S.initialBlueId"
           }
         },
         "exactDocumentPrecondition": false,
         "capture": "E10",
-        "stepId": "A-suspended-002"
+        "stepId": "A-suspended-003"
       },
       {
         "op": "append",
@@ -178,18 +262,58 @@
         "timestampUs": "20",
         "request": {
           "child": {
-            "$source": "examples/iteration2/source.yaml"
+            "$capture": "S.initialBlueId"
           }
         },
         "exactDocumentPrecondition": false,
         "capture": "E20",
-        "stepId": "A-suspended-003"
+        "stepId": "A-suspended-004"
       },
       {
-        "op": "setWait",
+        "op": "awaitSourceHistory",
         "root": "A",
-        "reason": "required exact evidence temporarily unavailable",
-        "stepId": "A-suspended-004"
+        "mustSelect": {
+          "$capture": "E10"
+        },
+        "expectedPrerequisite": "NONE",
+        "capture": "aMissingExact",
+        "stepId": "A-suspended-005"
+      },
+      {
+        "op": "provideAuthoredSource",
+        "sourceAlias": "S",
+        "capture": "sourceBody",
+        "stepId": "A-suspended-006"
+      },
+      {
+        "op": "awaitSourceHistory",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E20"
+        },
+        "expectedPrerequisite": "ADMISSION",
+        "capture": "sourceNeedsAdmission",
+        "stepId": "A-suspended-007"
+      },
+      {
+        "op": "sourcePrerequisite",
+        "root": "B",
+        "sourceAlias": "S",
+        "expectedKind": "ADMISSION",
+        "retryCommitted": true,
+        "capture": "sourceAdmission",
+        "stepId": "A-suspended-008",
+        "inspectForgedSource": true
+      },
+      {
+        "op": "sourcePrerequisite",
+        "root": "B",
+        "sourceAlias": "S",
+        "expectedKind": "LIVE",
+        "retryCommitted": false,
+        "capture": "source15",
+        "stepId": "A-suspended-009",
+        "inspectForgedSource": true
       },
       {
         "op": "processNext",
@@ -199,21 +323,16 @@
         },
         "budget": "DEFAULT",
         "capture": "attachB",
-        "collect": [
-          "exactBeforeAfter",
-          "channelCheckpoints",
-          "ownedRecords",
-          "orderedEvents",
-          "receipts",
-          "gasTrace",
-          "inputContext"
-        ],
-        "stepId": "A-suspended-005"
+        "stepId": "A-suspended-010"
       },
       {
-        "op": "releaseWait",
-        "root": "A",
-        "stepId": "A-suspended-006"
+        "op": "processNext",
+        "root": "B",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "untilLogicalOrder": "20",
+        "repeat": 2,
+        "capture": "subject",
+        "stepId": "A-suspended-011"
       },
       {
         "op": "processNext",
@@ -223,34 +342,39 @@
         },
         "budget": "DEFAULT",
         "capture": "attachA",
-        "collect": [
-          "exactBeforeAfter",
-          "channelCheckpoints",
-          "ownedRecords",
-          "orderedEvents",
-          "receipts",
-          "gasTrace",
-          "inputContext"
-        ],
-        "stepId": "A-suspended-007"
+        "stepId": "A-suspended-012"
       },
       {
         "op": "processNext",
-        "root": "B",
+        "root": "A",
         "inputFamily": "RETAINED_SUCCESSOR",
-        "untilLogicalOrder": "20",
-        "capture": "subject",
-        "stepId": "A-suspended-008"
+        "untilLogicalOrder": "10",
+        "repeat": 1,
+        "capture": "aCatchUp",
+        "stepId": "A-suspended-013"
+      },
+      {
+        "op": "observeSourceHistory",
+        "sourceAlias": "S",
+        "capture": "sourceHistoryBeforeRestart",
+        "stepId": "A-suspended-014"
       },
       {
         "op": "restart",
         "roots": [
           "A",
-          "B"
+          "B",
+          "S"
         ],
         "submitNewEntries": false,
         "assertExactRetainedState": true,
-        "stepId": "A-suspended-009"
+        "stepId": "A-suspended-015"
+      },
+      {
+        "op": "observeSourceHistory",
+        "sourceAlias": "S",
+        "capture": "sourceHistoryAfterRestart",
+        "stepId": "A-suspended-016"
       }
     ]
   },
@@ -267,21 +391,36 @@
       "sourceHistoryThrough20"
     ],
     "requiredEvents": 0,
-    "explicitNoRowIsNotBirth": true
+    "explicitNoRowIsNotBirth": true,
+    "sourceDiscovery": {
+      "sourceAlias": "S",
+      "earlierRoot": "A",
+      "laterRoot": "B",
+      "earlierEntry": "E10",
+      "laterEntry": "E20",
+      "requiredSourceEntry": "E15",
+      "futureSourceEntry": "E50",
+      "sourceEpochs": [
+        0,
+        1
+      ],
+      "admission": "FULL_HISTORY",
+      "earlierCounter": 0,
+      "laterCounter": 5
+    }
   },
   "productionStatus": "NOT_RUN",
   "allowedPrimitives": [
-    "start",
     "append",
+    "awaitSourceHistory",
+    "observeSourceHistory",
+    "prepareAuthoredSource",
     "processNext",
-    "read",
-    "captureEpoch",
-    "cache",
-    "evict",
-    "setWait",
-    "releaseWait",
+    "provideAuthoredSource",
     "restart",
-    "assert"
+    "sourcePrerequisite",
+    "start"
   ],
-  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter.",
+  "originalLiteralPlan": "provenance/recipe-inputs/rcp-run-025-original-plan.json"
 }

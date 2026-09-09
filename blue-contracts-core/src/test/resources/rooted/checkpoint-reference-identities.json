@@ -1,0 +1,39 @@
+{
+  "purpose": "Independent envelope vectors; no history authority claim",
+  "vectors": [
+    {
+      "constructor": "ROOTED_CHECKPOINT_REFERENCE_PROOF",
+      "domain": "blue-rooted-checkpoint-reference-proof/1.0-draft.2",
+      "value": {
+        "documentId": "P",
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "checkpointInputClosureIdentity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "checkpointOutputClosureIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rootProcessingContextIdentity": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "rootedInvocationIdentity": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "rootedCommitCompanionIdentity": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "expected": "sha256:54aec162234e7887098411fc5364bdec57d88e1bc79e4d785e07644ef6817787"
+    },
+    {
+      "constructor": "ROOTED_CHECKPOINT_REPRESENTATION_POSITION",
+      "domain": "blue-rooted-checkpoint-representation-position/1.0-draft.2",
+      "value": {
+        "documentId": "P",
+        "epoch": 0,
+        "anchorReceiptIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "predecessorPositionIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "transitionReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "originalInvocationIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "inputClosureIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "outputClosureIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "commitCompanionIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "checkpointReferenceProofIdentity": "sha256:54aec162234e7887098411fc5364bdec57d88e1bc79e4d785e07644ef6817787"
+      },
+      "expected": "sha256:3fadb2b758745944d96fc194408ab8e24589980d81577a406458735e2454d717"
+    }
+  ]
+}

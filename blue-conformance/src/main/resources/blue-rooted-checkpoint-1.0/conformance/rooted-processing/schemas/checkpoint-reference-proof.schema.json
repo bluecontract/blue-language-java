@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ROOTED_CHECKPOINT_REFERENCE_PROOF",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentId",
+    "beforeBlueId",
+    "afterBlueId",
+    "checkpointInputClosureIdentity",
+    "checkpointOutputClosureIdentity",
+    "rootProcessingContextIdentity",
+    "rootedInvocationIdentity",
+    "rootedCommitCompanionIdentity"
+  ],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "beforeBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?$"
+    },
+    "afterBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?$"
+    },
+    "checkpointInputClosureIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "checkpointOutputClosureIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rootProcessingContextIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rootedInvocationIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rootedCommitCompanionIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

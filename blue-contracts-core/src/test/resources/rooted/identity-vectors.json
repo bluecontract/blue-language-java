@@ -336,6 +336,23 @@
         "rootProcessingContextIdentity": "sha256:502dbc6db51009f643d729a2a9a98c4f4e4da1a8d18704283ac0fd558ca2f734"
       },
       "expected": "sha256:26120b9e8162b0ddfa4f9101638b9fcc8f3bf0a25427c81ab30de1c9598604c2"
+    },
+    {
+      "id": "HISTORY-FROM_NOW-BEGINNING",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          }
+        }
+      },
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "expected": "sha256:d8dede9d7537dc307cfcacaaf45ab77dfab6c4c44686ed774ebfd9f12db4f3f9"
     }
   ]
 }

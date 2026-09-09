@@ -59,7 +59,13 @@ def history(x):
     doc(x["documentId"]);blue(x["initialDocumentBlueId"]);sha(x["runtimeSemanticsIdentity"])
     a=x["admission"];m=a.get("mode") if isinstance(a,dict) else None
     if m=="FULL_HISTORY":closed(a,["mode"])
-    elif m in ("FROM_FRONTIER","FROM_NOW"):
+    elif m=="FROM_NOW":
+        closed(a,["mode","lowerExclusiveOrder"])
+        bound=a["lowerExclusiveOrder"]
+        if isinstance(bound,dict) and bound.get("kind")=="BEGINNING":
+            closed(bound,["kind"])
+        else:order_key(bound)
+    elif m=="FROM_FRONTIER":
         closed(a,["mode","lowerExclusiveOrder"]);order_key(a["lowerExclusiveOrder"])
     elif m=="CREATED_IN_OPERATION":
         closed(a,["mode","lowerExclusiveOrder","creatorOperationIdentity","birthOccurrenceIdentity"])

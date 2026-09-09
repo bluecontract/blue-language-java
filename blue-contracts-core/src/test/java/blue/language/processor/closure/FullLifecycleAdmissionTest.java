@@ -219,7 +219,8 @@ final class FullLifecycleAdmissionTest {
             assertEquals(EVENT_ONE_BLUE_ID, second.eventBlueId());
             assertEquals(0L, first.eventOccurrenceOrdinal());
             assertEquals(1L, second.eventOccurrenceOrdinal());
-            assertEquals(DUPLICATE_EVENT_IDENTITY_ORACLE,
+            assertEquals(LifecycleCyclicBindingOracle.duplicate(
+                            DUPLICATE_EVENT_IDENTITY_ORACLE, input),
                     duplicateEventIdentityProjection(
                             input, first, second));
             assertNotEquals(first.eventOccurrenceIdentity(),
@@ -2251,7 +2252,8 @@ final class FullLifecycleAdmissionTest {
             assertTrue(result.totalGas() <= LOOP_GAS);
             assertTrue(countKind(capture.evidence,
                     WorkKind.EMBEDDED_EVENT) > 2L);
-            assertEquals(GAS_FAILURE_ORACLE,
+            assertEquals(LifecycleCyclicBindingOracle.gas(
+                            GAS_FAILURE_ORACLE, input, result, capture.evidence),
                     gasFailureProjection(result, capture.evidence));
             assertTrue(result.publicEvents().isEmpty());
             assertNull(result.commitCompanion());
@@ -2477,7 +2479,8 @@ final class FullLifecycleAdmissionTest {
                     rejectedChargeProjection(retry.rejectedCharge()));
             assertEquals(workIdentities(captures.values.get(0)),
                     workIdentities(captures.values.get(1)));
-            assertEquals(GAS_FAILURE_ORACLE,
+            assertEquals(LifecycleCyclicBindingOracle.gas(
+                            GAS_FAILURE_ORACLE, input, first, captures.values.get(0)),
                     gasFailureProjection(first, captures.values.get(0)));
             assertLiteralRollback(input, first);
             assertLiteralRollback(input, retry);

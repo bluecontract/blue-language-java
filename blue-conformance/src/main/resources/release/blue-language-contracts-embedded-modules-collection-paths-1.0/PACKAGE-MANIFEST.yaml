@@ -9,10 +9,10 @@ components:
   languageFixturePackageIdentity: sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695
   languageVectorCount: 150
   languageBehaviorFixtureCount: 185
-  contractsSpecificationSha256: 0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
+  contractsSpecificationSha256: 08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172
   contractsRegistryPackageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
-  contractsFixturePackageIdentity: sha256:094ad941eb688f4ea7f92c471daf9097411a0378fcfdcd27139901a60c6f739c
-  contractsRepresentationFixturePackageIdentity: sha256:638eb80eccb12629d475a395d87b95b36df54e68463768fccb569c4356bc5916
+  contractsFixturePackageIdentity: sha256:e61d6b75b5f6d84065cdbd2e439fa99a6b4710fde163ace2faaa39fdbaa8229f
+  contractsRepresentationFixturePackageIdentity: sha256:de16d484c7d5f1183f3df59032443de4fc1f2ec88cc70f58fcaa066c3d047b1d
   contractsRepresentationFixtureCount: 2
   contractsAggregateExecutableFixtureCount: 297
   contractsGasPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
@@ -70,64 +70,64 @@ files:
   sha256: ebc9c93571662c4288cd13b6e20d1ea6e6667a0a132173c6757118a5a745f399
   bytes: 4799
 - path: conformance/contracts/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml
-  sha256: 2fc8e4709c1e0103408b7f9b97ff511724ef632d4ee7a31dd92db02fd43c0ea8
+  sha256: c504ab4262d21ed7caed1276261da5295e054f603370a37e89386d233cfdaf3b
   bytes: 58006
 - path: conformance/contracts/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml
-  sha256: f456b52a96a101b769b43d92f14a70770c61f66a2243063429f1aa3eb0f1ef6a
+  sha256: 49505373850245a5a80fd937abe7614f86812e0da90217afd513418bf3822375
   bytes: 57279
 - path: conformance/contracts/fixtures/closure/c-clo-01-static-cycle-admission.yaml
-  sha256: fd909cba831105fa683b68e29fddd721451d436dd9b7739d6ce129c706d1eb86
+  sha256: 35e6e0b3c2467e92a28efd9cae6e7466ce990436e85ba1f73b0d593468880bda
   bytes: 57285
 - path: conformance/contracts/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml
-  sha256: af1ee44265bcf9699b1c41c5b01d6e218ef9fb90cc991ff929afb303068e1ae8
+  sha256: 7bcf05d6bc6e401fe347ec603cf7f92a3fdbea9528c57cd9943a5b972546827e
   bytes: 120914
 - path: conformance/contracts/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml
-  sha256: 326aa02dd70249bac875770d61f3a8d792feb0ad5c4f5bdee126cbbdc523c159
+  sha256: 30d73591ea4eabc8083cb9a6d3da38f59c5adbdee0d2738a79acbc57c36f078b
   bytes: 119233
 - path: conformance/contracts/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml
-  sha256: 6fc7283c2db5b0e1648470a369271d7919072905414a72c88bcf00e3d3c5b875
+  sha256: 312bf43145bbe58d8d372c3d2e6011d5be7324c6cdbe95c6f73837d9ae22cf5d
   bytes: 119330
 - path: conformance/contracts/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml
-  sha256: 21d5188ff768ecd317eca043e156af126aa9703f577114d5b7569fe2c77d02dd
+  sha256: efc7b4a2a24d6e097c96b06d2205fbff7a7c70cb2d227aede8613d1cf4e1efb4
   bytes: 119629
 - path: conformance/contracts/fixtures/closure/c-clo-04-default-policy-loop.yaml
-  sha256: 6c14ecfb1cbf4b716513f9e21ca9d80a7e46ff9c111ad782a54c5f04b39c0825
+  sha256: e1b4f94467170ae9bd7949d0c31fdc53c839121f061dd168e67127b2e58e1481
   bytes: 518280
 - path: conformance/contracts/fixtures/closure/c-clo-04-same-event-gas-loop.yaml
-  sha256: bd6d2b700304ef8874c63819820d147bc44fc14278fad509ce4c4c86557105cb
+  sha256: b70967249c4ba7fc950f8d1c15af86bbb3b2830c6567f67938d32bbc72217d42
   bytes: 56508
 - path: conformance/contracts/fixtures/closure/c-clo-05-direct-both-members.yaml
-  sha256: 7a6d31382c300edd917848c56999699be4b395c2b1556710e4934b3268dee725
+  sha256: 6d753527a8a804af5a4f3517c4c50d322f247563de538f3e4299010aa8588e66
   bytes: 70780
 - path: conformance/contracts/fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml
-  sha256: 36c9c69884ab3eda4414830177184d34e33ef27d363ff6985a7e97837b1e7529
+  sha256: b8c446ec4be5d7674c2d0b49bfca8e523e40c831132ea623ee336780426f5a02
   bytes: 73540
 - path: conformance/contracts/fixtures/closure/c-clo-07-self-cycle.yaml
-  sha256: 454c17cccc6b7b4a2b45a9c040ffd51004bc1ee6232a21e7626f901ff982d021
+  sha256: cf44b556d8bce29c21ea6fa5a43c1924fa2edcde68941c36d0583fe559327a52
   bytes: 16693
 - path: conformance/contracts/fixtures/closure/c-clo-08-cycle-during-initialization.yaml
-  sha256: 5e9742e129cc8bbb4c9e88a637637e1398377d142ead3493c375375bbc6eae55
+  sha256: efbc8c73d08d8d67399eec312fce4e77dca0449f5aa13c6fb5259719980a0201
   bytes: 87882
 - path: conformance/contracts/fixtures/closure/c-clo-09-merge-two-cycles.yaml
-  sha256: 3073ff050f623edb21abf4046f23968762043a15437ea590df6c4f18c5025646
+  sha256: 615ac287394b9e2c6a3cb865a354ebeb15770f4a9337988c0440f6c3c798179b
   bytes: 94174
 - path: conformance/contracts/fixtures/closure/c-clo-10-split-to-singletons.yaml
-  sha256: 967933510d1033cccb34dc99e9c0dfb1fb51e0ace8881cd47abda6e545d38fa3
+  sha256: 9f8298c6b3c4799a8ada218e9c5a20e3fcdb48bbd5ac2347923eca1f2096b39f
   bytes: 71375
 - path: conformance/contracts/fixtures/closure/c-clo-11-split-into-two-cycles.yaml
-  sha256: 987d935d5724b8e1e4414385eb6cc4c7dc91517d6384918b105061d9049c716e
+  sha256: 392ad1491f70af64e0b9826ec5ef258ecbd5c2f6fc27123969423a7bd002c9c9
   bytes: 120356
 - path: conformance/contracts/fixtures/closure/c-clo-12-frozen-edge-removal.yaml
-  sha256: 290bf7e4519e6aa48941f0224787bebfb76c6658fcff1b3cfb3069bd5fe65ca3
+  sha256: 57773eae18dc5e58f4394c2148a6d9720bb9a102d0c22f19922da28cf2479a41
   bytes: 72686
 - path: conformance/contracts/fixtures/closure/c-clo-13-frozen-edge-addition.yaml
-  sha256: bea10ed9ac79c3ca0b134a53966e641f230288b339ef7ef41aa7581a03bba9e6
+  sha256: b768d788578d46779d6ec21c4c8f81d7b94f1c4b4956e73616c611031b56765b
   bytes: 76936
 - path: conformance/contracts/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml
-  sha256: 78f717a49ba1de610c00813ceccd5b76ef780893e3937134ee5b4719dbad5f8a
+  sha256: 73f179b47d57f6ca3abe69e9cbc2e0c54d3c1ca7cbd894b2dcce380920d3657b
   bytes: 21001
 - path: conformance/contracts/fixtures/closure/c-clo-15-ambiguous-preliminary-members.yaml
-  sha256: bbf2251134eea2e50b5d9fd94bd0a0e86abf4ec5b605f9f3307e77da5f14bb20
+  sha256: a3fd5238fdce85e6511fdd686bde8a9bfd91a15c18fa4e7a8df120dbe175053b
   bytes: 11138
 - path: conformance/contracts/fixtures/closure/c-clo-16-closure-expansions-at-bound.yaml
   sha256: e11783ba7d9a663276bd741410d84975b2bfa365399b022d335f4fa12c95ee6d
@@ -148,7 +148,7 @@ files:
   sha256: 62c5f5f9bb1bd0e4d8a3e389196e3eb4c9c2155a0b69adb637ed79965de92bf3
   bytes: 686
 - path: conformance/contracts/fixtures/closure/c-clo-16-limit-at-bound.yaml
-  sha256: 008c689d25806ed8c386974663dd57d7a7fa2b0b2b8448f9c5386ea9b5ee8a20
+  sha256: 03353e25c5cf04778ad27e5b9b3858173b51bdca1d01d0fdf0ba35328a746555
   bytes: 655029
 - path: conformance/contracts/fixtures/closure/c-clo-16-managed-documents-at-bound.yaml
   sha256: 92ef381565070cd167d080dd646993561c34cb17ed06204cea655e600cddb5ed
@@ -178,7 +178,7 @@ files:
   sha256: d754b5888eeea8918b037e66c14cd3b1462aaa5f040429a993f0dfc88b033a6c
   bytes: 789
 - path: conformance/contracts/fixtures/closure/c-clo-17-limit-above-bound.yaml
-  sha256: c8991e333d7f2d9670ee655de45337bf405ec1c17fdd052722a6bbe8aceef163
+  sha256: da598eb847009b209f7d935759eab1136289eb973413ca17d9ef98b05d6a9619
   bytes: 483092
 - path: conformance/contracts/fixtures/closure/c-clo-17-managed-documents-above-bound.yaml
   sha256: 32e81445387be5bac4e1f99e8ccdf14814ead00394a94b0d3ea9a9914f633da4
@@ -190,181 +190,181 @@ files:
   sha256: a4bca52f34632310a27093bb66c5e8bcace0395a70c86789112686b1dc2c887a
   bytes: 807
 - path: conformance/contracts/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml
-  sha256: be910f26798c715f2647990ac40a6cd8641758b2a2e5bfbd06f9b04f705ea004
+  sha256: b268607137a6c1867e21c781e69b325815171f31d802f04c3324617d1ee05a23
   bytes: 57244
 - path: conformance/contracts/fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml
-  sha256: d4945e55021fcd52389be2e2344aaa2c5c844e09f67ff706bd30058d0899c370
+  sha256: 674d915e3131d414c2433394a12b1962399e0cd27b530e805e04b5f3b08c0923
   bytes: 67421
 - path: conformance/contracts/fixtures/closure/c-clo-19-public-event-boundary.yaml
-  sha256: f3aad6fee660f0b5e854c6e3c5d548297a472a7101e8cec888d0fe6a2663a62b
+  sha256: 04aeec3844fc43f3a1f62523c40ac39a403316317c2b975497c0061db4baba44
   bytes: 103730
 - path: conformance/contracts/fixtures/closure/c-clo-19-single-public-root.yaml
-  sha256: cec6d771470ef9c9644903fd45d148cf72f6e2a81554a51f42920b4d9f2d93a9
+  sha256: 48cf5c6cbb702fecb96457c8c74a55e6c9042d2ba3422a3c2e16010942e41831
   bytes: 34153
 - path: conformance/contracts/fixtures/closure/c-clo-20-late-outer-failure.yaml
-  sha256: 0961b2304a18ad5138339f4762fb600da0572ad27e4d20d3006b7fdb41f1d12f
+  sha256: 3fd5f8ae1538abb4a574f648ec3cfaaee425755f6c7af9497b764670be6f9638
   bytes: 65957
 - path: conformance/contracts/fixtures/closure/c-clo-21-admission-zero-direct.yaml
-  sha256: 8b0f2f324b3eb4d11353822965382b8d081b7c76df7e2c40d5d4a71f408fb67e
+  sha256: 28c5b80dc53f6e15aec39e9df63834769033f805743adc885235072879a6d656
   bytes: 57246
 - path: conformance/contracts/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml
-  sha256: 79958f65f2988bc7a9b12da77b220f515e46a20f7ffc88ecf45e5656fecb2daf
+  sha256: ad770a85363f776872e3781136f7a0316cdb56f470349f14451f70f22a170a99
   bytes: 9954
 - path: conformance/contracts/fixtures/closure/c-clo-23-00-attach-a5-retry.yaml
-  sha256: 0e2f7c7fe9a2c3248668b5b4b51be463e68eafc728212aef4872dc37e8963d79
+  sha256: 09f6d2c00db31bc519c6391ffd2b59a9a983d350287b71c737113f47bb08a47b
   bytes: 47203
 - path: conformance/contracts/fixtures/closure/c-clo-23-01-a5-to-a6.yaml
-  sha256: 72b7718276c04fe0310627d28baca7e29f93b9c14b6a36485633bc56f2fcfeba
+  sha256: f29638f10943e1af2669ee47a85489a292a200d5ee64251a94a17c0da3b21b8b
   bytes: 36492
 - path: conformance/contracts/fixtures/closure/c-clo-23-02-a6-to-a7.yaml
-  sha256: 2667e6949b70be4ab292f9c0535680c7648ec674664354f6e5911f1a0c3d11f8
+  sha256: 044b0864a66149a0ff6e81ba60271a7b6890f890dd8369820e8ee1d89dcb7413
   bytes: 36492
 - path: conformance/contracts/fixtures/closure/c-clo-23-03-a7-to-a8.yaml
-  sha256: 36278530d99cf5c9b7bd1c2391cc95a59956f7da741789d8089bc1f3abd0b29c
+  sha256: 4914d8d489b1e29aa2b6d762b40b5b43ce858cf17a457bd660708306c04ff669
   bytes: 36492
 - path: conformance/contracts/fixtures/closure/c-clo-23-04-a8-to-a9.yaml
-  sha256: a0a18131da0d618d94ca5267d4cad89e4aed674d38fa9b593a6d2fc3d8ed70ac
+  sha256: b07edb6a66bd7ffe4284529ef3a5704eae9e9690a3c84f46b465b357ec07792a
   bytes: 36492
 - path: conformance/contracts/fixtures/closure/c-clo-23-05-a9-to-a10.yaml
-  sha256: 4688a26fdcd7a251da5716ff48444e273220beadfe8b102943894fb4166fb1a1
+  sha256: 7a2158333fd146e4cf9eb052b73fc7924e72e2034bc2e56dcdf780365c45f5c3
   bytes: 48629
 - path: conformance/contracts/fixtures/closure/c-clo-24-occurrence-continuity.yaml
-  sha256: e3318d8fa5461e9bc642f5e02b973d959624c336161811e88d06c99b20523ffc
+  sha256: b7f9d362747d1bef8f24de22538bbe95e8cf2ec82831b1d6efd1fc95bac9ae99
   bytes: 119214
 - path: conformance/contracts/fixtures/closure/c-clo-25-policy-identity-binding.yaml
-  sha256: 935ef95889f59c77e28d247425c9be72ef642ff562d92f0ee48d83577e1c179e
+  sha256: 40368d816780456ce99b93b4fd3737f2b2ac92161796929c9deb776361e79a61
   bytes: 56463
 - path: conformance/contracts/fixtures/closure/c-clo-26-embedded-local-cap.yaml
-  sha256: b7b8b8453d7b80d7c8b650062e54c810c697f5118c140b6e636549d549742f84
+  sha256: 7300d25a6690dbb9c0d73c8f223963cea83c3e7d90b7bd49cc086f274b088573
   bytes: 35901
 - path: conformance/contracts/fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml
-  sha256: e43884303271f66775c42fb0fe0322f3f1a5f3f96df0a9b94a7cbf36cee58410
+  sha256: ce7e317b61582241330b4fd599c43c6059641becdf1a0753aba0c1a85d114129
   bytes: 74904
 - path: conformance/contracts/fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml
-  sha256: b7db5312e0b3c8839d408e56c196300a9ab3adf972fdeb56c3deb896dceebcde
+  sha256: a59f513207c4281e269a2531c149b539240d8798a0eb29e8fd0d80303b171a39
   bytes: 76339
 - path: conformance/contracts/fixtures/closure/c-clo-28-mixed-result-shape.yaml
-  sha256: 40a41a67f01fc9cfd5e74c8bb68ef93f6069cbbb974765f52120245c9346e150
+  sha256: fdfd26aef9ddfb162335c4fb430c5052f375933893b00eebd717673b16af13e9
   bytes: 120320
 - path: conformance/contracts/fixtures/closure/c-clo-29-active-edge-path-validation.yaml
-  sha256: 8589542d79d1a5132d4f83a1fb16b43d33f66bcef7940a6b60aad51d52bdd673
+  sha256: 60dbb9089732b04f9cc18b8620e1ca3fff7cb4f42e0f908bd5206d6c8d16edbb
   bytes: 20136
 - path: conformance/contracts/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml
-  sha256: 22b7321e468ec56760b6527beccd4bb3aabc42533b601f6ee357dc4c6c575ca6
+  sha256: ea28f60c3b65be6c52926cea7493804a74d35536c0f6e774553a21f6460b9b26
   bytes: 119263
 - path: conformance/contracts/fixtures/closure/c-clo-31-invocation-owned-gas-rejection.yaml
-  sha256: 7625088aa133648dd0b47a635c2d395bdd103afca9fd0c1c306afdd3fbbee000
+  sha256: d0794ce8650cb5c73807074e0fc0a5921d1d9978a9e58bcf39c16b43657e216d
   bytes: 16951
 - path: conformance/contracts/fixtures/closure/c-clo-32-finalization-owned-gas-rejection.yaml
-  sha256: d2a8b8de576ea72bb8f519256050485e3e5ce9a23cd2fff39ae28bac6036202a
+  sha256: bb118d1033a73f6aae801894e5d3710420dcce60a09e8cf1a8b63e806f5161dd
   bytes: 23763
 - path: conformance/contracts/fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml
-  sha256: 56795457f971e47c587c9f6c4571a29c40b45814ac7876e53366f995b73756f6
+  sha256: dc255ac74a73c086337788d6d1fa0ce3b824fcc28935c2ce709f2d3230a70fbf
   bytes: 123166
 - path: conformance/contracts/fixtures/closure/c-clo-34-separate-document-steps.yaml
-  sha256: 654520fda2296ffb62eaa4ff3b1488158b362b76a93f4907fcf4c4a31dbe445f
+  sha256: 9d671830d0e8a5ea5a2fe52d4d76de1b9cbb5f79bc8edf086ff86e84a063a2a2
   bytes: 119322
 - path: conformance/contracts/fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml
-  sha256: 535aa552e8e5390bebc2853cae08c2b8ec96185a7dbf1c6c978189772d7eedad
+  sha256: f88b7d0f4e7569964625d209d6d0122095a126a43037650592824104982d4288
   bytes: 72719
 - path: conformance/contracts/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml
-  sha256: 618015736cf9d28886ef4cf11c3cb00205f775882fc13e1a08c21aeb8ad3f985
+  sha256: 912ac1d883cdf92f8e7e69d749352fd9cca5ed591592b319b7a9ad2551b66d7b
   bytes: 65905
 - path: conformance/contracts/fixtures/closure/c-emb-empty-05-prospective-activation.yaml
-  sha256: 87f965fda049ee606d0e03289dbfe0fe7756743f54080376aa0760de9deaf107
+  sha256: 640fe22c25818f6d9b8f68c2adc406a1d5a52c745d5ce6440cb5767b797ca2a5
   bytes: 77019
 - path: conformance/contracts/fixtures/closure/c-evo-18-missing-exact-node.yaml
-  sha256: 498f967ef6fa4cd5f9138ea85df839cb6fb9887b8bd78301feb4ab2a5605829b
+  sha256: eccf0ca6f734481c62b515672a6ac6c83dac4285407a234588c56722235f5c56
   bytes: 6751
 - path: conformance/contracts/fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml
-  sha256: 8f4ba8fc1a3a4c2dea55b4f8c0a2838559c208b223166e9a885a94da1fa6ad25
+  sha256: 59ce321fc6ab35a203444cfdea4c9a5f89e3f576adac5f086dc5709d18655e30
   bytes: 7592
 - path: conformance/contracts/fixtures/closure/c-evo-20-canonical-demand-order.yaml
-  sha256: 989b9faa09c6bdb8f42f86189a113814c73471afa90f1ac969622cf7cedaf88c
+  sha256: 19df15f15ce57bef5ede35ec2f5caeaee95e2a55264e2444a9345968edae8bd1
   bytes: 10265
 - path: conformance/contracts/fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml
-  sha256: b151c68f3d555e5d3e2c152daa4a3f4a4ee7608cf99834ecc0544926e8f52d8a
+  sha256: 131beecfaa4e3af9377994d72d3dec3bec10b777957c283592cca0bda5d2fc0f
   bytes: 8320
 - path: conformance/contracts/fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml
-  sha256: 720e50bdf6d65f0dad6dda12444bda8552438e63f70e63f133efe48a4c1c8f00
+  sha256: c4a3584ff58438b44ec161de3ea56a5167e07465742a0cc0f565d19c74ac22c2
   bytes: 8321
 - path: conformance/contracts/fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml
-  sha256: bae1f6e0658715a66b948f0da0401768d2b43e84d3087e39022bf7c4cc0dd9ca
+  sha256: f7fc60e2ef5b1dfc2f355c052ced37493d46cafd93be55399de31589c5d1a625
   bytes: 55591
 - path: conformance/contracts/fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml
-  sha256: d7b5ac3313c8d48315720aedf34f4ef8e67e55fa567f76eca7e84555add91d8a
+  sha256: ef756b26534bd378b9e28438ee4f4a997e80f22d81b6e05d4c50379808a4bd68
   bytes: 55592
 - path: conformance/contracts/fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml
-  sha256: 97f6a5045534ffe23230f9be0d5e9680c7af4212b5258686e7ef8939cf2a6b20
+  sha256: 7f469ca73bab866e4998ed76d67a1ed5f6b6e518f3ce4181a68e33a58fb2172a
   bytes: 8941
 - path: conformance/contracts/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml
-  sha256: d4cd4e34c7d8a39555063eb6fdb02280f7a1755f3d9733145906c14e7ea7060f
+  sha256: 1b99bfd4a4f1db7130da2c8ed528a11317fa264a7454f4ddf2a84ce5429d478f
   bytes: 1022619
 - path: conformance/contracts/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml
-  sha256: b37cebac1372d2bf28c60109410f85061214e57965b7b513371c75c8b32e8fea
+  sha256: 802f79a4091c395a954a5a6abdd406bede69effa4776a9a5b343c6b3f0155c44
   bytes: 1022612
 - path: conformance/contracts/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml
-  sha256: b0c6d60f662ffcf90e0f31284c52c1302d61a35212f42c5d01017996583032cf
+  sha256: bc7df4166d9d7ec736f131180f5e46b7fad9b81442b669a41ddd5e20ab2e4e58
   bytes: 8774
 - path: conformance/contracts/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml
-  sha256: 9e38f3b1a95560639d28faa7df920eed592f5d93ef6d633b5af65354e89471e2
+  sha256: 9bbca3ac4a57370f56f66f2f447af4256cbb3cd8114e87895cadf5dcb0b8a440
   bytes: 71699
 - path: conformance/contracts/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml
-  sha256: 264442b3faea83c5a11813b81e5cf8b5c862bd6e548b7f1c3be648b21d73d41f
+  sha256: fc755aeb0ebd289de33e5b2c66a79549a27c55c8296f61a91caf8f2aa307ad36
   bytes: 71698
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
-  sha256: 225a63dc24e2b946c1c4641431b5923ed30e3b09dfb10c32265384c05321afe1
+  sha256: 069464ad988cbcd9d1cddd226bc6d2f772ae8a8272b539e1b94337676b703aae
   bytes: 344389
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
-  sha256: 7b0012810f208fe44a6db3f28c8c394c4cb0227fbc5fa08101a3ad5ea0166286
+  sha256: fb5f629c295510a4d3ce0e87bef013bf9d93ef06e218c206b42caa799316c202
   bytes: 344387
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
-  sha256: ad61d45994c6b3423f8d6891e2e62aad186cf42229b6409e9b82ebeb8682e5c8
+  sha256: c4f56e7360a6dceb052a082975443584ee9a723389f766be2a682d5b32d0290f
   bytes: 343848
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
-  sha256: c280f47a334dfa0ead96c7fef0149ab02c36eb2fa1eb481ccb08faa1c087d125
+  sha256: b2a939ef588877db4992d82e4bd8a4876daaa612df1533c54bcb7a7fc91f1db5
   bytes: 343850
 - path: conformance/contracts/fixtures/closure/fl-adm-01-root-patch-event.yaml
-  sha256: 50a69427abab4821d74db25e1c72677ca92ba3ab59e57e39d3503460aacac06f
+  sha256: 8c06b84129c32141269295012ca5ea61e254af51ddc5fb780f86761e99e3f7f2
   bytes: 50656
 - path: conformance/contracts/fixtures/closure/fl-adm-02-duplicate-equal-events.yaml
-  sha256: 91c75d81f203f87c552fdfb48bcee3130318d403784523f21c12347f3c7de033
+  sha256: b0b9ad73d37e7b468bd3776149063bf284eb1902564b03803b721ffd2e9dbd3f
   bytes: 46149
 - path: conformance/contracts/fixtures/closure/fl-adm-03-non-public-containing-route.yaml
-  sha256: 7a2479bec2d5c8641e2354d8eb59ea9e4d9e899d014f34f7a0f28a2d764c853a
+  sha256: bbb8460d0a5a9b61f84efd28514b0825bea5e7a719d2aa01006a9877d178adc8
   bytes: 60851
 - path: conformance/contracts/fixtures/closure/fl-adm-04-document-update-continuation.yaml
-  sha256: 73e7fc71cca03811ed5db998c1171bd700a84c77cf8621f34cf2c03a4d0b8046
+  sha256: 7c5b83e6b5e5e37cf7e2650c51bb64d465753029f6dd2020cc901e691bb112c1
   bytes: 48144
 - path: conformance/contracts/fixtures/closure/fl-adm-05-graceful-termination.yaml
-  sha256: 31f76d9207f2fdf05f57c632c5e60da10f0a119a0095b604f35ae3fd2809a23b
+  sha256: ee0924345a837d91ca6c576d634cde5876ac17ee4c962b7f96799e170e1997ab
   bytes: 60359
 - path: conformance/contracts/fixtures/closure/fl-adm-06-order-representation-inline.yaml
-  sha256: 75a1487368aebbe16f680a7c569060f2d9692f117940eda66a294e2c936f3474
+  sha256: ea9b5421a3b06f2af4059171ed61277bab952a6e57b6dba7f5247490fa4e2016
   bytes: 62083
 - path: conformance/contracts/fixtures/closure/fl-adm-06-order-representation-reference.yaml
-  sha256: c8acf4d2393f7bf250670a2667b9c31947db96486ac763642fdff1191e38c62e
+  sha256: 6dad97ae34582422c98a8f6607223c3be75f740c2513e03c2f8e7a5f2e8a6b81
   bytes: 61680
 - path: conformance/contracts/fixtures/closure/fl-adm-06-order-representation-reversed.yaml
-  sha256: 0a19bd0657afbd805e85acd7cb23f50e3f501492189d20ba5343739bf0f05f3d
+  sha256: e37f0b5a8808d91a29a734463a76aeaff2bdf0987eb5f3727e4664fdb2fdff6c
   bytes: 61679
 - path: conformance/contracts/fixtures/closure/fl-adm-07-finite-cyclic-route.yaml
-  sha256: d5f86cfbe5670366e9b19de05730478b143340c5a088d7029aba96c329bb8c04
+  sha256: c941308f9889c6b746c2a399a91bb00612f2e8be7919ef1e246f7e813085072c
   bytes: 95166
 - path: conformance/contracts/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml
-  sha256: 4fcd22a6927faa96fad90b37745157d097c816b4756f6ed95fe4e47924288c4f
+  sha256: 40052c13f2101a87c585e0bb516464735c31d3f03002a84bcd479d8ded3e4989
   bytes: 921810
 - path: conformance/contracts/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml
-  sha256: c598497888e3f9e0b0d1d2cbdeaa3981796fa0d1080a95c81de0706e8f2fb521
+  sha256: 99406b4da49469c77e605783ad94d71f8fc1a59fd82c2f84759c54670272f537
   bytes: 921810
 - path: conformance/contracts/fixtures/closure/fl-adm-09-late-member-rollback.yaml
-  sha256: bed2a33db153e0a7dfa507e7424eb035f23726bb14568946d6575ee8c1e99319
+  sha256: acde1f0d83f5a92b9c36bf8e1f92281f0b8cc2282ffbf4773ee91f17020cd18a
   bytes: 42948
 - path: conformance/contracts/fixtures/closure/fl-adm-10-unknown-occurrence.yaml
-  sha256: 013890a48edf92202a2668b53109d7767e8727769b3bc6f44d3c17cd43f38133
+  sha256: 40044241e63840e862fefbc745657dd76d8a72a1af81a72d90e30a62e0af03b2
   bytes: 7572
 - path: conformance/contracts/fixtures/closure/traces/c-clo-04-default-policy-loop-gas.yaml
-  sha256: 66c77866c1f66ffc5ae6a1d21227db74e43879aa89f4368c565ca1ef5beb5911
+  sha256: aa873045059d1c2b646f65a4b8028e043ba3a771ae03d17146e26aea719b00ba
   bytes: 4325092
 - path: conformance/contracts/fixtures/disc/c-disc-01.yaml
   sha256: 7263181d5a8cc15f3c9470a0cbf81bddb60577a09757750be150e19df2f2d0a2
@@ -877,7 +877,7 @@ files:
   sha256: 83a15d3750f60f0b6d33acf055a40787d5acdb9f210ad1d6862dd776e4129b75
   bytes: 1457
 - path: conformance/contracts/fixtures/manifest.yaml
-  sha256: f2f1d0182463d13bc7485d848e2af5915df39e00793825c9c77d4df821987526
+  sha256: 85a48d6353b61e1975cf435e72cd9ccbdd7dabc88924bf7c1bdc1f295fbc0865
   bytes: 56157
 - path: conformance/contracts/fixtures/projection-catalog.yaml
   sha256: ff584d108bebb1f0d362eaa6f8ab41890c2b88e6d701150a1382013c6a7b3751
@@ -1045,7 +1045,7 @@ files:
   sha256: 3ee62ab029701c526f99b3cd50d638bc1d65120527d8ccd808cc8dd374bef118
   bytes: 646
 - path: conformance/contracts/representation/manifest.json
-  sha256: bba88fe1628a9655f8ad45e863d85d9d49e0d23e81f6e8233f4dd934ff5d079e
+  sha256: 558908baf4492fdf9f1b3f2b1b6495e380c6c457c3f257d88ec81c522eca9076
   bytes: 784
 - path: conformance/language/fixtures/HARNESS.md
   sha256: 8d2415587aaeb7b6e74fcb3c92bdf37f5657bb41d960f60ccb8ab2fc616ab99d
@@ -1660,9 +1660,9 @@ files:
   sha256: 645100a5de1a6bf46eb7f878046380ed33619031879f6cbe1dd3ba3eb4a21614
   bytes: 2849
 - path: specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
-  bytes: 357591
+  sha256: 08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172
+  bytes: 367842
 - path: specifications/blue-language-specification-1.0.md
   sha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   bytes: 217483
-packageIdentity: sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa
+packageIdentity: sha256:e913fdf2d136d793b6612931cf78568064bfb1f28a2a5b8881ea9a4bfd0b728c

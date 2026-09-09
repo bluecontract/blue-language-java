@@ -1,0 +1,235 @@
+{
+  "status": "PROPOSED_ENVELOPE_NEGATIVES_ONLY",
+  "vectors": [
+    {
+      "id": "BEGINNING-NULL",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": null
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-MISSING_OBJECT",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {}
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-STRING",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": "BEGINNING"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-ARRAY",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": []
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-WRONG_TAG",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "kind": "beginning"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-EXTRA_KEY",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING",
+            "timestampUs": "0"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-MIXED_KEY",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING",
+            "timelineBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-NUMBER",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": 0
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-BOOLEAN",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": false
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-MISSING_BOUND",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-EXTRA_ADMISSION",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_NOW",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          },
+          "trusted": "true"
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-FULL_HISTORY",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FULL_HISTORY",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-FROM_FRONTIER",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "FROM_FRONTIER",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-CREATED",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "CREATED_IN_OPERATION",
+          "creatorOperationIdentity": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "birthOccurrenceIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          }
+        }
+      },
+      "expected": "REJECT"
+    },
+    {
+      "id": "BEGINNING-UNKNOWN_MODE",
+      "constructor": "history",
+      "input": {
+        "documentId": "A",
+        "initialDocumentBlueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
+        "runtimeSemanticsIdentity": "sha256:17cfa4ea154f563b007b774a236e48376b80d4d6a4994e8dfab0ce82bd2176f5",
+        "admission": {
+          "mode": "EMPTY",
+          "lowerExclusiveOrder": {
+            "kind": "BEGINNING"
+          }
+        }
+      },
+      "expected": "REJECT"
+    }
+  ]
+}

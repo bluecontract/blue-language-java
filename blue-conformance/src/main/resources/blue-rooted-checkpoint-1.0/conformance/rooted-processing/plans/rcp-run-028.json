@@ -1,0 +1,51 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-028",
+  "title": "Actual packaged MyOS atomic publication and response-loss matrix",
+  "productionStatus": "NOT_RUN",
+  "inputIdentityPolicy": "Exact included source files; consumer embeds saved epoch-zero child reference. Fork real claimed command database preserving command UUID and exact inputs. No fabricated claims or source epochs.",
+  "setup": [],
+  "variants": {
+    "baseline": [
+      {
+        "stepId": "baseline-0001",
+        "op": "actualPackagedJvmFaultMatrix",
+        "lanes": [
+          "LIVE",
+          "OWNED_RETAINED"
+        ],
+        "cuts": [
+          "beforeCommit",
+          "afterCommitBeforeAck",
+          "beforeNotification",
+          "afterCursorWriteAttempt"
+        ]
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "PACKAGED_PROCESS_FAULT_MATRIX",
+    "faultCuts": {
+      "lanes": [
+        "LIVE",
+        "OWNED_RETAINED"
+      ],
+      "cuts": [
+        "beforeCommit",
+        "afterCommitBeforeAck",
+        "beforeNotification",
+        "afterCursorWriteAttempt"
+      ],
+      "maxConcurrentLanes": 1,
+      "startupSeconds": 60,
+      "cutSeconds": 60,
+      "commandSeconds": 45,
+      "freshJvmInstances": 36,
+      "control": "fork of actual PROCESSING claim H2 backup",
+      "termination": "owned Popen SIGKILL after exact fsynced cut marker",
+      "coldRead": "separate read-only JDBC JVM before Spring recovery",
+      "duplicates": "same command UUID, key and exact request",
+      "gas": "each actual invocation separately checked against unchanged tariff and full trace"
+    }
+  }
+}

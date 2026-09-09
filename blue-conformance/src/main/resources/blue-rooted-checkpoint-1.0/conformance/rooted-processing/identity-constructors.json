@@ -42,6 +42,40 @@
         "operationOwnerIdentity",
         "deliveryBasisIdentity"
       ]
+    },
+    "ROOTED_CHECKPOINT_REFERENCE_PROOF": {
+      "domain": "blue-rooted-checkpoint-reference-proof/1.0-draft.2",
+      "schema": "schemas/checkpoint-reference-proof.schema.json",
+      "fields": [
+        "documentId",
+        "beforeBlueId",
+        "afterBlueId",
+        "checkpointInputClosureIdentity",
+        "checkpointOutputClosureIdentity",
+        "rootProcessingContextIdentity",
+        "rootedInvocationIdentity",
+        "rootedCommitCompanionIdentity"
+      ],
+      "canonicalEncoding": "Contracts domain/value SHA-256 envelope; epoch is a nonnegative safe JSON integer; other operands are strings. See identity/checkpoint_constructors.py. Hashing is not authentication."
+    },
+    "ROOTED_CHECKPOINT_REPRESENTATION_POSITION": {
+      "domain": "blue-rooted-checkpoint-representation-position/1.0-draft.2",
+      "schema": "schemas/checkpoint-representation-position.schema.json",
+      "fields": [
+        "documentId",
+        "epoch",
+        "anchorReceiptIdentity",
+        "predecessorPositionIdentity",
+        "beforeBlueId",
+        "afterBlueId",
+        "transitionReceiptIdentity",
+        "originalInvocationIdentity",
+        "inputClosureIdentity",
+        "outputClosureIdentity",
+        "commitCompanionIdentity",
+        "checkpointReferenceProofIdentity"
+      ],
+      "canonicalEncoding": "Contracts domain/value SHA-256 envelope; epoch is a nonnegative safe JSON integer; other operands are strings. See identity/checkpoint_constructors.py. Hashing is not authentication."
     }
   },
   "constraints": [
@@ -49,6 +83,8 @@
     "Only the selected root live SCC canonicalizes view entrypoints",
     "Original semantic Operation Request target remains inside exact cause",
     "Freeze entry context across dynamic merge/split/retry",
-    "Production identity generation/release conformance NOT_RUN"
+    "Production identity generation/release conformance NOT_RUN",
+    "FROM_NOW alone may use the exact closed BEGINNING bound; actual beginning admission requires RCP-ID-01a authority independently of envelope hashing",
+    "Checkpoint-reference positions require the exact original processor-derived boundary proof and both base and rooted committed authority under Contracts \u00a72.3a.1; envelopes alone do not prove permission or history continuity"
   ]
 }

@@ -102,10 +102,10 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:ee425e7689c7d69360f839310ea63e928f317647ee82bade1d274fd1d83dff86
   closureIdentity: sha256:11b2dd8958d3728349173118cc45676650366c7308a608f321e60e315e2214a8
-  invocationIdentity: sha256:2ff8e051000facd95985d1d47cd13b39cedc38e7ff431c6ec5ddf1dd4123f7be
+  invocationIdentity: sha256:00afab6ae1246da3c37cdc0a59c2bcb61a165893806a1e4793038ba40344e508
   environment:
     blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
-    contractsSpecificationIdentity: sha256:0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
+    contractsSpecificationIdentity: sha256:08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172
     runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -190,12 +190,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c
-    cyclicProofVerifierIdentity: sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84
+    cyclicFinalizerIdentity: sha256:d768500d434ddfb7b4150472d91387809af17f4dc80f68c2d01e48d4f2a4dde1
+    cyclicProofVerifierIdentity: sha256:a6559a6763a49873bbdac411bb0ecdbccc7220e98c52468cc0219f003af77da2
 expected:
   attemptOutcome: Complete
   status: success
-  invocationIdentity: sha256:2ff8e051000facd95985d1d47cd13b39cedc38e7ff431c6ec5ddf1dd4123f7be
+  invocationIdentity: sha256:00afab6ae1246da3c37cdc0a59c2bcb61a165893806a1e4793038ba40344e508
   inputClosureIdentity: sha256:11b2dd8958d3728349173118cc45676650366c7308a608f321e60e315e2214a8
   outputClosureIdentity: sha256:11b2dd8958d3728349173118cc45676650366c7308a608f321e60e315e2214a8
   atomic: true
@@ -338,8 +338,8 @@ expected:
     documentId: self
     reason: admission.component-edge
   platformCommitCompanion:
-    companionIdentity: sha256:71c7588fd8b11ff20c351e476a11865c2c0b7367070e976a1bacbb4c435d80c8
-    invocationIdentity: sha256:2ff8e051000facd95985d1d47cd13b39cedc38e7ff431c6ec5ddf1dd4123f7be
+    companionIdentity: sha256:98fce4817e7d898ca2de5a55cf6431f0217d5a312f757869207749b35e012af7
+    invocationIdentity: sha256:00afab6ae1246da3c37cdc0a59c2bcb61a165893806a1e4793038ba40344e508
     inputClosureIdentity: sha256:11b2dd8958d3728349173118cc45676650366c7308a608f321e60e315e2214a8
     outputClosureIdentity: sha256:11b2dd8958d3728349173118cc45676650366c7308a608f321e60e315e2214a8
     expectedInputGraphGeneration: 1
@@ -369,7 +369,7 @@ expected:
     gasTraceIdentity: sha256:02da3e7d4666919b76d75eb22f8b776d6d292bc4dd5a729d0f31fbac921959b2
     managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
     blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
-    contractsSpecificationIdentity: sha256:0d7496790fb87d4589628c81fa8ca5e72b7d955458e20bc393f7837115ecb3b7
+    contractsSpecificationIdentity: sha256:08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
     managedBindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     exactNodeProviderDomainIdentity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
@@ -377,8 +377,8 @@ expected:
     runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     portableLimitPolicyIdentity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
-    cyclicFinalizerIdentity: sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c
-    cyclicProofVerifierIdentity: sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84
+    cyclicFinalizerIdentity: sha256:d768500d434ddfb7b4150472d91387809af17f4dc80f68c2d01e48d4f2a4dde1
+    cyclicProofVerifierIdentity: sha256:a6559a6763a49873bbdac411bb0ecdbccc7220e98c52468cc0219f003af77da2
 runtime:
   handlers: {}
   initializationHandlers: {}

@@ -109,6 +109,17 @@ final class ClosureIdentityService {
                 "documentId", "epoch", "anchorReceiptIdentity", "predecessorPositionIdentity",
                 "beforeBlueId", "afterBlueId", "transitionReceiptIdentity", "originalInvocationIdentity",
                 "inputClosureIdentity", "outputClosureIdentity", "commitCompanionIdentity"),
+        ROOTED_CHECKPOINT_REFERENCE_PROOF(
+                "blue-rooted-checkpoint-reference-proof/1.0-draft.2",
+                "documentId", "beforeBlueId", "afterBlueId", "checkpointInputClosureIdentity",
+                "checkpointOutputClosureIdentity", "rootProcessingContextIdentity", "rootedInvocationIdentity",
+                "rootedCommitCompanionIdentity"),
+        ROOTED_CHECKPOINT_REPRESENTATION_POSITION(
+                "blue-rooted-checkpoint-representation-position/1.0-draft.2",
+                "documentId", "epoch", "anchorReceiptIdentity", "predecessorPositionIdentity",
+                "beforeBlueId", "afterBlueId", "transitionReceiptIdentity", "originalInvocationIdentity",
+                "inputClosureIdentity", "outputClosureIdentity", "commitCompanionIdentity",
+                "checkpointReferenceProofIdentity"),
         MANAGED_REPRESENTATION_CAUSE(
                 "blue-managed-representation-step/1",
                 "targetOccurrenceIdentity", "representationPositionIdentity", "targetPositionIdentity",
@@ -1048,6 +1059,8 @@ final class ClosureIdentityService {
             case MANAGED_REVISION_CAUSE:
                 validateRevision(requireObject(value, OBJECT_VALUE), true);
                 return;
+            case ROOTED_CHECKPOINT_REFERENCE_PROOF:
+            case ROOTED_CHECKPOINT_REPRESENTATION_POSITION:
             case MANAGED_REPRESENTATION_POSITION:
             case MANAGED_REPRESENTATION_CAUSE:
                 Map<String, Object> representation = requireObject(value, OBJECT_VALUE);

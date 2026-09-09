@@ -90,30 +90,46 @@
               "const": "FROM_NOW"
             },
             "lowerExclusiveOrder": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "timestampUs",
-                "timelineBlueId",
-                "entryBlueId"
-              ],
-              "properties": {
-                "timestampUs": {
-                  "type": "string",
-                  "pattern": "^(0|[1-9][0-9]*)$",
-                  "description": "Also <= 9007199254740991."
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "timestampUs",
+                    "timelineBlueId",
+                    "entryBlueId"
+                  ],
+                  "properties": {
+                    "timestampUs": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$",
+                      "description": "Also <= 9007199254740991."
+                    },
+                    "timelineBlueId": {
+                      "type": "string",
+                      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                      "description": "Grammar only; production content evidence must independently authenticate."
+                    },
+                    "entryBlueId": {
+                      "type": "string",
+                      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                      "description": "Grammar only; production content evidence must independently authenticate."
+                    }
+                  }
                 },
-                "timelineBlueId": {
-                  "type": "string",
-                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
-                  "description": "Grammar only; production content evidence must independently authenticate."
-                },
-                "entryBlueId": {
-                  "type": "string",
-                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
-                  "description": "Grammar only; production content evidence must independently authenticate."
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "BEGINNING"
+                    }
+                  }
                 }
-              }
+              ]
             }
           }
         },

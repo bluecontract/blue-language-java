@@ -1085,6 +1085,50 @@ does not authorize replacing or omitting bytes at its former source path.
 Only authenticated live references may be normalized in the body comparison;
 the complete remainder of the historical target must still agree exactly.
 
+
+#### 2.3a.1 Rooted checkpoint-only representation positions (RCP-1 draft.2)
+
+For the separately advertised RCP-1 draft.2 profile only, the original committed
+position MAY additionally be an entry owner's containing-reference change
+caused solely by checkpoint-settlement Direct Writes in read-only root-local
+dependencies, as permitted by §5.7.1. The actual processor MUST prove that the
+owner's exact body did not change at any WORK, initialization or termination
+boundary, and changed only at the typed CHECKPOINT_SETTLEMENT boundary. The
+owner remains at the same epoch and lifecycle, emits no Root event, has no
+owner-local checkpoint write, and has no body delta outside authenticated
+same-lineage containing references. The full occurrence inventory, including
+retired rows, is compared bijectively. Graph changes are outside this class.
+The original LIVE direct-receiving set is nonempty and wholly unowned; its
+local dependency effects do not become independent source receipts or outboxes.
+
+The classifier is processor-derived execution evidence, not an author field,
+caller-provided owner list or unbound diagnostic. Its closed proof constructor
+is `blue-rooted-checkpoint-reference-proof/1.0-draft.2`, containing exactly
+`documentId`, `beforeBlueId`, `afterBlueId`, `checkpointInputClosureIdentity`,
+`checkpointOutputClosureIdentity`, `rootProcessingContextIdentity`,
+`rootedInvocationIdentity`, and `rootedCommitCompanionIdentity`. The checkpoint
+closure identities name the complete exact snapshots immediately before and
+after the actual typed boundary. The wrappers name the original rooted
+operation and its companion, not the later application. Each proof identity
+uses the same domain-and-canonical-record SHA-256 envelope convention as the
+other Contracts identity constructors. A recomputable proof hash is not
+external authority: the host MUST authenticate it against the processor-derived
+proof and rooted terminal evidence of the same immutable original publication
+which retained the ordered representation row and its original head fence.
+
+Such a position uses the distinct closed constructor
+`blue-rooted-checkpoint-representation-position/1.0-draft.2`. It has every field
+of `blue-managed-representation-position/1` plus exactly
+`checkpointReferenceProofIdentity`. The old pending-target class retains its
+original predicate, constructor and exact identities, including under this
+profile. The new class requires both original base and rooted authority; it
+is not accepted by an unamended profile. Historical application still uses one
+`ManagedRepresentationCause`, the unchanged occurrence/anchor/predecessor and
+fixed target rules, ordinary metering, complete rollback and original source
+immutability. Neither LIVE replay, new numbered epochs nor source emissions
+are manufactured to traverse this position. Existing unknown/forged/omitted
+position and ordinary body/event mutations continue to reject.
+
 An inactive occurrence gains optional `pendingRepresentationPosition`, a
 closed cursor record with exactly `anchorReceiptIdentity`, `positionIdentity`,
 `targetPositionIdentity`, and nullable `nextRevisionReceiptIdentity`. The three
@@ -7055,5 +7099,8 @@ how many containing occurrences exist.
 ## Appendix E — Rooted checkpoint profile and conformance
 
 The normative companion [RCP-1](rooted-checkpoint-processing-1.0-draft.md) defines selected-root discovery, checkpoint-driven next-input selection, history and evidence roles, gas/publication qualification and the candidate identity wrappers. Its fixture obligations are in `../conformance/rooted-processing/`.
+
+This candidate adopts RCP-ID-01a authenticated beginning-of-history FROM_NOW admission in the exact companion with SHA-256 `7f2ae53757f51bca7e8d0f66b0cdbac05591cdc6b468770b22c60dd9226fad38`. Its closed BEGINNING bound is admission evidence, not a Timeline Entry or accepted-input checkpoint. Existing ownership, gas, historical receipts and nonempty admission forms remain unchanged.
+
 
 The simple contract is: driver selects the earliest pending input across the selected root's exact views; processor settles that one supplied input. This does not move Timeline completeness or authority into Contracts. The unchanged lower-level rules remain required. Legacy exact fixture results are preserved as legacy inputs, not automatically re-certified for this changed scope.

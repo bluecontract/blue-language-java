@@ -11,31 +11,49 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
+        "alias": "source",
         "source": "examples/counter.yaml"
       },
       {
-        "alias": "parent",
+        "alias": "consumer",
         "source": "examples/parent.yaml"
       }
     ],
-    "steps": [
-      {
-        "op": "scenario",
-        "name": "CRASH_AND_LOST_RESPONSE_MATRIX",
+    "steps": [],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-028.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-028.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "PACKAGED_PROCESS_FAULT_MATRIX",
+      "faultCuts": {
+        "lanes": [
+          "LIVE",
+          "OWNED_RETAINED"
+        ],
         "cuts": [
           "beforeCommit",
           "afterCommitBeforeAck",
           "beforeNotification",
           "afterCursorWriteAttempt"
         ],
-        "bind": "s"
+        "maxConcurrentLanes": 1,
+        "startupSeconds": 60,
+        "cutSeconds": 60,
+        "commandSeconds": 45,
+        "freshJvmInstances": 36,
+        "control": "fork of actual PROCESSING claim H2 backup",
+        "termination": "owned Popen SIGKILL after exact fsynced cut marker",
+        "coldRead": "separate read-only JDBC JVM before Spring recovery",
+        "duplicates": "same command UUID, key and exact request",
+        "gas": "each actual invocation separately checked against unchanged tariff and full trace"
       }
-    ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
-  },
-  "expected": {
+    },
     "assertions": [
       {
         "actual": "s.partialResultsPublished",

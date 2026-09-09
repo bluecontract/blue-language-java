@@ -980,6 +980,22 @@ def reviewed_representation_transition(before_files, after_files):
     return review
 
 
+ROOTED_COMBINED_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-combined-amendment-transition.json")
+ROOTED_COMBINED_REVIEW_INPUT_SHA256 = "03b572322640c4872fd0882ce374451400827dbe7ec56c339c750113d14ee1a4"
+
+
+def reviewed_rooted_combined_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the combined rooted amendment."""
+    data = ROOTED_COMBINED_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_COMBINED_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed rooted-combined baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1436,6 +1452,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
     reviewed_transition = reviewed_typed_patch_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_representation_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_combined_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1482,7 +1500,9 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (REPRESENTATION_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (ROOTED_COMBINED_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-combined-amendment-exact-proposed-transition"
+                else REPRESENTATION_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "historical-representation-exact-proposed-transition"
                 else TYPED_PATCH_REVIEW_INPUT_SHA256),
             "beforeSourceCommit": reviewed_transition["before"]["sourceCommit"],

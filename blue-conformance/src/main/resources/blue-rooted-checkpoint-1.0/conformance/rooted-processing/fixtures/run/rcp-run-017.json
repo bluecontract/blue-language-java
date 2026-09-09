@@ -2,48 +2,82 @@
   "schema": "blue-rooted-processing-fixture/1.0-draft.1",
   "id": "RCP-RUN-017",
   "category": "RUN",
-  "title": "Same-epoch representation chain uses exact predecessors",
+  "title": "Same-epoch pending-target and rooted checkpoint chains use exact predecessors",
   "kind": "runtime",
   "requirements": [
-    "RCP-HISTORY-06"
+    "RCP-HISTORY-06",
+    "RCP-OWN-02",
+    "RCP-OWN-04",
+    "RCP-CAUSE-01"
   ],
   "input": {
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
-      }
-    ],
-    "steps": [
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml"
+      },
       {
-        "op": "scenario",
-        "name": "REPRESENTATION_CHAIN_AND_FORGERIES",
-        "bind": "s"
+        "alias": "C",
+        "source": "examples/iteration2/representation-017-consumer.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/representation-017-legacy-a.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/representation-017-legacy-b.yaml"
+      },
+      {
+        "alias": "legacyC",
+        "source": "examples/iteration2/representation-017-legacy-c.yaml"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "steps": [],
+    "variants": [
+      "checkpoint-tail",
+      "checkpoint-intermediate",
+      "local-work",
+      "owned-checkpoint",
+      "pending-target"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-017.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-017.json"
   },
   "expected": {
     "assertions": [
       {
-        "actual": "s.validChainApplied",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.forgedSkippedReorderedChainsRejected",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.oldReceiptsUnchanged",
-        "op": "isTrue"
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "verifyIdentityEnvelopes": true,
+      "representationHistory": {
+        "maxSelections": 32,
+        "checkpointPositionCount": 2,
+        "pendingPositionCount": 4,
+        "sourceEpoch": 0,
+        "pendingEpoch": 2,
+        "variants": [
+          "checkpoint-tail",
+          "checkpoint-intermediate",
+          "local-work",
+          "owned-checkpoint",
+          "pending-target"
+        ]
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
