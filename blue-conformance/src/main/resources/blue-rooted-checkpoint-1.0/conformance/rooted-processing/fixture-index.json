@@ -985,7 +985,7 @@
         "RCP-PROGRESS-05"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL"
     },
     {
       "id": "RCP-RUN-028",

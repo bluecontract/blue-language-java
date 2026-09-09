@@ -1,0 +1,225 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-027",
+  "title": "Actual source-owned missing exact body wait resumes the original durable MyOS operation",
+  "inputIdentityPolicy": "Use packaged isolated AuthoredDocumentIdentity for missing body; do not prepare it in the live exact store. Preserve actual command UUID, request JSON and exact input entry across continuation.",
+  "setup": [
+    {
+      "op": "hostStart",
+      "isolatedDatabase": true,
+      "port": 0,
+      "executionPolicy": "release-default",
+      "stepId": "setup-001"
+    },
+    {
+      "op": "hostSubmit",
+      "commandType": "CREATE_TIMELINE",
+      "payload": {
+        "timelineId": "labs/dynamic-resource/alice",
+        "actorId": "alice"
+      },
+      "idempotencyKey": "rcp-027-timeline",
+      "capture": "timeline",
+      "stepId": "setup-002"
+    },
+    {
+      "op": "hostSubmit",
+      "commandType": "START_DOCUMENT",
+      "source": "examples/iteration2/resource-host.yaml",
+      "publicRoot": true,
+      "activation": "IMPORT_FULL_HISTORY",
+      "idempotencyKey": "rcp-027-host",
+      "capture": "H",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "hostIdentify",
+      "source": "examples/iteration2/resource-correct.yaml",
+      "capture": "missing",
+      "requireAbsentFromLiveProvider": true,
+      "stepId": "setup-004"
+    },
+    {
+      "op": "hostIdentify",
+      "source": "examples/iteration2/resource-wrong.yaml",
+      "capture": "wrong",
+      "requireAbsentFromLiveProvider": true,
+      "stepId": "setup-005"
+    },
+    {
+      "op": "hostPrepareSource",
+      "source": "examples/iteration2/resource-child.template.yaml",
+      "substitutions": {
+        "<MISSING_BLUE_ID>": {
+          "$capture": "missing.blueId"
+        }
+      },
+      "capture": "child",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "hostSnapshot",
+      "capture": "beforeOperation",
+      "stepId": "setup-007"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "hostSubmit",
+        "commandType": "EXECUTE_OPERATION",
+        "target": {
+          "$capture": "H.sessionId"
+        },
+        "operation": "attach",
+        "timelineId": "labs/dynamic-resource/alice",
+        "channel": "ownerChannel",
+        "requestField": "child",
+        "requestSource": {
+          "$capture": "child.authoredYaml"
+        },
+        "mode": "EXECUTE",
+        "idempotencyKey": "rcp-027-attach",
+        "capture": "blocked",
+        "expectedStatus": "BLOCKED",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "hostAwaitSourceWait",
+        "commandId": {
+          "$capture": "blocked.commandId"
+        },
+        "capture": "sourceWait",
+        "sourceWaitSeconds": 45,
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "blockedState",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "hostRebuild",
+        "capture": "pendingRestart",
+        "retainBlockedCommand": true,
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "pendingRestartState",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "hostUpload",
+        "expectedBlueId": {
+          "$capture": "missing.blueId"
+        },
+        "source": "examples/iteration2/resource-wrong.yaml",
+        "expectError": "EXACT_NODE_IDENTITY_MISMATCH",
+        "capture": "wrongUpload",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "wrongState",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "hostUpload",
+        "expectedBlueId": {
+          "$capture": "missing.blueId"
+        },
+        "source": "examples/iteration2/resource-correct.yaml",
+        "capture": "correctUpload",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "hostAwait",
+        "commandId": {
+          "$capture": "blocked.commandId"
+        },
+        "expectedStatus": "APPLIED",
+        "capture": "subject",
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "appliedState",
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "hostUpload",
+        "expectedBlueId": {
+          "$capture": "missing.blueId"
+        },
+        "source": "examples/iteration2/resource-correct.yaml",
+        "capture": "duplicateUpload",
+        "stepId": "baseline-011"
+      },
+      {
+        "op": "hostDuplicate",
+        "commandCapture": "blocked",
+        "capture": "duplicateSubmission",
+        "stepId": "baseline-012"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "duplicateState",
+        "stepId": "baseline-013"
+      },
+      {
+        "op": "hostRebuild",
+        "capture": "completedRestart",
+        "requireVerifiedReplay": true,
+        "stepId": "baseline-014"
+      },
+      {
+        "op": "hostSnapshot",
+        "capture": "completedRestartState",
+        "stepId": "baseline-015"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "PACKAGED_RESOURCE_CONTINUATION",
+    "resourceContinuation": {
+      "observationField": "resourceContinuation",
+      "sourceFiles": [
+        "examples/iteration2/resource-host.yaml",
+        "examples/iteration2/resource-child.template.yaml",
+        "examples/iteration2/resource-correct.yaml",
+        "examples/iteration2/resource-wrong.yaml"
+      ],
+      "commandSeconds": 45,
+      "sourceWaitSeconds": 45,
+      "restartBoundary": "MYOS_RUNTIME_REBUILDER",
+      "wrongUploadCode": "EXACT_NODE_IDENTITY_MISMATCH",
+      "captureMultiplicity": "exact frozen sourceHistoryCaptures from original typed suspension",
+      "sourceMultiplicity": "one next-source command per retained exact selection; same source command resumes after its exact body upload",
+      "sourceKind": "ADMISSION for the included timeless authored child; no prepopulation, fabricated history or source business entry",
+      "entryIdentity": "same exact saved entry and request through capture, source prerequisite, original continuation and replay",
+      "gas": "each actual complete processor invocation separately checked; pre-admission typed waits have no fabricated terminal or charge"
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "hostAwait",
+    "hostAwaitSourceWait",
+    "hostDuplicate",
+    "hostIdentify",
+    "hostPrepareSource",
+    "hostRebuild",
+    "hostSnapshot",
+    "hostStart",
+    "hostSubmit",
+    "hostUpload"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-027.json",
+    "sha256": "68cf7d24b81faa66f14f1374167fcfea866c85e6ddcbb90d4d99e7baf520d074"
+  },
+  "setupBoundary": {
+    "activation": "IMPORT_FULL_HISTORY",
+    "reason": "Explicit included fixture admission basis; source history is separately admitted through real source-owned commands."
+  }
+}

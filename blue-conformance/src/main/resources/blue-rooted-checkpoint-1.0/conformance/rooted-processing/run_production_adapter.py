@@ -1416,7 +1416,7 @@ def check_runs(f,run_records,weights,calibration=None):
     observations={};count=0
     for name in names:
         rec=run_records[name]
-        if contract.get('faultCuts'):
+        if contract.get('faultCuts') or contract.get('resourceContinuation'):
             require(isinstance(rec,dict) and set(rec)>={'transcript','output'},'RUN_RECORD_FIELDS')
         else:
             require(isinstance(rec,dict) and set(rec)>={'transcript','output','restart'},'RUN_RECORD_FIELDS')
@@ -1429,6 +1429,12 @@ def check_runs(f,run_records,weights,calibration=None):
             from check_fault_cuts import check_fault_cuts
             check_fault_cuts(rec,contract['faultCuts'],weights,require,exact_equal,gas_check)
             observations[name]=o;count+=8
+            continue
+        if contract.get('resourceContinuation'):
+            require(scope=='PACKAGED_RESOURCE_CONTINUATION' and names==['baseline'],'RESOURCE_CONTRACT_SCOPE')
+            from check_resource_continuation import check_resource_continuation
+            count+=check_resource_continuation(rec,contract['resourceContinuation'],weights,require,exact_equal,gas_check)
+            observations[name]=o
             continue
         structured_output(o,weights)
         require(o['causeKind']==contract['causeKind'],'WRONG_CAUSE_KIND')
@@ -1595,7 +1601,7 @@ def main():
         out=evidenceRoot/f['id'];out.mkdir()
         plan=json.loads((suite/f['input']['literalPlan']).read_text())
         request={'schema':'blue-rooted-adapter-request/1.0-draft.2','fixture':f,'plan':plan,'sourceFiles':literal_sources(suite,f,plan),'artifactPath':str(a.artifact.resolve()),'artifactSha256':art,'embeddedDependencies':deps,'sourceCommits':lock['sourceCommits'],'sourceLockSha256':a.source_lock_sha256,'specificationSetSha256':spec,'requestNonce':secrets.token_hex(16),'evidenceDirectory':str(out.resolve())}
-        if f['id']=='RCP-RUN-028':request['sourceLockPath']=str(a.source_lock.resolve())
+        if f['id'] in ('RCP-RUN-027','RCP-RUN-028'):request['sourceLockPath']=str(a.source_lock.resolve())
         request['requestSha256']=digest_bytes(json.dumps(request,sort_keys=True,separators=(',',':')).encode())
         (out/'request.json').write_text(json.dumps(request,indent=2)+'\n');start=time.perf_counter()
         try:

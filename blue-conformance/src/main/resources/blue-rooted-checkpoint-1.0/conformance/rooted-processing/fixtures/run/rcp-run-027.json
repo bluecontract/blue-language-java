@@ -12,30 +12,53 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "resource-host",
+        "source": "examples/iteration2/resource-host.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
-      }
-    ],
-    "steps": [
-      {
-        "op": "scenario",
-        "name": "MISSING_CONTENT_WRONG_UPLOAD_RIGHT_UPLOAD",
-        "bind": "s"
+        "alias": "resource-child.template",
+        "source": "examples/iteration2/resource-child.template.yaml"
       },
       {
-        "op": "restartAndCompare",
-        "target": "s",
-        "bind": "restart"
+        "alias": "resource-correct",
+        "source": "examples/iteration2/resource-correct.yaml"
+      },
+      {
+        "alias": "resource-wrong",
+        "source": "examples/iteration2/resource-wrong.yaml"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "steps": [],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-027.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-027.json"
   },
   "expected": {
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "PACKAGED_RESOURCE_CONTINUATION",
+      "resourceContinuation": {
+        "observationField": "resourceContinuation",
+        "sourceFiles": [
+          "examples/iteration2/resource-host.yaml",
+          "examples/iteration2/resource-child.template.yaml",
+          "examples/iteration2/resource-correct.yaml",
+          "examples/iteration2/resource-wrong.yaml"
+        ],
+        "commandSeconds": 45,
+        "sourceWaitSeconds": 45,
+        "restartBoundary": "MYOS_RUNTIME_REBUILDER",
+        "wrongUploadCode": "EXACT_NODE_IDENTITY_MISMATCH",
+        "captureMultiplicity": "exact frozen sourceHistoryCaptures from original typed suspension",
+        "sourceMultiplicity": "one next-source command per retained exact selection; same source command resumes after its exact body upload",
+        "sourceKind": "ADMISSION for the included timeless authored child; no prepopulation, fabricated history or source business entry",
+        "entryIdentity": "same exact saved entry and request through capture, source prerequisite, original continuation and replay",
+        "gas": "each actual complete processor invocation separately checked; pre-admission typed waits have no fabricated terminal or charge"
+      }
+    },
     "assertions": [
       {
         "actual": "s.wrongUploadSatisfiedDemand",

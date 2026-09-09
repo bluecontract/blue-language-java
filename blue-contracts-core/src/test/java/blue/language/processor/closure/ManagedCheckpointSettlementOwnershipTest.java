@@ -493,13 +493,219 @@ final class ManagedCheckpointSettlementOwnershipTest {
         }
     }
 
+    @Test
+    void rootedCheckpointReferenceGraphAcceptsActualCompleteRebindsAndProcessorProof() {
+        try (Fixture fixture = new Fixture(true)) {
+            Run run = fixture.rootedCheckpointRun(fixture.rootedPair(true), 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot output = run.result.rootedProjection().resultingSnapshot();
+            assertTrue(RootedCheckpointReferenceGraph.verifies(run.input.snapshot(), output, run.result.graphChanges()));
+            for (AffectedClosureSnapshot boundary : run.result.rootedProjection().topologyBoundaries())
+                assertTrue(RootedCheckpointReferenceGraph.sameTopology(run.input.snapshot(), boundary));
+            assertEquals(run.input.snapshot().graphGeneration(), output.graphGeneration());
+            AffectedClosureSnapshot wrongGeneration = new AffectedClosureSnapshot(output.closureIdentity(),
+                    output.graphGeneration() + 1L, output.managedDocuments(), output.occurrences(),
+                    output.occurrenceBindingSetIdentity(), output.components(), output.publicRootDocumentIds());
+            assertFalse(RootedCheckpointReferenceGraph.verifies(run.input.snapshot(), wrongGeneration, run.result.graphChanges()));
+            assertEquals(run.input.snapshot().managedDocument(A).epoch(), output.managedDocument(A).epoch());
+            assertTrue(run.result.totalGas() > 0L);
+        }
+    }
+
+    @Test
+    void rootedCheckpointReferenceGraphRejectsMissingDuplicateDetachedAndForgedReceipts() {
+        try (Fixture fixture = new Fixture(true)) {
+            AffectedClosureSnapshot input = fixture.rootedPair(true);
+            Run run = fixture.rootedCheckpointRun(input, 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot output = run.result.rootedProjection().resultingSnapshot();
+            GraphChange first = run.result.graphChanges().get(0), second = run.result.graphChanges().get(1);
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Collections.emptyList()));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Collections.singletonList(first)));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Arrays.asList(first, first)));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Arrays.asList(first, second, second)));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Arrays.asList(second, first)));
+            List<GraphChange> invalid = Arrays.asList(
+                    new GraphChange(9L, GraphChange.Kind.REBIND, A, first.sourcePath(), first.before(), first.after()),
+                    new GraphChange(0L, GraphChange.Kind.REBIND, B, first.sourcePath(), first.before(), first.after()),
+                    new GraphChange(0L, GraphChange.Kind.REBIND, A, "/unknown", first.before(), first.after()),
+                    new GraphChange(0L, GraphChange.Kind.ADD, A, first.sourcePath(), null, first.after()),
+                    new GraphChange(0L, GraphChange.Kind.REMOVE, A, first.sourcePath(), first.before(), null),
+                    new GraphChange(0L, GraphChange.Kind.REBIND, A, first.sourcePath(),
+                            graphSide(first.before(), hash('e'), first.beforeTargetBlueId()), first.after()),
+                    new GraphChange(0L, GraphChange.Kind.REBIND, A, first.sourcePath(), first.before(),
+                            graphSide(first.after(), hash('f'), first.afterTargetBlueId())),
+                    new GraphChange(0L, GraphChange.Kind.REBIND, A, first.sourcePath(), first.before(),
+                            graphSide(first.after(), first.afterBindingIdentity(), first.beforeTargetBlueId())));
+            for (GraphChange replacement : invalid)
+                assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, Arrays.asList(replacement, second)),
+                        "Every receipt side, location, kind and ordinal must match the exact inventory");
+            Run other = fixture.rootedCheckpointRun(input, 2L);
+            assertActualCheckpointReference(other, 2);
+            assertNotEquals(run.result.outputClosureIdentity(), other.result.outputClosureIdentity());
+            assertFalse(RootedCheckpointReferenceGraph.verifies(input, output, other.result.graphChanges()),
+                    "Another genuine checkpoint's graph evidence is not this publication's evidence");
+        }
+    }
+
+    @Test
+    void rootedCheckpointReferenceGraphRejectsInventoryOmissionDuplicationAndForgedBinding() {
+        try (Fixture fixture = new Fixture(true)) {
+            Run run = fixture.rootedCheckpointRun(fixture.rootedPair(true), 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot output = run.result.rootedProjection().resultingSnapshot();
+            List<ManagedOccurrenceBinding> rows = output.occurrences();
+            AffectedClosureSnapshot missing = fixture.snapshot(snapshotBodies(output), Collections.singletonList(rows.get(0)));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(run.input.snapshot(), missing, run.result.graphChanges()));
+            assertThrows(IllegalArgumentException.class, () -> new AffectedClosureSnapshot(output.closureIdentity(),
+                    output.graphGeneration(), output.managedDocuments(), Arrays.asList(rows.get(0), rows.get(0)),
+                    output.occurrenceBindingSetIdentity(), output.components(), output.publicRootDocumentIds()));
+            ManagedOccurrenceBinding old = rows.get(0);
+            ManagedOccurrenceBinding forged = new ManagedOccurrenceBinding(old.occurrenceIdentity(), hash('f'),
+                    old.bindingPolicyIdentity(), old.sourceDocumentId(), old.sourceAddress(), old.targetDocumentId(),
+                    old.expectedTargetBlueId(), old.active(), old.pendingHistoricalEpoch());
+            assertThrows(IllegalArgumentException.class, () -> fixture.snapshot(snapshotBodies(output),
+                    Arrays.asList(forged, rows.get(1))));
+        }
+    }
+
+    @Test
+    void rootedCheckpointReferenceGraphRejectsStableMetadataAndCursorChanges() {
+        try (Fixture fixture = new Fixture(true)) {
+            Run run = fixture.rootedCheckpointRun(fixture.rootedPair(true), 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot output = run.result.rootedProjection().resultingSnapshot();
+            ManagedOccurrenceBinding old = output.occurrences().get(0), other = output.occurrences().get(1);
+            List<ManagedOccurrenceBinding> invalid = Arrays.asList(
+                    ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A,
+                            ScopeAddress.embedded("/wrongPath", old.activationGeneration()), B, old.expectedTargetBlueId(), true, null),
+                    ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A,
+                            ScopeAddress.embedded(old.sourcePath(), old.activationGeneration() + 1L), B, old.expectedTargetBlueId(), true, null),
+                    ManagedOccurrenceBinding.derived(hash('e'), A, old.sourceAddress(), B, old.expectedTargetBlueId(), true, null),
+                    ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A, old.sourceAddress(), B,
+                            old.expectedTargetBlueId(), false, null),
+                    ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A, old.sourceAddress(), B,
+                            old.expectedTargetBlueId(), false, 0L),
+                    ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A, old.sourceAddress(), B,
+                            old.expectedTargetBlueId(), false, 0L).withRepresentationCursor(
+                                    new ManagedRepresentationCursor(hash('a'), hash('b'), hash('c'), null)));
+            for (ManagedOccurrenceBinding changed : invalid) {
+                Map<DocumentId, Node> bodies = snapshotBodies(output);
+                if ("/wrongPath".equals(changed.sourcePath())) {
+                    Node value = NodePathEditor.getOrNull(bodies.get(A), old.sourcePath());
+                    NodePathEditor.put(bodies.get(A), changed.sourcePath(), value);
+                }
+                AffectedClosureSnapshot mutation = fixture.snapshot(bodies, Arrays.asList(changed, other));
+                assertFalse(RootedCheckpointReferenceGraph.sameTopology(output, mutation));
+                assertFalse(RootedCheckpointReferenceGraph.verifies(run.input.snapshot(), mutation, run.result.graphChanges()));
+            }
+            // The constructor can establish a new legitimate self-edge/SCC; it
+            // cannot make a target-lineage change a checkpoint reference rewrite.
+            ManagedOccurrenceBinding retarget = ManagedOccurrenceBinding.derived(old.bindingPolicyIdentity(), A,
+                    ScopeAddress.embedded(old.sourcePath(), old.activationGeneration() + 1L), A,
+                    output.managedDocument(A).blueId(), true, null);
+            AffectedClosureSnapshot retargeted = fixture.snapshot(snapshotBodies(output), Arrays.asList(retarget, other));
+            assertFalse(RootedCheckpointReferenceGraph.sameTopology(output, retargeted));
+            assertFalse(RootedCheckpointReferenceGraph.verifies(run.input.snapshot(), retargeted, run.result.graphChanges()));
+        }
+    }
+
+    @Test
+    void rootedCheckpointReferenceGraphComparesInactiveRepresentationCursorsExactly() {
+        try (Fixture fixture = new Fixture(true)) {
+            Run run = fixture.rootedCheckpointRun(fixture.rootedPair(true), 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot output = run.result.rootedProjection().resultingSnapshot();
+            ManagedOccurrenceBinding active = output.occurrences().get(0), other = output.occurrences().get(1);
+            ManagedOccurrenceBinding pending = ManagedOccurrenceBinding.derived(active.bindingPolicyIdentity(), A,
+                    active.sourceAddress(), B, active.expectedTargetBlueId(), false, 0L);
+            ManagedRepresentationCursor position = new ManagedRepresentationCursor(hash('a'), hash('b'), hash('c'), hash('d'));
+            AffectedClosureSnapshot anchored = fixture.snapshot(snapshotBodies(output),
+                    Arrays.asList(pending.withRepresentationCursor(position), other));
+            for (ManagedRepresentationCursor changed : Arrays.asList(
+                    new ManagedRepresentationCursor(hash('e'), hash('b'), hash('c'), hash('d')),
+                    new ManagedRepresentationCursor(hash('a'), hash('e'), hash('c'), hash('d')),
+                    new ManagedRepresentationCursor(hash('a'), hash('b'), hash('e'), hash('d')),
+                    new ManagedRepresentationCursor(hash('a'), hash('b'), hash('c'), hash('e')))) {
+                AffectedClosureSnapshot mutation = fixture.snapshot(snapshotBodies(output),
+                        Arrays.asList(pending.withRepresentationCursor(changed), other));
+                assertFalse(RootedCheckpointReferenceGraph.sameTopology(anchored, mutation));
+            }
+            AffectedClosureSnapshot cleared = fixture.snapshot(snapshotBodies(output), Arrays.asList(pending, other));
+            assertFalse(RootedCheckpointReferenceGraph.sameTopology(anchored, cleared));
+        }
+    }
+
+    @Test
+    void rootedCheckpointReferenceProofRejectsTransientTopologyRestoredBeforePublication() {
+        try (Fixture fixture = new Fixture(true)) {
+            Run run = fixture.rootedCheckpointRun(fixture.rootedPair(true), 1L);
+            assertActualCheckpointReference(run, 2);
+            AffectedClosureSnapshot input = run.input.snapshot();
+            // Drop only one of two parallel edges: graph adjacency/SCCs stay
+            // unchanged, but the complete active occurrence inventory differs.
+            ManagedOccurrenceBinding active = input.occurrences().get(0), other = input.occurrences().get(1);
+            ManagedOccurrenceBinding retired = ManagedOccurrenceBinding.derived(active.bindingPolicyIdentity(), A,
+                    active.sourceAddress(), B, active.expectedTargetBlueId(), false, null);
+            AffectedClosureSnapshot transientState = fixture.snapshot(snapshotBodies(input), Arrays.asList(retired, other));
+            assertEquals(input.graph().adjacency(), transientState.graph().adjacency());
+            assertFalse(RootedCheckpointReferenceGraph.sameTopology(input, transientState));
+            // Deliberately forged tracker is a negative only. Genuine positive
+            // authority above came from actual BlueClosureContracts processing.
+            RootedOwnershipTracker forged = new RootedOwnershipTracker(run.input.rootedBinding(), input);
+            forged.finalized(transientState, TentativeFinalization.Boundary.Kind.WORK);
+            forged.finalized(input, TentativeFinalization.Boundary.Kind.WORK);
+            forged.finalized(run.result.rootedProjection().resultingSnapshot(),
+                    TentativeFinalization.Boundary.Kind.CHECKPOINT_SETTLEMENT);
+            RootedPublicationProjection rejected = new RootedPublicationProjection(run.result, forged.snapshot());
+            assertFalse(rejected.checkpointReferenceProofIdentity(A).isPresent());
+        }
+    }
+
+    private static GraphChange.Side graphSide(GraphChange.Side original, String binding, String blueId) {
+        return new GraphChange.Side(original.activationGeneration(), original.occurrenceIdentity(), binding,
+                original.targetDocumentId(), blueId);
+    }
+
+    private static Map<DocumentId, Node> snapshotBodies(AffectedClosureSnapshot snapshot) {
+        Map<DocumentId, Node> result = new LinkedHashMap<>();
+        snapshot.managedDocuments().forEach(document -> result.put(document.documentId(), document.document()));
+        return result;
+    }
+
+    private static void assertActualCheckpointReference(Run run, int references) {
+        assertSuccess(run);
+        assertNotNull(run.result.rootedProjection());
+        assertEquals(Collections.singletonList(A), run.result.rootedProjection().ownedDocumentIds());
+        assertEquals(Collections.singletonList(B), run.input.directDeliveries().stream()
+                .map(DirectLogicalDelivery::targetDocumentId).collect(Collectors.toList()));
+        assertTrue(run.evidence.workTrace().stream().allMatch(work -> B.equals(work.targetDocumentId())));
+        assertTrue(writesFor(run, A).isEmpty());
+        assertFalse(writesFor(run, B).isEmpty());
+        assertEquals(references, run.result.graphChanges().size());
+        for (GraphChange graph : run.result.graphChanges()) {
+            assertEquals(GraphChange.Kind.REBIND, graph.changeKind());
+            assertEquals(A, graph.sourceDocumentId());
+            assertEquals(B, graph.beforeTargetDocumentId());
+            assertEquals(B, graph.afterTargetDocumentId());
+            assertEquals(graph.beforeOccurrenceIdentity(), graph.afterOccurrenceIdentity());
+            assertEquals(graph.beforeActivationGeneration(), graph.afterActivationGeneration());
+            assertNotEquals(graph.beforeTargetBlueId(), graph.afterTargetBlueId());
+        }
+        assertTrue(receipt(run, A).emittedRootEvents().isEmpty());
+        assertTrue(run.result.rootedProjection().checkpointReferenceProofIdentity(A).isPresent(),
+                "Only the actual processor may supply the positive rooted checkpoint proof");
+    }
+
     private static final class Fixture implements AutoCloseable {
         private final Map<String, Node> exact = new LinkedHashMap<>();
         private final ProbeProcessor probe = new ProbeProcessor();
         private final DocumentProcessor owner;
         private final ClosureEnvironment environment;
 
-        private Fixture() {
+        private Fixture() { this(false); }
+
+        private Fixture(boolean rooted) {
             exact.put(CHANNEL_ID, CHANNEL_TYPE.clone());
             exact.put(HANDLER_ID, HANDLER_TYPE.clone());
             NodeProvider runtime = BlueRuntimeTypeRegistry.getDefault().asProvider();
@@ -510,10 +716,57 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     .register(CHANNEL_ID, CHANNEL_TYPE, new SourceProcessor())
                     .register(HANDLER_ID, HANDLER_TYPE, probe).build();
             owner = DocumentProcessor.builder().runtimeRegistry(registry).nodeProvider(provider).build();
-            environment = ClosureEvidenceFactory.environment(owner, hash('a'), hash('b'),
+            environment = ClosureEvidenceFactory.environment(owner, hash('a'),
+                    rooted ? RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY : hash('b'),
                     "checkpoint-ownership-document-v1", "checkpoint-ownership-binding-v1",
                     "checkpoint-ownership-provider-v1", "checkpoint-ownership-order-v1",
                     "checkpoint-ownership-limits-v1", GasSchedule.contracts10().portableLimits());
+        }
+
+        private AffectedClosureSnapshot rootedPair(boolean parallel) {
+            Node b = root("b", "noop", false);
+            Node a = root("a", "noop", false).properties("peer", new Node().blueId(blueId(b)));
+            a.getContracts().properties("embedded", embedded("/peer"));
+            List<ManagedOccurrenceBinding> rows = new ArrayList<>();
+            rows.add(binding(A, "/peer", B, blueId(b)));
+            if (parallel) {
+                a.properties("otherPeer", new Node().blueId(blueId(b)));
+                a.getContracts().getProperties().get("embedded").getProperties().put("paths",
+                        new Node().items(new Node().value("/peer"), new Node().value("/otherPeer")));
+                rows.add(binding(A, "/otherPeer", B, blueId(b)));
+            }
+            return snapshot(bodies(a, b), rows);
+        }
+
+        private Run rootedCheckpointRun(AffectedClosureSnapshot snapshot, long sequence) {
+            Node event = event("rooted-checkpoint-" + sequence);
+            exact.put(blueId(event), event.clone());
+            snapshot.managedDocuments().forEach(document -> exact.put(document.blueId(), document.document()));
+            ExternalEventCause cause = ClosureEvidenceFactory.externalCause(event, blueId(event),
+                    ExternalOrderKey.of(Arrays.<Object>asList(sequence, "checkpoint-ownership")),
+                    environment.externalOrderPolicyIdentity());
+            ClosureInvocationInput base = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                    Collections.singletonList(new DirectLogicalDelivery(ManagedScopeKey.root(B),
+                            "ownerChannel", "ownerChannel", 0L)),
+                    ClosureEvidenceFactory.executionPolicy(100_000L, Collections.emptyMap(), "rooted-reference-graph"), environment);
+            RootedProcessingContext context = RootedProcessingContext.derive(snapshot, A, Collections.singletonMap(A, hash('c')));
+            String delivery;
+            try (ManagedDocumentStepRuntime step = new ManagedDocumentStepRuntime(owner)) {
+                blue.language.processor.ManagedRootChannelOccurrence channel = step.projectRootSubscriptionSurface(
+                        snapshot.managedDocument(B).document()).channelOccurrences().stream()
+                        .filter(row -> "ownerChannel".equals(row.rawChannelKey())).findFirst().get();
+                ChannelOccurrence receiving = ChannelOccurrence.root(B, channel.rawChannelKey(),
+                        channel.effectiveRuntimeContributionBlueId(), channel.subscriptionHeaderBlueId());
+                delivery = context.deliveryBasisIdentity(cause.causeIdentity(), "LIVE", Collections.singletonList(receiving), null);
+            }
+            ClosureInvocationInput input = base.withRootedContext(context, delivery);
+            Capture capture = new Capture();
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                ClosureAttemptResult attempt = contracts.processClosure(input);
+                assertTrue(attempt.isComplete(), () -> "Actual checkpoint fixture suspended: " + attempt.resourceDemands());
+                assertNotNull(capture.evidence);
+                return new Run(input, attempt.processResult(), capture.evidence);
+            }
         }
 
         private Node root(String label, String handlerKey, boolean catalog) {

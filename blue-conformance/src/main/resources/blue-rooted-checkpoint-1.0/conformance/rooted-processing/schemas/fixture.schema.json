@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:blue:rooted-processing-fixture:1.0-draft.1",
-  "title": "Rooted processing fixture \u2014 draft source schema",
+  "title": "Rooted processing fixture — draft source schema",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -319,6 +319,76 @@
                               },
                               "gas": {
                                 "const": "each actual invocation separately checked against unchanged tariff and full trace"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "scope",
+                          "resourceContinuation"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "const": "PACKAGED_RESOURCE_CONTINUATION"
+                          },
+                          "resourceContinuation": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "observationField",
+                              "sourceFiles",
+                              "commandSeconds",
+                              "sourceWaitSeconds",
+                              "restartBoundary",
+                              "wrongUploadCode",
+                              "captureMultiplicity",
+                              "sourceMultiplicity",
+                              "sourceKind",
+                              "entryIdentity",
+                              "gas"
+                            ],
+                            "properties": {
+                              "observationField": {
+                                "const": "resourceContinuation"
+                              },
+                              "sourceFiles": {
+                                "const": [
+                                  "examples/iteration2/resource-host.yaml",
+                                  "examples/iteration2/resource-child.template.yaml",
+                                  "examples/iteration2/resource-correct.yaml",
+                                  "examples/iteration2/resource-wrong.yaml"
+                                ]
+                              },
+                              "commandSeconds": {
+                                "const": 45
+                              },
+                              "sourceWaitSeconds": {
+                                "const": 45
+                              },
+                              "restartBoundary": {
+                                "const": "MYOS_RUNTIME_REBUILDER"
+                              },
+                              "wrongUploadCode": {
+                                "const": "EXACT_NODE_IDENTITY_MISMATCH"
+                              },
+                              "captureMultiplicity": {
+                                "const": "exact frozen sourceHistoryCaptures from original typed suspension"
+                              },
+                              "sourceMultiplicity": {
+                                "const": "one next-source command per retained exact selection; same source command resumes after its exact body upload"
+                              },
+                              "sourceKind": {
+                                "const": "ADMISSION for the included timeless authored child; no prepopulation, fabricated history or source business entry"
+                              },
+                              "entryIdentity": {
+                                "const": "same exact saved entry and request through capture, source prerequisite, original continuation and replay"
+                              },
+                              "gas": {
+                                "const": "each actual complete processor invocation separately checked; pre-admission typed waits have no fabricated terminal or charge"
                               }
                             }
                           }

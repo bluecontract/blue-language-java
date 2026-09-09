@@ -404,6 +404,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBir
 blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java

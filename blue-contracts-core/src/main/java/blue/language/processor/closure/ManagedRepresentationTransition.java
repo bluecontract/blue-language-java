@@ -113,7 +113,8 @@ public final class ManagedRepresentationTransition {
                 || originalInput.directDeliveries().stream().anyMatch(delivery -> rooted.owns(delivery.targetDocumentId()))
                 || originalResult.checkpointWrites().stream().anyMatch(write ->
                         write.targetManagedScopeKey().documentId().equals(documentId))
-                || !originalResult.graphChanges().isEmpty()) return null;
+                || !RootedCheckpointReferenceGraph.verifies(originalInput.snapshot(),
+                        rooted.resultingSnapshot(), originalResult.graphChanges())) return null;
         return rooted.checkpointReferenceProofIdentity(documentId).orElse(null);
     }
 

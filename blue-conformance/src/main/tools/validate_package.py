@@ -9880,6 +9880,19 @@ def validate_static_package_laws() -> None:
     validate_release_layout(ROOT, SPEC, require)
 
 
+def validate_package_file_roles(package: dict[str, Any]) -> None:
+    """Independently reject mislabelled normative inputs in the outer manifest."""
+    prefixes = ("specifications/", "conformance/contracts/", "conformance/rooted-processing/",
+                "companions/rooted-checkpoint/specifications/",
+                "companions/rooted-checkpoint/conformance/rooted-processing/")
+    bindings = {"companions/rooted-checkpoint-manifest.json",
+                "companions/rooted-checkpoint/manifests/specification-set.json"}
+    for row in package["files"]:
+        relative = row["path"]
+        expected = "normative" if relative.startswith(prefixes) or relative in bindings else "informative"
+        require(row.get("role") == expected, "outer package file role mismatch: " + relative)
+
+
 def validate_manifests() -> dict[str, Any]:
     registry = verify_manifest(REGISTRY / "manifest.yaml", "packageIdentity", ("fixturePackageIdentity",))
     verify_listed_files(REGISTRY, registry["entries"])
@@ -9918,6 +9931,7 @@ def validate_manifests() -> dict[str, Any]:
         "source archive provenance must not participate in release identity",
     )
     package = verify_manifest(PACKAGE_MANIFEST, "packageIdentity")
+    validate_package_file_roles(package)
     verify_listed_files(ROOT, package["files"])
     require(package["contractsReleaseIdentity"] == release["releaseIdentity"], "package/release binding mismatch")
     return {"registry": registry, "gas": gas, "fixtures": fixtures, "oracles": oracles, "release": release, "package": package}

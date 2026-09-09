@@ -57,7 +57,7 @@ public final class HistoricalRepresentationConformanceCli {
     private static final String CHECKPOINT = "/contracts/checkpoint/entries/ownerChannel";
 
     private HistoricalRepresentationConformanceCli() { }
-    private static final String PACKAGE_IDENTITY = "sha256:de16d484c7d5f1183f3df59032443de4fc1f2ec88cc70f58fcaa066c3d047b1d";
+    private static final String PACKAGE_IDENTITY = "sha256:0dd4ea36a102a1dc1bf3ae9158502f9774df6cf2a908fe819e4a5fa77d16ea81";
     private static final String ROOT = "/blue-contracts-representation-1.0/fixtures/";
 
     /**

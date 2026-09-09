@@ -61,7 +61,24 @@ def check_source_discovery(rec, rule, weights, variant, require, exact_equal, ga
     def selection(sel, kind, root):
         require(sel['kind'] == kind and did(sel['requestingRoot']) == ids[root]
                 and did(sel['sourceDocumentId']) == ids['S'] and sel['authoredBlueId'] == ids['S'], 'DISCOVERY_SELECTION_OWNER')
-        cutoff = [10 if root == 'A' else 20, timelines[root], entryids['E10' if root == 'A' else 'E20']]
+        entry_name = 'E10' if root == 'A' else 'E20'
+        entry_id = entryids[entry_name]
+        observed = phases['sourceHistoryBeforeRestart']
+        cutoff = observed['progress']['journalOrders'][entry_id]['components']
+        require(len(cutoff) == 3 and type(cutoff[0]) is int
+                and cutoff[0] == (10 if root == 'A' else 20) and cutoff[2] == entry_id,
+                'DISCOVERY_EXACT_PARENT_ORDER')
+        I.blue(cutoff[1])
+        parent_receipt = observed['records'][root]['receipts'][1]
+        checkpoint = parent_receipt['afterDocument']['contracts']['checkpoint']['entries']['owner']['subject']
+        require(exact_equal(parent_receipt['sourceEntry'], entries[entry_name])
+                and parent_receipt['sourceOrder']['components'] == cutoff
+                and scalar(checkpoint['timestamp']) == cutoff[0]
+                and scalar(checkpoint['timelineBlueId']) == cutoff[1]
+                and scalar(checkpoint['entryBlueId']) == entry_id,
+                'DISCOVERY_PARENT_ORDER_RECEIPT_CHECKPOINT')
+        require(sel['requestingInvocationIdentity'] == phases['attach'+root]['identityEvidence']['baseInvocationIdentity'],
+                'DISCOVERY_ORIGINAL_PARENT_INVOCATION')
         require(sel['cutoffExclusive']['components'] == cutoff, 'DISCOVERY_FROZEN_CUTOFF')
         fields = [ids[root],sel['requestingInvocationIdentity'],sel['demandIdentity'],ids['S'],ids['S'],kind,
                   str(sel['sourceEpoch']),sel['sourceBlueId'],sel['workIdentity'],sel['entryBlueId'] or '',
@@ -70,15 +87,23 @@ def check_source_discovery(rec, rule, weights, variant, require, exact_equal, ga
         for field in ['blue.coordination/source-history-prerequisite/1']+fields+[str(v) for v in cutoff]:
             encoded=field.encode('utf-8');h.update(struct.pack('>I',len(encoded)));h.update(encoded)
         require(sel['selectionIdentity'] == 'sha256:'+h.hexdigest(), 'DISCOVERY_SELECTION_IDENTITY')
-    def bind_source_transition(retained, transitions, companion, invocation):
+    def bind_source_transition(retained, transitions, companion, invocation, initialization=False):
         matches = [t for t in transitions if did(t['documentId']) == ids['S']
                    and t['transitionReceiptIdentity'] == retained['contractsTransitionReceiptIdentity']]
         require(len(matches) == 1, 'DISCOVERY_SOURCE_COMMITTED_TRANSITION')
         transition = matches[0]
+        if initialization:
+            require(retained['epoch'] == 0 and retained['kind'] == 'INITIALIZATION'
+                    and retained['beforeBlueId'] is None and retained['sourceEntry'] is None
+                    and transition['beforeBlueId'] == prepared['initialBlueId'] == ids['S'],
+                    'DISCOVERY_AUTHORED_GENESIS_PREDECESSOR')
+        else:
+            require(retained['epoch'] == 1 and retained['kind'] == 'TIMELINE_ENTRY'
+                    and retained['beforeBlueId'] == transition['beforeBlueId'],
+                    'DISCOVERY_SUCCESSOR_PREDECESSOR')
         require(companion['bindsManagedTransitionReceipts'] is True
                 and companion['invocationIdentity'] == invocation == transition['sourceInvocationIdentity']
                 and retained['commitCompanionIdentity'] == companion['companionIdentity']
-                and retained['beforeBlueId'] == transition['beforeBlueId']
                 and retained['afterBlueId'] == transition['afterBlueId']
                 and retained['originalCauseIdentity'] == transition['originalCauseIdentity'],
                 'DISCOVERY_SOURCE_COMMIT_BINDING')
@@ -114,7 +139,7 @@ def check_source_discovery(rec, rule, weights, variant, require, exact_equal, ga
     require(len(admission['after']['S']['receipts']) == 1 and admission['after']['S']['epoch'] == 0
             and admission['after']['S']['events'] == [], 'DISCOVERY_GENESIS_NOT_SOURCE_EVENT')
     admission_transition = bind_source_transition(admission['after']['S']['receipts'][0],
-            result['managedTransitionReceipts'], result['platformCommitCompanion'], result['invocationIdentity'])
+            result['managedTransitionReceipts'], result['platformCommitCompanion'], result['invocationIdentity'], initialization=True)
     repeated = admission['repeated']
     require(repeated['replayed'] is True and exact_equal(repeated['selection'],admission['selection'])
             and exact_equal(repeated['admission'],ar) and repeated['processing'] is None
@@ -162,9 +187,16 @@ def check_source_discovery(rec, rule, weights, variant, require, exact_equal, ga
                     and application['targetPath']=='/child' and application['status']=='SUCCESS'
                     and exact_equal(retained,source['receipts'][epoch]), 'DISCOVERY_IMMUTABLE_SOURCE_RECEIPT')
             require(cause['fromEpoch']==epoch-1 and cause['toEpoch']==epoch and did(cause['childDocumentId'])==ids['S']
-                    and cause['beforeBlueId']==retained['beforeBlueId'] and cause['afterBlueId']==retained['afterBlueId']
+                    and cause['afterBlueId']==retained['afterBlueId']
                     and exact_equal(cause['sourceTransitionReceipt'],application['sourceReceipt'])
                     and work['sourceReceiptIdentity']==retained['receiptIdentity'], 'DISCOVERY_AUTHENTIC_HISTORY_CAUSE')
+            if epoch == 0:
+                require(retained['kind'] == 'INITIALIZATION' and retained['beforeBlueId'] is None
+                        and cause['beforeBlueId'] == prepared['initialBlueId'] == ids['S'],
+                        'DISCOVERY_HISTORY_AUTHORED_GENESIS')
+            else:
+                require(retained['kind'] == 'TIMELINE_ENTRY' and cause['beforeBlueId'] == retained['beforeBlueId'],
+                        'DISCOVERY_HISTORY_EXACT_SUCCESSOR')
             original_transition = admission_transition if epoch == 0 else live_transition
             require(exact_equal(application['sourceReceipt'], original_transition)
                     and cause['sourceRevisionReceiptIdentity'] == retained['contractsTransitionReceiptIdentity']

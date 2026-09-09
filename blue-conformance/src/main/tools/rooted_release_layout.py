@@ -137,6 +137,69 @@ def validate_release_layout(root, specification, require):
     return validate_rooted_package(companion, require)
 
 
+def validate_resource_continuation_plan(suite, fixture, plan, require):
+    """One closed MyOS command/rebuild recipe; never an extensible host-op lane."""
+    contract = fixture['expected']['contract']
+    sources = contract['resourceContinuation']['sourceFiles']
+    require(fixture['id'] == 'RCP-RUN-027' and fixture['input'] == {
+        'isolation': 'NEW_REALM', 'documents': [{'alias': Path(p).stem, 'source': p} for p in sources],
+        'steps': [], 'variants': ['baseline'], 'qualification': 'LITERAL_CRITICAL',
+        'literalPlan': 'plans/rcp-run-027.json', 'originalRecipe': 'provenance/recipe-inputs/rcp-run-027.json'},
+        'Resource continuation differs from its closed fixture-owned input')
+    require(set(plan) == {'schema','fixtureId','title','inputIdentityPolicy','setup','variants',
+            'outputContract','productionStatus','allowedPrimitives','recipeProvenance','setupBoundary'}
+            and plan['schema'] == 'blue-rooted-literal-plan/1.0-draft.2' and plan['fixtureId'] == fixture['id']
+            and isinstance(plan['title'], str) and len(plan['title']) >= 5
+            and plan['productionStatus'] == 'NOT_RUN' and plan['outputContract'] == contract
+            and plan['setupBoundary'] == {'activation':'IMPORT_FULL_HISTORY',
+                'reason':'Explicit included fixture admission basis; source history is separately admitted through real source-owned commands.'}
+            and plan['inputIdentityPolicy'] == 'Use packaged isolated AuthoredDocumentIdentity for missing body; do not prepare it in the live exact store. Preserve actual command UUID, request JSON and exact input entry across continuation.',
+            'Resource continuation plan metadata or independent contract binding differs')
+    def capture(path): return {'$capture': path}
+    setup = [
+        {'op':'hostStart','isolatedDatabase':True,'port':0,'executionPolicy':'release-default'},
+        {'op':'hostSubmit','commandType':'CREATE_TIMELINE','payload':{'timelineId':'labs/dynamic-resource/alice','actorId':'alice'},
+         'idempotencyKey':'rcp-027-timeline','capture':'timeline'},
+        {'op':'hostSubmit','commandType':'START_DOCUMENT','source':sources[0],'publicRoot':True,'activation':'IMPORT_FULL_HISTORY',
+         'idempotencyKey':'rcp-027-host','capture':'H'},
+        {'op':'hostIdentify','source':sources[2],'capture':'missing','requireAbsentFromLiveProvider':True},
+        {'op':'hostIdentify','source':sources[3],'capture':'wrong','requireAbsentFromLiveProvider':True},
+        {'op':'hostPrepareSource','source':sources[1],'substitutions':{'<MISSING_BLUE_ID>':capture('missing.blueId')},'capture':'child'},
+        {'op':'hostSnapshot','capture':'beforeOperation'},
+    ]
+    steps = [
+        {'op':'hostSubmit','commandType':'EXECUTE_OPERATION','target':capture('H.sessionId'),'operation':'attach',
+         'timelineId':'labs/dynamic-resource/alice','channel':'ownerChannel','requestField':'child','requestSource':capture('child.authoredYaml'),
+         'mode':'EXECUTE','idempotencyKey':'rcp-027-attach','capture':'blocked','expectedStatus':'BLOCKED'},
+        {'op':'hostAwaitSourceWait','commandId':capture('blocked.commandId'),'capture':'sourceWait','sourceWaitSeconds':45},
+        {'op':'hostSnapshot','capture':'blockedState'},
+        {'op':'hostRebuild','capture':'pendingRestart','retainBlockedCommand':True},
+        {'op':'hostSnapshot','capture':'pendingRestartState'},
+        {'op':'hostUpload','expectedBlueId':capture('missing.blueId'),'source':sources[3],
+         'expectError':'EXACT_NODE_IDENTITY_MISMATCH','capture':'wrongUpload'},
+        {'op':'hostSnapshot','capture':'wrongState'},
+        {'op':'hostUpload','expectedBlueId':capture('missing.blueId'),'source':sources[2],'capture':'correctUpload'},
+        {'op':'hostAwait','commandId':capture('blocked.commandId'),'expectedStatus':'APPLIED','capture':'subject'},
+        {'op':'hostSnapshot','capture':'appliedState'},
+        {'op':'hostUpload','expectedBlueId':capture('missing.blueId'),'source':sources[2],'capture':'duplicateUpload'},
+        {'op':'hostDuplicate','commandCapture':'blocked','capture':'duplicateSubmission'},
+        {'op':'hostSnapshot','capture':'duplicateState'},
+        {'op':'hostRebuild','capture':'completedRestart','requireVerifiedReplay':True},
+        {'op':'hostSnapshot','capture':'completedRestartState'},
+    ]
+    for index, step in enumerate(setup, 1): step['stepId'] = f'setup-{index:03d}'
+    for index, step in enumerate(steps, 1): step['stepId'] = f'baseline-{index:03d}'
+    # Equality closes the entire sequence, every request/capture and every per-step field.
+    # Self-declaring an unknown primitive or another retry/transport strategy cannot pass.
+    require(jcs_dumps(plan['setup']) == jcs_dumps(setup) and jcs_dumps(plan['variants']) == jcs_dumps({'baseline':steps})
+            and plan['allowedPrimitives'] == sorted({s['op'] for s in setup + steps}),
+            'Resource continuation differs from its exact command/upload/rebuild sequence')
+    path = fixture['input']['originalRecipe']
+    original = '68cf7d24b81faa66f14f1374167fcfea866c85e6ddcbb90d4d99e7baf520d074'
+    require(plan['recipeProvenance'] == {'path':path,'sha256':original} and sha(suite / path) == original,
+            'Resource continuation does not authenticate its preserved original recipe')
+
+
 def validate_rooted_package(companion, require):
     import jsonschema
     suite = companion / SUITE
@@ -177,6 +240,8 @@ def validate_rooted_package(companion, require):
             require(plan['schema'] == 'blue-rooted-literal-plan/1.0-draft.2' and plan['fixtureId'] == row['id']
                     and set(plan['variants']) == set(fixture['input']['variants']) and plan['variants'],
                     'Literal plan identity or complete variant inventory mismatch')
+            if fixture['expected'].get('contract', {}).get('scope') == 'PACKAGED_RESOURCE_CONTINUATION':
+                validate_resource_continuation_plan(suite, fixture, plan, require)
             host_matrix = fixture['expected'].get('contract', {}).get('scope') == 'PACKAGED_PROCESS_FAULT_MATRIX'
             if host_matrix:
                 cuts = fixture['expected']['contract']['faultCuts']

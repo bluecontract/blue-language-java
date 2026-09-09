@@ -1097,7 +1097,20 @@ boundary, and changed only at the typed CHECKPOINT_SETTLEMENT boundary. The
 owner remains at the same epoch and lifecycle, emits no Root event, has no
 owner-local checkpoint write, and has no body delta outside authenticated
 same-lineage containing references. The full occurrence inventory, including
-retired rows, is compared bijectively. Graph changes are outside this class.
+retired rows, is compared bijectively. Graph topology changes are outside this
+class. This exclusion does not exclude the mandatory same-lineage exact-state
+`REBIND` receipts of §2.6 for authenticated containing-reference updates. The
+complete graph-change sequence MUST correspond bijectively, with canonical
+ordinals and exact before/after sides, to precisely the active occurrence rows
+whose exact target BlueId and binding identity changed. Both complete occurrence
+inventories, and every actual intervening boundary, MUST preserve occurrence
+identity, source document/path, target lineage, binding policy, activation,
+active/retired status, and both historical cursors. The exact endpoints are
+proved against their respective complete snapshots; retired rows authorize no
+source-path normalization. ADD, REMOVE, different-lineage REBIND, omitted,
+duplicated or extraneous receipts, and transient topology changes are excluded.
+The ordinary graph and component generation rules remain unchanged; a nonempty
+same-lineage receipt sequence does not itself constitute an active-edge change.
 The original LIVE direct-receiving set is nonempty and wholly unowned; its
 local dependency effects do not become independent source receipts or outboxes.
 

@@ -68,6 +68,54 @@ class RootedReleaseLayoutTest(unittest.TestCase):
             with self.subTest(ordinal=ordinal), self.assertRaises(jsonschema.ValidationError):
                 validator.validate(value)
 
+    def test_packaged_resource_continuation_schema_is_closed(self):
+        suite = RESOURCE_ROOT / layout.SUITE
+        validator = jsonschema.Draft202012Validator(layout.json_file(suite / 'schemas/fixture.schema.json'))
+        fixture = layout.json_file(suite / 'fixtures/run/rcp-run-027.json')
+        validator.validate(fixture)
+        edits = [lambda c: c['resourceContinuation']['sourceFiles'].pop(),
+                 lambda c: c['resourceContinuation'].__setitem__('commandSeconds', 600),
+                 lambda c: c['resourceContinuation'].__setitem__('sourceWaitSeconds', 600),
+                 lambda c: c['resourceContinuation'].__setitem__('restartBoundary', 'NONE'),
+                 lambda c: c['resourceContinuation'].__setitem__('wrongUploadCode', 'ACCEPTED'),
+                 lambda c: c['resourceContinuation'].__setitem__('sourceKind', 'LIVE'),
+                 lambda c: c['resourceContinuation'].__setitem__('ignoreMissingEvidence', True),
+                 lambda c: c['resourceContinuation'].pop('gas'),
+                 lambda c: c.__setitem__('causeKind', 'LIVE')]
+        for ordinal, edit in enumerate(edits):
+            value = deepcopy(fixture); edit(value['expected']['contract'])
+            with self.subTest(ordinal=ordinal), self.assertRaises(jsonschema.ValidationError):
+                validator.validate(value)
+
+    def test_packaged_resource_continuation_plan_requires_exact_real_sequence(self):
+        suite = RESOURCE_ROOT / layout.SUITE
+        fixture = layout.json_file(suite / 'fixtures/run/rcp-run-027.json')
+        plan = layout.json_file(suite / 'plans/rcp-run-027.json')
+        layout.validate_resource_continuation_plan(suite, fixture, plan, require)
+        edits = [lambda p: p['setup'][0].__setitem__('isolatedDatabase', False),
+                 lambda p: p['setup'][0].__setitem__('isolatedDatabase', 1),
+                 lambda p: p['setup'][0].__setitem__('port', False),
+                 lambda p: p['setup'][0].__setitem__('port', 8080),
+                 lambda p: p['setup'][2].__setitem__('activation', 'FROM_NOW'),
+                 lambda p: p['setup'][3].__setitem__('requireAbsentFromLiveProvider', False),
+                 lambda p: p['variants']['baseline'][1].__setitem__('sourceWaitSeconds', 600),
+                 lambda p: p['variants']['baseline'][5].__setitem__('source', p['setup'][3]['source']),
+                 lambda p: p['variants']['baseline'][8]['commandId'].__setitem__('$capture', 'new.commandId'),
+                 lambda p: p['variants']['baseline'][0]['requestSource'].__setitem__('$capture', 'child.currentSnapshot'),
+                 lambda p: p['variants']['baseline'].pop(13),
+                 lambda p: p['allowedPrimitives'].append('acceptAnything'),
+                 lambda p: p['variants']['baseline'][0].__setitem__('ignoreFailure', True),
+                 lambda p: p.__setitem__('unknownHostMode', True),
+                 lambda p: p['recipeProvenance'].__setitem__('sha256', '0'*64),
+                 lambda p: p['outputContract']['resourceContinuation'].__setitem__('gas', 'none')]
+        for ordinal, edit in enumerate(edits):
+            value = deepcopy(plan); edit(value)
+            with self.subTest(ordinal=ordinal), self.assertRaises((ValueError, KeyError)):
+                layout.validate_resource_continuation_plan(suite, fixture, value, require)
+        changed = deepcopy(fixture); changed['id'] = 'RCP-RUN-028'
+        with self.assertRaises(ValueError):
+            layout.validate_resource_continuation_plan(suite, changed, plan, require)
+
     def test_duplicate_json_identity_field_rejects(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'manifest.json'; path.write_text('{"files":{},"files":{"unexpected":"x"}}')

@@ -4,7 +4,7 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 08755625c221dc9b64c6ea61707326581bfa91167644e08061fd23373cb7f172
+  sha256: c7c4e4d72ffb2c0da608c7ac2d8e7da920d0a193b84c732e5731c9bf1a2ee15a
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
@@ -801,7 +801,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCursor.java
     sha256: d50fb5864b3383725a5e771f80553418b0b1850cd56dad641d6bbc9aeb115dd2
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationTransition.java
-    sha256: aec8e9201966eaa5bebad38c6952f1b255dbe95fbe6974193d24778579e44520
+    sha256: 27b05f183f512b487706cff78951fd5cf5950baa2da416d0956bda7f5b2b8d6f
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCause.java
     sha256: 760bc3b69315b20dfa081fea0a3b080862f1f65b0ee73577903af69beb86d891
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCyclicEvidenceVerifier.java
@@ -826,6 +826,8 @@ languageDependency:
     sha256: a459dcef2d5cd731c613f9c0b3cde7d3b42b78750d02ced86e40e44a1e75e218
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java
     sha256: f47e6e7649f584a794d1716e171b1d048169c6d201ee911da68eaef39534af49
+  - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java
+    sha256: 8e323d4f7a4dd609bf56cbcedce456c251f3c8ed8f1144931655ae13e232d0b2
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java
     sha256: 5bdb61d736b6b02000f71e0f7b54d63774a9213ae1813d3cc1228507a8f86087
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java
@@ -835,9 +837,9 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershipTracker.java
     sha256: b3c78aec39a02125d278f0aa2b11ba79a822d6e222340f618dff3823fef4aad1
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java
-    sha256: 20252288b9c893fda02c8ca9d5d7e596e4a83b72805757b4b1f106f8531d5600
+    sha256: 706688f91d5f5af8f7011cf8b199303ef45e4d08248f14b67ca93603a0bbafab
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java
-    sha256: a14bb57bfaa2e43aa29a0376184e1fe1f4768ab280886afe52540d6991914c8b
+    sha256: d048608cc0e3746bbad13e45fbafa2b0f331c36e19cd4c0ad17b2b8abcbbbd95
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java
     sha256: d907367bd0470d2b502f9a30a57ba21240e53a52d3ba0290d38baec8915e9781
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java
@@ -1509,7 +1511,7 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:e61d6b75b5f6d84065cdbd2e439fa99a6b4710fde163ace2faaa39fdbaa8229f
+  packageIdentity: sha256:fbbc958679c1b9a8f9a90554e07a28e7dc179cfd1f553c587eea8d5d30461dd7
   vectorCount: 182
   fixtureCount: 295
 oraclePackage:
@@ -1538,4 +1540,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:fcde2e3af19a583743fb485d113531d993156a183cb414587fb75d873b905b51
+releaseIdentity: sha256:77f4dcbe2bfdfb287a10e8501bfa51d05b674ebefbc4102067df040be4d50fb3

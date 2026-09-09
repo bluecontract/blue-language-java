@@ -109,7 +109,9 @@ public final class RootedPublicationProjection {
                     || !after.blueId().equals(next.managedDocument(document).blueId())
                     || before.epoch() != after.epoch() || !before.initialized() || !after.initialized()
                     || before.terminated() || after.terminated() || before.publicRoot() != after.publicRoot()
-                    || !result.graphChanges().isEmpty()
+                    || !RootedCheckpointReferenceGraph.verifies(inputSnapshot, resultingSnapshot, result.graphChanges())
+                    || topologyBoundaries.stream().anyMatch(boundary ->
+                            !RootedCheckpointReferenceGraph.sameTopology(inputSnapshot, boundary))
                     || result.checkpointWrites().stream().anyMatch(write -> write.targetManagedScopeKey().documentId().equals(document))
                     || result.managedTransitionReceipts().stream().noneMatch(receipt -> receipt.documentId().equals(document)
                             && receipt.emittedRootEvents().isEmpty())) continue;
