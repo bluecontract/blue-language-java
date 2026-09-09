@@ -3345,7 +3345,8 @@ final class ClosureExecutionSession
         for (ManagedOccurrenceBinding binding
                 : finalized.finalizedGraph().bindings()) {
             if (binding.active()
-                    || binding.pendingHistoricalEpoch() != null) {
+                    || binding.pendingHistoricalEpoch() != null
+                    || finalized.finalizedGraph().immutableSources().contains(binding.sourceDocumentId())) {
                 rebound.add(binding);
                 continue;
             }

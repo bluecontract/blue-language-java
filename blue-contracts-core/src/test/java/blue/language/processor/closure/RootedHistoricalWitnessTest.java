@@ -6,6 +6,7 @@ import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 import java.util.*;
+import java.util.function.Consumer;
 import static blue.language.processor.closure.CompositionCampaignFixture.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,7 +15,23 @@ final class RootedHistoricalWitnessTest {
     private static final DocumentId P = new DocumentId("P");
     private static final DocumentId S = new DocumentId("S");
 
-    @Test void historicalReactionDoesNotRewriteTheImmutableSourceOrItsReturnReference() {
+    @Test
+    void historicalReactionDoesNotRewriteTheImmutableSourceOrItsReturnReference() {
+        historicalReaction(false, output -> assertThrows(IllegalArgumentException.class, () -> publicCopy(output),
+                "A public flat-state constructor cannot assert witness authority"));
+    }
+
+    @Test
+    void historicalReactionPreservesTheImmutableSourcesRetiredReturnBinding() {
+        historicalReaction(true, output -> {
+            // Retired rows are valid in a flat graph, but copying them grants no witness authority.
+            AffectedClosureSnapshot copy = publicCopy(output);
+            assertNull(copy.rootedWitnesses());
+            assertTrue(copy.graph().immutableSources().isEmpty());
+        });
+    }
+
+    private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy) {
         try (CompositionCampaignFixture fixture = new CompositionCampaignFixture(true)) {
             Node source0 = initialized(document("source"));
             source0.getContracts().properties("embedded", process("paths", "/peer"));
@@ -26,9 +43,10 @@ final class RootedHistoricalWitnessTest {
             Node source1 = source0.clone().properties("count", new Node().value(1L))
                     .properties("peer", new Node().blueId(id(parent)));
             Node sourceHead = source1.clone().properties("count", new Node().value(3L));
+            if (retiredReturn) sourceHead.getProperties().remove("peer");
             ManagedOccurrenceBinding pending = ManagedOccurrenceBinding.derived(fixture.environment.managedBindingPolicyIdentity(),
                     P, ScopeAddress.embedded("/child", 1L), S, id(source0), false, Long.valueOf(0L));
-            ManagedOccurrenceBinding reverse = fixture.binding(S, "/peer", P, parent, true);
+            ManagedOccurrenceBinding reverse = fixture.binding(S, "/peer", P, parent, !retiredReturn);
             Map<DocumentId, Node> bodies = new LinkedHashMap<>(); bodies.put(P, parent); bodies.put(S, sourceHead);
             AffectedClosureSnapshot raw = snapshot(bodies, Arrays.asList(pending, reverse), P);
             List<ManagedDocumentSnapshot> initialized = new ArrayList<>();
@@ -84,9 +102,7 @@ final class RootedHistoricalWitnessTest {
                         Collections.singletonMap(S, 4L)));
                 assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.rootedRetainedSnapshot(result,
                         Collections.<DocumentId, Long>emptyMap()));
-                assertThrows(IllegalArgumentException.class, () -> new AffectedClosureSnapshot(output.closureIdentity(),
-                        output.graphGeneration(), output.managedDocuments(), output.occurrences(), output.occurrenceBindingSetIdentity(),
-                        output.components(), output.publicRootDocumentIds()), "A public flat-state constructor cannot assert witness authority");
+                verifyPublicCopy.accept(output);
                 Map<DocumentId, Node> changed = new LinkedHashMap<>();
                 for (ManagedDocumentSnapshot document : output.managedDocuments()) changed.put(document.documentId(), document.document());
                 changed.get(S).properties("count", new Node().value(99L));
@@ -97,7 +113,7 @@ final class RootedHistoricalWitnessTest {
                 List<ManagedOccurrenceBinding> deactivated = new ArrayList<>();
                 for (ManagedOccurrenceBinding row : output.occurrences()) deactivated.add(row.sourceDocumentId().equals(S)
                         ? ManagedOccurrenceBinding.derived(row.bindingPolicyIdentity(), S, row.sourceAddress(), P,
-                            row.expectedTargetBlueId(), false, null) : row);
+                            row.expectedTargetBlueId(), !reverse.active(), null) : row);
                 assertThrows(IllegalArgumentException.class, () -> output.rootedWitnesses().requireUnchanged(bodies, deactivated));
                 // A second invocation starts with a newer owner but the same immutable
                 // source witness and its older authenticated return reference.
@@ -139,6 +155,11 @@ final class RootedHistoricalWitnessTest {
                 assertNull(failed.rootedProjection());
             }
         }
+    }
+
+    private static AffectedClosureSnapshot publicCopy(AffectedClosureSnapshot output) {
+        return new AffectedClosureSnapshot(output.closureIdentity(), output.graphGeneration(), output.managedDocuments(),
+                output.occurrences(), output.occurrenceBindingSetIdentity(), output.components(), output.publicRootDocumentIds());
     }
 
     private static Node initialized(Node source) {
