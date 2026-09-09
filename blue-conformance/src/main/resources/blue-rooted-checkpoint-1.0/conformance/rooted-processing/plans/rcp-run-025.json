@@ -49,7 +49,7 @@
         "operation": "setCounter",
         "channel": "owner",
         "request": {
-          "value": 5
+          "counterValue": 5
         },
         "capture": "E15",
         "stepId": "normal-001"
@@ -150,7 +150,7 @@
         "operation": "setCounter",
         "channel": "owner",
         "request": {
-          "value": 5
+          "counterValue": 5
         },
         "capture": "E15",
         "stepId": "A-suspended-001"
