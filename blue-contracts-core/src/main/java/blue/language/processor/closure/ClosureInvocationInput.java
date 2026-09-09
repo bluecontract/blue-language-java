@@ -284,6 +284,21 @@ public final class ClosureInvocationInput {
         return withRootedBinding(new RootedInvocationBinding(this, context, deliveryBasisIdentity));
     }
 
+    /**
+     * Preserves the original rooted owner, cause and meter while adding exact read evidence.
+     * The complete original input remains immutable; added rows cannot activate an edge
+     * from an existing input document. Actual demand/receipt authentication still runs
+     * at the ordinary processor boundary before the added evidence can be consumed.
+     *
+     * @param original previously suspended rooted input
+     * @return augmented input carrying the same frozen rooted context
+     * @throws IllegalArgumentException if this is not a monotone exact read expansion
+     */
+    public ClosureInvocationInput withRootedReadExpansionOf(ClosureInvocationInput original) {
+        RootedInputExpansion.verify(Objects.requireNonNull(original, "original"), this);
+        return withRootedBinding(original.rootedBinding());
+    }
+
     RootedInvocationBinding rootedBinding() { return rootedBinding; }
 
     ClosureInvocationInput withRootedBinding(RootedInvocationBinding binding) {
