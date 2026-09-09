@@ -141,12 +141,13 @@ def literal_steps(plan,variant,transcript):
     is false; exactly one completed=True record is required per semantic step.
     """
     steps=plan['setup']+plan['variants'][variant]
-    expected=[];allowed={}
+    expected=[];allowed={};requests={}
     for step in steps:
         key=step['stepId'];repeat=step.get('repeat',1)
         require(isinstance(key,str) and key and key not in allowed,'DUPLICATE_PLAN_STEP')
         require(type(repeat) is int and repeat>0,'BAD_PLAN_REPEAT')
         allowed[key]=repeat
+        requests[key]=step
         expected.extend((key,i) for i in range(repeat))
     require(isinstance(transcript,list),'TRANSCRIPT_REQUIRED')
     completed=[];seen=set()
@@ -158,6 +159,7 @@ def literal_steps(plan,variant,transcript):
         require(type(i) is int and 0<=i<allowed[key],'STEP_REPEAT_INDEX')
         if 'completed' in row:require(type(row['completed']) is bool,'COMPLETION_FLAG')
         if row.get('completed') is True:
+            require(exact_equal(row.get('request'),requests[key]),'LITERAL_REQUEST_CHANGED')
             token=(key,i)
             require(token not in seen,'DUPLICATE_STEP_COMPLETION')
             seen.add(token);completed.append(token)

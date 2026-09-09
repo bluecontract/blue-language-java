@@ -122,10 +122,13 @@ class SuccessorCarrierOracleTest(unittest.TestCase):
         proof_receipt = {"transitionReceiptIdentity": h(9), "originalCauseIdentity": h(8),
                          "beforeBlueId": after, "afterBlueId": before, "emittedRootEvents": []}
         tr = {"documentId": {"value": "S"}, "epoch": 0, "anchorReceiptIdentity": h(3),
-              "predecessorPositionIdentity": h(3), "beforeBlueId": after, "afterBlueId": before,
+              "predecessorPositionIdentity": h(3),
               "afterDocument": {}, "transitionReceipt": proof_receipt,
-              "originalInput": {"invocationIdentity": h(7), "snapshot": {"closureIdentity": h(6)}},
-              "originalResult": {"outputClosureIdentity": h(5), "platformCommitCompanion": {"companionIdentity": h(4)}},
+              "originalInput": {"invocationIdentity": h(7), "snapshot": {"closureIdentity": h(6),
+                  "managedDocuments": [{"documentId": {"value": "S"}, "epoch": 0, "blueId": after}]}},
+              "originalResult": {"outputClosureIdentity": h(5), "platformCommitCompanion": {"companionIdentity": h(4)},
+                  "resultingDocuments": [{"documentId": {"value": "S"}, "epoch": 0,
+                      "beforeBlueId": after, "afterBlueId": before, "document": {}}]},
               "rootedCheckpointReferenceProofIdentity": None}
         tr["positionIdentity"] = digest("blue-managed-representation-position/1", {
             "documentId": "S", "epoch": 0, "anchorReceiptIdentity": h(3), "predecessorPositionIdentity": h(3),
@@ -157,7 +160,7 @@ class SuccessorCarrierOracleTest(unittest.TestCase):
         self.cursor = step(future)["before"]
         self.terminal = {"causeType": "ManagedRevisionCause", "invocationIdentity": h(6),
                          "commitCompanion": {"companionIdentity": h(8), "outputClosureIdentity": h(7)},
-                         "occurrenceBindings": [{"occurrenceIdentity": h(4), "pendingRepresentationCursor": self.cursor,
+                         "occurrenceBindings": [{"occurrenceIdentity": h(4), "pendingRepresentationCursor": dict(self.cursor, identityValue=self.cursor),
                                                  "active": False, "pendingHistoricalEpoch": 0}]}
         receipt = dict(next(v["value"] for v in json.loads((ROOT / "identity/managed-successor-vectors.json").read_text())["vectors"]
                          if v["domain"] == MANAGED.RECEIPT), workIdentity=work["workIdentity"],
@@ -202,6 +205,28 @@ class SuccessorCarrierOracleTest(unittest.TestCase):
         r = self.copy(self.receipt); r["resultingRepresentationCursor"]["positionIdentity"] = self.cause["successorRepresentationCause"]["transition"]["positionIdentity"]
         with self.assertRaises(ValueError): self.check(receipt=r)
 
+    def test_core_cursor_requires_its_exact_identity_projection(self):
+        for field in self.cursor:
+            t = self.copy(self.terminal)
+            t["occurrenceBindings"][0]["pendingRepresentationCursor"]["identityValue"][field] = "forged"
+            with self.subTest(field=field), self.assertRaises(ValueError): self.check(terminal=t)
+        t = self.copy(self.terminal)
+        del t["occurrenceBindings"][0]["pendingRepresentationCursor"]["identityValue"]
+        with self.assertRaises(ValueError): self.check(terminal=t)
+
+    def test_future_endpoints_require_unique_original_source_rows(self):
+        for inventory in ("before", "after"):
+            for mutation in ("missing", "duplicate", "wrong-endpoint", "wrong-bytes"):
+                c = self.copy(self.cause); tr = c["successorRepresentationCause"]["transition"]
+                rows = (tr["originalInput"]["snapshot"]["managedDocuments"] if inventory == "before"
+                        else tr["originalResult"]["resultingDocuments"])
+                if mutation == "missing": rows.clear()
+                elif mutation == "duplicate": rows.append(self.copy(rows[0]))
+                elif mutation == "wrong-endpoint": rows[0]["blueId" if inventory == "before" else "afterBlueId"] = "forged"
+                elif inventory == "after": rows[0]["document"] = {"value": "forged"}
+                else: rows[0]["documentId"] = {"value": "another-source"}
+                with self.subTest(inventory=inventory, mutation=mutation), self.assertRaises(ValueError): self.check(cause=c)
+
     def test_forged_future_transition_and_original_companion_reject(self):
         for field,value in (("anchorReceiptIdentity","sha256:"+"0"*64),
                             ("predecessorPositionIdentity","sha256:"+"0"*64),
@@ -229,7 +254,7 @@ class SuccessorCarrierOracleTest(unittest.TestCase):
             inputClosureIdentity=inp["snapshot"]["closureIdentity"], gasTrace={"charges": []},
             managedTransitionReceipts=[tr["transitionReceipt"]], rootedProjection={},
             resultingDocuments=[{"documentId": {"value": "S"}, "epoch": 0,
-                "afterBlueId": future["afterBlueId"], "document": future["afterDocument"]}])
+                "beforeBlueId": future["beforeBlueId"], "afterBlueId": future["afterBlueId"], "document": future["afterDocument"]}])
         original = {"publicationIdentity": "original", "status": "SUCCESS",
             "invocationIdentity": inp["invocationIdentity"], "input": inp,
             "commitCompanion": companion, "fullGasTrace": result["gasTrace"],

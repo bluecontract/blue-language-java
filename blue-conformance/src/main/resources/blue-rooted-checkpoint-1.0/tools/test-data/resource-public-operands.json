@@ -1,0 +1,920 @@
+{
+  "artifactSha256": "f8ea2db31c0c9e81caa97c58e92ce1f02b157c82400d407e5300445e474b0c8e",
+  "beforeDocuments": [
+    {
+      "activeCatchUpBarrierCount": 0,
+      "activeWorkId": null,
+      "authoredInitialYaml": "name: dynamic exact-resource host\nchildren: {}\ncontracts:\n  embedded:\n    type: Process Embedded\n    collectionPaths:\n      - /children\n  ownerChannel:\n    type: Coordination/Timeline Channel\n    timeline:\n      type: MyOS/MyOS Timeline\n      timelineId: labs/dynamic-resource/alice\n    actor:\n      type: MyOS/Principal Actor\n      accountId: alice\n  attach:\n    type: Coordination/Sequential Workflow Operation\n    channel: ownerChannel\n    request:\n      child: {}\n    steps:\n      - type: Coordination/Compute\n        do:\n          - $appendChange:\n              op: add\n              path: /children/one\n              val: {$binding: event/message/request/child}\n          - $return: true\n",
+      "committedBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "committedEpoch": 0,
+      "createdAt": "2026-09-09T21:40:58.860969Z",
+      "currentBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "currentEpoch": 0,
+      "documentId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+      "exactCurrentJson": "{\n  \"name\" : \"dynamic exact-resource host\",\n  \"contracts\" : {\n    \"embedded\" : {\n      \"type\" : {\n        \"blueId\" : \"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\"\n      },\n      \"collectionPaths\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"/children\"\n        } ]\n      }\n    },\n    \"ownerChannel\" : {\n      \"type\" : {\n        \"blueId\" : \"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\"\n      },\n      \"timeline\" : {\n        \"type\" : {\n          \"blueId\" : \"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\"\n        },\n        \"timelineId\" : {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"labs/dynamic-resource/alice\"\n        }\n      },\n      \"actor\" : {\n        \"type\" : {\n          \"blueId\" : \"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\"\n        },\n        \"accountId\" : {\n          \"description\" : \"MyOS account ID of the principal.\",\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"alice\",\n          \"schema\" : {\n            \"required\" : true\n          }\n        }\n      }\n    },\n    \"attach\" : {\n      \"type\" : {\n        \"blueId\" : \"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\"\n      },\n      \"channel\" : {\n        \"type\" : {\n          \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n        },\n        \"value\" : \"ownerChannel\"\n      },\n      \"request\" : {\n        \"child\" : { }\n      },\n      \"steps\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\"\n          },\n          \"do\" : {\n            \"items\" : [ {\n              \"$appendChange\" : {\n                \"op\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"add\"\n                },\n                \"path\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"/children/one\"\n                },\n                \"val\" : {\n                  \"$binding\" : {\n                    \"type\" : {\n                      \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                    },\n                    \"value\" : \"event/message/request/child\"\n                  }\n                }\n              }\n            }, {\n              \"$return\" : {\n                \"type\" : {\n                  \"blueId\" : \"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\"\n                },\n                \"value\" : true\n              }\n            } ]\n          }\n        } ]\n      }\n    },\n    \"initialized\" : {\n      \"type\" : {\n        \"blueId\" : \"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\"\n      },\n      \"document\" : {\n        \"blueId\" : \"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\"\n      }\n    }\n  },\n  \"children\" : { }\n}",
+      "graphGeneration": 0,
+      "initialBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "lastCommandId": "c2fd0485-720b-43e2-a2af-45d5360696ef",
+      "projectedCurrentJson": "{\n  \"name\" : \"dynamic exact-resource host\",\n  \"contracts\" : {\n    \"embedded\" : {\n      \"type\" : {\n        \"blueId\" : \"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\"\n      },\n      \"collectionPaths\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"/children\"\n        } ]\n      }\n    },\n    \"ownerChannel\" : {\n      \"type\" : {\n        \"blueId\" : \"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\"\n      },\n      \"timeline\" : {\n        \"type\" : {\n          \"blueId\" : \"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\"\n        },\n        \"timelineId\" : {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"labs/dynamic-resource/alice\"\n        }\n      },\n      \"actor\" : {\n        \"type\" : {\n          \"blueId\" : \"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\"\n        },\n        \"accountId\" : {\n          \"description\" : \"MyOS account ID of the principal.\",\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"alice\",\n          \"schema\" : {\n            \"required\" : true\n          }\n        }\n      }\n    },\n    \"attach\" : {\n      \"type\" : {\n        \"blueId\" : \"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\"\n      },\n      \"channel\" : {\n        \"type\" : {\n          \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n        },\n        \"value\" : \"ownerChannel\"\n      },\n      \"request\" : {\n        \"child\" : { }\n      },\n      \"steps\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\"\n          },\n          \"do\" : {\n            \"items\" : [ {\n              \"$appendChange\" : {\n                \"op\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"add\"\n                },\n                \"path\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"/children/one\"\n                },\n                \"val\" : {\n                  \"$binding\" : {\n                    \"type\" : {\n                      \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                    },\n                    \"value\" : \"event/message/request/child\"\n                  }\n                }\n              }\n            }, {\n              \"$return\" : {\n                \"type\" : {\n                  \"blueId\" : \"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\"\n                },\n                \"value\" : true\n              }\n            } ]\n          }\n        } ]\n      }\n    },\n    \"initialized\" : {\n      \"type\" : {\n        \"blueId\" : \"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\"\n      },\n      \"document\" : {\n        \"blueId\" : \"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\"\n      }\n    }\n  },\n  \"children\" : { }\n}",
+      "publicRoot": true,
+      "publishedDocumentBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "publishedDocumentEpoch": 0,
+      "publishedGraphGeneration": 0,
+      "readyBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "readyEpoch": 0,
+      "sessionId": "c5369181-e7b4-451e-9724-e4f0d4bbed4b",
+      "status": "READY",
+      "updatedAt": "2026-09-09T21:40:58.860969Z",
+      "waitCode": null,
+      "waitMessage": null
+    }
+  ],
+  "waitingDocuments": [
+    {
+      "activeCatchUpBarrierCount": 0,
+      "activeWorkId": null,
+      "authoredInitialYaml": "name: dynamic exact-resource host\nchildren: {}\ncontracts:\n  embedded:\n    type: Process Embedded\n    collectionPaths:\n      - /children\n  ownerChannel:\n    type: Coordination/Timeline Channel\n    timeline:\n      type: MyOS/MyOS Timeline\n      timelineId: labs/dynamic-resource/alice\n    actor:\n      type: MyOS/Principal Actor\n      accountId: alice\n  attach:\n    type: Coordination/Sequential Workflow Operation\n    channel: ownerChannel\n    request:\n      child: {}\n    steps:\n      - type: Coordination/Compute\n        do:\n          - $appendChange:\n              op: add\n              path: /children/one\n              val: {$binding: event/message/request/child}\n          - $return: true\n",
+      "committedBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "committedEpoch": 0,
+      "createdAt": "2026-09-09T21:40:58.860969Z",
+      "currentBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "currentEpoch": 0,
+      "documentId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+      "exactCurrentJson": "{\n  \"name\" : \"dynamic exact-resource host\",\n  \"contracts\" : {\n    \"embedded\" : {\n      \"type\" : {\n        \"blueId\" : \"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\"\n      },\n      \"collectionPaths\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"/children\"\n        } ]\n      }\n    },\n    \"ownerChannel\" : {\n      \"type\" : {\n        \"blueId\" : \"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\"\n      },\n      \"timeline\" : {\n        \"type\" : {\n          \"blueId\" : \"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\"\n        },\n        \"timelineId\" : {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"labs/dynamic-resource/alice\"\n        }\n      },\n      \"actor\" : {\n        \"type\" : {\n          \"blueId\" : \"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\"\n        },\n        \"accountId\" : {\n          \"description\" : \"MyOS account ID of the principal.\",\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"alice\",\n          \"schema\" : {\n            \"required\" : true\n          }\n        }\n      }\n    },\n    \"attach\" : {\n      \"type\" : {\n        \"blueId\" : \"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\"\n      },\n      \"channel\" : {\n        \"type\" : {\n          \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n        },\n        \"value\" : \"ownerChannel\"\n      },\n      \"request\" : {\n        \"child\" : { }\n      },\n      \"steps\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\"\n          },\n          \"do\" : {\n            \"items\" : [ {\n              \"$appendChange\" : {\n                \"op\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"add\"\n                },\n                \"path\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"/children/one\"\n                },\n                \"val\" : {\n                  \"$binding\" : {\n                    \"type\" : {\n                      \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                    },\n                    \"value\" : \"event/message/request/child\"\n                  }\n                }\n              }\n            }, {\n              \"$return\" : {\n                \"type\" : {\n                  \"blueId\" : \"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\"\n                },\n                \"value\" : true\n              }\n            } ]\n          }\n        } ]\n      }\n    },\n    \"initialized\" : {\n      \"type\" : {\n        \"blueId\" : \"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\"\n      },\n      \"document\" : {\n        \"blueId\" : \"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\"\n      }\n    }\n  },\n  \"children\" : { }\n}",
+      "graphGeneration": 0,
+      "initialBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "lastCommandId": "c2fd0485-720b-43e2-a2af-45d5360696ef",
+      "projectedCurrentJson": "{\n  \"name\" : \"dynamic exact-resource host\",\n  \"contracts\" : {\n    \"embedded\" : {\n      \"type\" : {\n        \"blueId\" : \"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\"\n      },\n      \"collectionPaths\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"/children\"\n        } ]\n      }\n    },\n    \"ownerChannel\" : {\n      \"type\" : {\n        \"blueId\" : \"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\"\n      },\n      \"timeline\" : {\n        \"type\" : {\n          \"blueId\" : \"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\"\n        },\n        \"timelineId\" : {\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"labs/dynamic-resource/alice\"\n        }\n      },\n      \"actor\" : {\n        \"type\" : {\n          \"blueId\" : \"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\"\n        },\n        \"accountId\" : {\n          \"description\" : \"MyOS account ID of the principal.\",\n          \"type\" : {\n            \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n          },\n          \"value\" : \"alice\",\n          \"schema\" : {\n            \"required\" : true\n          }\n        }\n      }\n    },\n    \"attach\" : {\n      \"type\" : {\n        \"blueId\" : \"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\"\n      },\n      \"channel\" : {\n        \"type\" : {\n          \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n        },\n        \"value\" : \"ownerChannel\"\n      },\n      \"request\" : {\n        \"child\" : { }\n      },\n      \"steps\" : {\n        \"items\" : [ {\n          \"type\" : {\n            \"blueId\" : \"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\"\n          },\n          \"do\" : {\n            \"items\" : [ {\n              \"$appendChange\" : {\n                \"op\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"add\"\n                },\n                \"path\" : {\n                  \"type\" : {\n                    \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                  },\n                  \"value\" : \"/children/one\"\n                },\n                \"val\" : {\n                  \"$binding\" : {\n                    \"type\" : {\n                      \"blueId\" : \"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\"\n                    },\n                    \"value\" : \"event/message/request/child\"\n                  }\n                }\n              }\n            }, {\n              \"$return\" : {\n                \"type\" : {\n                  \"blueId\" : \"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\"\n                },\n                \"value\" : true\n              }\n            } ]\n          }\n        } ]\n      }\n    },\n    \"initialized\" : {\n      \"type\" : {\n        \"blueId\" : \"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\"\n      },\n      \"document\" : {\n        \"blueId\" : \"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\"\n      }\n    }\n  },\n  \"children\" : { }\n}",
+      "publicRoot": true,
+      "publishedDocumentBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "publishedDocumentEpoch": 0,
+      "publishedGraphGeneration": 0,
+      "readyBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+      "readyEpoch": 0,
+      "sessionId": "c5369181-e7b4-451e-9724-e4f0d4bbed4b",
+      "status": "READY",
+      "updatedAt": "2026-09-09T21:41:00.096555Z",
+      "waitCode": null,
+      "waitMessage": null
+    }
+  ],
+  "commands": [
+    {
+      "attemptCount": 1,
+      "commandId": "97fbe9ea-2fc7-46f3-9563-c8c7b70e9da9",
+      "commandType": "CREATE_TIMELINE",
+      "completedAt": "2026-09-09T21:40:58.168470Z",
+      "createdAt": "2026-09-09T21:40:58.147044Z",
+      "errorCode": null,
+      "errorMessage": null,
+      "evidenceSchemaVersion": 6,
+      "globalSequence": 1,
+      "idempotencyKey": "rcp-027-timeline",
+      "progressPhase": "COMPLETED",
+      "requestJson": "{\"actorId\":\"alice\",\"timelineId\":\"labs/dynamic-resource/alice\"}",
+      "resultJson": "{\"changedSessionIds\":[],\"commandId\":\"97fbe9ea-2fc7-46f3-9563-c8c7b70e9da9\",\"entryBlueIds\":[],\"globalSequence\":1,\"replayEvidence\":{\"actorId\":\"alice\",\"exactProviderReads\":[],\"timelineId\":\"labs/dynamic-resource/alice\"},\"result\":{\"actorId\":\"alice\",\"timelineId\":\"labs/dynamic-resource/alice\"},\"status\":\"APPLIED\",\"type\":\"CREATE_TIMELINE\"}",
+      "runtimeGeneration": 2,
+      "startedAt": "2026-09-09T21:40:58.149461Z",
+      "status": "APPLIED"
+    },
+    {
+      "attemptCount": 1,
+      "commandId": "c2fd0485-720b-43e2-a2af-45d5360696ef",
+      "commandType": "START_DOCUMENT",
+      "completedAt": "2026-09-09T21:40:58.957517Z",
+      "createdAt": "2026-09-09T21:40:58.336636Z",
+      "errorCode": null,
+      "errorMessage": null,
+      "evidenceSchemaVersion": 6,
+      "globalSequence": 2,
+      "idempotencyKey": "rcp-027-host",
+      "progressPhase": "COMPLETED",
+      "requestJson": "{\"activation\":\"IMPORT_FULL_HISTORY\",\"authoredYaml\":\"name: dynamic exact-resource host\\nchildren: {}\\ncontracts:\\n  embedded:\\n    type: Process Embedded\\n    collectionPaths:\\n      - /children\\n  ownerChannel:\\n    type: Coordination/Timeline Channel\\n    timeline:\\n      type: MyOS/MyOS Timeline\\n      timelineId: labs/dynamic-resource/alice\\n    actor:\\n      type: MyOS/Principal Actor\\n      accountId: alice\\n  attach:\\n    type: Coordination/Sequential Workflow Operation\\n    channel: ownerChannel\\n    request:\\n      child: {}\\n    steps:\\n      - type: Coordination/Compute\\n        do:\\n          - $appendChange:\\n              op: add\\n              path: /children/one\\n              val: {$binding: event/message/request/child}\\n          - $return: true\\n\",\"documentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"publicRoot\":true}",
+      "resultJson": "{\"changedSessionIds\":[\"c5369181-e7b4-451e-9724-e4f0d4bbed4b\"],\"commandId\":\"c2fd0485-720b-43e2-a2af-45d5360696ef\",\"entryBlueIds\":[],\"globalSequence\":2,\"replayEvidence\":{\"closureId\":\"sha256:273d7f1fc9951f03520012f6a7ab4de13bd141efab5edffcc61718ed573f96bb\",\"document\":{\"blueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"documentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"epoch\":0,\"exactDocument\":\"{\\n  \\\"name\\\" : \\\"dynamic exact-resource host\\\",\\n  \\\"contracts\\\" : {\\n    \\\"embedded\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\\\"\\n      },\\n      \\\"collectionPaths\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"/children\\\"\\n        } ]\\n      }\\n    },\\n    \\\"ownerChannel\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\\\"\\n      },\\n      \\\"timeline\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n        },\\n        \\\"timelineId\\\" : {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n        }\\n      },\\n      \\\"actor\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n        },\\n        \\\"accountId\\\" : {\\n          \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"alice\\\",\\n          \\\"schema\\\" : {\\n            \\\"required\\\" : true\\n          }\\n        }\\n      }\\n    },\\n    \\\"attach\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\\\"\\n      },\\n      \\\"channel\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n        },\\n        \\\"value\\\" : \\\"ownerChannel\\\"\\n      },\\n      \\\"request\\\" : {\\n        \\\"child\\\" : { }\\n      },\\n      \\\"steps\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\\\"\\n          },\\n          \\\"do\\\" : {\\n            \\\"items\\\" : [ {\\n              \\\"$appendChange\\\" : {\\n                \\\"op\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"add\\\"\\n                },\\n                \\\"path\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"/children/one\\\"\\n                },\\n                \\\"val\\\" : {\\n                  \\\"$binding\\\" : {\\n                    \\\"type\\\" : {\\n                      \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                    },\\n                    \\\"value\\\" : \\\"event/message/request/child\\\"\\n                  }\\n                }\\n              }\\n            }, {\\n              \\\"$return\\\" : {\\n                \\\"type\\\" : {\\n                  \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n                },\\n                \\\"value\\\" : true\\n              }\\n            } ]\\n          }\\n        } ]\\n      }\\n    },\\n    \\\"initialized\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\\\"\\n      },\\n      \\\"document\\\" : {\\n        \\\"blueId\\\" : \\\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\\\"\\n      }\\n    }\\n  },\\n  \\\"children\\\" : { }\\n}\",\"history\":[{\"afterBlueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"beforeBlueId\":null,\"epoch\":0,\"gas\":1257,\"kind\":\"INITIALIZATION\",\"publicEventBlueIds\":[],\"sourceEntryBlueId\":null}]},\"documents\":[{\"alias\":\"root\",\"blueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"documentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"epoch\":0,\"exactDocument\":\"{\\n  \\\"name\\\" : \\\"dynamic exact-resource host\\\",\\n  \\\"contracts\\\" : {\\n    \\\"embedded\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\\\"\\n      },\\n      \\\"collectionPaths\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"/children\\\"\\n        } ]\\n      }\\n    },\\n    \\\"ownerChannel\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\\\"\\n      },\\n      \\\"timeline\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n        },\\n        \\\"timelineId\\\" : {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n        }\\n      },\\n      \\\"actor\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n        },\\n        \\\"accountId\\\" : {\\n          \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"alice\\\",\\n          \\\"schema\\\" : {\\n            \\\"required\\\" : true\\n          }\\n        }\\n      }\\n    },\\n    \\\"attach\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\\\"\\n      },\\n      \\\"channel\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n        },\\n        \\\"value\\\" : \\\"ownerChannel\\\"\\n      },\\n      \\\"request\\\" : {\\n        \\\"child\\\" : { }\\n      },\\n      \\\"steps\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\\\"\\n          },\\n          \\\"do\\\" : {\\n            \\\"items\\\" : [ {\\n              \\\"$appendChange\\\" : {\\n                \\\"op\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"add\\\"\\n                },\\n                \\\"path\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"/children/one\\\"\\n                },\\n                \\\"val\\\" : {\\n                  \\\"$binding\\\" : {\\n                    \\\"type\\\" : {\\n                      \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                    },\\n                    \\\"value\\\" : \\\"event/message/request/child\\\"\\n                  }\\n                }\\n              }\\n            }, {\\n              \\\"$return\\\" : {\\n                \\\"type\\\" : {\\n                  \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n                },\\n                \\\"value\\\" : true\\n              }\\n            } ]\\n          }\\n        } ]\\n      }\\n    },\\n    \\\"initialized\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\\\"\\n      },\\n      \\\"document\\\" : {\\n        \\\"blueId\\\" : \\\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\\\"\\n      }\\n    }\\n  },\\n  \\\"children\\\" : { }\\n}\",\"history\":[{\"afterBlueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"beforeBlueId\":null,\"epoch\":0,\"gas\":1257,\"kind\":\"INITIALIZATION\",\"publicEventBlueIds\":[],\"sourceEntryBlueId\":null}]}],\"exactProviderReads\":[],\"occurrenceCount\":0},\"result\":{\"closureId\":\"sha256:273d7f1fc9951f03520012f6a7ab4de13bd141efab5edffcc61718ed573f96bb\",\"document\":{\"blueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"documentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"epoch\":0,\"exactDocument\":\"{\\n  \\\"name\\\" : \\\"dynamic exact-resource host\\\",\\n  \\\"contracts\\\" : {\\n    \\\"embedded\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\\\"\\n      },\\n      \\\"collectionPaths\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"/children\\\"\\n        } ]\\n      }\\n    },\\n    \\\"ownerChannel\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\\\"\\n      },\\n      \\\"timeline\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n        },\\n        \\\"timelineId\\\" : {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n        }\\n      },\\n      \\\"actor\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n        },\\n        \\\"accountId\\\" : {\\n          \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"alice\\\",\\n          \\\"schema\\\" : {\\n            \\\"required\\\" : true\\n          }\\n        }\\n      }\\n    },\\n    \\\"attach\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\\\"\\n      },\\n      \\\"channel\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n        },\\n        \\\"value\\\" : \\\"ownerChannel\\\"\\n      },\\n      \\\"request\\\" : {\\n        \\\"child\\\" : { }\\n      },\\n      \\\"steps\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\\\"\\n          },\\n          \\\"do\\\" : {\\n            \\\"items\\\" : [ {\\n              \\\"$appendChange\\\" : {\\n                \\\"op\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"add\\\"\\n                },\\n                \\\"path\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"/children/one\\\"\\n                },\\n                \\\"val\\\" : {\\n                  \\\"$binding\\\" : {\\n                    \\\"type\\\" : {\\n                      \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                    },\\n                    \\\"value\\\" : \\\"event/message/request/child\\\"\\n                  }\\n                }\\n              }\\n            }, {\\n              \\\"$return\\\" : {\\n                \\\"type\\\" : {\\n                  \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n                },\\n                \\\"value\\\" : true\\n              }\\n            } ]\\n          }\\n        } ]\\n      }\\n    },\\n    \\\"initialized\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\\\"\\n      },\\n      \\\"document\\\" : {\\n        \\\"blueId\\\" : \\\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\\\"\\n      }\\n    }\\n  },\\n  \\\"children\\\" : { }\\n}\",\"history\":[{\"afterBlueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"beforeBlueId\":null,\"epoch\":0,\"gas\":1257,\"kind\":\"INITIALIZATION\",\"publicEventBlueIds\":[],\"sourceEntryBlueId\":null}]},\"documents\":[{\"alias\":\"root\",\"blueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"documentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"epoch\":0,\"exactDocument\":\"{\\n  \\\"name\\\" : \\\"dynamic exact-resource host\\\",\\n  \\\"contracts\\\" : {\\n    \\\"embedded\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\\\"\\n      },\\n      \\\"collectionPaths\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"/children\\\"\\n        } ]\\n      }\\n    },\\n    \\\"ownerChannel\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf\\\"\\n      },\\n      \\\"timeline\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n        },\\n        \\\"timelineId\\\" : {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n        }\\n      },\\n      \\\"actor\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n        },\\n        \\\"accountId\\\" : {\\n          \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n          },\\n          \\\"value\\\" : \\\"alice\\\",\\n          \\\"schema\\\" : {\\n            \\\"required\\\" : true\\n          }\\n        }\\n      }\\n    },\\n    \\\"attach\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah\\\"\\n      },\\n      \\\"channel\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n        },\\n        \\\"value\\\" : \\\"ownerChannel\\\"\\n      },\\n      \\\"request\\\" : {\\n        \\\"child\\\" : { }\\n      },\\n      \\\"steps\\\" : {\\n        \\\"items\\\" : [ {\\n          \\\"type\\\" : {\\n            \\\"blueId\\\" : \\\"HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab\\\"\\n          },\\n          \\\"do\\\" : {\\n            \\\"items\\\" : [ {\\n              \\\"$appendChange\\\" : {\\n                \\\"op\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"add\\\"\\n                },\\n                \\\"path\\\" : {\\n                  \\\"type\\\" : {\\n                    \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                  },\\n                  \\\"value\\\" : \\\"/children/one\\\"\\n                },\\n                \\\"val\\\" : {\\n                  \\\"$binding\\\" : {\\n                    \\\"type\\\" : {\\n                      \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n                    },\\n                    \\\"value\\\" : \\\"event/message/request/child\\\"\\n                  }\\n                }\\n              }\\n            }, {\\n              \\\"$return\\\" : {\\n                \\\"type\\\" : {\\n                  \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n                },\\n                \\\"value\\\" : true\\n              }\\n            } ]\\n          }\\n        } ]\\n      }\\n    },\\n    \\\"initialized\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB\\\"\\n      },\\n      \\\"document\\\" : {\\n        \\\"blueId\\\" : \\\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\\\"\\n      }\\n    }\\n  },\\n  \\\"children\\\" : { }\\n}\",\"history\":[{\"afterBlueId\":\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\",\"beforeBlueId\":null,\"epoch\":0,\"gas\":1257,\"kind\":\"INITIALIZATION\",\"publicEventBlueIds\":[],\"sourceEntryBlueId\":null}]}],\"occurrenceCount\":0},\"status\":\"APPLIED\",\"type\":\"START_DOCUMENT\"}",
+      "runtimeGeneration": 2,
+      "startedAt": "2026-09-09T21:40:58.338513Z",
+      "status": "APPLIED"
+    },
+    {
+      "attemptCount": 1,
+      "commandId": "4f1aa64f-3640-4fca-a6dd-de29c0c682be",
+      "commandType": "EXECUTE_OPERATION",
+      "completedAt": "2026-09-09T21:40:59.967818Z",
+      "createdAt": "2026-09-09T21:40:59.374417Z",
+      "errorCode": "NEEDS_RESOURCES",
+      "errorMessage": "Separate source-owned prerequisite required: ADMISSION source=8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3 cutoff=[1800000000000001, A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa, EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe]",
+      "evidenceSchemaVersion": 6,
+      "globalSequence": 3,
+      "idempotencyKey": "rcp-027-attach",
+      "progressPhase": "COMPLETED",
+      "requestJson": "{\"channel\":\"ownerChannel\",\"managedDrafts\":[],\"mode\":\"EXECUTE\",\"operation\":\"attach\",\"request\":null,\"requestYaml\":\"child:\\n  name: dynamic child waiting for exact content\\n  peer:\\n    blueId: ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\\n  contracts:\\n    embedded:\\n      type: Process Embedded\\n      paths:\\n        - /peer\\n\",\"targetSessionId\":\"c5369181-e7b4-451e-9724-e4f0d4bbed4b\",\"timelineId\":\"labs/dynamic-resource/alice\"}",
+      "resultJson": "{\"attemptCount\":1,\"blueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"code\":\"NEEDS_RESOURCES\",\"commandId\":\"4f1aa64f-3640-4fca-a6dd-de29c0c682be\",\"demandId\":\"9b7ffe72-89dd-4abd-a0d5-dec4abf7e0a0\",\"demandKind\":\"MANAGED_OCCURRENCE_EVIDENCE\",\"demands\":[{\"blueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"closureId\":\"sha256:0e11132aa5d45cf207c3a13b3dabb0d5e8d90bf176800493c9a6c1387424cd18\",\"coordinationDemandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"coordinationKind\":\"MANAGED_OCCURRENCE_EVIDENCE\",\"demandId\":\"9b7ffe72-89dd-4abd-a0d5-dec4abf7e0a0\",\"demandKind\":\"MANAGED_OCCURRENCE_EVIDENCE\",\"managedResolutionDiagnostic\":\"Separate source-owned prerequisite required: ADMISSION source=8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3 cutoff=[1800000000000001, A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa, EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe]\",\"managedResolutionStatus\":\"UNPROVEN_MANAGED_HISTORY\",\"processorAttemptCount\":1,\"sourceDocumentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"sourcePath\":\"/children/one\"}],\"gas\":0,\"globalSequence\":3,\"message\":\"Separate source-owned prerequisite required: ADMISSION source=8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3 cutoff=[1800000000000001, A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa, EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe]\",\"sourceDocumentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"sourcePath\":\"/children/one\",\"status\":\"BLOCKED\",\"type\":\"EXECUTE_OPERATION\"}",
+      "runtimeGeneration": 2,
+      "startedAt": "2026-09-09T21:40:59.378294Z",
+      "status": "BLOCKED"
+    },
+    {
+      "attemptCount": 1,
+      "commandId": "b4404b71-47c1-30ad-ada1-fcaf6d1d53ef",
+      "commandType": "SOURCE_HISTORY_CAPTURE",
+      "completedAt": "2026-09-09T21:41:00.130711Z",
+      "createdAt": "2026-09-09T21:40:59.747810Z",
+      "errorCode": null,
+      "errorMessage": null,
+      "evidenceSchemaVersion": 6,
+      "globalSequence": 4,
+      "idempotencyKey": "source-history-capture:4f1aa64f-3640-4fca-a6dd-de29c0c682be:8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+      "progressPhase": "COMPLETED",
+      "requestJson": "{\"entryBlueId\":\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\",\"entryJson\":\"{\\n  \\\"type\\\" : {\\n    \\\"blueId\\\" : \\\"7L685pBvjNNrBPq6tNv53kfPEBMDkoRu7MdVMTqdcyR2\\\"\\n  },\\n  \\\"timeline\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n    },\\n    \\\"timelineId\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n    }\\n  },\\n  \\\"timestamp\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\\\"\\n    },\\n    \\\"value\\\" : 1800000000000001\\n  },\\n  \\\"actor\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n    },\\n    \\\"accountId\\\" : {\\n      \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"alice\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    }\\n  },\\n  \\\"message\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"93PyhYJyekVeSvQcFi5u8moU5fbfKcbD68BCRtzE8ZLz\\\"\\n    },\\n    \\\"requestId\\\" : {\\n      \\\"description\\\" : \\\"Optional application-level correlation key. It may group retries, provider work, or multiple messages associated with one logical request. It is not a substitute for inResponseTo, which identifies an exact Message occurrence.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"threadId\\\" : {\\n      \\\"description\\\" : \\\"Optional thread key grouping related Messages without requiring a consumer to walk an inResponseTo chain.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"recipientChannel\\\" : {\\n      \\\"description\\\" : \\\"Optional channel key identifying the participant this Message is addressed to. When absent, the Message is addressed to the table as a whole or to the document itself. Addressing does not make a Message private; visibility follows the enclosing document and timeline rules.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"inResponseTo\\\" : {\\n      \\\"description\\\" : \\\"Optional reference to the Message being answered, normally a pure { blueId: ... } reference to the exact Message occurrence or an equivalent materialized node. Any Message may answer any Message. Chains form a conversation tree; threadId provides direct grouping.\\\\n\\\"\\n    },\\n    \\\"operation\\\" : {\\n      \\\"description\\\" : \\\"Required operation contract key/name to invoke.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"attach\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"channel\\\" : {\\n      \\\"description\\\" : \\\"Required effective target channel key.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"ownerChannel\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"document\\\" : {\\n      \\\"blueId\\\" : \\\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\\\"\\n    },\\n    \\\"requireExactDocumentVersion\\\" : {\\n      \\\"description\\\" : \\\"When true, the feeder passes the request only if document equals the current target state. When false or absent, a newer state may be accepted according to the feeder's document-version eligibility policy.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n      },\\n      \\\"value\\\" : true\\n    },\\n    \\\"request\\\" : {\\n      \\\"blueId\\\" : \\\"GjfAuYEyPsVpWc2D96hYeDdESj1ApGPsF2uCpmyzkMhM\\\"\\n    }\\n  }\\n}\",\"originalCommandId\":\"4f1aa64f-3640-4fca-a6dd-de29c0c682be\",\"originalRequestJson\":\"{\\\"channel\\\":\\\"ownerChannel\\\",\\\"managedDrafts\\\":[],\\\"mode\\\":\\\"EXECUTE\\\",\\\"operation\\\":\\\"attach\\\",\\\"request\\\":null,\\\"requestYaml\\\":\\\"child:\\\\n  name: dynamic child waiting for exact content\\\\n  peer:\\\\n    blueId: ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\\\\n  contracts:\\\\n    embedded:\\\\n      type: Process Embedded\\\\n      paths:\\\\n        - /peer\\\\n\\\",\\\"targetSessionId\\\":\\\"c5369181-e7b4-451e-9724-e4f0d4bbed4b\\\",\\\"timelineId\\\":\\\"labs/dynamic-resource/alice\\\"}\",\"requestBlueId\":\"GjfAuYEyPsVpWc2D96hYeDdESj1ApGPsF2uCpmyzkMhM\",\"requestJson\":\"{\\n  \\\"child\\\" : {\\n    \\\"name\\\" : \\\"dynamic child waiting for exact content\\\",\\n    \\\"contracts\\\" : {\\n      \\\"embedded\\\" : {\\n        \\\"type\\\" : {\\n          \\\"blueId\\\" : \\\"9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\\\"\\n        },\\n        \\\"paths\\\" : {\\n          \\\"items\\\" : [ {\\n            \\\"type\\\" : {\\n              \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n            },\\n            \\\"value\\\" : \\\"/peer\\\"\\n          } ]\\n        }\\n      }\\n    },\\n    \\\"peer\\\" : {\\n      \\\"blueId\\\" : \\\"ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\\\"\\n    }\\n  }\\n}\",\"schemaVersion\":1,\"selection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"}}",
+      "resultJson": "{\"changedSessionIds\":[],\"commandId\":\"b4404b71-47c1-30ad-ada1-fcaf6d1d53ef\",\"entryBlueIds\":[\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"globalSequence\":4,\"replayEvidence\":{\"entry\":{\"actorId\":\"alice\",\"blueId\":\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\",\"channel\":\"ownerChannel\",\"exactEntry\":\"{\\n  \\\"type\\\" : {\\n    \\\"blueId\\\" : \\\"7L685pBvjNNrBPq6tNv53kfPEBMDkoRu7MdVMTqdcyR2\\\"\\n  },\\n  \\\"timeline\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n    },\\n    \\\"timelineId\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n    }\\n  },\\n  \\\"timestamp\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\\\"\\n    },\\n    \\\"value\\\" : 1800000000000001\\n  },\\n  \\\"actor\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n    },\\n    \\\"accountId\\\" : {\\n      \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"alice\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    }\\n  },\\n  \\\"message\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"93PyhYJyekVeSvQcFi5u8moU5fbfKcbD68BCRtzE8ZLz\\\"\\n    },\\n    \\\"requestId\\\" : {\\n      \\\"description\\\" : \\\"Optional application-level correlation key. It may group retries, provider work, or multiple messages associated with one logical request. It is not a substitute for inResponseTo, which identifies an exact Message occurrence.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"threadId\\\" : {\\n      \\\"description\\\" : \\\"Optional thread key grouping related Messages without requiring a consumer to walk an inResponseTo chain.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"recipientChannel\\\" : {\\n      \\\"description\\\" : \\\"Optional channel key identifying the participant this Message is addressed to. When absent, the Message is addressed to the table as a whole or to the document itself. Addressing does not make a Message private; visibility follows the enclosing document and timeline rules.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"inResponseTo\\\" : {\\n      \\\"description\\\" : \\\"Optional reference to the Message being answered, normally a pure { blueId: ... } reference to the exact Message occurrence or an equivalent materialized node. Any Message may answer any Message. Chains form a conversation tree; threadId provides direct grouping.\\\\n\\\"\\n    },\\n    \\\"operation\\\" : {\\n      \\\"description\\\" : \\\"Required operation contract key/name to invoke.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"attach\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"channel\\\" : {\\n      \\\"description\\\" : \\\"Required effective target channel key.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"ownerChannel\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"document\\\" : {\\n      \\\"blueId\\\" : \\\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\\\"\\n    },\\n    \\\"requireExactDocumentVersion\\\" : {\\n      \\\"description\\\" : \\\"When true, the feeder passes the request only if document equals the current target state. When false or absent, a newer state may be accepted according to the feeder's document-version eligibility policy.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n      },\\n      \\\"value\\\" : true\\n    },\\n    \\\"request\\\" : {\\n      \\\"blueId\\\" : \\\"GjfAuYEyPsVpWc2D96hYeDdESj1ApGPsF2uCpmyzkMhM\\\"\\n    }\\n  }\\n}\",\"globalSequence\":1,\"operation\":\"attach\",\"previousEntryBlueId\":null,\"timelineId\":\"labs/dynamic-resource/alice\",\"timelineSequence\":1,\"timestampMicros\":1800000000000001},\"exactProviderReads\":[],\"kind\":\"SOURCE_HISTORY_CAPTURE\",\"nextSourceSelection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"},\"originalCommandId\":\"4f1aa64f-3640-4fca-a6dd-de29c0c682be\",\"parentDisposition\":\"NEEDS_RESOURCES\",\"selection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"},\"sourceReady\":false,\"suspension\":{\"closures\":[{\"changes\":[],\"closureId\":\"sha256:0e11132aa5d45cf207c3a13b3dabb0d5e8d90bf176800493c9a6c1387424cd18\",\"diagnostic\":{\"code\":\"REQUIRED_EXACT_RESOURCES\",\"details\":{\"requiredExactBlueIds\":\"\"},\"message\":\"Closure processing requires unavailable exact values\"},\"disposition\":\"NEEDS_RESOURCES\",\"managedSurfaceEvidence\":{\"componentTransitions\":[],\"documentTransitions\":[],\"graphChanges\":[],\"graphGeneration\":0,\"operationRouteChanges\":[],\"resolvedOccurrences\":[],\"subscriptionChanges\":[]},\"processorAttemptCount\":1,\"publicEvents\":[],\"resourceDemands\":[{\"blueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"kind\":\"MANAGED_OCCURRENCE_EVIDENCE\",\"sourceDocumentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"sourcePath\":\"/children/one\"}],\"stats\":{\"committedTransitions\":0,\"counters\":{},\"documentStepOrder\":[],\"documentsOpened\":0,\"gas\":0}}],\"diagnostic\":{\"code\":\"REQUIRED_EXACT_RESOURCES\",\"details\":{\"requiredExactBlueIds\":\"\"},\"message\":\"Closure processing requires unavailable exact values\"},\"disposition\":\"NEEDS_RESOURCES\",\"entryBlueId\":\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\",\"publicEvents\":[],\"stats\":{\"committedTransitions\":0,\"counters\":{},\"documentStepOrder\":[],\"documentsOpened\":0,\"gas\":0}}},\"result\":{\"entry\":{\"actorId\":\"alice\",\"blueId\":\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\",\"channel\":\"ownerChannel\",\"exactEntry\":\"{\\n  \\\"type\\\" : {\\n    \\\"blueId\\\" : \\\"7L685pBvjNNrBPq6tNv53kfPEBMDkoRu7MdVMTqdcyR2\\\"\\n  },\\n  \\\"timeline\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX\\\"\\n    },\\n    \\\"timelineId\\\" : {\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"labs/dynamic-resource/alice\\\"\\n    }\\n  },\\n  \\\"timestamp\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq\\\"\\n    },\\n    \\\"value\\\" : 1800000000000001\\n  },\\n  \\\"actor\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw\\\"\\n    },\\n    \\\"accountId\\\" : {\\n      \\\"description\\\" : \\\"MyOS account ID of the principal.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"alice\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    }\\n  },\\n  \\\"message\\\" : {\\n    \\\"type\\\" : {\\n      \\\"blueId\\\" : \\\"93PyhYJyekVeSvQcFi5u8moU5fbfKcbD68BCRtzE8ZLz\\\"\\n    },\\n    \\\"requestId\\\" : {\\n      \\\"description\\\" : \\\"Optional application-level correlation key. It may group retries, provider work, or multiple messages associated with one logical request. It is not a substitute for inResponseTo, which identifies an exact Message occurrence.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"threadId\\\" : {\\n      \\\"description\\\" : \\\"Optional thread key grouping related Messages without requiring a consumer to walk an inResponseTo chain.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"recipientChannel\\\" : {\\n      \\\"description\\\" : \\\"Optional channel key identifying the participant this Message is addressed to. When absent, the Message is addressed to the table as a whole or to the document itself. Addressing does not make a Message private; visibility follows the enclosing document and timeline rules.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      }\\n    },\\n    \\\"inResponseTo\\\" : {\\n      \\\"description\\\" : \\\"Optional reference to the Message being answered, normally a pure { blueId: ... } reference to the exact Message occurrence or an equivalent materialized node. Any Message may answer any Message. Chains form a conversation tree; threadId provides direct grouping.\\\\n\\\"\\n    },\\n    \\\"operation\\\" : {\\n      \\\"description\\\" : \\\"Required operation contract key/name to invoke.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"attach\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"channel\\\" : {\\n      \\\"description\\\" : \\\"Required effective target channel key.\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\\\"\\n      },\\n      \\\"value\\\" : \\\"ownerChannel\\\",\\n      \\\"schema\\\" : {\\n        \\\"required\\\" : true\\n      }\\n    },\\n    \\\"document\\\" : {\\n      \\\"blueId\\\" : \\\"Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk\\\"\\n    },\\n    \\\"requireExactDocumentVersion\\\" : {\\n      \\\"description\\\" : \\\"When true, the feeder passes the request only if document equals the current target state. When false or absent, a newer state may be accepted according to the feeder's document-version eligibility policy.\\\\n\\\",\\n      \\\"type\\\" : {\\n        \\\"blueId\\\" : \\\"AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2\\\"\\n      },\\n      \\\"value\\\" : true\\n    },\\n    \\\"request\\\" : {\\n      \\\"blueId\\\" : \\\"GjfAuYEyPsVpWc2D96hYeDdESj1ApGPsF2uCpmyzkMhM\\\"\\n    }\\n  }\\n}\",\"globalSequence\":1,\"operation\":\"attach\",\"previousEntryBlueId\":null,\"timelineId\":\"labs/dynamic-resource/alice\",\"timelineSequence\":1,\"timestampMicros\":1800000000000001},\"kind\":\"SOURCE_HISTORY_CAPTURE\",\"nextSourceSelection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"},\"originalCommandId\":\"4f1aa64f-3640-4fca-a6dd-de29c0c682be\",\"parentDisposition\":\"NEEDS_RESOURCES\",\"selection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"},\"sourceReady\":false,\"suspension\":{\"closures\":[{\"changes\":[],\"closureId\":\"sha256:0e11132aa5d45cf207c3a13b3dabb0d5e8d90bf176800493c9a6c1387424cd18\",\"diagnostic\":{\"code\":\"REQUIRED_EXACT_RESOURCES\",\"details\":{\"requiredExactBlueIds\":\"\"},\"message\":\"Closure processing requires unavailable exact values\"},\"disposition\":\"NEEDS_RESOURCES\",\"managedSurfaceEvidence\":{\"componentTransitions\":[],\"documentTransitions\":[],\"graphChanges\":[],\"graphGeneration\":0,\"operationRouteChanges\":[],\"resolvedOccurrences\":[],\"subscriptionChanges\":[]},\"processorAttemptCount\":1,\"publicEvents\":[],\"resourceDemands\":[{\"blueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"kind\":\"MANAGED_OCCURRENCE_EVIDENCE\",\"sourceDocumentId\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"sourcePath\":\"/children/one\"}],\"stats\":{\"committedTransitions\":0,\"counters\":{},\"documentStepOrder\":[],\"documentsOpened\":0,\"gas\":0}}],\"diagnostic\":{\"code\":\"REQUIRED_EXACT_RESOURCES\",\"details\":{\"requiredExactBlueIds\":\"\"},\"message\":\"Closure processing requires unavailable exact values\"},\"disposition\":\"NEEDS_RESOURCES\",\"entryBlueId\":\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\",\"publicEvents\":[],\"stats\":{\"committedTransitions\":0,\"counters\":{},\"documentStepOrder\":[],\"documentsOpened\":0,\"gas\":0}}},\"status\":\"APPLIED\",\"type\":\"SOURCE_HISTORY_CAPTURE\"}",
+      "runtimeGeneration": 2,
+      "startedAt": "2026-09-09T21:40:59.972554Z",
+      "status": "APPLIED"
+    },
+    {
+      "attemptCount": 1,
+      "commandId": "8babb170-5dbd-3f17-b32c-8bd0186f45b7",
+      "commandType": "SOURCE_HISTORY_EXECUTE",
+      "completedAt": "2026-09-09T21:41:00.468326Z",
+      "createdAt": "2026-09-09T21:41:00.136516Z",
+      "errorCode": "NEEDS_RESOURCES",
+      "errorMessage": "Exact resources are required",
+      "evidenceSchemaVersion": 6,
+      "globalSequence": 5,
+      "idempotencyKey": "source-history-execute:sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8",
+      "progressPhase": "COMPLETED",
+      "requestJson": "{\"captureCommandId\":\"b4404b71-47c1-30ad-ada1-fcaf6d1d53ef\",\"originalCommandId\":\"4f1aa64f-3640-4fca-a6dd-de29c0c682be\",\"schemaVersion\":1,\"selection\":{\"authoredBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"cutoffExclusive\":[1800000000000001,\"A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\",\"EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\"],\"demandIdentity\":\"sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7\",\"diagnostic\":null,\"entryBlueId\":null,\"journalRevision\":1,\"kind\":\"ADMISSION\",\"requestingInvocationIdentity\":\"sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153\",\"requestingRoot\":\"4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\",\"routeGeneration\":1,\"selectionIdentity\":\"sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8\",\"sourceBlueId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourceEpoch\":-1,\"sourceSurfaceIdentity\":\"sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46\",\"workIdentity\":\"sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4\"}}",
+      "resultJson": "{\"attemptCount\":1,\"blueId\":\"ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\",\"code\":\"NEEDS_RESOURCES\",\"commandId\":\"8babb170-5dbd-3f17-b32c-8bd0186f45b7\",\"demandId\":\"f5f71179-0ef5-4a07-9420-5567d8322d1b\",\"demandKind\":\"EXACT_BLUE_NODE\",\"demands\":[{\"blueId\":\"ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\",\"closureId\":\"coordination-contracts-closure-admission-v1:sha256:57c7ef98097778434f4e65df0d22ef580667858a41110d56276f3219cfa0a2e2\",\"coordinationDemandIdentity\":\"sha256:35b676bab36ff9d4497d2910901ee93dfae6b77c46813fbbb9a1b18ef28bdd58\",\"coordinationKind\":\"EXACT_NODE\",\"demandId\":\"f5f71179-0ef5-4a07-9420-5567d8322d1b\",\"demandKind\":\"EXACT_BLUE_NODE\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourcePath\":\"/peer\"}],\"gas\":0,\"globalSequence\":5,\"message\":\"Exact resources are required\",\"sourceDocumentId\":\"8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3\",\"sourcePath\":\"/peer\",\"status\":\"BLOCKED\",\"type\":\"SOURCE_HISTORY_EXECUTE\"}",
+      "runtimeGeneration": 3,
+      "startedAt": "2026-09-09T21:41:00.137845Z",
+      "status": "BLOCKED"
+    }
+  ],
+  "ids": {
+    "child": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+    "host": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+    "missing": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+  },
+  "applied": {
+    "http": {
+      "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3": {
+        "body": {
+          "activeBarrierCount": 0,
+          "activePlanCount": 0,
+          "activeWorkId": null,
+          "auditState": "READY",
+          "authoredBlueId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+          "authoredInitialYaml": "---\nname: dynamic child waiting for exact content\ncontracts:\n  embedded:\n    type:\n      blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3\n    paths:\n      items:\n      - type:\n          blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n        value: /peer\npeer:\n  blueId: ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\n",
+          "authoredInitialYamlLinks": [
+            {
+              "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3",
+              "contentHref": "/content/9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/embedded/type",
+              "sessionId": null
+            },
+            {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC",
+              "contentHref": "/content/GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/embedded/paths/items/0/type",
+              "sessionId": null
+            },
+            {
+              "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "contentHref": "/content/ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/peer",
+              "sessionId": null
+            }
+          ],
+          "catchUpProgress": {
+            "appliedEpochCount": 0,
+            "percent": 100,
+            "requiredEpochCount": 0
+          },
+          "committedBlueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+          "committedEpoch": 0,
+          "componentId": "scc-91ed2ca4676310f3",
+          "componentKind": "ACYCLIC",
+          "componentMemberCount": 1,
+          "createdAt": "2026-09-09T21:41:01.071264Z",
+          "currentBlueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+          "currentEpoch": 0,
+          "documentId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+          "durableStatus": "READY",
+          "exactCurrent": {
+            "contracts": {
+              "embedded": {
+                "paths": {
+                  "items": [
+                    {
+                      "type": {
+                        "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                      },
+                      "value": "/peer"
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                }
+              },
+              "initialized": {
+                "document": {
+                  "blueId": "E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              }
+            },
+            "name": "dynamic child waiting for exact content",
+            "peer": {
+              "blueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU"
+            }
+          },
+          "exactCurrentYaml": "name: dynamic child waiting for exact content\npeer:\n  blueId: Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU\ncontracts:\n  embedded:\n    type: Process Embedded\n    paths:\n      items:\n      - /peer\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR\n",
+          "exactCurrentYamlLinks": [
+            {
+              "blueId": "E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR",
+              "contentHref": "/content/E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            },
+            {
+              "blueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+              "contentHref": "/content/Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+              "current": true,
+              "documentId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "epoch": 0,
+              "href": "/documents/4ae047a4-70b1-41f5-9dd5-93161c29722e",
+              "path": "/peer",
+              "sessionId": "4ae047a4-70b1-41f5-9dd5-93161c29722e"
+            }
+          ],
+          "graphGeneration": 0,
+          "incomingCount": 1,
+          "initialBlueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+          "initializationBlueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+          "isReady": true,
+          "lastActivityAt": "2026-09-09T21:41:01.836771Z",
+          "lastChangedAt": "2026-09-09T21:41:01.071264Z",
+          "lastCommandId": "8babb170-5dbd-3f17-b32c-8bd0186f45b7",
+          "name": "dynamic child waiting for exact content",
+          "outgoingCount": 1,
+          "projectedCurrent": {
+            "contracts": {
+              "embedded": {
+                "paths": {
+                  "items": [
+                    {
+                      "type": {
+                        "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                      },
+                      "value": "/peer"
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                }
+              },
+              "initialized": {
+                "document": {
+                  "blueId": "E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              }
+            },
+            "name": "dynamic child waiting for exact content",
+            "peer": {
+              "blueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU"
+            }
+          },
+          "projectedCurrentYaml": "name: dynamic child waiting for exact content\npeer:\n  blueId: Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU\ncontracts:\n  embedded:\n    type: Process Embedded\n    paths:\n      items:\n      - /peer\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR\n",
+          "projectedCurrentYamlLinks": [
+            {
+              "blueId": "E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR",
+              "contentHref": "/content/E3YGbygjtgBetUagGnWoThEB7P7yoWGEBJFYMv9tUyDR",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            },
+            {
+              "blueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+              "contentHref": "/content/Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+              "current": true,
+              "documentId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "epoch": 0,
+              "href": "/documents/4ae047a4-70b1-41f5-9dd5-93161c29722e",
+              "path": "/peer",
+              "sessionId": "4ae047a4-70b1-41f5-9dd5-93161c29722e"
+            }
+          ],
+          "publicRoot": true,
+          "ready": true,
+          "readyBlueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+          "readyEpoch": 0,
+          "sessionId": "6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7",
+          "status": "READY",
+          "updatedAt": "2026-09-09T21:41:01.836771Z",
+          "waitCode": null,
+          "waitMessage": null,
+          "waitReason": null
+        },
+        "path": "/api/v1/documents/6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7",
+        "status": 200
+      },
+      "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8": {
+        "body": {
+          "activeBarrierCount": 0,
+          "activePlanCount": 0,
+          "activeWorkId": null,
+          "auditState": "READY",
+          "authoredBlueId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+          "authoredInitialYaml": "name: dynamic exact-resource host\nchildren: {}\ncontracts:\n  embedded:\n    type: Process Embedded\n    collectionPaths:\n      - /children\n  ownerChannel:\n    type: Coordination/Timeline Channel\n    timeline:\n      type: MyOS/MyOS Timeline\n      timelineId: labs/dynamic-resource/alice\n    actor:\n      type: MyOS/Principal Actor\n      accountId: alice\n  attach:\n    type: Coordination/Sequential Workflow Operation\n    channel: ownerChannel\n    request:\n      child: {}\n    steps:\n      - type: Coordination/Compute\n        do:\n          - $appendChange:\n              op: add\n              path: /children/one\n              val: {$binding: event/message/request/child}\n          - $return: true\n",
+          "authoredInitialYamlLinks": [],
+          "catchUpProgress": {
+            "appliedEpochCount": 1,
+            "percent": 100,
+            "requiredEpochCount": 1
+          },
+          "committedBlueId": "42L2hdtiSKF1PmYh5kwV1TJT4fGLiec5vnaeAGiKQVJn",
+          "committedEpoch": 2,
+          "componentId": "scc-69356816f776770b",
+          "componentKind": "ACYCLIC",
+          "componentMemberCount": 1,
+          "createdAt": "2026-09-09T21:40:58.860969Z",
+          "currentBlueId": "42L2hdtiSKF1PmYh5kwV1TJT4fGLiec5vnaeAGiKQVJn",
+          "currentEpoch": 2,
+          "documentId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+          "durableStatus": "READY",
+          "exactCurrent": {
+            "children": {
+              "one": {
+                "blueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp"
+              }
+            },
+            "contracts": {
+              "attach": {
+                "channel": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "ownerChannel"
+                },
+                "request": {
+                  "child": {}
+                },
+                "steps": {
+                  "items": [
+                    {
+                      "do": {
+                        "items": [
+                          {
+                            "$appendChange": {
+                              "op": {
+                                "type": {
+                                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                },
+                                "value": "add"
+                              },
+                              "path": {
+                                "type": {
+                                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                },
+                                "value": "/children/one"
+                              },
+                              "val": {
+                                "$binding": {
+                                  "type": {
+                                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                  },
+                                  "value": "event/message/request/child"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "$return": {
+                              "type": {
+                                "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+                              },
+                              "value": true
+                            }
+                          }
+                        ]
+                      },
+                      "type": {
+                        "blueId": "HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab"
+                      }
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah"
+                }
+              },
+              "checkpoint": {
+                "entries": {
+                  "ownerChannel": {
+                    "domain": {
+                      "blueId": "2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3"
+                    },
+                    "subject": {
+                      "entryBlueId": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe"
+                      },
+                      "semantics": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "blue.coordination/1.0/timeline-order-subject-v3"
+                      },
+                      "timelineBlueId": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa"
+                      },
+                      "timestamp": {
+                        "type": {
+                          "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+                        },
+                        "value": 1800000000000001
+                      }
+                    }
+                  }
+                },
+                "type": {
+                  "blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
+                }
+              },
+              "embedded": {
+                "collectionPaths": {
+                  "items": [
+                    {
+                      "type": {
+                        "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                      },
+                      "value": "/children"
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                }
+              },
+              "initialized": {
+                "document": {
+                  "blueId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              },
+              "ownerChannel": {
+                "actor": {
+                  "accountId": {
+                    "description": "MyOS account ID of the principal.",
+                    "schema": {
+                      "required": true
+                    },
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "alice"
+                  },
+                  "type": {
+                    "blueId": "CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw"
+                  }
+                },
+                "timeline": {
+                  "timelineId": {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "labs/dynamic-resource/alice"
+                  },
+                  "type": {
+                    "blueId": "5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX"
+                  }
+                },
+                "type": {
+                  "blueId": "8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf"
+                }
+              }
+            },
+            "name": "dynamic exact-resource host"
+          },
+          "exactCurrentYaml": "name: dynamic exact-resource host\nchildren:\n  one:\n    blueId: 7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp\ncontracts:\n  embedded:\n    type: Process Embedded\n    collectionPaths:\n      items:\n      - /children\n  ownerChannel:\n    type: Coordination/Timeline Channel\n    timeline:\n      type: MyOS/MyOS Timeline\n      timelineId: labs/dynamic-resource/alice\n    actor:\n      type: MyOS/Principal Actor\n      accountId:\n        description: MyOS account ID of the principal.\n        type: Text\n        value: alice\n        schema:\n          required: true\n  attach:\n    type: Coordination/Sequential Workflow Operation\n    channel: ownerChannel\n    request:\n      child: {}\n    steps:\n      items:\n      - type: Coordination/Compute\n        do:\n          items:\n          - $appendChange:\n              op: add\n              path: /children/one\n              val:\n                $binding: event/message/request/child\n          - $return: true\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: 4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\n  checkpoint:\n    type: Channel Event Checkpoint\n    entries:\n      ownerChannel:\n        domain:\n          blueId: 2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3\n        subject:\n          semantics: blue.coordination/1.0/timeline-order-subject-v3\n          timestamp: 1800000000000001\n          timelineBlueId: A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\n          entryBlueId: EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\n",
+          "exactCurrentYamlLinks": [
+            {
+              "blueId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+              "contentHref": "/content/4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            },
+            {
+              "blueId": "2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3",
+              "contentHref": "/content/2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/checkpoint/entries/ownerChannel/domain",
+              "sessionId": null
+            },
+            {
+              "blueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+              "contentHref": "/content/7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+              "current": true,
+              "documentId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+              "epoch": 0,
+              "href": "/documents/6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7",
+              "path": "/children/one",
+              "sessionId": "6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7"
+            }
+          ],
+          "graphGeneration": 2,
+          "incomingCount": 0,
+          "initialBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+          "initializationBlueId": "Avf9Gh9dT84sCnwrAU8JRS1AAEdcGiVxESajNRdtdoMk",
+          "isReady": true,
+          "lastActivityAt": "2026-09-09T21:41:01.919641Z",
+          "lastChangedAt": "2026-09-09T21:41:01.836771Z",
+          "lastCommandId": "2ab87705-f01f-3d3b-a9dc-9c4c04f146c7",
+          "name": "dynamic exact-resource host",
+          "outgoingCount": 1,
+          "projectedCurrent": {
+            "children": {
+              "one": {
+                "blueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp"
+              }
+            },
+            "contracts": {
+              "attach": {
+                "channel": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "ownerChannel"
+                },
+                "request": {
+                  "child": {}
+                },
+                "steps": {
+                  "items": [
+                    {
+                      "do": {
+                        "items": [
+                          {
+                            "$appendChange": {
+                              "op": {
+                                "type": {
+                                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                },
+                                "value": "add"
+                              },
+                              "path": {
+                                "type": {
+                                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                },
+                                "value": "/children/one"
+                              },
+                              "val": {
+                                "$binding": {
+                                  "type": {
+                                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                                  },
+                                  "value": "event/message/request/child"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "$return": {
+                              "type": {
+                                "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+                              },
+                              "value": true
+                            }
+                          }
+                        ]
+                      },
+                      "type": {
+                        "blueId": "HLwXH1Zsw9LBcFeueCCo776WxauAU8SWsHGcaarNdTab"
+                      }
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "3zJs3fKBPAi8hRZdBrWwzdyNaAs2ZggcVfR35JWnA3ah"
+                }
+              },
+              "checkpoint": {
+                "entries": {
+                  "ownerChannel": {
+                    "domain": {
+                      "blueId": "2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3"
+                    },
+                    "subject": {
+                      "entryBlueId": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe"
+                      },
+                      "semantics": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "blue.coordination/1.0/timeline-order-subject-v3"
+                      },
+                      "timelineBlueId": {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa"
+                      },
+                      "timestamp": {
+                        "type": {
+                          "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+                        },
+                        "value": 1800000000000001
+                      }
+                    }
+                  }
+                },
+                "type": {
+                  "blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
+                }
+              },
+              "embedded": {
+                "collectionPaths": {
+                  "items": [
+                    {
+                      "type": {
+                        "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                      },
+                      "value": "/children"
+                    }
+                  ]
+                },
+                "type": {
+                  "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                }
+              },
+              "initialized": {
+                "document": {
+                  "blueId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              },
+              "ownerChannel": {
+                "actor": {
+                  "accountId": {
+                    "description": "MyOS account ID of the principal.",
+                    "schema": {
+                      "required": true
+                    },
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "alice"
+                  },
+                  "type": {
+                    "blueId": "CtsH9hhbLAYcQYv5jYnNhaviKxkEdrwAg8b4KoxEU5Lw"
+                  }
+                },
+                "timeline": {
+                  "timelineId": {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "labs/dynamic-resource/alice"
+                  },
+                  "type": {
+                    "blueId": "5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX"
+                  }
+                },
+                "type": {
+                  "blueId": "8aohWT7jcoaC1j2siQzBxoKM8HhQ4HF13BkZDNnq5UHf"
+                }
+              }
+            },
+            "name": "dynamic exact-resource host"
+          },
+          "projectedCurrentYaml": "name: dynamic exact-resource host\nchildren:\n  one:\n    blueId: 7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp\ncontracts:\n  embedded:\n    type: Process Embedded\n    collectionPaths:\n      items:\n      - /children\n  ownerChannel:\n    type: Coordination/Timeline Channel\n    timeline:\n      type: MyOS/MyOS Timeline\n      timelineId: labs/dynamic-resource/alice\n    actor:\n      type: MyOS/Principal Actor\n      accountId:\n        description: MyOS account ID of the principal.\n        type: Text\n        value: alice\n        schema:\n          required: true\n  attach:\n    type: Coordination/Sequential Workflow Operation\n    channel: ownerChannel\n    request:\n      child: {}\n    steps:\n      items:\n      - type: Coordination/Compute\n        do:\n          items:\n          - $appendChange:\n              op: add\n              path: /children/one\n              val:\n                $binding: event/message/request/child\n          - $return: true\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: 4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8\n  checkpoint:\n    type: Channel Event Checkpoint\n    entries:\n      ownerChannel:\n        domain:\n          blueId: 2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3\n        subject:\n          semantics: blue.coordination/1.0/timeline-order-subject-v3\n          timestamp: 1800000000000001\n          timelineBlueId: A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa\n          entryBlueId: EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe\n",
+          "projectedCurrentYamlLinks": [
+            {
+              "blueId": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+              "contentHref": "/content/4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            },
+            {
+              "blueId": "2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3",
+              "contentHref": "/content/2amiAMJaDQvDkXEEYsbkS4JuQHcxuNkFsJqEx3JvFrM3",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/checkpoint/entries/ownerChannel/domain",
+              "sessionId": null
+            },
+            {
+              "blueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+              "contentHref": "/content/7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+              "current": true,
+              "documentId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+              "epoch": 0,
+              "href": "/documents/6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7",
+              "path": "/children/one",
+              "sessionId": "6ddd4666-4a6a-4dd3-ae80-8c1ce721ecd7"
+            }
+          ],
+          "publicRoot": true,
+          "ready": true,
+          "readyBlueId": "42L2hdtiSKF1PmYh5kwV1TJT4fGLiec5vnaeAGiKQVJn",
+          "readyEpoch": 2,
+          "sessionId": "c5369181-e7b4-451e-9724-e4f0d4bbed4b",
+          "status": "READY",
+          "updatedAt": "2026-09-09T21:41:01.919641Z",
+          "waitCode": null,
+          "waitMessage": null,
+          "waitReason": null
+        },
+        "path": "/api/v1/documents/c5369181-e7b4-451e-9724-e4f0d4bbed4b",
+        "status": 200
+      },
+      "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN": {
+        "body": {
+          "activeBarrierCount": 0,
+          "activePlanCount": 0,
+          "activeWorkId": null,
+          "auditState": "READY",
+          "authoredBlueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+          "authoredInitialYaml": "---\nstate:\n  type:\n    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC\n  value: unavailable-here\n",
+          "authoredInitialYamlLinks": [
+            {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC",
+              "contentHref": "/content/GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/state/type",
+              "sessionId": null
+            }
+          ],
+          "catchUpProgress": {
+            "appliedEpochCount": 0,
+            "percent": 100,
+            "requiredEpochCount": 0
+          },
+          "committedBlueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+          "committedEpoch": 0,
+          "componentId": "scc-25b07c850ed48b3c",
+          "componentKind": "ACYCLIC",
+          "componentMemberCount": 1,
+          "createdAt": "2026-09-09T21:41:01.071264Z",
+          "currentBlueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+          "currentEpoch": 0,
+          "documentId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+          "durableStatus": "READY",
+          "exactCurrent": {
+            "contracts": {
+              "initialized": {
+                "document": {
+                  "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              }
+            },
+            "state": {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "unavailable-here"
+            }
+          },
+          "exactCurrentYaml": "state: unavailable-here\ncontracts:\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\n",
+          "exactCurrentYamlLinks": [
+            {
+              "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "contentHref": "/content/ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            }
+          ],
+          "graphGeneration": 0,
+          "incomingCount": 1,
+          "initialBlueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+          "initializationBlueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+          "isReady": true,
+          "lastActivityAt": "2026-09-09T21:41:01.071264Z",
+          "lastChangedAt": "2026-09-09T21:41:01.071264Z",
+          "lastCommandId": "8babb170-5dbd-3f17-b32c-8bd0186f45b7",
+          "name": "Unnamed document",
+          "outgoingCount": 0,
+          "projectedCurrent": {
+            "contracts": {
+              "initialized": {
+                "document": {
+                  "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+                },
+                "type": {
+                  "blueId": "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
+                }
+              }
+            },
+            "state": {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "unavailable-here"
+            }
+          },
+          "projectedCurrentYaml": "state: unavailable-here\ncontracts:\n  initialized:\n    type: Processing Initialized Marker\n    document:\n      blueId: ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN\n",
+          "projectedCurrentYamlLinks": [
+            {
+              "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "contentHref": "/content/ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+              "current": false,
+              "documentId": null,
+              "epoch": null,
+              "href": null,
+              "path": "/contracts/initialized/document",
+              "sessionId": null
+            }
+          ],
+          "publicRoot": false,
+          "ready": true,
+          "readyBlueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+          "readyEpoch": 0,
+          "sessionId": "4ae047a4-70b1-41f5-9dd5-93161c29722e",
+          "status": "READY",
+          "updatedAt": "2026-09-09T21:41:01.071264Z",
+          "waitCode": null,
+          "waitMessage": null,
+          "waitReason": null
+        },
+        "path": "/api/v1/documents/4ae047a4-70b1-41f5-9dd5-93161c29722e",
+        "status": 200
+      }
+    },
+    "sdkRecords": {
+      "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3": {
+        "blueId": "7LcvvtqiycicwrLi5ACU9HFK24RUY953tQwXjWvebECp",
+        "epoch": 0
+      },
+      "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8": {
+        "blueId": "42L2hdtiSKF1PmYh5kwV1TJT4fGLiec5vnaeAGiKQVJn",
+        "epoch": 2
+      },
+      "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN": {
+        "blueId": "Ef6y4Bcre5hy3F7cAZb5MyqKTaZnWNo6MYf6rL1ppmU",
+        "epoch": 0
+      }
+    }
+  }
+}

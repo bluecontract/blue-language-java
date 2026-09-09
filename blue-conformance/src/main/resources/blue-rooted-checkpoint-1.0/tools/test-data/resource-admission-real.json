@@ -1,0 +1,510 @@
+{
+  "artifactSha256": "f8ea2db31c0c9e81caa97c58e92ce1f02b157c82400d407e5300445e474b0c8e",
+  "admission": {
+    "originalInput": {
+      "admissionCandidate": null,
+      "admissionCandidateIdentity": null,
+      "cause": {
+        "admissionKind": "TOP_LEVEL_ADMISSION",
+        "causeIdentity": "sha256:afe8ab14ce72505f4bf5ce28fd0231c9e8d1f0f9399fc6304f453951288686f2",
+        "kind": "ADMISSION",
+        "label": "contracts10-static-process-embedded-admission",
+        "parentTransitionIdentity": null,
+        "policyIdentity": "sha256:12e9992e3941cb741159a94bf414f4e720a8a1ef5bab42d6412020def3d1c953",
+        "triggeringEventBlueId": null
+      },
+      "directDeliveries": [],
+      "directDeliverySnapshotIdentity": "sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f",
+      "environment": {
+        "blueLanguageSpecificationIdentity": "sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
+        "contractsSpecificationIdentity": "sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f",
+        "cyclicFinalizerIdentity": "sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b",
+        "cyclicProofVerifierIdentity": "sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834",
+        "exactNodeProviderDomain": {
+          "identity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+          "label": "coordination-whole-object-store-v1"
+        },
+        "exactNodeProviderDomainIdentity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+        "externalOrderPolicy": {
+          "identity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+          "label": "canonical-source-order-v1"
+        },
+        "externalOrderPolicyIdentity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+        "gasManifestIdentity": "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
+        "managedBindingPolicy": {
+          "identity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+          "label": "exact-document-lineage"
+        },
+        "managedBindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+        "managedDocumentIdentityPolicy": {
+          "identity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+          "label": "nfc-document-lineage-v1"
+        },
+        "managedDocumentIdentityPolicyIdentity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+        "portableLimitPolicy": {
+          "identity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+          "label": "blue-contracts-1.0-portable-limits",
+          "limits": {
+            "closureExpansionsPerInvocation": 4096,
+            "closureGraphChangesPerInvocation": 4096,
+            "closureTentativeFinalizationsPerInvocation": 8192,
+            "closureWorkOccurrencesPerInvocation": 8192,
+            "contractKeyCodePoints": 256,
+            "contractKeyUtf8Bytes": 1024,
+            "cyclicCanonicalBytesPerComponent": 16777216,
+            "cyclicEdgesPerComponent": 1024,
+            "cyclicMembersPerComponent": 128,
+            "directCanonicalIdentityInputBytes": 1048576,
+            "directInlineIdentityTextCodePoints": 262144,
+            "directListItemsMaterializedOrRebuilt": 16384,
+            "directObjectEntriesMaterializedOrRebuilt": 16384,
+            "directObjectKeyCodePoints": 4096,
+            "effectiveContractsPerParticipatingScope": 8192,
+            "embeddedDepth": 256,
+            "eventsPerContractExecutionResult": 1024,
+            "externalChannelsPerScope": 2048,
+            "handlersBoundToOneDelivery": 4096,
+            "internalEventOccurrencesPerInvocation": 8192,
+            "managedDocumentsPerClosure": 4096,
+            "nestedDocumentUpdateCascadeDepth": 256,
+            "normalizedRuntimePointerUtf8Bytes": 4096,
+            "participatingScopesPerEvent": 4096,
+            "patchesPerContractExecutionResult": 1024,
+            "preselectedExternalOccurrencesPerEvent": 1024,
+            "processEmbeddedEdgesPerClosure": 16384,
+            "processEmbeddedPathsPerScope": 4096,
+            "rootEventsReturned": 4096,
+            "runtimeChildLedgerCounterKinds": 256,
+            "runtimePointerSegments": 256,
+            "subscriptionKeysPerChannel": 256,
+            "typeChainEdges": 256
+          }
+        },
+        "portableLimitPolicyIdentity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+        "runtimeRegistryIdentity": "sha256:a19d5eecc8b53c68a4a35baf8ff009bb8bd90060e96097f5ca19d56d0b18c8c1"
+      },
+      "executionPolicy": {
+        "identity": "sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685",
+        "label": "release-default",
+        "localLimits": {},
+        "sharedLimit": 100000
+      },
+      "invocationIdentity": "sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4",
+      "operation": "ADMIT_CLOSURE",
+      "snapshot": {
+        "closureIdentity": "sha256:7ea42528ef8c0695abbb8b9f7d6e6e05032b9e93accc2580e8638bb72f066047",
+        "components": [
+          {
+            "completeCyclicProof": null,
+            "componentGeneration": 1,
+            "componentIdentity": "sha256:ad93175c8de0cb8e17d2e1a0b4d06bf2a81697000186a0a6392a0112c17dd595",
+            "componentStateIdentity": "sha256:8c64cbec5c3e0f31a87ccbb82116947cf108297cb6ae071d7b0b7714a4a269f8",
+            "cyclicProofIdentity": null,
+            "kind": "ACYCLIC",
+            "masterBlueId": null,
+            "orderedMemberBlueIds": [
+              "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+            ],
+            "orderedMemberDocumentIds": [
+              {
+                "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+              }
+            ]
+          }
+        ],
+        "graphGeneration": 1,
+        "managedDocuments": [
+          {
+            "blueId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+            "componentGeneration": 1,
+            "document": {
+              "contracts": {
+                "embedded": {
+                  "paths": {
+                    "items": [
+                      {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "/peer"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                  }
+                }
+              },
+              "name": "dynamic child waiting for exact content",
+              "peer": {
+                "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+              }
+            },
+            "documentId": {
+              "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+            },
+            "epoch": 0,
+            "initialized": false,
+            "publicRoot": true,
+            "terminated": false
+          }
+        ],
+        "occurrenceBindingSetIdentity": "sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab",
+        "occurrences": [],
+        "publicRootDocumentIds": [
+          {
+            "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+          }
+        ]
+      }
+    },
+    "completedInput": {
+      "admissionCandidate": null,
+      "admissionCandidateIdentity": null,
+      "cause": {
+        "admissionKind": "TOP_LEVEL_ADMISSION",
+        "causeIdentity": "sha256:afe8ab14ce72505f4bf5ce28fd0231c9e8d1f0f9399fc6304f453951288686f2",
+        "kind": "ADMISSION",
+        "label": "contracts10-static-process-embedded-admission",
+        "parentTransitionIdentity": null,
+        "policyIdentity": "sha256:12e9992e3941cb741159a94bf414f4e720a8a1ef5bab42d6412020def3d1c953",
+        "triggeringEventBlueId": null
+      },
+      "directDeliveries": [],
+      "directDeliverySnapshotIdentity": "sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f",
+      "environment": {
+        "blueLanguageSpecificationIdentity": "sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
+        "contractsSpecificationIdentity": "sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f",
+        "cyclicFinalizerIdentity": "sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b",
+        "cyclicProofVerifierIdentity": "sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834",
+        "exactNodeProviderDomain": {
+          "identity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+          "label": "coordination-whole-object-store-v1"
+        },
+        "exactNodeProviderDomainIdentity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+        "externalOrderPolicy": {
+          "identity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+          "label": "canonical-source-order-v1"
+        },
+        "externalOrderPolicyIdentity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+        "gasManifestIdentity": "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
+        "managedBindingPolicy": {
+          "identity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+          "label": "exact-document-lineage"
+        },
+        "managedBindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+        "managedDocumentIdentityPolicy": {
+          "identity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+          "label": "nfc-document-lineage-v1"
+        },
+        "managedDocumentIdentityPolicyIdentity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+        "portableLimitPolicy": {
+          "identity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+          "label": "blue-contracts-1.0-portable-limits",
+          "limits": {
+            "closureExpansionsPerInvocation": 4096,
+            "closureGraphChangesPerInvocation": 4096,
+            "closureTentativeFinalizationsPerInvocation": 8192,
+            "closureWorkOccurrencesPerInvocation": 8192,
+            "contractKeyCodePoints": 256,
+            "contractKeyUtf8Bytes": 1024,
+            "cyclicCanonicalBytesPerComponent": 16777216,
+            "cyclicEdgesPerComponent": 1024,
+            "cyclicMembersPerComponent": 128,
+            "directCanonicalIdentityInputBytes": 1048576,
+            "directInlineIdentityTextCodePoints": 262144,
+            "directListItemsMaterializedOrRebuilt": 16384,
+            "directObjectEntriesMaterializedOrRebuilt": 16384,
+            "directObjectKeyCodePoints": 4096,
+            "effectiveContractsPerParticipatingScope": 8192,
+            "embeddedDepth": 256,
+            "eventsPerContractExecutionResult": 1024,
+            "externalChannelsPerScope": 2048,
+            "handlersBoundToOneDelivery": 4096,
+            "internalEventOccurrencesPerInvocation": 8192,
+            "managedDocumentsPerClosure": 4096,
+            "nestedDocumentUpdateCascadeDepth": 256,
+            "normalizedRuntimePointerUtf8Bytes": 4096,
+            "participatingScopesPerEvent": 4096,
+            "patchesPerContractExecutionResult": 1024,
+            "preselectedExternalOccurrencesPerEvent": 1024,
+            "processEmbeddedEdgesPerClosure": 16384,
+            "processEmbeddedPathsPerScope": 4096,
+            "rootEventsReturned": 4096,
+            "runtimeChildLedgerCounterKinds": 256,
+            "runtimePointerSegments": 256,
+            "subscriptionKeysPerChannel": 256,
+            "typeChainEdges": 256
+          }
+        },
+        "portableLimitPolicyIdentity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+        "runtimeRegistryIdentity": "sha256:a19d5eecc8b53c68a4a35baf8ff009bb8bd90060e96097f5ca19d56d0b18c8c1"
+      },
+      "executionPolicy": {
+        "identity": "sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685",
+        "label": "release-default",
+        "localLimits": {},
+        "sharedLimit": 100000
+      },
+      "invocationIdentity": "sha256:6aa0cc8dcc3ac1c9498e785be4f9cb3aefbcbc4703f9e3d9d6398c6a7640d599",
+      "operation": "ADMIT_CLOSURE",
+      "snapshot": {
+        "closureIdentity": "sha256:b38c29635df2b119b0a4c3e8e2e393d020cf0763fdeff66d25747c9f976d7b34",
+        "components": [
+          {
+            "completeCyclicProof": null,
+            "componentGeneration": 1,
+            "componentIdentity": "sha256:d7d85150bb7f016fd31859aefc9399e741475d9ce2d79fd3de8dcf13f2fec2ec",
+            "componentStateIdentity": "sha256:01e6ebbbd487465e2e2d5d133d69e583360ef4c97db83a1f6cf74e2764a3db2e",
+            "cyclicProofIdentity": null,
+            "kind": "ACYCLIC",
+            "masterBlueId": null,
+            "orderedMemberBlueIds": [
+              "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+            ],
+            "orderedMemberDocumentIds": [
+              {
+                "value": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+              }
+            ]
+          },
+          {
+            "completeCyclicProof": null,
+            "componentGeneration": 1,
+            "componentIdentity": "sha256:ad93175c8de0cb8e17d2e1a0b4d06bf2a81697000186a0a6392a0112c17dd595",
+            "componentStateIdentity": "sha256:8c64cbec5c3e0f31a87ccbb82116947cf108297cb6ae071d7b0b7714a4a269f8",
+            "cyclicProofIdentity": null,
+            "kind": "ACYCLIC",
+            "masterBlueId": null,
+            "orderedMemberBlueIds": [
+              "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+            ],
+            "orderedMemberDocumentIds": [
+              {
+                "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+              }
+            ]
+          }
+        ],
+        "graphGeneration": 1,
+        "managedDocuments": [
+          {
+            "blueId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+            "componentGeneration": 1,
+            "document": {
+              "contracts": {
+                "embedded": {
+                  "paths": {
+                    "items": [
+                      {
+                        "type": {
+                          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                        },
+                        "value": "/peer"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+                  }
+                }
+              },
+              "name": "dynamic child waiting for exact content",
+              "peer": {
+                "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+              }
+            },
+            "documentId": {
+              "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+            },
+            "epoch": 0,
+            "initialized": false,
+            "publicRoot": true,
+            "terminated": false
+          },
+          {
+            "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+            "componentGeneration": 1,
+            "document": {
+              "state": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "unavailable-here"
+              }
+            },
+            "documentId": {
+              "value": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+            },
+            "epoch": 0,
+            "initialized": false,
+            "publicRoot": false,
+            "terminated": false
+          }
+        ],
+        "occurrenceBindingSetIdentity": "sha256:c6d33b2caac7714e923ca9fa2e321e1afe8de101456ecfafa46938c35f840aea",
+        "occurrences": [
+          {
+            "activationGeneration": 1,
+            "active": true,
+            "bindingIdentity": "sha256:f90a41ab8fb1a5d706e29a0abc7da8847e9837f85b0546307e5fe8470ce5161f",
+            "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+            "expectedTargetBlueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+            "occurrenceIdentity": "sha256:00353e36a44330ec6ed56db9185ab371e22f9f66a5bc9edba78376b160ab5c0e",
+            "pendingHistoricalEpoch": null,
+            "pendingRepresentationCursor": null,
+            "sourceAddress": {
+              "activationGeneration": 1,
+              "isRoot": false,
+              "path": "/peer"
+            },
+            "sourceDocumentId": {
+              "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+            },
+            "sourcePath": "/peer",
+            "targetDocumentId": {
+              "value": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+            }
+          }
+        ],
+        "publicRootDocumentIds": [
+          {
+            "value": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3"
+          }
+        ]
+      }
+    },
+    "selectionPlan": null,
+    "publicationIdentity": "coordination-contracts-closure-admission-v1:sha256:57c7ef98097778434f4e65df0d22ef580667858a41110d56276f3219cfa0a2e2",
+    "inputPublicationIdentity": "coordination-contracts-closure-admission-v1:sha256:57c7ef98097778434f4e65df0d22ef580667858a41110d56276f3219cfa0a2e2",
+    "result": {
+      "invocationIdentity": "sha256:6aa0cc8dcc3ac1c9498e785be4f9cb3aefbcbc4703f9e3d9d6398c6a7640d599"
+    },
+    "implementationEvidence": {
+      "invocationIdentity": "sha256:6aa0cc8dcc3ac1c9498e785be4f9cb3aefbcbc4703f9e3d9d6398c6a7640d599"
+    }
+  },
+  "selection": {
+    "authoredBlueId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+    "cutoffExclusive": [
+      1800000000000001,
+      "A9UCUMrY6NQAJwPuxYj6bgkHy5zw1EsDG5A3hhfmRQSa",
+      "EoPmoeN3TNx2HAGgTP8cGnQ4ojrij7oDrFjdTYbj8vUe"
+    ],
+    "demandIdentity": "sha256:1c56a643c54100dd8b60c808a6b5c8bc353738bb2b39960a7130b6f6a214f4a7",
+    "diagnostic": null,
+    "entryBlueId": null,
+    "journalRevision": 1,
+    "kind": "ADMISSION",
+    "requestingInvocationIdentity": "sha256:ab494a5010712a14c4b42f4f3468d6961c29933fdb9ec98fbf842cfae3574153",
+    "requestingRoot": "4DaZYf4uHvHCVv5RSB6ozGzs3PHeNZCLYW42Mzj9QgD8",
+    "routeGeneration": 1,
+    "selectionIdentity": "sha256:5c70541afe4cfce338f8876c0609c9f9cef241c61b25df1a302f668a478eedf8",
+    "sourceBlueId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+    "sourceDocumentId": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+    "sourceEpoch": -1,
+    "sourceSurfaceIdentity": "sha256:25bc0f0d2ae1c69e5b07353f2d75342d1667e3e25a528e1c266dcb2c0239df46",
+    "workIdentity": "sha256:75ea4edaf4661dbd2ffb0e8e5c4e1f5565f7b19982691d0fa66292494dbc28d4"
+  },
+  "child": "8uYGrMkDjGz9KCx2NYnt3Tese9FAY2Gv8BdeDCHspkc3",
+  "missing": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN",
+  "childExact": {
+    "name": "dynamic child waiting for exact content",
+    "contracts": {
+      "embedded": {
+        "type": {
+          "blueId": "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
+        },
+        "paths": {
+          "items": [
+            {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "/peer"
+            }
+          ]
+        }
+      }
+    },
+    "peer": {
+      "blueId": "ET9aYAUHuu1nyLtKefzba14gm2kGpAkYe5Sy5GbZcTZN"
+    }
+  },
+  "missingExact": {
+    "state": {
+      "type": {
+        "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+      },
+      "value": "unavailable-here"
+    }
+  },
+  "environment": {
+    "blueLanguageSpecificationIdentity": "sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
+    "contractsSpecificationIdentity": "sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f",
+    "cyclicFinalizerIdentity": "sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b",
+    "cyclicProofVerifierIdentity": "sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834",
+    "exactNodeProviderDomain": {
+      "identity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+      "label": "coordination-whole-object-store-v1"
+    },
+    "exactNodeProviderDomainIdentity": "sha256:e4d84054741d685bff963dc229838737b8760c2c86d711a57734203d3bc6c590",
+    "externalOrderPolicy": {
+      "identity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+      "label": "canonical-source-order-v1"
+    },
+    "externalOrderPolicyIdentity": "sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9",
+    "gasManifestIdentity": "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
+    "managedBindingPolicy": {
+      "identity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+      "label": "exact-document-lineage"
+    },
+    "managedBindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+    "managedDocumentIdentityPolicy": {
+      "identity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+      "label": "nfc-document-lineage-v1"
+    },
+    "managedDocumentIdentityPolicyIdentity": "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",
+    "portableLimitPolicy": {
+      "identity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+      "label": "blue-contracts-1.0-portable-limits",
+      "limits": {
+        "closureExpansionsPerInvocation": 4096,
+        "closureGraphChangesPerInvocation": 4096,
+        "closureTentativeFinalizationsPerInvocation": 8192,
+        "closureWorkOccurrencesPerInvocation": 8192,
+        "contractKeyCodePoints": 256,
+        "contractKeyUtf8Bytes": 1024,
+        "cyclicCanonicalBytesPerComponent": 16777216,
+        "cyclicEdgesPerComponent": 1024,
+        "cyclicMembersPerComponent": 128,
+        "directCanonicalIdentityInputBytes": 1048576,
+        "directInlineIdentityTextCodePoints": 262144,
+        "directListItemsMaterializedOrRebuilt": 16384,
+        "directObjectEntriesMaterializedOrRebuilt": 16384,
+        "directObjectKeyCodePoints": 4096,
+        "effectiveContractsPerParticipatingScope": 8192,
+        "embeddedDepth": 256,
+        "eventsPerContractExecutionResult": 1024,
+        "externalChannelsPerScope": 2048,
+        "handlersBoundToOneDelivery": 4096,
+        "internalEventOccurrencesPerInvocation": 8192,
+        "managedDocumentsPerClosure": 4096,
+        "nestedDocumentUpdateCascadeDepth": 256,
+        "normalizedRuntimePointerUtf8Bytes": 4096,
+        "participatingScopesPerEvent": 4096,
+        "patchesPerContractExecutionResult": 1024,
+        "preselectedExternalOccurrencesPerEvent": 1024,
+        "processEmbeddedEdgesPerClosure": 16384,
+        "processEmbeddedPathsPerScope": 4096,
+        "rootEventsReturned": 4096,
+        "runtimeChildLedgerCounterKinds": 256,
+        "runtimePointerSegments": 256,
+        "subscriptionKeysPerChannel": 256,
+        "typeChainEdges": 256
+      }
+    },
+    "portableLimitPolicyIdentity": "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
+    "runtimeRegistryIdentity": "sha256:a19d5eecc8b53c68a4a35baf8ff009bb8bd90060e96097f5ca19d56d0b18c8c1"
+  }
+}

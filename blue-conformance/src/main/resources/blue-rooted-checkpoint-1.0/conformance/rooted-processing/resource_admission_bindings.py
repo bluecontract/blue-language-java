@@ -136,7 +136,8 @@ def check_admission_inputs(admission, selection, child, missing, child_exact, mi
         policy=inp['executionPolicy'];closed(policy,('identity','label','localLimits','sharedLimit'),'RESOURCE_ADMISSION_POLICY_FIELDS')
         require(policy['label']=='release-default' and policy['sharedLimit']==100000 and policy['localLimits']=={}
                 and policy['identity']==digest('blue-contracts-execution-policy/1.0',
-                     {k:v for k,v in policy.items() if k!='identity'}),'RESOURCE_ADMISSION_EXECUTION_POLICY')
+                     {'sharedLimit':policy['sharedLimit'],'localLimits':[],'label':policy['label']}),
+                'RESOURCE_ADMISSION_EXECUTION_POLICY')
         direct=digest('blue-contracts-direct-delivery-snapshot/1.0',[])
         require(inp['directDeliverySnapshotIdentity']==direct,'RESOURCE_ADMISSION_DIRECT_SNAPSHOT')
         docs=snapshot(inp['snapshot']);s=inp['snapshot'];value={

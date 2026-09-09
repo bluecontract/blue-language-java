@@ -4,9 +4,46 @@ Counts come from the actual frozen capture descriptors and their typed next-step
 chain. A missing resource before processor admission has no invented terminal.
 """
 import base64,hashlib,json,struct
+from datetime import datetime
 from pathlib import Path
 from resource_admission_bindings import check_admission_inputs
 from resource_followup_bindings import check_followup, timeline_identity
+
+def check_host_transcript(transcript, host_transcript, require):
+    require(all(r['completed'] is True for r in transcript),'RESOURCE_INCOMPLETE_TRANSCRIPT')
+    require([r['request'] for r in transcript]==[r['literal'] for r in host_transcript],'RESOURCE_LITERAL_TRANSCRIPT')
+    require([r['response'] for r in transcript]==[{'actual':r.get('actual',{})} for r in host_transcript],
+            'RESOURCE_ACTUAL_RESPONSE_TRANSCRIPT')
+
+def check_waiting_documents(before, waiting, commands, require):
+    require(len(before)==len(waiting),'RESOURCE_WAIT_DOCUMENT_INVENTORY')
+    for old,new in zip(before,waiting):
+        # The host's fenced UPDATING overlay is restored before blocking. Its
+        # wall-clock update timestamp records that work; every other field,
+        # including exact content, readiness and last semantic command, stays.
+        require(set(old)==set(new) and {**new,'updatedAt':old['updatedAt']}==old,
+                'RESOURCE_WAIT_DOCUMENT_CHANGED')
+        if new['updatedAt']!=old['updatedAt']:
+            stamp=datetime.fromisoformat(new['updatedAt'])
+            require(stamp>=datetime.fromisoformat(old['updatedAt']) and any(
+                c['commandType'] in ('EXECUTE_OPERATION','SOURCE_HISTORY_CAPTURE')
+                and c['status'] in ('APPLIED','BLOCKED')
+                and datetime.fromisoformat(c['startedAt'])<=stamp<=datetime.fromisoformat(c['completedAt'])
+                for c in commands),'RESOURCE_WAIT_TIMESTAMP_WITHOUT_HOST_WORK')
+
+def check_public_resource_chain(state, ids, require):
+    views={key:state['http'][id]['body'] for key,id in ids.items()}
+    for key,id in ids.items():
+        public=views[key];exact=state['sdkRecords'][id]
+        require(public['documentId']==id and public['ready'] is True
+                and public['currentBlueId']==public['committedBlueId']==exact['blueId']
+                and public['currentEpoch']==public['committedEpoch']==exact['epoch'],
+                'RESOURCE_PUBLIC_CURRENT_IDENTITY')
+    require(views['host']['projectedCurrent']['children']['one']=={'blueId':views['child']['currentBlueId']}
+            and views['child']['projectedCurrent']['peer']=={'blueId':views['missing']['currentBlueId']}
+            and views['missing']['projectedCurrent']['state']=={
+                'type':{'blueId':'GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC'},'value':'unavailable-here'},
+            'RESOURCE_FINAL_PUBLIC_VALUE_OR_READINESS')
 
 def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     from rooted_graph_checks import graph_checks
@@ -35,8 +72,7 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     for name,data in sources.items():
         observed=host['sourceInputs'][name]
         require(base64.b64decode(observed['sourceBytes'])==data and observed['sha256']==hashlib.sha256(data).hexdigest(),'RESOURCE_LITERAL_SOURCE_BYTES')
-    require(all(r['completed'] is True for r in rec['transcript']),'RESOURCE_INCOMPLETE_TRANSCRIPT')
-    require([r['request'] for r in rec['transcript']]==[r['literal'] for r in host['transcript']],'RESOURCE_LITERAL_TRANSCRIPT')
+    check_host_transcript(rec['transcript'],host['transcript'],require)
     awaits=[r['request'] for r in rec['transcript'] if r['request']['op']=='hostAwait']
     require(len(awaits)==1 and awaits[0]['awaitReadiness'] is True,'RESOURCE_EXPLICIT_READY_OBSERVATION')
     names=('beforeOperation','blocked','pendingRestart','wrongUpload','applied','duplicate','completedRestart')
@@ -162,8 +198,9 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     for stage in (blocked,pending,wrong):
         require(stage['sdkRecords']==base['sdkRecords'] and stage['liveRetainedMissing'] is None
                 and stage['exactContent']==[],'RESOURCE_PREMATURE_MANAGED_PUBLICATION')
-        require(stage['semantic']['sqlDocuments']==base['semantic']['sqlDocuments']
-                and stage['semantic']['sqlEpochs']==base['semantic']['sqlEpochs']
+        check_waiting_documents(base['semantic']['sqlDocuments'],stage['semantic']['sqlDocuments'],
+                stage['commands'],require)
+        require(stage['semantic']['sqlEpochs']==base['semantic']['sqlEpochs']
                 and stage['semantic']['sqlOccurrences']==base['semantic']['sqlOccurrences']
                 and stage['semantic']['sqlEntryResults']==[],'RESOURCE_PREMATURE_DURABLE_RESULT')
         require(all(stage['commands'][i]['status'] in ('APPLIED','BLOCKED') for i in range(len(stage['commands']))),'RESOURCE_NOT_STABLE_WAIT')
@@ -172,8 +209,7 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     for stage in states.values():
         require(stage['runtimeWritable'] is True and stage['http'],'RESOURCE_HOST_NOT_WRITABLE')
         for response in stage['http'].values():require(response['status']==200,'RESOURCE_PUBLIC_READ_FAILED')
-    public=applied['http'][root]['body']
-    require(public['ready'] is True and public['projectedCurrent']['children']['one']['peer']['state']=='unavailable-here','RESOURCE_FINAL_PUBLIC_VALUE_OR_READINESS')
+    check_public_resource_chain(applied,ids,require)
     # A rejected or repeated upload may record its own host event. No other SQL
     # table may change, and the event is independently bound to that upload.
     for a,b in (('blocked','pendingRestart'),('pendingRestart','wrongUpload'),('applied','duplicate'),('duplicate','completedRestart')):
@@ -186,9 +222,14 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
             require(before['columns']==after['columns'] and before['primaryKeys']==after['primaryKeys'],'RESOURCE_SQL_EVENT_SCHEMA')
             retained={json.dumps(r,sort_keys=True) for r in before['rows']};added=[r for r in after['rows'] if json.dumps(r,sort_keys=True) not in retained]
             require(retained<={json.dumps(r,sort_keys=True) for r in after['rows']} and len(added)==1,'RESOURCE_UPLOAD_EVENT_COUNT')
-            event=added[0];require(event['event_type'].startswith('content.retention.') and event['command_id'] is None,'RESOURCE_UNRELATED_UPLOAD_EVENT')
+            event=added[0];require(event['event_type']==('content.retention.rejected' if b=='wrongUpload' else 'content.verified')
+                    and event['command_id'] is None,'RESOURCE_UNRELATED_UPLOAD_EVENT')
             payload=json.loads(event['compact_payload_json'])
-            if b=='wrongUpload':require(payload['code']==rule['wrongUploadCode'] and payload['expectedBlueId']==missing,'RESOURCE_UPLOAD_REJECTION_EVENT')
+            if b=='wrongUpload':require(payload['code']==rule['wrongUploadCode'] and payload['expectedBlueId']==missing
+                    and payload['actualBlueId']==captures['wrong']['blueId'] and event['outcome']=='REJECTED','RESOURCE_UPLOAD_REJECTION_EVENT')
+            else:require(event['outcome']=='SUCCEEDED' and event['content_blue_id']==missing and payload['retainedCount']==0
+                    and payload['contentCount']==1 and len(payload['content'])==1 and payload['content'][0]['blueId']==missing
+                    and payload['content'][0]['newlyRetained'] is False,'RESOURCE_DUPLICATE_VERIFICATION_EVENT')
     before_demands={r['demandId']:r for r in blocked['demands']};after_demands={r['demandId']:r for r in applied['demands']}
     require(before_demands and set(before_demands)==set(after_demands),'RESOURCE_DEMAND_INVENTORY')
     exact_demands=[]
@@ -289,7 +330,8 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
         require([did(v) for v in terminal['ownedDocumentIds']]==[root] and terminal['ownedPublicEvents']==[],'RESOURCE_ROOT_ONLY_PUBLICATION')
         descriptor=terminal['rootedContext'];context_id=descriptor['contextIdentity'] if 'contextIdentity' in descriptor else None
         expected,context_id=I.context({'members':[{'documentId':root,'historyBasisIdentity':I.history(base['sdkRecords'][root]['historyBasis'])}],'internalEdges':[]})
-        require(descriptor==expected and projection['invocationIdentity']==I.wrapper('rootedInvocationIdentity',{'baseInvocationIdentity':inp['invocationIdentity'],'rootProcessingContextIdentity':context_id,'deliveryBasisIdentity':projection['deliveryBasisIdentity']})
+        entry_base=frozen['selection']['requestingInvocationIdentity'] if terminal['causeType']=='ExternalEventCause' else inp['invocationIdentity']
+        require(descriptor==expected and projection['invocationIdentity']==I.wrapper('rootedInvocationIdentity',{'baseInvocationIdentity':entry_base,'rootProcessingContextIdentity':context_id,'deliveryBasisIdentity':projection['deliveryBasisIdentity']})
                 and projection['companionIdentity']==I.wrapper('rootedCommitCompanionIdentity',{'baseCommitCompanionIdentity':companion['companionIdentity'],'rootedInvocationIdentity':projection['invocationIdentity'],'rootProcessingContextIdentity':context_id}),'RESOURCE_ROOTED_AUTHORITY')
         require(projection['inputSnapshot']==inp['snapshot'] and projection['resultingSnapshot']==terminal['outputSnapshot'],'RESOURCE_ROOTED_SNAPSHOT_BINDING')
         if terminal['causeType']=='ExternalEventCause':require(inp['cause']['eventBlueId']==entry_id,'RESOURCE_CHANGED_ORIGINAL_LIVE_ENTRY')

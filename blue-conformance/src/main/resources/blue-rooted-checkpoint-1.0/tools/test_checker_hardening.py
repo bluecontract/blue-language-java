@@ -9,7 +9,7 @@ class CompletionTests(unittest.TestCase):
     def setUp(self):
         self.plan=json.loads((T.S/'plans/rcp-run-002.json').read_text());self.variant='no-extra-observer'
         self.steps=self.plan['setup']+self.plan['variants'][self.variant]
-        self.records=[{'kind':'SDK_CALL','planStepId':s['stepId'],'completed':True,'request':{},'response':{}} for s in self.steps]
+        self.records=[{'kind':'SDK_CALL','planStepId':s['stepId'],'completed':True,'request':copy.deepcopy(s),'response':{}} for s in self.steps]
     def check(self,rows,plan=None):P.literal_steps(plan or self.plan,self.variant,rows)
     def test_exact_order_passes(self):self.check(self.records)
     def test_reverse_order_rejects(self):
@@ -32,6 +32,7 @@ class CompletionTests(unittest.TestCase):
     def repeated(self):
         p=copy.deepcopy(self.plan);p['setup'][0]['repeat']=2
         a=copy.deepcopy(self.records[0]);b=copy.deepcopy(a);a['repeatIndex']=0;b['repeatIndex']=1
+        a['request']=copy.deepcopy(p['setup'][0]);b['request']=copy.deepcopy(p['setup'][0])
         return p,[a,b]+self.records[1:]
     def test_repeats_in_order_pass(self):
         p,r=self.repeated();self.check(r,p)
@@ -47,6 +48,14 @@ class CompletionTests(unittest.TestCase):
     def test_duplicate_plan_id_rejects(self):
         p=copy.deepcopy(self.plan);p['setup'][1]['stepId']=p['setup'][0]['stepId']
         with self.assertRaisesRegex(ValueError,'DUPLICATE_PLAN'):self.check(self.records,p)
+    def test_completed_step_cannot_substitute_or_omit_its_request(self):
+        for index,step in enumerate(self.steps):
+            for field in step:
+                rows=copy.deepcopy(self.records);rows[index]['request'][field]='substituted'
+                with self.subTest(step=index,field=field), self.assertRaisesRegex(ValueError,'LITERAL_REQUEST_CHANGED'):
+                    self.check(rows)
+        rows=copy.deepcopy(self.records);del rows[0]['request']
+        with self.assertRaisesRegex(ValueError,'LITERAL_REQUEST_CHANGED'):self.check(rows)
 
 class MultipleHistoryTests(unittest.TestCase):
     """Synthetic binding negatives, not production execution evidence."""
@@ -187,7 +196,7 @@ class AuthoredInitialCyclePlanTests(unittest.TestCase):
     def setUp(self):
         self.plan=json.loads((T.S/'plans/rcp-run-023.json').read_text())
         self.variant='view-A'
-        self.rows=[{'kind':'SDK_CALL','planStepId':s['stepId'],'completed':True,'request':{},'response':{}}
+        self.rows=[{'kind':'SDK_CALL','planStepId':s['stepId'],'completed':True,'request':copy.deepcopy(s),'response':{}}
                    for s in self.plan['setup']+self.plan['variants'][self.variant]]
     def test_saved_original_has_one_explicit_genesis_successor(self):
         self.assertEqual(self.plan['setup'][2]['request']['a'],{'$capture':'A.initialBlueId'})

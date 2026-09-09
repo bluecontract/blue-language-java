@@ -74,18 +74,22 @@ def verify_carrier(work, cause, terminal, application, source_receipt, require, 
                 "nextRevisionReceiptIdentity", "terminalPositionReached"}, "CARRIER_FUTURE_INVENTORY")
         tr = future["transition"]
         source_transition = tr["transitionReceipt"]
+        before_rows=[d for d in tr['originalInput']['snapshot']['managedDocuments'] if did(d['documentId'])==did(tr['documentId'])]
+        after_rows=[d for d in tr['originalResult']['resultingDocuments'] if did(d['documentId'])==did(tr['documentId'])]
+        require(len(before_rows)==len(after_rows)==1,'CARRIER_FUTURE_SOURCE_INVENTORY')
+        before,after=before_rows[0],after_rows[0]
         require(future["terminalPositionReached"] is (future["targetPositionIdentity"] == tr["positionIdentity"]
                 and future["nextRevisionReceiptIdentity"] is None)
                 and future["sourceRevisionReceiptIdentity"] == source_transition["transitionReceiptIdentity"]
                 and future["originalSourceCauseIdentity"] == source_transition["originalCauseIdentity"]
                 and exact_equal(future["sourceTransitionReceipt"], source_transition)
-                and future["beforeBlueId"] == tr["beforeBlueId"] == source_transition["beforeBlueId"]
-                and future["afterBlueId"] == tr["afterBlueId"] == source_transition["afterBlueId"]
-                and exact_equal(future["afterDocument"], tr["afterDocument"])
+                and future["beforeBlueId"] == before['blueId'] == after['beforeBlueId'] == source_transition["beforeBlueId"]
+                and future["afterBlueId"] == after['afterBlueId'] == source_transition["afterBlueId"]
+                and exact_equal(future["afterDocument"], tr["afterDocument"]) and exact_equal(tr['afterDocument'],after['document'])
                 and source_transition["emittedRootEvents"] == [], "CARRIER_FUTURE_TRANSITION")
         operands = {"documentId": did(tr["documentId"]), "epoch": tr["epoch"],
                 "anchorReceiptIdentity": tr["anchorReceiptIdentity"], "predecessorPositionIdentity": tr["predecessorPositionIdentity"],
-                "beforeBlueId": tr["beforeBlueId"], "afterBlueId": tr["afterBlueId"],
+                "beforeBlueId": before['blueId'], "afterBlueId": after['afterBlueId'],
                 "transitionReceiptIdentity": source_transition["transitionReceiptIdentity"],
                 "originalInvocationIdentity": tr["originalInput"]["invocationIdentity"],
                 "inputClosureIdentity": tr["originalInput"]["snapshot"]["closureIdentity"],
@@ -122,7 +126,8 @@ def verify_carrier(work, cause, terminal, application, source_receipt, require, 
     target = targets[0]
     expected_cursor = position(future, True) if future is not None else (
         None if numbered or cause["terminalPositionReached"] else position(cause, False))
-    require(exact_equal(target["pendingRepresentationCursor"], expected_cursor), "CARRIER_RESULT_POSITION")
+    wire_cursor=None if expected_cursor is None else dict(expected_cursor,identityValue=expected_cursor)
+    require(exact_equal(target["pendingRepresentationCursor"], wire_cursor), "CARRIER_RESULT_POSITION")
     if future is not None:
         require(target["active"] is False and target["pendingHistoricalEpoch"] == work["sourceEpoch"], "CARRIER_FUTURE_EXECUTED_EARLY")
     if application is not None:

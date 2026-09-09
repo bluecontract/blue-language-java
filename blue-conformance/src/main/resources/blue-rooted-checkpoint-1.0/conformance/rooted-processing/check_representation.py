@@ -6,6 +6,11 @@ from identity import checkpoint_constructors as C
 from rooted_graph_checks import graph_checks
 from check_successor_carriers import check_call_carriers
 
+def root_scope_identity(document_id):
+    value={'domain':'blue-contracts-managed-scope-key/1.0','value':{
+        'documentId':document_id,'scopePath':'/','activationGeneration':0}}
+    return 'sha256:'+hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
 
 def check_representation(rec, contract, weights, variant, require, exact_equal, gas_check):
     rule = contract['representationHistory']; phases = rec['phaseRecords']; tr = rec['transcript']
@@ -35,6 +40,9 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
         require(t['status'] == 'SUCCESS' and t['rollbackToInput'] is False, 'REP_TERMINAL_STATUS')
         inp, companion, projection = t['input'], t['commitCompanion'], t['rootedProjection']
         before, after = snapshot_check(inp['snapshot']), snapshot_check(t['outputSnapshot'])
+        scope_ids={root_scope_identity(document) for document in before}
+        require(all(w['targetManagedScopeIdentity'] in scope_ids for w in t['checkpointWrites']),
+                'REP_CHECKPOINT_SCOPE_IDENTITY')
         trace_check(t['gas'],t['fullGasTrace'],inp['executionPolicy']['sharedLimit'])
         require(t['gas']['charges'] and t['gas']['total'] > 0, 'REP_ACTUAL_METER_REQUIRED')
         require(t['invocationIdentity'] == inp['invocationIdentity'] == companion['invocationIdentity']
@@ -58,7 +66,7 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
                 if group & owners: owners |= group
         require(owners == {did(d) for d in t['ownedDocumentIds']}, 'REP_MONOTONE_OWNERSHIP')
         require(projection['invocationIdentity'] == I.wrapper('rootedInvocationIdentity',{
-                'rootProcessingContextIdentity':context_id,'baseInvocationIdentity':inp['invocationIdentity'],'deliveryBasisIdentity':projection['deliveryBasisIdentity']})
+                'rootProcessingContextIdentity':context_id,'baseInvocationIdentity':t['entryInvocationIdentity'],'deliveryBasisIdentity':projection['deliveryBasisIdentity']})
                 and projection['companionIdentity'] == I.wrapper('rootedCommitCompanionIdentity',{
                 'rootProcessingContextIdentity':context_id,'baseCommitCompanionIdentity':companion['companionIdentity'],
                 'rootedInvocationIdentity':projection['invocationIdentity']}), 'REP_ROOTED_WRAPPERS')
@@ -105,7 +113,7 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
                         and source_id in {did(d) for d in original['ownedDocumentIds']}
                         and original['input']['directDeliveries']
                         and all(did(d['targetDocumentId']) not in {did(x) for x in original['ownedDocumentIds']} for d in original['input']['directDeliveries'])
-                        and all(did(w['targetManagedScopeKey']['documentId'])!=source_id for w in original['checkpointWrites']), 'REP_CHECKPOINT_CLASS')
+                        and all(w['targetManagedScopeIdentity']!=root_scope_identity(source_id) for w in original['checkpointWrites']), 'REP_CHECKPOINT_CLASS')
                 # Independent public snapshot scan locates the sole actual exact-owner change.
                 snapshots=[original['input']['snapshot']]+original['rootedProjection']['topologyBoundaries']
                 changed=[(a,b) for a,b in zip(snapshots,snapshots[1:]) if by_id(a['managedDocuments'])[source_id]['blueId']!=by_id(b['managedDocuments'])[source_id]['blueId']]
@@ -151,7 +159,7 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
         require(source==ids[own] and appends['E100']['request']['operation']==('tick' if own=='P' else 'noop'), 'REP_COUNTEREXAMPLE_LITERAL')
         transition=next(r for r in final['actualPublication']['managedTransitionReceipts'] if did(r['documentId'])==source)
         require(transition['emittedRootEvents']==[], 'REP_EVENTLESS_COUNTEREXAMPLE')
-        require(any(did(w['targetManagedScopeKey']['documentId'])==ids['S'] for w in final['actualPublication']['checkpointWrites']), 'REP_ACTUAL_CHECKPOINT_REQUIRED')
+        require(any(w['targetManagedScopeIdentity']==root_scope_identity(ids['S']) for w in final['actualPublication']['checkpointWrites']), 'REP_ACTUAL_CHECKPOINT_REQUIRED')
         require(scalar(final['records']['S']['exactDocument']['counter'])==0, 'REP_INDEPENDENT_SOURCE_CHANGED')
         if own=='P':require(scalar(final['records']['P']['exactDocument']['seen'])==1, 'REP_ACTUAL_LOCAL_WORK_REQUIRED')
         else:require(any(did(d['targetDocumentId'])==ids['S'] for d in final['actualPublication']['input']['directDeliveries']), 'REP_OWN_DIRECT_CHECKPOINT_REQUIRED')
@@ -192,7 +200,8 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
                     require(p['positionIdentity'] in expected and exact_equal(p,next(x['position'] for x in final['positions'] if x['position']['positionIdentity']==p['positionIdentity'])),'REP_UNCOMMITTED_APPLIED_POSITION')
                     token=cause['targetOccurrenceIdentity'];goal=(cause['targetPositionIdentity'],cause['nextRevisionReceiptIdentity'])
                     require(fixed_targets.setdefault(token,goal)==goal and goal==(expected[-1],phases['originalChain']['nextRevisionReceiptIdentity']),'REP_MOVING_POSITION_TARGET')
-                    require(cause['fromEpoch']==cause['toEpoch']==0 and cause['beforeBlueId']==p['beforeBlueId'] and cause['afterBlueId']==p['afterBlueId'],'REP_POSITION_CAUSE_ENDPOINTS')
+                    require(cause['fromEpoch']==cause['toEpoch']==0 and cause['beforeBlueId']==p['transitionReceipt']['beforeBlueId']
+                            and cause['afterBlueId']==p['transitionReceipt']['afterBlueId'],'REP_POSITION_CAUSE_ENDPOINTS')
                 elif t['causeType']=='ManagedRevisionCause':
                     cause=t['input']['cause'];require(cause['toEpoch']==cause['fromEpoch']+1,'REP_REVISION_PLUS_ONE')
                     future=cause['successorRepresentationCause']
@@ -211,10 +220,26 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
         occurrence=[x for x in final['progress']['selectedSnapshots']['C']['occurrences'] if did(x['sourceDocumentId'])==ids['C'] and x['sourcePath']=='/child']
         require(len(occurrence)==1 and occurrence[0]['active'] is True and occurrence[0]['expectedTargetBlueId']==final['records']['P']['blueId'],'REP_FINAL_ACTIVE_EXACT_REFERENCE')
     else:
-        require(variant=='pending-target','REP_VARIANT')
-        chain_check(phases['pendingTail'],'A',4,False,True)
-        expected=chain_check(phases['originalChain'],'A',4,False,True)
-        require(chain_check(final,'A',4,False,False)==expected,'REP_OLD_PENDING_POSITIONS_CHANGED')
+        require(variant=='pending-target' and rule['pendingPositionCount']==1,'REP_VARIANT')
+        # Under rooted publication A stays independent during B's older imports.
+        # Only their terminal cyclic join rewrites A at its existing epoch.
+        chain_check(phases['pendingTail'],'A',1,False,True)
+        expected=chain_check(phases['originalChain'],'A',1,False,True)
+        require(chain_check(final,'A',1,False,False)==expected,'REP_OLD_PENDING_POSITIONS_CHANGED')
+        creation=[t for call in phases['graph200']['calls'] for t in call['terminals']]
+        require(len(creation)==4, 'REP_PENDING_ORIGINAL_APPLICATION_COUNT')
+        source=ids['A']
+        for index,t in enumerate(creation):
+            before,after,_=terminal(t)
+            require(before[source]['epoch']==after[source]['epoch']==2, 'REP_PENDING_ORIGINAL_EPOCH')
+            if index<3:
+                require(exact_equal(before[source],after[source])
+                        and source not in {did(d) for d in t['ownedDocumentIds']}, 'REP_PRE_JOIN_SOURCE_CHANGED')
+            else:
+                require(source in {did(d) for d in t['ownedDocumentIds']}
+                        and before[source]['blueId']!=after[source]['blueId']
+                        and exact_equal(t,phases['pendingTail']['positions'][0]['originalPublication']),
+                        'REP_PENDING_EXACT_JOIN_PUBLICATION')
         traversed=[]
         for phase in ['graph100','graph200','graph300','graph400']:
             calls=phases[phase]['calls']; require(1<=len(calls)<=32 and calls[-1]['quiescent'] is True,'REP_PENDING_GRAPH_BOUND')

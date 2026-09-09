@@ -1,5 +1,6 @@
 """Synthetic constructor/negative tests; no production fixture execution claimed."""
 import copy
+import json
 import unittest
 import sys
 from pathlib import Path
@@ -38,7 +39,8 @@ def inp(expanded):
                triggeringEventBlueId=None,parentTransitionIdentity=None,
                policyIdentity=D('blue-contracts-admission-policy/1.0',{'label':'contracts-top-level-admission-v1'}))
     cause['causeIdentity']=D('blue-contracts-admission-cause/1.0',cause);cause['kind']='ADMISSION'
-    policy=dict(label='release-default',localLimits={},sharedLimit=100000);policy['identity']=D('blue-contracts-execution-policy/1.0',policy)
+    policy=dict(label='release-default',localLimits={},sharedLimit=100000)
+    policy['identity']=D('blue-contracts-execution-policy/1.0',dict(policy,localLimits=[]))
     direct=D('blue-contracts-direct-delivery-snapshot/1.0',[])
     iv=dict(E,operation='admit-closure',causeIdentity=cause['causeIdentity'],admissionCandidateIdentity=None,inputGraphGeneration=1,
             inputClosureIdentity=ci,documents=dv,directDeliverySnapshotIdentity=direct,occurrenceBindingSetIdentity=bs,gasPolicyIdentity=policy['identity'])
@@ -51,6 +53,18 @@ def fixture():
                 implementationEvidence={'invocationIdentity':b['invocationIdentity']}),{'workIdentity':a['invocationIdentity']}
 def check(a,s):return H.check_admission_inputs(a,s,C,M,CE,ME,E,req,lambda a,b:a==b)
 class ProofTests(unittest.TestCase):
+    def test_actual_packaged_admission_inputs(self):
+        f=json.loads((Path(__file__).parent/'test-data/resource-admission-real.json').read_text())
+        def verify():return H.check_admission_inputs(f['admission'],f['selection'],f['child'],f['missing'],
+                f['childExact'],f['missingExact'],f['environment'],req,lambda a,b:a==b)
+        self.assertIs(verify(),f['admission']['completedInput'])
+        f['admission']['originalInput']['executionPolicy']['identity']='sha256:'+'0'*64
+        with self.assertRaisesRegex(ValueError,'RESOURCE_ADMISSION_EXECUTION_POLICY'):verify()
+    def test_typed_policy_map_uses_canonical_limit_rows(self):
+        a,s=fixture();policy=a['originalInput']['executionPolicy']
+        self.assertEqual('sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685',policy['identity'])
+        policy['identity']=D('blue-contracts-execution-policy/1.0',{k:v for k,v in policy.items() if k!='identity'})
+        with self.assertRaisesRegex(ValueError,'RESOURCE_ADMISSION_EXECUTION_POLICY'):check(a,s)
     def test_positive_exact_objects(self):
         a,s=fixture();self.assertIs(check(a,s),a['completedInput'])
     def test_closed_negative_operands(self):

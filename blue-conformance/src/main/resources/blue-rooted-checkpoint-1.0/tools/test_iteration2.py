@@ -200,13 +200,14 @@ class HarnessV2Tests(unittest.TestCase):
 class EvidenceBindingTests(unittest.TestCase):
     def test_complete_step_set_passes(self):
         p={'setup':[{'stepId':'s1'}],'variants':{'v':[{'stepId':'v1','repeat':2}]}}
-        P.literal_steps(p,'v',[{'planStepId':'s1','completed':True},{'planStepId':'v1','completed':True,'repeatIndex':0},{'planStepId':'v1','completed':True,'repeatIndex':1}])
+        P.literal_steps(p,'v',[{'planStepId':'s1','completed':True,'request':p['setup'][0]},
+            *[{'planStepId':'v1','completed':True,'repeatIndex':i,'request':p['variants']['v'][0]} for i in range(2)]])
     def test_omitted_action_does_not_pass(self):
         p={'setup':[{'stepId':'s1'}],'variants':{'v':[{'stepId':'v1'}]}}
-        with self.assertRaisesRegex(ValueError,'INCOMPLETE_LITERAL'):P.literal_steps(p,'v',[{'planStepId':'s1','completed':True}])
+        with self.assertRaisesRegex(ValueError,'INCOMPLETE_LITERAL'):P.literal_steps(p,'v',[{'planStepId':'s1','completed':True,'request':p['setup'][0]}])
     def test_missing_repeated_application_does_not_pass(self):
         p={'setup':[],'variants':{'v':[{'stepId':'v1','repeat':5}]}}
-        with self.assertRaisesRegex(ValueError,'INCOMPLETE_LITERAL'):P.literal_steps(p,'v',[{'planStepId':'v1','completed':True,'repeatIndex':i} for i in range(4)])
+        with self.assertRaisesRegex(ValueError,'INCOMPLETE_LITERAL'):P.literal_steps(p,'v',[{'planStepId':'v1','completed':True,'repeatIndex':i,'request':p['variants']['v'][0]} for i in range(4)])
     def test_source_lock_is_checked_outside_driver(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'lock.json';lock={'artifactSha256':'a'*64,'dependencies':{'lib.jar':'b'*64},'sourceCommits':{k:'c'*40 for k in ('language','bex','coordination','myos')},'specificationSetSha256':'d'*64};p.write_text(json.dumps(lock));sha=hashlib.sha256(p.read_bytes()).hexdigest()
