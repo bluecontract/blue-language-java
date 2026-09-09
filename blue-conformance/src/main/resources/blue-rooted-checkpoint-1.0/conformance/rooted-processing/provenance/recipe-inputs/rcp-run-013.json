@@ -1,0 +1,57 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-013",
+  "category": "RUN",
+  "title": "Historical retarget does not read the retired or latest wrong source",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-05",
+    "RCP-HISTORY-04"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "RETARGET_B_TO_OLD_C",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.selectedHistoryVerified",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.retiredSourceLaterDeliveries",
+        "op": "equals",
+        "expected": 0
+      },
+      {
+        "actual": "s.newSourceLaterDeliveries",
+        "op": "equals",
+        "expected": 1
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

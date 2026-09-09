@@ -12,46 +12,117 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "B",
+        "source": "examples/iteration2/source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "C",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "RETARGET_B_TO_OLD_C",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-013.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-013.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.selectedHistoryVerified",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.retiredSourceLaterDeliveries",
+        "actual": "status",
         "op": "equals",
-        "expected": 0
-      },
-      {
-        "actual": "s.newSourceLaterDeliveries",
-        "op": "equals",
-        "expected": 1
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "P.seen": 2,
+        "P.log": [
+          1,
+          1,
+          2
+        ],
+        "P.child.counter": 2,
+        "B.counter": 0,
+        "C.counter": 3
+      },
+      "requiredApplicationCount": 2,
+      "occurrenceSuffixes": {
+        "/child": {
+          "source": "C",
+          "positions": [
+            1,
+            2
+          ]
+        }
+      },
+      "applicationOrder": [
+        [
+          "C",
+          110
+        ],
+        [
+          "C",
+          210
+        ]
+      ],
+      "preserveSource": true,
+      "sourceAliases": [
+        "B",
+        "C"
+      ],
+      "requiredEvents": 0,
+      "extraChecks": {
+        "baseline": {
+          "fromB.after.P.log": [
+            1
+          ],
+          "retiredFirst.after.P.log": [
+            1,
+            1,
+            2
+          ],
+          "retiredLater.after.P.log": [
+            1,
+            1,
+            2
+          ],
+          "retiredLater.after.B.counter": 2,
+          "newSource.causeKind": "LIVE",
+          "newSource.after.P.log": [
+            1,
+            1,
+            2,
+            3
+          ],
+          "newSource.after.P.seen": 3,
+          "newSource.after.P.child.counter": 3,
+          "newSource.after.C.counter": 3
+        }
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-013.json",
+    "sha256": "a06bf3c6eab0c812e2759bff09db3aa11e02261671e0103fa3b95a9ba7aa1796"
   }
 }
