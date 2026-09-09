@@ -469,6 +469,132 @@ def check_phase_events(phases,anchors,weights):
             for key,value in anchor.items():
                 require(key in actual and exact_equal(actual[key],value),'PHASE_EVENT_ANCHOR:'+name+'.'+key)
 
+def check_value_boundary(rec, contract):
+    observed = rec['output'].get('valueBoundary')
+    require(isinstance(observed, dict), 'VALUE_BOUNDARY_MISSING')
+    rule = contract['valueBoundary']
+    require(set(observed['sources']) == set(rule['requiredSourceFiles']) == set(rule['sourceSha256']),
+            'VALUE_BOUNDARY_SOURCE_INVENTORY')
+    for path, source in observed['sources'].items():
+        require(hashlib.sha256(source.encode('utf-8')).hexdigest() == rule['sourceSha256'][path],
+                'VALUE_BOUNDARY_SOURCE_CHANGED')
+    foo = observed['fooDefinition']['blueId']
+    gender = observed['genderDefinition']['blueId']
+    require(isinstance(foo, str) and foo and isinstance(gender, str) and gender and foo != gender,
+            'VALUE_BOUNDARY_DEFINITION_IDS')
+
+    def status(record, expected, conformant=None):
+        require(record['outcome'] == expected, 'VALUE_BOUNDARY_OUTCOME')
+        if expected in ('ESTABLISHED', 'INVALID'):
+            require(record['outstandingBlueIds'] == [], 'VALUE_BOUNDARY_UNEXPECTED_MISSING_TYPE')
+        if conformant is not None:
+            require(record['conformant'] is conformant, 'VALUE_BOUNDARY_CONFORMANCE')
+
+    def scalar(node):
+        return node['value'] if isinstance(node, dict) and 'value' in node else node
+
+    def missing(record, expected_id):
+        status(record, 'INCOMPLETE')
+        require(record['outstandingBlueIds'] == [expected_id], 'VALUE_BOUNDARY_MISSING_TYPE_ID')
+        require(record['providerOutcome'] != 'INVALID_EVIDENCE', 'VALUE_BOUNDARY_MISSING_IS_INVALID')
+
+    def rejected_admission(record):
+        call = record['call']
+        require('returned' not in call and isinstance(call.get('thrown'), list) and call['thrown'],
+                'VALUE_BOUNDARY_INVALID_ADMISSION_RETURNED')
+        top = call['thrown'][0]
+        require(top['class'] == 'java.lang.IllegalArgumentException'
+                or (top['class'] == 'blue.coordination.api.CoordinationException'
+                    and top.get('code') == 'FROZEN_PROCESSING_FAILED'),
+                'VALUE_BOUNDARY_UNEXPECTED_ADMISSION_FAILURE')
+        require(all(row.get('code') != 'NEEDS_RESOURCES' for row in call['thrown']),
+                'VALUE_BOUNDARY_INVALID_IS_MISSING')
+        require(record['beforeDocumentCount'] == record['afterDocumentCount'] == 0,
+                'VALUE_BOUNDARY_INVALID_ADMISSION_PUBLISHED')
+        require(record['beforeEntryCount'] == record['afterEntryCount'] == 0,
+                'VALUE_BOUNDARY_INVALID_ADMISSION_APPENDED')
+
+    missing(observed['fooMissingType'], foo)
+    missing(observed['genderMissingType'], gender)
+    status(observed['fooValidReferenced'], 'ESTABLISHED', True)
+    require(scalar(observed['fooValidReferenced']['resolved']['bar']) == 42, 'VALUE_BOUNDARY_FOO_VALID_VALUE')
+    for key in ('fooInvalidInline', 'fooInvalidReferenced', 'fooInvalidImported'):
+        status(observed[key], 'INVALID', False)
+        require(scalar(observed[key]['input']['bar']) == 'tekst a Foo ma bar jako integer',
+                'VALUE_BOUNDARY_FOO_INPUT_CHANGED')
+    rejected_admission(observed['fooSdkAdmission'])
+
+    definition = observed['genderDefinition']
+    require(definition['blueId'] == definition['sourceBlueId'] == definition['sdkProviderBlueId']
+            == definition['sdkRepeatedProviderBlueId'] == definition['sdkReidentifiedProviderBlueId'],
+            'VALUE_BOUNDARY_GENDER_DEFINITION_IDENTITY')
+    for key in ('authored', 'canonical', 'resolvedDefinition', 'sdkProviderExact', 'sdkProviderReadExact'):
+        form = definition[key]
+        require(isinstance(form, dict) and 'value' not in form, 'VALUE_BOUNDARY_INVENTED_DEFINITION_PAYLOAD')
+        require([scalar(x) for x in form['schema']['enum']] == ['female', 'male'],
+                'VALUE_BOUNDARY_GENDER_ENUM_CHANGED')
+    require(exact_equal(definition['sdkProviderExact'], definition['sdkProviderReadExact']),
+            'VALUE_BOUNDARY_DEFINITION_PROVIDER_CHANGED')
+    provider_instances = definition['sdkProviderInstances']
+    require(set(provider_instances) == {'female', 'male'}, 'VALUE_BOUNDARY_PROVIDER_INSTANCE_INVENTORY')
+
+    cases = observed['genderCases']
+    require(set(cases) == {'female', 'male', 'other', 'wrong-kind', 'no-value'}, 'VALUE_BOUNDARY_CASE_INVENTORY')
+    for name, forms in cases.items():
+        expected = 'ESTABLISHED' if name in ('female', 'male') else 'INVALID'
+        ids = []
+        for form_name in ('inline', 'referenced', 'imported'):
+            record = forms[form_name]
+            status(record, expected, expected == 'ESTABLISHED')
+            if expected == 'ESTABLISHED':
+                require(record['resolved']['value'] == name, 'VALUE_BOUNDARY_GENDER_PAYLOAD')
+                definition_identity = record['definitionIdentity']
+                require('thrown' not in definition_identity, 'VALUE_BOUNDARY_VALID_IDENTITY_FAILED')
+                ids.append(definition_identity['returned']['blueId'])
+            elif name == 'no-value':
+                require('value' not in record['input'], 'VALUE_BOUNDARY_MISSING_VALUE_SUBSTITUTED')
+            elif name == 'wrong-kind':
+                require(type(record['input']['value']) is int and record['input']['value'] == 7,
+                        'VALUE_BOUNDARY_NUMBER_CHANGED_TO_TEXT')
+            else:
+                require(record['input']['value'] == 'other', 'VALUE_BOUNDARY_INVALID_ENUM_INPUT_CHANGED')
+        if ids:
+            require(len(ids) == 3 and len(set(ids)) == 1, 'VALUE_BOUNDARY_GENDER_REPRESENTATION_IDENTITY')
+            require(provider_instances[name]['blueId'] == ids[0]
+                    and provider_instances[name]['exact']['value'] == name,
+                    'VALUE_BOUNDARY_PROVIDER_INSTANCE_CHANGED')
+        else:
+            rejected_admission(forms['sdkAdmission'])
+
+    fixed = observed['invalidFixedDefinition']
+    require('returned' not in fixed and fixed.get('thrown'), 'VALUE_BOUNDARY_INVALID_FIXED_DEFINITION_ACCEPTED')
+    require(fixed['thrown'][0]['class'] == 'java.lang.IllegalArgumentException',
+            'VALUE_BOUNDARY_INVALID_FIXED_UNEXPECTED_FAILURE')
+    status(observed['requiredMissing'], 'INVALID', False)
+    require('sku' not in observed['requiredMissing']['input'], 'VALUE_BOUNDARY_REQUIRED_VALUE_INVENTED')
+    status(observed['requiredPresent'], 'ESTABLISHED', True)
+    require(scalar(observed['requiredPresent']['resolved']['sku']) == 'bolt', 'VALUE_BOUNDARY_REQUIRED_VALID_VALUE')
+
+    empty = observed['emptySchema']
+    status(empty['resolution'], 'ESTABLISHED')
+    for key in ('source', 'canonical', 'sdkExact'):
+        require(empty[key].get('schema') == {} and empty[key]['value'] == 3,
+                'VALUE_BOUNDARY_EMPTY_SCHEMA_DROPPED')
+    paths = empty['identityPaths']
+    require(set(paths) == {'source', 'canonicalDirect', 'snapshot', 'snapshotCanonicalDirect',
+            'minimizedSource', 'expandedSource', 'collapsedSource', 'sdkSource', 'sdkCanonicalJson', 'sdkRetained'},
+            'VALUE_BOUNDARY_IDENTITY_PATH_INVENTORY')
+    require(all(isinstance(value, str) and value for value in paths.values()) and len(set(paths.values())) == 1,
+            'VALUE_BOUNDARY_EMPTY_SCHEMA_IDENTITY')
+
+    calls = [row for row in rec['transcript'] if row['request'].get('op') == 'inspectValueBoundary']
+    require(len(calls) == 1 and calls[0]['completed'] is True, 'VALUE_BOUNDARY_LITERAL_STEP')
+    response = calls[0]['response']
+    require(exact_equal(response['observations'], observed), 'VALUE_BOUNDARY_TRANSCRIPT_DIFF')
+    require(exact_equal(response['rootedRecordsBefore'], response['rootedRecordsAfter']),
+            'VALUE_BOUNDARY_INSPECTION_MUTATED_ROOTED_STATE')
+
+
 def check_four_attachment_positions(record,rule,variant,weights):
     """Bind each literal starting reference to its genuine retained application suffix."""
     completed=[row for row in record['transcript'] if row.get('completed') is True]
@@ -625,6 +751,8 @@ def check_runs(f,run_records,weights,calibration=None):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('laggingObserver'):
             check_lagging_observer(rec,contract['laggingObserver'])
+        if contract.get('valueBoundary'):
+            check_value_boundary(rec,contract)
         if contract.get('fourAttachmentPositions'):
             check_four_attachment_positions(rec,contract['fourAttachmentPositions'],name,weights)
         if contract.get('derivedAfter'):

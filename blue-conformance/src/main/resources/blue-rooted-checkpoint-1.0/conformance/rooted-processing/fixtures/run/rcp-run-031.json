@@ -9,43 +9,138 @@
   ],
   "input": {
     "isolation": "NEW_REALM",
-    "documents": [],
-    "steps": [
+    "documents": [
       {
-        "op": "scenario",
-        "name": "VALUE_BOUNDARY_REGRESSIONS",
-        "inputs": {
-          "fooDefinition": "name: Foo\nbar:\n  type: Integer\n",
-          "genderDefinition": "name: Gender\ntype: Text\nschema:\n  enum: [female, male]\n",
-          "emptySchema": "type: Integer\nschema: {}\nvalue: 3\n"
-        },
-        "bind": "s"
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "value-input-1",
+        "source": "examples/iteration2/empty-schema.yaml"
+      },
+      {
+        "alias": "value-input-2",
+        "source": "examples/iteration2/foo-definition.yaml"
+      },
+      {
+        "alias": "value-input-3",
+        "source": "examples/iteration2/foo-invalid.yaml"
+      },
+      {
+        "alias": "value-input-4",
+        "source": "examples/iteration2/foo-valid.yaml"
+      },
+      {
+        "alias": "value-input-5",
+        "source": "examples/iteration2/gender-definition.yaml"
+      },
+      {
+        "alias": "value-input-6",
+        "source": "examples/iteration2/gender-female.yaml"
+      },
+      {
+        "alias": "value-input-7",
+        "source": "examples/iteration2/gender-invalid-fixed-definition.yaml"
+      },
+      {
+        "alias": "value-input-8",
+        "source": "examples/iteration2/gender-male.yaml"
+      },
+      {
+        "alias": "value-input-9",
+        "source": "examples/iteration2/gender-no-value.yaml"
+      },
+      {
+        "alias": "value-input-10",
+        "source": "examples/iteration2/gender-other.yaml"
+      },
+      {
+        "alias": "value-input-11",
+        "source": "examples/iteration2/gender-wrong-kind.yaml"
+      },
+      {
+        "alias": "value-input-12",
+        "source": "examples/iteration2/required-missing.yaml"
+      },
+      {
+        "alias": "value-input-13",
+        "source": "examples/iteration2/required-present.yaml"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-031.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-031.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.fooInvalidInstanceAccepted",
+        "actual": "status",
         "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.genderDefinitionStored",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.genderWrongValueAccepted",
-        "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.emptySchemaIdentityPaths",
-        "op": "allEqual"
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        }
+      ],
+      "verifyIdentityEnvelopes": true,
+      "valueBoundary": {
+        "collector": "RootedValueBoundaryObservations.collect",
+        "observationField": "valueBoundary",
+        "requiredSourceFiles": [
+          "examples/iteration2/empty-schema.yaml",
+          "examples/iteration2/foo-definition.yaml",
+          "examples/iteration2/foo-invalid.yaml",
+          "examples/iteration2/foo-valid.yaml",
+          "examples/iteration2/gender-definition.yaml",
+          "examples/iteration2/gender-female.yaml",
+          "examples/iteration2/gender-invalid-fixed-definition.yaml",
+          "examples/iteration2/gender-male.yaml",
+          "examples/iteration2/gender-no-value.yaml",
+          "examples/iteration2/gender-other.yaml",
+          "examples/iteration2/gender-wrong-kind.yaml",
+          "examples/iteration2/required-missing.yaml",
+          "examples/iteration2/required-present.yaml"
+        ],
+        "sourceSha256": {
+          "examples/iteration2/empty-schema.yaml": "96b131a4dc526476c6c3e7b3d3359eb8dcff4c4f315bb6e86f9236cfc3759a6d",
+          "examples/iteration2/foo-definition.yaml": "06919625d449d905e44c0769ec49f1e8ae42e89a0cb9d3b8858ca6d43f7f2e87",
+          "examples/iteration2/foo-invalid.yaml": "f622692eb7082322bf4ed0ecc0067e6048fdecdbb6d34aee12ae3b7e62515e7a",
+          "examples/iteration2/foo-valid.yaml": "2d1fa53e26842e3038c9517e1b3504e4e68633163763a66bd31c101cd5807d29",
+          "examples/iteration2/gender-definition.yaml": "5cf1e7a81757fc883634a539c190b3db9c4b3806d072b97d9e4eab8fdd07ac5e",
+          "examples/iteration2/gender-female.yaml": "e0a87e6166338531fddd66e308ff8746a1ed15ca09929f4d36e725031c915955",
+          "examples/iteration2/gender-invalid-fixed-definition.yaml": "7fc51bca5ab5dd2aaa98f4d8387f366d1f7a80812a7e40d358e5dbaf0cab1c51",
+          "examples/iteration2/gender-male.yaml": "0c6deaedff6413b85fa0e1902c61304e06d88f3cb49c7b07bbae075a9f9cabde",
+          "examples/iteration2/gender-no-value.yaml": "a72d816322eac411fe333959f229cef1268aef2401dcdd763617b1b80f9a37c9",
+          "examples/iteration2/gender-other.yaml": "dffeece7fd719479350c06a0a529f16a9ba258d5786acdeaf603cdb0bff58d67",
+          "examples/iteration2/gender-wrong-kind.yaml": "ba2fa1e049b6af01b79b2d3f0870ba2844d345db657d3e22aa84bc8b1f44c16a",
+          "examples/iteration2/required-missing.yaml": "5030761a71cf2fa7acdbd1280d8e97247cca59fb004c532a568308f66f6d2c5a",
+          "examples/iteration2/required-present.yaml": "3cf20960c90bf463891da38002528fed555c323cc72440e09edb85303eaf1480"
+        }
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",

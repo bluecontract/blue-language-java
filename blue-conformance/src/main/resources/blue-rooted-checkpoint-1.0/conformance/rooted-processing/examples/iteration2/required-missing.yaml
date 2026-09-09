@@ -1,0 +1,5 @@
+type:
+  sku:
+    type: Text
+    schema:
+      required: true

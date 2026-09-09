@@ -1,0 +1,122 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-031",
+  "title": "Foo/Gender/missing-value/empty-schema boundaries through packaged Language and SDK",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "inspectValueBoundary",
+        "capture": "valueBoundary",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-005"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "S"
+    ],
+    "afterEquals": {
+      "S.counter": 1
+    },
+    "requiredEvents": 1,
+    "eventAnchors": [
+      {
+        "origin": "S",
+        "ordinal": 0,
+        "kind": "RCP2/Tick"
+      }
+    ],
+    "verifyIdentityEnvelopes": true,
+    "valueBoundary": {
+      "collector": "RootedValueBoundaryObservations.collect",
+      "observationField": "valueBoundary",
+      "requiredSourceFiles": [
+        "examples/iteration2/empty-schema.yaml",
+        "examples/iteration2/foo-definition.yaml",
+        "examples/iteration2/foo-invalid.yaml",
+        "examples/iteration2/foo-valid.yaml",
+        "examples/iteration2/gender-definition.yaml",
+        "examples/iteration2/gender-female.yaml",
+        "examples/iteration2/gender-invalid-fixed-definition.yaml",
+        "examples/iteration2/gender-male.yaml",
+        "examples/iteration2/gender-no-value.yaml",
+        "examples/iteration2/gender-other.yaml",
+        "examples/iteration2/gender-wrong-kind.yaml",
+        "examples/iteration2/required-missing.yaml",
+        "examples/iteration2/required-present.yaml"
+      ]
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "inspectValueBoundary",
+    "assertQuiescent",
+    "restart"
+  ]
+}

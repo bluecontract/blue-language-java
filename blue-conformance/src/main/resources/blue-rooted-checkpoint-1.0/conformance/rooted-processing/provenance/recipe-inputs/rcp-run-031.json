@@ -1,0 +1,56 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-031",
+  "category": "RUN",
+  "title": "Foo/Gender/empty-schema identity remain correct under the new profile",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-SCOPE-06"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "VALUE_BOUNDARY_REGRESSIONS",
+        "inputs": {
+          "fooDefinition": "name: Foo\nbar:\n  type: Integer\n",
+          "genderDefinition": "name: Gender\ntype: Text\nschema:\n  enum: [female, male]\n",
+          "emptySchema": "type: Integer\nschema: {}\nvalue: 3\n"
+        },
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.fooInvalidInstanceAccepted",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.genderDefinitionStored",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.genderWrongValueAccepted",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.emptySchemaIdentityPaths",
+        "op": "allEqual"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

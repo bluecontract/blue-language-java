@@ -1,6 +1,6 @@
 # Iteration 2 fixture index
 
-100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. 23 production obligations have literal plans; 11 remain recipe-level. All production runtime results are NOT_RUN.
+100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. 24 production obligations have literal plans; 10 remain recipe-level. All production runtime results are NOT_RUN.
 
 | ID | Kind | Qualification | Title |
 |---|---|---|---|
@@ -100,7 +100,7 @@
 | [RCP-RUN-028](fixtures/run/rcp-run-028.json) | runtime | RECIPE_ONLY | Crash around publication does not lose state or duplicate events |
 | [RCP-RUN-029](fixtures/run/rcp-run-029.json) | runtime | RECIPE_ONLY | Nanosecond timestamp round-trip cannot masquerade as conflicting evidence |
 | [RCP-RUN-030](fixtures/run/rcp-run-030.json) | runtime | RECIPE_ONLY | False and mutated root contexts must be rejected |
-| [RCP-RUN-031](fixtures/run/rcp-run-031.json) | runtime | RECIPE_ONLY | Foo/Gender/empty-schema identity remain correct under the new profile |
+| [RCP-RUN-031](fixtures/run/rcp-run-031.json) | runtime | LITERAL_CRITICAL | Foo/Gender/empty-schema identity remain correct under the new profile |
 | [RCP-RUN-032](fixtures/run/rcp-run-032.json) | runtime | RECIPE_ONLY | Large fan-out is scheduled as independent rooted obligations |
 | [RCP-RUN-033](fixtures/run/rcp-run-033.json) | runtime | LITERAL_CRITICAL | All four explicit attachment starting positions preserve their intended suffixes |
 | [RCP-RUN-034](fixtures/run/rcp-run-034.json) | runtime | LITERAL_CRITICAL | Source advances while a one-way observer stays behind without false readiness |

@@ -1026,7 +1026,8 @@
         "RCP-SCOPE-06"
       ],
       "verificationScope": "PRODUCTION_ADAPTER_REQUIRED",
-      "qualification": "RECIPE_ONLY"
+      "qualification": "LITERAL_CRITICAL",
+      "literalPlan": "plans/rcp-run-031.json"
     },
     {
       "id": "RCP-RUN-032",
