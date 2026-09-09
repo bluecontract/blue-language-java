@@ -469,6 +469,219 @@ def check_phase_events(phases,anchors,weights):
             for key,value in anchor.items():
                 require(key in actual and exact_equal(actual[key],value),'PHASE_EVENT_ANCHOR:'+name+'.'+key)
 
+def check_created_child_prebirth(record, rule, variant, weights):
+    require(variant in ('parent-first', 'source-first'), 'BIRTH_VARIANT')
+    creator, observer, child = rule['creator'], rule['observer'], rule['child']
+    ids = record['documentIds']; cid = ids[child]; sid = ids[creator]
+    require(len({ids[creator], ids[observer], cid}) == 3, 'BIRTH_LINEAGES')
+    output = record['output']; observations = output['birthObservations']
+    before, local, prefix, final, restarted = [observations[k] for k in
+        ('before', 'afterParent', 'afterPrefixRestart', 'final', 'finalRestart')]
+    phases = record['phaseRecords']; source = phases[rule['sourcePhase']]
+    structured_output(source, weights)
+    require(source['status'] == 'SUCCESS' and sorted(source['ownedWrites']) == sorted([creator, child]),
+            'BIRTH_SOURCE_OWNERS')
+    require(output['ownedWrites'] == [observer] and output['sourceBefore'] == output['sourceAfter'],
+            'BIRTH_OBSERVER_PUBLICATION')
+    require(before['published'] is False and child not in before['retainedRecords'], 'BIRTH_PREMATURE_ADMISSION')
+    require(local['published'] is (variant == 'source-first') and prefix['published'] is local['published'],
+            'BIRTH_PREFIX_PUBLICATION')
+    require(local['retainedRecords'] == prefix['retainedRecords'], 'BIRTH_PREFIX_RESTART_RECORDS')
+    require(local['selectedChild'] == prefix['selectedChild'], 'BIRTH_PREFIX_RESTART_SELECTED')
+    require(final['published'] is True and restarted['published'] is True, 'BIRTH_SOURCE_NOT_PUBLISHED')
+    require(final == restarted, 'BIRTH_FINAL_RESTART_EVIDENCE')
+    require(all(o['initialBlueId'] == cid and o['documentId'] == cid
+                and o['initialExact'] == before['initialExact']
+                for o in (local, prefix, final, restarted)), 'BIRTH_AUTHORED_ID_SUBSTITUTION')
+
+    def scalar(v):
+        return v.get('value', v) if isinstance(v, dict) else v
+    def counter(node):
+        require(isinstance(node, dict) and 'counter' in node, 'BIRTH_COUNTER_MISSING')
+        value = scalar(node['counter'])
+        require(integer(value), 'BIRTH_COUNTER_KIND')
+        return value
+    def one(op, capture):
+        rows = [r for r in record['transcript'] if r['request'].get('op') == op
+                and r['request'].get('capture') == capture and r.get('completed') is True]
+        require(len(rows) == 1, 'BIRTH_MISSING_OR_DUPLICATED_STEP:' + capture)
+        return rows[0]
+    draft_rows = [r for r in record['transcript'] if r['request'].get('op') == 'draft'
+                  and r['request'].get('alias') == child and r.get('completed') is True]
+    require(len(draft_rows) == 1 and draft_rows[0]['response']['published'] is False
+            and draft_rows[0]['response']['documentId'] == cid
+            and draft_rows[0]['response']['initialBlueId'] == cid, 'BIRTH_DRAFT_NOT_EXACT')
+    old_rows = [one('append', c) for c in rule['oldEntryCaptures']]
+    old = [r['response']['actualEntry'] for r in old_rows]
+    birth_row = one('submitManaged', rule['birthEntryCapture']); submitted = birth_row['response']
+    entry = submitted['actualEntry']; base = int(rule['baseTimeUs']); birth_time = base + rule['birthOffset']
+    require([e['timestampMicros'] for e in old] == [base + x for x in rule['preBirthOffsets']]
+            and entry['timestampMicros'] == birth_time, 'BIRTH_LOGICAL_ORDER')
+    require(old[0]['previousEntryBlueId'] is None and old[1]['previousEntryBlueId'] == old[0]['blueId'],
+            'BIRTH_OLD_PREDECESSOR_CHAIN')
+    require(len({e['blueId'] for e in old + [entry]}) == 3, 'BIRTH_REUSED_ENTRY')
+    for row, event in zip(old_rows, old):
+        require(row['request']['draft'] == child and row['request']['operation'] == 'tick'
+                and event['operation'] == 'tick' and event['channel'] == 'owner', 'BIRTH_OLD_OPERATION')
+        require(event['exact']['message']['document']['blueId'] == cid, 'BIRTH_OLD_TARGET_NOT_AUTHORED')
+    require(birth_row['request']['root'] == creator and birth_row['request']['draft'] == child
+            and birth_row['request']['activation'] == 'FROM_NOW'
+            and birth_row['request']['expectedPath'] == '/child'
+            and birth_row['request']['requestField'] == 'child'
+            and entry['operation'] == 'attach' and entry['channel'] == 'owner'
+            and submitted['draftDocumentId'] == cid and submitted['draftInitialBlueId'] == cid
+            and submitted['targetDocumentId'] == sid, 'BIRTH_MANAGED_SUBMISSION')
+    require(before['journal'] == final['journal'], 'BIRTH_ADDED_OR_REWROTE_JOURNAL')
+    journal = {row['blueId']: row for row in final['journal']}
+    require(len(journal) == len(final['journal']) and set(journal) == {e['blueId'] for e in old + [entry]},
+            'BIRTH_JOURNAL_INVENTORY')
+    for e in old + [entry]: require(journal[e['blueId']] == e, 'BIRTH_EXACT_JOURNAL_CHANGED')
+
+    selected = local['selectedChild']; retained = final['retainedRecords'][child]
+    require(selected['documentId']['value'] == cid and selected['initialized'] is True
+            and counter(selected['document']) == 0 and selected['blueId'] == retained['blueId']
+            and counter(retained['exactDocument']) == 0 and retained['epoch'] == 0, 'BIRTH_OLD_INPUT_APPLIED')
+    receipts = retained['receipts']
+    require(len(receipts) == 1, 'BIRTH_INITIALIZATION_COUNT')
+    receipt = receipts[0]
+    require(receipt['kind'] == 'INITIALIZATION' and receipt['epoch'] == 0
+            and receipt['beforeBlueId'] is None and receipt['afterBlueId'] == retained['blueId'],
+            'BIRTH_INITIALIZATION_POSITION')
+    operation = final['sourceOperation']; basis = final['historyBasis']; admission = basis['admission']
+    require(basis == retained['historyBasis'] and basis['documentId'] == cid
+            and basis['initialDocumentBlueId'] == cid and admission['mode'] == 'CREATED_IN_OPERATION',
+            'BIRTH_HISTORY_BASIS')
+    order = operation['sourceOrder']['components']
+    require(len(order) == 3 and order[0] == birth_time and order[2] == entry['blueId']
+            and isinstance(order[1], str) and bool(order[1]), 'BIRTH_SOURCE_ORDER')
+    require(admission['lowerExclusiveOrder'] == {'timestampUs': str(birth_time),
+            'timelineBlueId': order[1], 'entryBlueId': order[2]}, 'BIRTH_LOWER_EXCLUSIVE_ORDER')
+    # Host INITIALIZATION receipts have no sourceEntry; the birth's actual
+    # entry is bound by its complete source order, cause and commit companion.
+    require(receipt['sourceOrder']['components'] == order and receipt['sourceEntry'] is None,
+            'BIRTH_RECEIPT_SOURCE')
+    require(admission['creatorOperationIdentity'] == operation['rootedInvocationIdentity']
+            and final['admissionInvocationIdentity'] == operation['invocationIdentity']
+            and final['admissionCompanionIdentity'] == operation['companionIdentity']
+            and receipt['commitCompanionIdentity'] == operation['companionIdentity']
+            and receipt['originalCauseIdentity'] == operation['inputCauseIdentity'], 'BIRTH_CAUSE_COMPANION_BINDING')
+    require(set(r['value'] for r in operation['ownedDocuments']) == {sid, cid}, 'BIRTH_RESULT_OWNERS')
+    edges = [e for e in operation['occurrences'] if e['occurrenceIdentity'] == admission['birthOccurrenceIdentity']]
+    require(len(edges) == 1 and edges[0]['active'] is True and edges[0]['sourceDocumentId']['value'] == sid
+            and edges[0]['targetDocumentId']['value'] == cid and edges[0]['sourcePath'] == '/child',
+            'BIRTH_OCCURRENCE_BINDING')
+    transitions = [t for t in operation['transitions'] if t['transitionReceiptIdentity'] == receipt['contractsTransitionReceiptIdentity']]
+    require(len(transitions) == 1 and transitions[0]['documentId']['value'] == cid
+            and transitions[0]['afterBlueId'] == retained['blueId'], 'BIRTH_SOURCE_TRANSITION')
+    # There must be exactly the two real process calls. The observation helpers may not drain work.
+    processed = [r for r in record['transcript'] if r['request'].get('op') == 'processNext']
+    require(len(processed) == 2 and all(r.get('completed') is True for r in processed), 'BIRTH_HIDDEN_PROCESSING')
+    require([r['request']['root'] for r in processed] == ([observer, creator] if variant == 'parent-first'
+            else [creator, observer]), 'BIRTH_SCHEDULE_SUBSTITUTED')
+    quiescent = [r for r in record['transcript'] if r['request'].get('op') == 'assertQuiescent']
+    require(len(quiescent) == 6 and [r['request']['root'] for r in quiescent] == [child, creator, observer] * 2,
+            'BIRTH_QUIESCENCE_COVERAGE')
+    for r in quiescent:
+        require(r.get('completed') is True and r['response']['quiescent'] is True
+                and r['response']['entries'] == [] and r['response']['before'] == r['response']['after'],
+                'BIRTH_QUIESCENCE_MUTATION')
+
+
+def check_root_context_negatives(rec, rule, require, exact_equal):
+    observed = rec['output']['rootContextNegatives']
+    cases = observed['mutations']
+    ids = rec['documentIds']
+    root, source, reverse = (ids[rule[k]] for k in ('root', 'source', 'reverse'))
+    historical_root, historical_source = (ids[rule[k]] for k in ('historicalRoot', 'historicalSource'))
+    require(set(cases) == set(rule['requiredMutations']), 'CONTEXT_NEGATIVE_INVENTORY')
+    boundaries = {
+        'extraReverseParent': 'blue.language.processor.closure.RootedProcessingContext.requireForwardClosure',
+        'missingForwardChild': 'blue.language.processor.closure.AffectedClosureSnapshot.validateOccurrenceEndpoints',
+        'wrongRoot': 'blue.language.processor.closure.RootedProcessingContext.requireEntrySnapshot',
+        'wrongHistoryBasis': 'blue.coordination.internal.RootedResultScope.require',
+        'tamperedPublicationSet': 'blue.coordination.internal.ContractsClosurePublicationReceipt.<init>',
+        'readWitnessMadeWritable': 'blue.language.processor.closure.RootedPublicationProjection.retainedSnapshot',
+    }
+    def identity(value):
+        return value if isinstance(value, str) else value['value']
+    def documents(snapshot):
+        return {identity(row['documentId']): row for row in snapshot['managedDocuments']}
+    def owners(projection):
+        return [identity(value) for value in projection['ownedDocumentIds']]
+    for name, case in cases.items():
+        require(case['returnedNormally'] is False, 'CONTEXT_MUTATION_ACCEPTED:' + name)
+        require(case['exceptionClass'] == 'java.lang.IllegalArgumentException', 'CONTEXT_UNEXPECTED_FAILURE:' + name)
+        require(boundaries[name] in case['exceptionFrames'], 'CONTEXT_WRONG_REJECTION_BOUNDARY:' + name)
+        require(case['before'] and exact_equal(case['before'], case['after']), 'CONTEXT_PARTIAL_PUBLICATION:' + name)
+        for alias in ids:
+            record = case['before'][alias]
+            require(record['documentId'] == ids[alias] and record['receipts'], 'CONTEXT_MISSING_HISTORY:' + alias)
+            require(set(record) >= {'exactDocument', 'historyBasis', 'occurrences', 'components', 'events'},
+                    'CONTEXT_INCOMPLETE_RETAINED_STATE:' + alias)
+    require(observed['positiveResult']['commits'] is True, 'CONTEXT_MISSING_POSITIVE_CALCULATION')
+    require(owners(observed['positiveResult']['rootedProjection']) == [root], 'CONTEXT_POSITIVE_OWNERS')
+    require([identity(v) for v in observed['positivePublicationMembers']] == [root], 'CONTEXT_POSITIVE_PUBLICATION')
+    require(exact_equal(observed['inspectionBefore'], observed['inspectionAfter']), 'CONTEXT_INSPECTION_PUBLISHED')
+    baseline = observed['baselineInput']['snapshot']
+    require(set(documents(baseline)) == {root, source}, 'CONTEXT_BASELINE_FORWARD_GRAPH')
+
+    extra = cases['extraReverseParent']['candidate']
+    require(extra['requestedRoot'] == root and extra['extraDocument'] == reverse, 'CONTEXT_EXTRA_ROOT_TARGET')
+    require(set(documents(extra['evidence'])) == {root, source, reverse}, 'CONTEXT_EXTRA_INVENTORY')
+    edges = {(identity(r['sourceDocumentId']), identity(r['targetDocumentId'])) for r in extra['evidence']['occurrences'] if r['active']}
+    require(edges == {(reverse, root), (root, source)}, 'CONTEXT_EXTRA_REVERSE_TOPOLOGY')
+
+    missing = cases['missingForwardChild']['candidate']
+    require(missing['removedDocument'] == source and exact_equal(missing['evidence'], baseline), 'CONTEXT_MISSING_INPUT_CHANGED')
+    require({identity(row['documentId']) for row in missing['managedDocuments']} == {root}, 'CONTEXT_MISSING_NOT_REMOVED')
+    require(any(identity(r['targetDocumentId']) == source for r in baseline['occurrences']), 'CONTEXT_MISSING_EDGE_NOT_PRESENT')
+
+    wrong_root = cases['wrongRoot']['candidate']
+    require(wrong_root['baselineRoot'] == root and wrong_root['proposedRoot'] == source, 'CONTEXT_ROOT_NOT_MUTATED')
+    require(set(documents(wrong_root['contextEntrySnapshot'])) == {source}, 'CONTEXT_WRONG_ROOT_NO_REAL_SNAPSHOT')
+
+    wrong_history = cases['wrongHistoryBasis']['candidate']
+    require(wrong_history['baselineHistoryBasisIdentity'] != wrong_history['proposedHistoryBasisIdentity'], 'CONTEXT_HISTORY_NOT_MUTATED')
+    require(wrong_history['substitutedSourceHistory']['documentId'] == source, 'CONTEXT_HISTORY_NOT_OTHER_LINEAGE')
+    changed = wrong_history['changedCalculation']
+    require(changed['commits'] is True, 'CONTEXT_HISTORY_DID_NOT_REACH_PUBLICATION')
+    original_projection = observed['positiveResult']['rootedProjection']
+    changed_projection = changed['rootedProjection']
+    require(changed_projection['context']['identity'] != original_projection['context']['identity'], 'CONTEXT_HISTORY_MUTATION_NOT_EXECUTED')
+    require(changed_projection['context']['descriptor'] == wrong_history['evidence'], 'CONTEXT_HISTORY_WRONG_EXECUTED_CONTEXT')
+    require(changed['inputClosureIdentity'] == observed['positiveResult']['inputClosureIdentity'], 'CONTEXT_HISTORY_CHANGED_SNAPSHOT')
+    # The admitted-context authority comparison is performed by the actual host.
+    # Closed wrapper recomputation may additionally reuse identity/constructors.py.
+    require(changed_projection['deliveryBasisIdentity'] != original_projection['deliveryBasisIdentity'], 'CONTEXT_HISTORY_STALE_DELIVERY')
+
+    publication = cases['tamperedPublicationSet']['candidate']
+    require([identity(v) for v in publication['baselineMembers']] == [root], 'CONTEXT_PUBLICATION_ORIGINAL')
+    require(set(identity(v) for v in publication['proposedMembers']) == {root, source}, 'CONTEXT_PUBLICATION_NOT_MUTATED')
+    require(publication['terminalKey'] == observed['positiveTerminalKey'], 'CONTEXT_PUBLICATION_CHANGED_UNRELATED_KEY')
+
+    witness = cases['readWitnessMadeWritable']['candidate']
+    require(witness['promotedReadWitness'] == historical_source, 'CONTEXT_WRONG_WITNESS')
+    require(set(witness['baselineOwnerPositions']) == {historical_root}, 'CONTEXT_WITNESS_ALREADY_OWNER')
+    require(set(witness['proposedOwnerPositions']) == {historical_root, historical_source}, 'CONTEXT_WITNESS_NOT_PROMOTED')
+    result = witness['retainedResult']
+    require(result['commits'] is True and owners(result['rootedProjection']) == [historical_root], 'CONTEXT_NO_RETAINED_WITNESS_RESULT')
+    cause = witness['retainedInput']['cause']
+    require(identity(cause['childDocumentId']) == historical_source and cause['fromEpoch'] == 0 and cause['toEpoch'] == 1,
+            'CONTEXT_WITNESS_NOT_REAL_RETAINED_STEP')
+    source_record = documents(witness['evidence'])[historical_source]
+    require(source_record['epoch'] == 2 and source_record['publicRoot'] is False, 'CONTEXT_WITNESS_WRONG_POSITION')
+    require(all(identity(receipt['documentId']) != historical_source for receipt in result['managedTransitionReceipts']),
+            'CONTEXT_WITNESS_SOURCE_REEMITTED')
+    require(exact_equal(observed['witnessInspectionBefore'], observed['witnessInspectionAfter']), 'CONTEXT_WITNESS_INSPECTION_PUBLISHED')
+    live_calls = [step for step in rec['transcript'] if step['request']['op'] == 'inspectRootContextNegatives']
+    witness_calls = [step for step in rec['transcript'] if step['request']['op'] == 'inspectHistoricalWitnessPromotion']
+    require(len(live_calls) == len(witness_calls) == 1 and live_calls[0]['completed'] and witness_calls[0]['completed'],
+            'CONTEXT_MISSING_EXECUTED_CONTROL')
+    require(exact_equal(live_calls[0]['response']['observations']['mutations'], {k: v for k, v in cases.items() if k != 'readWitnessMadeWritable'}),
+            'CONTEXT_LIVE_TRANSCRIPT_MISMATCH')
+    require(exact_equal(witness_calls[0]['response']['observation'], cases['readWitnessMadeWritable']), 'CONTEXT_WITNESS_TRANSCRIPT_MISMATCH')
+
+
 def check_value_boundary(rec, contract):
     observed = rec['output'].get('valueBoundary')
     require(isinstance(observed, dict), 'VALUE_BOUNDARY_MISSING')
@@ -751,6 +964,10 @@ def check_runs(f,run_records,weights,calibration=None):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('laggingObserver'):
             check_lagging_observer(rec,contract['laggingObserver'])
+        if contract.get('createdChildPreBirth'):
+            check_created_child_prebirth(rec,contract['createdChildPreBirth'],name,weights)
+        if contract.get('rootContextNegatives'):
+            check_root_context_negatives(rec,contract['rootContextNegatives'],require,exact_equal)
         if contract.get('valueBoundary'):
             check_value_boundary(rec,contract)
         if contract.get('fourAttachmentPositions'):

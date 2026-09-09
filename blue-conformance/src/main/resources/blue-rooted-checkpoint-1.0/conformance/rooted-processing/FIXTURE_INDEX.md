@@ -95,11 +95,11 @@
 | [RCP-RUN-023](fixtures/run/rcp-run-023.json) | runtime | LITERAL_CRITICAL | Cycle formation and split do not change gas ownership midway |
 | [RCP-RUN-024](fixtures/run/rcp-run-024.json) | runtime | RECIPE_ONLY | New child birth failure cannot publish a half-created graph |
 | [RCP-RUN-025](fixtures/run/rcp-run-025.json) | runtime | LITERAL_CRITICAL | Suspending early materialization cannot change source history |
-| [RCP-RUN-026](fixtures/run/rcp-run-026.json) | runtime | RECIPE_ONLY | Explicit new-from-cause remains distinct from history discovery |
+| [RCP-RUN-026](fixtures/run/rcp-run-026.json) | runtime | LITERAL_CRITICAL | Explicit new-from-cause remains distinct from history discovery |
 | [RCP-RUN-027](fixtures/run/rcp-run-027.json) | runtime | RECIPE_ONLY | Missing exact input creates a typed wait and exact resume |
 | [RCP-RUN-028](fixtures/run/rcp-run-028.json) | runtime | RECIPE_ONLY | Crash around publication does not lose state or duplicate events |
 | [RCP-RUN-029](fixtures/run/rcp-run-029.json) | runtime | RECIPE_ONLY | Nanosecond timestamp round-trip cannot masquerade as conflicting evidence |
-| [RCP-RUN-030](fixtures/run/rcp-run-030.json) | runtime | RECIPE_ONLY | False and mutated root contexts must be rejected |
+| [RCP-RUN-030](fixtures/run/rcp-run-030.json) | runtime | LITERAL_CRITICAL | False and mutated root contexts must be rejected |
 | [RCP-RUN-031](fixtures/run/rcp-run-031.json) | runtime | LITERAL_CRITICAL | Foo/Gender/empty-schema identity remain correct under the new profile |
 | [RCP-RUN-032](fixtures/run/rcp-run-032.json) | runtime | RECIPE_ONLY | Large fan-out is scheduled as independent rooted obligations |
 | [RCP-RUN-033](fixtures/run/rcp-run-033.json) | runtime | LITERAL_CRITICAL | All four explicit attachment starting positions preserve their intended suffixes |

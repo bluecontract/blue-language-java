@@ -1,0 +1,55 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-026",
+  "category": "RUN",
+  "title": "Explicit new-from-cause remains distinct from history discovery",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-BIRTH-02",
+    "RCP-BIRTH-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "EXPLICIT_NEW_FROM_CAUSE",
+        "birthTime": 20,
+        "oldInputTime": 15,
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.preBirthInputApplied",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.materializationOrderAffectsResult",
+        "op": "equals",
+        "expected": false
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

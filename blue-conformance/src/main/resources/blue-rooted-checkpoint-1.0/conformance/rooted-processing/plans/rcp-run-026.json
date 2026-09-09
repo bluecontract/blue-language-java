@@ -1,0 +1,344 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-026",
+  "title": "Authentic managed birth excludes retained pre-birth entries in both local creation schedules",
+  "inputIdentityPolicy": "Draft keeps the actual authored BlueId; public managed submission chooses real BASE+20 after two genuine exact journal appends. No static child admission or clock setter.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/name": "RCP2 Creator",
+        "/contracts/owner/timeline/timelineId": "rcp2/creator"
+      },
+      "admission": "FULL_HISTORY",
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "stepId": "setup-002"
+    },
+    {
+      "op": "draft",
+      "alias": "T",
+      "source": "examples/iteration2/source.yaml",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "append",
+      "draft": "T",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "1800000000000015",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "old15",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "append",
+      "draft": "T",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "1800000000000019",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "old19",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "submitManaged",
+      "root": "S",
+      "operation": "attach",
+      "channel": "owner",
+      "draft": "T",
+      "requestField": "child",
+      "expectedPath": "/child",
+      "activation": "FROM_NOW",
+      "expectedTimestampUs": "1800000000000020",
+      "capture": "birth",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "observeBirth",
+      "observer": "P",
+      "child": "T",
+      "capture": "before",
+      "stepId": "setup-007"
+    }
+  ],
+  "variants": {
+    "parent-first": [
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "parent-first-001"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterParent",
+        "stepId": "parent-first-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "parent-first-003"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterPrefixRestart",
+        "stepId": "parent-first-004"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "budget": "DEFAULT",
+        "capture": "sourceBirth",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "parent-first-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "final",
+        "sourcePhase": "sourceBirth",
+        "stepId": "parent-first-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "parent-first-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "parent-first-008"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "parent-first-009"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "parent-first-010"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "finalRestart",
+        "sourcePhase": "sourceBirth",
+        "stepId": "parent-first-011"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "parent-first-012"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "parent-first-013"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "parent-first-014"
+      }
+    ],
+    "source-first": [
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "budget": "DEFAULT",
+        "capture": "sourceBirth",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "source-first-001"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterSource",
+        "sourcePhase": "sourceBirth",
+        "stepId": "source-first-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "source-first-003"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterParent",
+        "stepId": "source-first-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "source-first-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterPrefixRestart",
+        "stepId": "source-first-006"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "final",
+        "sourcePhase": "sourceBirth",
+        "stepId": "source-first-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "source-first-008"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "source-first-009"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "source-first-010"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "S"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "source-first-011"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "finalRestart",
+        "sourcePhase": "sourceBirth",
+        "stepId": "source-first-012"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "source-first-013"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "source-first-014"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "source-first-015"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.seen": 0,
+      "P.log": [],
+      "P.child.child.counter": 0
+    },
+    "requiredEvents": 0,
+    "preserveSource": true,
+    "verifyIdentityEnvelopes": true,
+    "createdChildPreBirth": {
+      "creator": "S",
+      "observer": "P",
+      "child": "T",
+      "baseTimeUs": "1800000000000000",
+      "preBirthOffsets": [
+        15,
+        19
+      ],
+      "birthOffset": 20,
+      "oldEntryCaptures": [
+        "old15",
+        "old19"
+      ],
+      "birthEntryCapture": "birth",
+      "sourcePhase": "sourceBirth"
+    },
+    "equalAcrossVariants": [
+      "after.P",
+      "birthObservations.final.finalSummary"
+    ]
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "draft",
+    "append",
+    "submitManaged",
+    "processNext",
+    "observeBirth",
+    "assertQuiescent",
+    "restart"
+  ]
+}

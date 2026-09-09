@@ -16,44 +16,82 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "R",
+        "source": "examples/iteration2/context-reverse-parent.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/historical-b.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "ROOT_CONTEXT_NEGATIVES",
-        "mutations": [
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-030.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-030.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        }
+      ],
+      "verifyIdentityEnvelopes": true,
+      "rootContextNegatives": {
+        "observationField": "rootContextNegatives",
+        "root": "P",
+        "source": "S",
+        "reverse": "R",
+        "historicalRoot": "B",
+        "historicalSource": "A",
+        "requiredMutations": [
           "extraReverseParent",
           "missingForwardChild",
           "readWitnessMadeWritable",
           "wrongRoot",
           "wrongHistoryBasis",
           "tamperedPublicationSet"
-        ],
-        "bind": "s"
+        ]
       }
-    ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
-  },
-  "expected": {
-    "assertions": [
-      {
-        "actual": "s.allMutationsRejected",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.anyPartialPublication",
-        "op": "equals",
-        "expected": false
-      }
-    ]
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",

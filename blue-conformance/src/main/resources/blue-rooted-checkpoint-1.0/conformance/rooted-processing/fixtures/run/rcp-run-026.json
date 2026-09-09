@@ -12,39 +12,76 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/parent.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "T",
+        "source": "examples/iteration2/source.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "EXPLICIT_NEW_FROM_CAUSE",
-        "birthTime": 20,
-        "oldInputTime": 15,
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-026.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "parent-first",
+      "source-first"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-026.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.preBirthInputApplied",
+        "actual": "status",
         "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.materializationOrderAffectsResult",
-        "op": "equals",
-        "expected": false
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.seen": 0,
+        "P.log": [],
+        "P.child.child.counter": 0
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "verifyIdentityEnvelopes": true,
+      "createdChildPreBirth": {
+        "creator": "S",
+        "observer": "P",
+        "child": "T",
+        "baseTimeUs": "1800000000000000",
+        "preBirthOffsets": [
+          15,
+          19
+        ],
+        "birthOffset": 20,
+        "oldEntryCaptures": [
+          "old15",
+          "old19"
+        ],
+        "birthEntryCapture": "birth",
+        "sourcePhase": "sourceBirth"
+      },
+      "equalAcrossVariants": [
+        "after.P",
+        "birthObservations.final.finalSummary"
+      ]
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
