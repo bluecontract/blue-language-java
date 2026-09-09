@@ -12,56 +12,94 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/multi-history-parent.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "TWO_OCCURRENCES_5_8",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-006.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-006.json"
   },
   "expected": {
     "assertions": [
       {
-        "actual": "s.leftObservedPositions",
+        "actual": "causeKind",
         "op": "equals",
-        "expected": [
+        "expected": "MANAGED_REVISION"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "A.counter": 10,
+        "P.leftLog": [
           6,
           7,
           8,
           9,
           10
-        ]
-      },
-      {
-        "actual": "s.rightObservedPositions",
-        "op": "equals",
-        "expected": [
+        ],
+        "P.rightLog": [
           9,
           10
-        ]
+        ],
+        "P.left.counter": 10,
+        "P.right.counter": 10
       },
-      {
-        "actual": "s.sourceHistoryRewritten",
-        "op": "equals",
-        "expected": false
-      }
-    ]
+      "requiredApplicationCount": 7,
+      "occurrenceSuffixes": {
+        "/left": {
+          "source": "A",
+          "positions": [
+            6,
+            7,
+            8,
+            9,
+            10
+          ]
+        },
+        "/right": {
+          "source": "A",
+          "positions": [
+            9,
+            10
+          ]
+        }
+      },
+      "preserveSource": true,
+      "sourceAliases": [
+        "A"
+      ],
+      "requiredEvents": 0
+    },
+    "oracleVersion": 2
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-006.json",
+    "sha256": "ad2ff8610abd3799985365dc54a23094377b796f5fcbd127d4a76a5c97422fd0"
   }
 }

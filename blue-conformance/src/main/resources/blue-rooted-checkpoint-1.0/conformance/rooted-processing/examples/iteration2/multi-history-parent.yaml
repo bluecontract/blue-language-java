@@ -1,0 +1,101 @@
+name: RCP2 Multiple Historical Occurrences
+leftLog: []
+rightLog: []
+order: []
+marked: false
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+    - /left
+    - /right
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/history-parent
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  attach:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request:
+      left: {}
+      right: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /left
+          val:
+            $binding: event/message/request/left
+      - $appendChange:
+          op: add
+          path: /right
+          val:
+            $binding: event/message/request/right
+      - $return: true
+  mark:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: replace
+          path: /marked
+          val: true
+      - $return: true
+  fromLeft:
+    type: Embedded Node Channel
+    sourcePath: /left
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+  fromRight:
+    type: Embedded Node Channel
+    sourcePath: /right
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+  observeLeft:
+    type: Coordination/Sequential Workflow
+    channel: fromLeft
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /leftLog/-
+          val:
+            $document: /left/counter
+      - $appendChange:
+          op: add
+          path: /order/-
+          val: left
+      - $return: true
+  observeRight:
+    type: Coordination/Sequential Workflow
+    channel: fromRight
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /rightLog/-
+          val:
+            $document: /right/counter
+      - $appendChange:
+          op: add
+          path: /order/-
+          val: right
+      - $return: true

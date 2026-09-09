@@ -48,6 +48,67 @@ class CompletionTests(unittest.TestCase):
         p=copy.deepcopy(self.plan);p['setup'][1]['stepId']=p['setup'][0]['stepId']
         with self.assertRaisesRegex(ValueError,'DUPLICATE_PLAN'):self.check(self.records,p)
 
+class MultipleHistoryTests(unittest.TestCase):
+    """Synthetic binding negatives, not production execution evidence."""
+    def setUp(self):
+        self.contract={'requiredApplicationCount':2,'sourceAliases':['A'],
+                       'occurrenceSuffixes':{'/left':{'source':'A','positions':[1,2]}},
+                       'applicationOrder':[['A',60],['A',90]],'perApplicationEquals':{'P.marked':False}}
+        self.ids={'A':'actual-A'};self.o={'sourceBefore':{'A':{'receipts':[]}},'applications':[]}
+        label,weight=next(iter(T.WEIGHTS.items()))
+        for i,time in [(1,60),(2,90)]:
+            doc={'value':'actual-A'};before='exact-'+str(i-1);after='exact-'+str(i)
+            retained={'documentId':doc,'epoch':i,'receiptIdentity':'source-'+str(i),
+                      'contractsTransitionReceiptIdentity':'transition-'+str(i),'beforeBlueId':before,
+                      'afterBlueId':after,'originalCauseIdentity':'cause-'+str(i),
+                      'sourceOrder':{'components':[time,'timeline','entry-'+str(i)]}}
+            self.o['sourceBefore']['A']['receipts'].append(retained)
+            transition={'transitionReceiptIdentity':retained['contractsTransitionReceiptIdentity'],
+                        'beforeBlueId':before,'afterBlueId':after,'originalCauseIdentity':retained['originalCauseIdentity']}
+            cause={'targetOccurrenceIdentity':'left-occurrence','childDocumentId':doc,'fromEpoch':i-1,
+                   'toEpoch':i,'beforeBlueId':before,'afterBlueId':after,
+                   'sourceRevisionReceiptIdentity':transition['transitionReceiptIdentity'],
+                   'originalSourceCauseIdentity':retained['originalCauseIdentity']}
+            work={'workIdentity':'work-'+str(i),'targetPath':'/left','targetOccurrenceIdentity':'left-occurrence',
+                  'sourceDocumentId':doc,'sourceEpoch':i,'sourceReceiptIdentity':retained['receiptIdentity']}
+            receipt={'workIdentity':work['workIdentity'],'applicationReceiptIdentity':'app-'+str(i),
+                     'sourceReceiptIdentity':retained['receiptIdentity']}
+            self.o['applications'].append({'source':'A','targetPath':'/left','status':'SUCCESS',
+                'from':i-1,'to':i,'work':work,'receipt':receipt,'retainedSource':copy.deepcopy(retained),
+                'sourceReceipt':transition,'exactCause':cause,'sourceOrder':retained['sourceOrder']['components'],
+                'after':{'P':{'marked':False}},'budget':weight,
+                'gas':{'charges':[{'sequence':0,'label':label,'quantity':1,'weight':weight,'amount':weight}],
+                       'total':weight,'rejected':None}})
+    def check(self):P.check_multiple_history(self.o,self.contract,T.WEIGHTS,self.ids)
+    def test_complete_bound_sequence_passes(self):self.check()
+    def test_skipped_application_rejects(self):
+        self.o['applications'].pop()
+        with self.assertRaisesRegex(ValueError,'MULTI_APPLICATION_COUNT'):self.check()
+    def test_reordered_applications_reject(self):
+        self.o['applications'].reverse()
+        with self.assertRaisesRegex(ValueError,'MULTI_WRONG_SUFFIX'):self.check()
+    def test_duplicate_work_rejects(self):
+        h=self.o['applications'][1];h['work']['workIdentity']='work-1';h['receipt']['workIdentity']='work-1'
+        with self.assertRaisesRegex(ValueError,'MULTI_DUPLICATE_WORK'):self.check()
+    def test_occurrence_swap_rejects(self):
+        self.o['applications'][0]['work']['targetOccurrenceIdentity']='right-occurrence'
+        with self.assertRaisesRegex(ValueError,'MULTI_OCCURRENCE_BINDING'):self.check()
+    def test_source_alias_cannot_hide_wrong_lineage(self):
+        self.o['applications'][0]['work']['sourceDocumentId']={'value':'wrong-source'}
+        with self.assertRaisesRegex(ValueError,'MULTI_SOURCE_ID'):self.check()
+    def test_unretained_source_receipt_rejects(self):
+        self.o['applications'][0]['retainedSource']['receiptIdentity']='forged-source'
+        with self.assertRaisesRegex(ValueError,'MULTI_UNRETAINED_SOURCE'):self.check()
+    def test_exact_predecessor_mismatch_rejects(self):
+        self.o['applications'][0]['exactCause']['beforeBlueId']='wrong-predecessor'
+        with self.assertRaisesRegex(ValueError,'MULTI_EXACT_SUCCESSOR'):self.check()
+    def test_wrong_reported_timestamp_rejects(self):
+        self.o['applications'][0]['sourceOrder']=[55,'timeline','entry-1']
+        with self.assertRaisesRegex(ValueError,'MULTI_SOURCE_ORDER'):self.check()
+    def test_later_input_overtaking_history_rejects(self):
+        self.o['applications'][0]['after']['P']['marked']=True
+        with self.assertRaisesRegex(ValueError,'MULTI_OVERTAKE'):self.check()
+
 class TariffBindingTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)

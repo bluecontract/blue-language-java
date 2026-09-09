@@ -1,0 +1,57 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-008",
+  "category": "RUN",
+  "title": "Two historical sources interleave by cause order",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-ORDER-04",
+    "RCP-HISTORY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "INTERLEAVED_RETAINED_SOURCES",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.applicationOrder",
+        "op": "equals",
+        "expected": [
+          "A60",
+          "C70",
+          "C80",
+          "A90"
+        ]
+      },
+      {
+        "actual": "s.noNextDependentInputOvertookHistory",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

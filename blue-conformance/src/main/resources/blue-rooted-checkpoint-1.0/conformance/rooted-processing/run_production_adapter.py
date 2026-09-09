@@ -233,6 +233,37 @@ def check_calibration(cal,weights):
     require(o['gas']['total']>0,'CALIBRATION_ZERO')
     return o['gas']['total']
 
+def check_multiple_history(o,contract,weights,document_ids):
+    """Exact occurrence suffixes and cross-source ordering, independent of the adapter."""
+    hist=o.get('applications');expected=contract['occurrenceSuffixes']
+    require(isinstance(hist,list) and len(hist)==contract['requiredApplicationCount'],'MULTI_APPLICATION_COUNT')
+    require(expected and sum(len(v['positions']) for v in expected.values())==len(hist),'MULTI_EXPECTED_COUNT')
+    require(set(o['sourceBefore'])==set(contract['sourceAliases']),'MULTI_SOURCE_INVENTORY')
+    observed={path:[] for path in expected};work_ids=set();receipt_ids=set();order=[]
+    for h in hist:
+        path=h.get('targetPath');source=h.get('source')
+        require(path in expected and source==expected[path]['source'],'MULTI_OCCURRENCE_SOURCE')
+        require(h['status']=='SUCCESS' and type(h['from']) is int and h['to']==h['from']+1,'MULTI_EPOCH_STEP')
+        work=h['work'];cause=h['exactCause'];receipt=h['receipt'];retained=h['retainedSource'];transition=h['sourceReceipt']
+        require(work['workIdentity']==receipt['workIdentity'] and work['workIdentity'] not in work_ids,'MULTI_DUPLICATE_WORK')
+        require(receipt['applicationReceiptIdentity'] not in receipt_ids,'MULTI_DUPLICATE_APPLICATION')
+        work_ids.add(work['workIdentity']);receipt_ids.add(receipt['applicationReceiptIdentity'])
+        require(work['targetPath']==path and work['targetOccurrenceIdentity']==cause['targetOccurrenceIdentity'],'MULTI_OCCURRENCE_BINDING')
+        require(work['sourceDocumentId']['value']==document_ids[source]==cause['childDocumentId']['value']==retained['documentId']['value'],'MULTI_SOURCE_ID')
+        require(work['sourceEpoch']==h['to']==cause['toEpoch']==retained['epoch'] and cause['fromEpoch']==h['from'],'MULTI_SOURCE_EPOCH')
+        require(retained in o['sourceBefore'][source]['receipts'],'MULTI_UNRETAINED_SOURCE')
+        require(work['sourceReceiptIdentity']==receipt['sourceReceiptIdentity']==retained['receiptIdentity'],'MULTI_SOURCE_RECEIPT')
+        require(cause['sourceRevisionReceiptIdentity']==transition['transitionReceiptIdentity']==retained['contractsTransitionReceiptIdentity'],'MULTI_TRANSITION_RECEIPT')
+        require(cause['beforeBlueId']==transition['beforeBlueId']==retained['beforeBlueId'] and cause['afterBlueId']==transition['afterBlueId']==retained['afterBlueId'],'MULTI_EXACT_SUCCESSOR')
+        require(cause['originalSourceCauseIdentity']==transition['originalCauseIdentity']==retained['originalCauseIdentity'],'MULTI_ORIGINAL_CAUSE')
+        require(h['sourceOrder']==retained['sourceOrder']['components'] and len(h['sourceOrder'])==3,'MULTI_SOURCE_ORDER')
+        gas_check(h['gas'],h['budget'],weights);require(h['gas']['charges'] and h['gas']['rejected'] is None,'MULTI_GAS')
+        for key,value in contract.get('perApplicationEquals',{}).items():
+            require(exact_equal(lookup(h['after'],key),value),'MULTI_OVERTAKE:'+key)
+        observed[path].append(h['to']);order.append([source,h['sourceOrder'][0]])
+    require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
+    if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
+
 def check_runs(f,run_records,weights,calibration=None):
     require(f['input'].get('qualification')=='LITERAL_CRITICAL','RECIPE_ONLY_NOT_QUALIFIED')
     require(f['expected'].get('oracleVersion')==2,'ORACLE_VERSION')
@@ -306,6 +337,7 @@ def check_runs(f,run_records,weights,calibration=None):
             require(after.get('events')==before.get('events') and isinstance(before.get('events'),list),'SOURCE_REEMISSION')
             require(after.get('epoch',-1)>=contract['sourceEpochMinimum'],'SOURCE_REWIND')
             require(sorted(o.get('liveCycle',[]))==sorted(contract['requireLiveCycle']),'LIVE_JOIN_MISSING')
+        if scope=='HISTORY_MULTIPLE':check_multiple_history(o,contract,weights,rec['documentIds'])
         if contract.get('derivedAfter'):
             for path,rule in contract['derivedAfter'].items():
                 require(rule['function']=='canonicalComponentOrder','UNKNOWN_ORACLE')
