@@ -64,6 +64,26 @@ final class RootedHistoricalWitnessTest {
                         .filter(row -> row.sourceDocumentId().equals(S)).findFirst().get().bindingIdentity());
                 assertTrue(result.managedTransitionReceipts().stream().noneMatch(value -> value.documentId().equals(S)));
                 AffectedClosureSnapshot output = result.rootedProjection().resultingSnapshot();
+                long ownerEpoch = output.managedDocument(P).epoch();
+                AffectedClosureSnapshot retained = ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.singletonMap(P, ownerEpoch + 1L));
+                assertEquals(ownerEpoch + 1L, retained.managedDocument(P).epoch());
+                assertEquals(ownerEpoch, output.managedDocument(P).epoch(), "Original processor result stays immutable");
+                assertSame(output.rootedWitnesses(), retained.rootedWitnesses());
+                assertSame(output.managedDocument(S), retained.managedDocument(S));
+                assertEquals(output.occurrences(), retained.occurrences());
+                assertEquals(output.components(), retained.components());
+                ClosureEvidenceVerifier.verifySnapshot(retained);
+                assertEquals(output.closureIdentity(), ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.singletonMap(P, ownerEpoch)).closureIdentity());
+                assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.singletonMap(P, ownerEpoch - 1L)));
+                assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.singletonMap(P, ownerEpoch + 2L)));
+                assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.singletonMap(S, 4L)));
+                assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                        Collections.<DocumentId, Long>emptyMap()));
                 assertThrows(IllegalArgumentException.class, () -> new AffectedClosureSnapshot(output.closureIdentity(),
                         output.graphGeneration(), output.managedDocuments(), output.occurrences(), output.occurrenceBindingSetIdentity(),
                         output.components(), output.publicRootDocumentIds()), "A public flat-state constructor cannot assert witness authority");

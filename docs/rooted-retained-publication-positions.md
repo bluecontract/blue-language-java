@@ -1,0 +1,9 @@
+# Rooted retained publication positions
+
+Contracts §5.7.1 preserves the processor epoch for an event-only step, while allowing the authoritative host to assign a contiguous retained revision with the real receipt and companion. The Coordination SDK reproduced a failure after two actual source emissions at order100 and attachment of its saved initialized state at200: a stored source view exposed processor epoch0 while occurrence resolution selected host revision1. The next attempt that preserved revision1 failed the complete witness-position check, as required, because the accompanying proof still described epoch0.
+
+`ClosureEvidenceFactory.rootedRetainedSnapshot(result, retainedEpochs)` derives the next host-input snapshot from a successful processor-owned result. It requires exactly the derived owners, preserves each processor epoch or permits one host revision, and keeps exact documents, occurrence rows, graph/components, lifecycle, and immutable historical witness provenance. The original processor result is unchanged. The complete new snapshot is independently verified. This factory does not authenticate durable host history: Coordination must derive the positions from validated replacement sessions inside the same atomic publication as their receipts and companion.
+
+The focused Language suite passed12tests without failures or skips, including witness aliases and mutation negatives, ownership, read expansion, and strict Javadoc. New assertions reject missing owners, changing an unowned source position, a rewind, and a skipped position; the existing wrong-body, removed/deactivated-row, flat-proof reconstruction and gas rollback negatives remain.
+
+This is an additive integration API implementing the selected rules, not a new epoch/gas/publication model or final RC acceptance. The actual SDK event-only regression, timestamp cutoff, restart, publication negatives and final library/MyOS gates remain required.

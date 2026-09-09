@@ -76,6 +76,23 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
+     * Captures host retained positions alongside an unchanged, successful rooted result.
+     * The host must bind these positions to its atomically stored receipts; this factory
+     * verifies exact ownership, the permitted single host increment, and all source proofs.
+     * It neither edits the processor result nor authenticates a host's durable storage.
+     *
+     * @param result successful processor-owned rooted result
+     * @param retainedEpochs complete actual retained positions of the derived owners
+     * @return independently verified snapshot preserving all exact values and witness roles
+     */
+    public static AffectedClosureSnapshot rootedRetainedSnapshot(ClosureProcessResult result,
+            Map<DocumentId, Long> retainedEpochs) {
+        if (!Objects.requireNonNull(result, "result").commits() || result.rootedProjection() == null)
+            throw new IllegalArgumentException("Retained positions require a successful rooted result");
+        return result.rootedProjection().retainedSnapshot(retainedEpochs);
+    }
+
+    /**
      * Captures one exact production environment from a configured processor.
      *
      * @param processor configured ordinary processor used by the closure

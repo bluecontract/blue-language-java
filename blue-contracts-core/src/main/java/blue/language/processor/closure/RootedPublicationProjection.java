@@ -144,6 +144,32 @@ public final class RootedPublicationProjection {
      * @return complete selected output */
     public AffectedClosureSnapshot resultingSnapshot() { return resultingSnapshot; }
 
+    AffectedClosureSnapshot retainedSnapshot(java.util.Map<DocumentId, Long> epochs) {
+        if (epochs == null || !epochs.keySet().equals(new java.util.HashSet<>(ownedDocumentIds)))
+            throw new IllegalArgumentException("Retained positions must cover exactly the derived owners");
+        List<ManagedDocumentSnapshot> documents = new ArrayList<>();
+        for (ManagedDocumentSnapshot document : resultingSnapshot.managedDocuments()) {
+            Long proposed = epochs.get(document.documentId());
+            if (owns(document.documentId())) {
+                if (proposed == null || proposed < document.epoch() || proposed > document.epoch() + 1L)
+                    throw new IllegalArgumentException("Retained position must preserve the epoch or record one host revision");
+                documents.add(new ManagedDocumentSnapshot(document.documentId(), document.blueId(), document.document(),
+                        document.initialized(), document.terminated(), document.publicRoot(), proposed,
+                        document.componentGeneration()));
+            } else documents.add(document);
+        }
+        AffectedClosureSnapshot source = resultingSnapshot;
+        AffectedClosureSnapshot provisional = new AffectedClosureSnapshot(source.closureIdentity(), source.graphGeneration(),
+                documents, source.occurrences(), source.occurrenceBindingSetIdentity(), source.components(),
+                source.publicRootDocumentIds(), source.rootedWitnesses());
+        AffectedClosureSnapshot retained = new AffectedClosureSnapshot(
+                ClosureIdentityService.INSTANCE.affectedClosureIdentity(provisional), source.graphGeneration(),
+                documents, source.occurrences(), source.occurrenceBindingSetIdentity(), source.components(),
+                source.publicRootDocumentIds(), source.rootedWitnesses());
+        ClosureEvidenceVerifier.verifySnapshot(retained);
+        return retained;
+    }
+
     /** Returns complete owned components, never partial cyclic proofs.
      * @return exact owned component results */
     public List<ComponentSnapshot> ownedComponents() { return ownedComponents; }
