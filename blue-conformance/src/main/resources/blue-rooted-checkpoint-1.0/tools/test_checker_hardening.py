@@ -235,4 +235,26 @@ class PhaseEventTests(unittest.TestCase):
         self.phases['first']['events'].reverse()
         with self.assertRaisesRegex(ValueError,'PHASE_EVENT_ANCHOR'):self.check()
 
+class LiteralSourceTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture=json.loads((T.S/'fixtures/run/rcp-run-011.json').read_text())
+        self.plan=json.loads((T.S/'plans/rcp-run-011.json').read_text())
+    def load(self):return P.literal_sources(T.S,self.fixture,self.plan)
+    def test_declared_legacy_examples_are_included_exactly(self):
+        sources=self.load()
+        self.assertEqual(len(sources),4)
+        self.assertEqual(sources['examples/empty-orders.yaml'],(T.S/'examples/empty-orders.yaml').read_text())
+    def test_traversal_rejects(self):
+        self.plan['setup'][0]['source']='examples/../run_production_adapter.py'
+        with self.assertRaisesRegex(ValueError,'LITERAL_SOURCE_PATH'):self.load()
+    def test_absolute_path_rejects(self):
+        self.plan['setup'][0]['source']=str(T.S/'examples/empty-orders.yaml')
+        with self.assertRaisesRegex(ValueError,'LITERAL_SOURCE_PATH'):self.load()
+    def test_missing_source_rejects(self):
+        self.plan['setup'][0]['source']='examples/not-present.yaml'
+        with self.assertRaisesRegex(ValueError,'LITERAL_SOURCE_MISSING'):self.load()
+    def test_non_yaml_rejects(self):
+        self.plan['setup'][0]['source']='examples/not-yaml.json'
+        with self.assertRaisesRegex(ValueError,'LITERAL_SOURCE_PATH'):self.load()
+
 if __name__=='__main__':unittest.main(verbosity=2)

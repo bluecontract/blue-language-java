@@ -18,5 +18,16 @@ provided separately by the unchanged packaged collection acceptance tests.
 The independent checker rejects missing, extra, reordered and wrong-origin phase
 events. Six synthetic negative/positive checks supplement the existing hardened
 suite; they provide no runtime conformance credit. Actual execution status is
-stored separately from fixture metadata, which remains NOT_RUN until evaluated
-against exact application bytes and the independent dependency/source lock.
+stored separately from fixture metadata, which remains NOT_RUN; separate results bind each evaluation to exact
+application bytes and the independent dependency/source lock.
+
+The first execution stopped before admission because the runner supplied only
+examples/iteration2 YAML. The input loader now reads the exact declared example
+paths, rejecting missing files, absolute paths, traversal and non-YAML inputs.
+No source document or runtime behavior changed to repair that harness issue.
+
+The complete literal passed on application SHA-256
+3b9422207ecb6008c3c3c6e33cb12574bd41ff6b457d3a3ebe52a9aa7ec85b44.
+Evidence: rooted-production-empty-collection-declared-sources.json. The new
+loader and phase inventory checks pass all 54 hardened checker tests; the 64
+Iteration 2 and 18 harness tests remain required as part of final verification.

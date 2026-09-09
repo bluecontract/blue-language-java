@@ -45,6 +45,20 @@ def integer(x,minval=0):return type(x) is int and x>=minval
 
 def digest_bytes(b):return hashlib.sha256(b).hexdigest()
 
+def literal_sources(suite,fixture,plan):
+    """Load exact declared examples, including maintained pre-iteration2 YAML."""
+    steps=plan['setup']+[s for variant in plan['variants'].values() for s in variant]
+    names={row['source'] for row in fixture['input']['documents']+steps if 'source' in row}
+    sources={}
+    for name in sorted(names):
+        path=Path(name)
+        require(not path.is_absolute() and '..' not in path.parts
+                and path.parts[0]=='examples' and path.suffix=='.yaml','LITERAL_SOURCE_PATH')
+        full=(suite/path).resolve()
+        require(full.is_relative_to((suite/'examples').resolve()) and full.is_file(),'LITERAL_SOURCE_MISSING')
+        sources[name]=full.read_text()
+    return sources
+
 def verified_tariff_weights(suite):
     """Derive the complete allowed table from three pinned governing manifests."""
     table=json.loads((suite/'tariff-weights.json').read_text())
@@ -416,7 +430,8 @@ def main():
         f=json.loads((suite/row['path']).read_text());rec={'id':f['id'],'status':'NOT_RUN','releaseReadinessClaimed':False}
         if f['input'].get('qualification')!='LITERAL_CRITICAL':rec['reason']='Recipe-level obligation; no complete v2 oracle supplied';results.append(rec);continue
         out=evidenceRoot/f['id'];out.mkdir()
-        request={'schema':'blue-rooted-adapter-request/1.0-draft.2','fixture':f,'plan':json.loads((suite/f['input']['literalPlan']).read_text()),'sourceFiles':{p.relative_to(suite).as_posix():p.read_text() for p in (suite/'examples/iteration2').glob('*.yaml')},'artifactPath':str(a.artifact.resolve()),'artifactSha256':art,'embeddedDependencies':deps,'sourceCommits':lock['sourceCommits'],'sourceLockSha256':a.source_lock_sha256,'specificationSetSha256':spec,'requestNonce':secrets.token_hex(16),'evidenceDirectory':str(out.resolve())}
+        plan=json.loads((suite/f['input']['literalPlan']).read_text())
+        request={'schema':'blue-rooted-adapter-request/1.0-draft.2','fixture':f,'plan':plan,'sourceFiles':literal_sources(suite,f,plan),'artifactPath':str(a.artifact.resolve()),'artifactSha256':art,'embeddedDependencies':deps,'sourceCommits':lock['sourceCommits'],'sourceLockSha256':a.source_lock_sha256,'specificationSetSha256':spec,'requestNonce':secrets.token_hex(16),'evidenceDirectory':str(out.resolve())}
         request['requestSha256']=digest_bytes(json.dumps(request,sort_keys=True,separators=(',',':')).encode())
         (out/'request.json').write_text(json.dumps(request,indent=2)+'\n');start=time.perf_counter()
         try:
