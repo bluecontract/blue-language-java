@@ -520,7 +520,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
                 require(call['index'] == index and exact_equal(current,call['before'])
                         and call['cutoffEntryBlueId'] == cutoff_id, 'RECONNECT_CALL_SEQUENCE')
                 require(call['lane'] == ('RETAINED' if call['selection']['kind'] == 'MANAGED_EPOCH_APPLICATION' else 'JOURNAL_CUTOFF'), 'RECONNECT_DRIVER_SELECTION_LANE')
-                stop = call['lane'] == 'JOURNAL_CUTOFF' and call['quiescent']
+                stop = call['quiescent']
                 require(stop is (index == len(phase['calls'])-1), 'RECONNECT_CUTOFF_COMPLETION_BOUNDARY')
                 require({e['blueId'] for e in call['progressBefore']['journal']} == {captures[k] for k in seen_captures if k in appends}, 'RECONNECT_REGISTERED_ENTRY_INVENTORY')
                 cutoff = call['progressBefore']['journalOrders'][cutoff_id]['components']

@@ -5,6 +5,8 @@ chain. A missing resource before processor admission has no invented terminal.
 """
 import base64,hashlib,json,struct
 from pathlib import Path
+from resource_admission_bindings import check_admission_inputs
+from resource_followup_bindings import check_followup, timeline_identity
 
 def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     from rooted_graph_checks import graph_checks
@@ -35,6 +37,8 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
         require(base64.b64decode(observed['sourceBytes'])==data and observed['sha256']==hashlib.sha256(data).hexdigest(),'RESOURCE_LITERAL_SOURCE_BYTES')
     require(all(r['completed'] is True for r in rec['transcript']),'RESOURCE_INCOMPLETE_TRANSCRIPT')
     require([r['request'] for r in rec['transcript']]==[r['literal'] for r in host['transcript']],'RESOURCE_LITERAL_TRANSCRIPT')
+    awaits=[r['request'] for r in rec['transcript'] if r['request']['op']=='hostAwait']
+    require(len(awaits)==1 and awaits[0]['awaitReadiness'] is True,'RESOURCE_EXPLICIT_READY_OBSERVATION')
     names=('beforeOperation','blocked','pendingRestart','wrongUpload','applied','duplicate','completedRestart')
     require(set(states)==set(names),'RESOURCE_STAGE_INVENTORY')
     base,blocked,pending,wrong,applied,duplicate,restarted=[states[n] for n in names]
@@ -69,8 +73,9 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     frozen=expected_captures[0];entry=json.loads(frozen['entryJson']);request=json.loads(frozen['requestJson']);entry_id=frozen['entryBlueId']
     require(request['child']['peer']=={'blueId':missing} and request['child']['name']=='dynamic child waiting for exact content','RESOURCE_EXACT_MISSING_INPUT')
     def scalar(v):return v['value'] if isinstance(v,dict) and 'value' in v else v
-    cutoff=[scalar(entry['timestamp']),scalar(entry['timeline']['timelineId']),entry_id]
-    require(cutoff[1]=='labs/dynamic-resource/alice' and scalar(entry['actor']['accountId'])=='alice'
+    timeline_label=scalar(entry['timeline']['timelineId'])
+    cutoff=[scalar(entry['timestamp']),timeline_identity(entry['timeline'],require),entry_id]
+    require(timeline_label=='labs/dynamic-resource/alice' and scalar(entry['actor']['accountId'])=='alice'
             and scalar(entry['message']['operation'])=='attach' and scalar(entry['message']['channel'])=='ownerChannel'
             and entry['message']['document']['blueId']==base['sdkRecords'][root]['blueId'],'RESOURCE_EXACT_ORIGINAL_ENVELOPE')
     # The exact transport can use its correctly bound pure request reference.
@@ -125,7 +130,12 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
                     and source_result['sourceStepComplete'] is True,'RESOURCE_SOURCE_RESULT_AUTHORITY')
             require(source_result['sourceReady'] is True,'RESOURCE_NO_EXTRA_HISTORY_FOR_TIMELESS_SOURCE')
             require('nextSourceSelection' not in source_result,'RESOURCE_CONTRADICTORY_SOURCE_READY');next_selection=None;previous=source_id
-    require(set(done)==required_commands and set(wait_commands)==required_commands,'RESOURCE_UNACCOUNTED_COMMAND')
+    followups={k:v for k,v in done.items() if v['commandType']=='DRAIN_PROCESSING'}
+    require(len(followups)==1 and not set(followups).intersection(wait_commands),'RESOURCE_ONE_SUBSEQUENT_RETAINED_COMMAND')
+    followup_id,followup_command=next(iter(followups.items()))
+    require(replay.index(original)<replay.index(followup_id),'RESOURCE_RETAINED_REPLAY_ORDER')
+    require(set(wait_commands)==required_commands and set(done)==required_commands|set(followups),'RESOURCE_UNACCOUNTED_COMMAND')
+    required_commands.update(followups)
     require(source_commands and set(source_commands)=={r['commandId'] for r in captures['sourceWait']},'RESOURCE_ACTUAL_BLOCKED_SOURCE_SET')
     for key in required_commands-set(before_commands):
         rows=observations[key]
@@ -142,7 +152,7 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
             require(len(row['actualEntries'])==1,'RESOURCE_ENTRY_INVENTORY')
             actual=row['actualEntries'][0]
             require(actual['blueId']==entry_id and actual['exact']==entry and actual['request']==request
-                    and actual['timestampMicros']==cutoff[0] and actual['timeline']['id']==cutoff[1],'RESOURCE_ENTRY_RECREATED')
+                    and actual['timestampMicros']==cutoff[0] and actual['timeline']['id']==timeline_label,'RESOURCE_ENTRY_RECREATED')
     def tables(name):return h['rawSqlSnapshots'][name]['tables']
     dependencies=tables('blocked')['mini_source_history_dependency']['rows']
     completed=tables('applied')['mini_source_history_dependency']['rows']
@@ -244,8 +254,9 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
                 require(admission['resourceDemands'] and missing in admission['requiredExactBlueIds'],'RESOURCE_UNTYPED_SOURCE_WAIT')
                 continue
             successful_admissions+=1;require(admission['complete'] is True and admission['published'] is True,'RESOURCE_SOURCE_NOT_ADMITTED')
-            inp=admission['retainedInput'];result=admission['result']
-            require(inp['invocationIdentity']==sel['workIdentity'] and admission['implementationEvidence']['invocationIdentity']==inp['invocationIdentity'],'RESOURCE_REAL_SOURCE_ADMISSION_INPUT')
+            inp=check_admission_inputs(admission,sel,child,missing,request['child'],
+                json.loads(captures['missing']['canonicalJson']),last['actualDrain']['terminals'][0]['input']['environment'],require,exact_equal)
+            result=admission['result']
             docs={did(d) for d in admission['documentIds']};require(child in docs and docs<={child,missing} and root not in docs and not admitted.intersection(docs),'RESOURCE_SOURCE_ADMISSION_INVENTORY')
             admitted.update(docs);require(set(row['afterRecords'])-set(row['beforeRecords'])==docs,'RESOURCE_UNBOUND_ADMITTED_DOCUMENT')
             require(set(admission['selectedSnapshots'])==docs,'RESOURCE_ADMISSION_SNAPSHOT_INVENTORY')
@@ -258,13 +269,17 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
                 record=row['afterRecords'][document];require(record['epoch']==0 and len(record['receipts'])==1 and record['events']==[],'RESOURCE_DUPLICATE_SOURCE_INITIALIZATION')
                 receipt=record['receipts'][0];matches=[t for t in result['managedTransitionReceipts'] if t['transitionReceiptIdentity']==receipt['contractsTransitionReceiptIdentity']]
                 require(len(matches)==1 and did(matches[0]['documentId'])==document and receipt['commitCompanionIdentity']==result['platformCommitCompanion']['companionIdentity']
-                        and receipt['beforeBlueId']==document and receipt['afterBlueId']==matches[0]['afterBlueId'],'RESOURCE_ADMISSION_HOST_RECEIPT')
+                        and receipt['kind']=='INITIALIZATION' and receipt['beforeBlueId'] is None
+                        and matches[0]['beforeBlueId']==document and receipt['afterBlueId']==matches[0]['afterBlueId'],'RESOURCE_ADMISSION_HOST_RECEIPT')
                 require(record==final_records[document],'RESOURCE_PARENT_REWROTE_SOURCE')
     require(successful_admissions==len(source_commands) and set(final_records)=={root}|admitted,'RESOURCE_SOURCE_MULTIPLICITY')
-    drain=last['actualDrain'];require(drain['resourceFailures']==[] and drain['quiescent'] is True and drain['paused'] is False
+    drain=last['actualDrain'];require(drain['resourceFailures']==[]
             and len(drain['entries'])==1 and drain['entries'][0]['entry']['blueId']==entry_id
             and drain['entries'][0]['disposition']=='APPLIED' and drain['terminals'],'RESOURCE_ORIGINAL_NOT_FINISHED')
-    for terminal in drain['terminals']:
+    require(len(observations[followup_id])==1,'RESOURCE_DUPLICATE_RETAINED_ATTEMPT')
+    drains=check_followup(last,observations[followup_id][0],followup_command,root,child,cutoff,final_records,require)
+    terminals=[terminal for step in drains for terminal in step['terminals']]
+    for terminal in terminals:
         require(terminal['status']=='SUCCESS' and terminal['rollbackToInput'] is False,'RESOURCE_FAILED_ORIGINAL_TERMINAL')
         inp=terminal['input'];projection=terminal['rootedProjection'];companion=terminal['commitCompanion']
         trace_check(terminal['gas'],terminal['fullGasTrace'],inp['executionPolicy']['sharedLimit'])
@@ -282,12 +297,16 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
             require(terminal['causeType']=='ManagedRevisionCause','RESOURCE_UNEXPECTED_HISTORY_CAUSE')
             cause=inp['cause'];source=final_records[did(cause['childDocumentId'])]['receipts'][cause['toEpoch']]
             require(cause['fromEpoch']+1==cause['toEpoch'] and cause['sourceRevisionReceiptIdentity']==source['contractsTransitionReceiptIdentity']
-                    and cause['beforeBlueId']==source['beforeBlueId'] and cause['afterBlueId']==source['afterBlueId'],'RESOURCE_HISTORY_SOURCE_RECEIPT')
-    preserved(drain['before'],drain['after']);require(drain['after']==final_records,'RESOURCE_FINAL_DRAIN_RECORDS')
+                    and cause['sourceTransitionReceipt']['transitionReceiptIdentity']==source['contractsTransitionReceiptIdentity']
+                    and cause['beforeBlueId']==cause['sourceTransitionReceipt']['beforeBlueId']==child
+                    and source['epoch']==0 and source['beforeBlueId'] is None
+                    and cause['afterBlueId']==source['afterBlueId'],'RESOURCE_HISTORY_SOURCE_RECEIPT')
+    for step in drains:preserved(step['before'],step['after'])
+    require(drains[-1]['after']==final_records,'RESOURCE_FINAL_DRAIN_RECORDS')
     appended=final_records[root]['receipts'][len(base['sdkRecords'][root]['receipts']):]
     require(appended,'RESOURCE_ROOT_DID_NOT_ADVANCE')
     for receipt in appended:
-        matches=[(terminal,t) for terminal in drain['terminals'] for t in terminal['managedTransitionReceipts']
+        matches=[(terminal,t) for terminal in terminals for t in terminal['managedTransitionReceipts']
                  if t['transitionReceiptIdentity']==receipt['contractsTransitionReceiptIdentity']]
         require(len(matches)==1,'RESOURCE_ROOT_RECEIPT_PUBLICATION')
         terminal,t=matches[0];cause=terminal['input']['cause']
@@ -302,4 +321,4 @@ def check_resource_continuation(rec,rule,weights,require,exact_equal,gas_check):
     require(journal[0]['exact']==entry and journal[0]['request']==request and json.loads(entries[0]['exactEntryJson'])==entry
             and entries[0]['commandId']==results[0]['commandId']==original and results[0]['entryBlueId']==entry_id
             and entries[0]['disposition']==results[0]['disposition']=='APPLIED','RESOURCE_FINAL_ENTRY_BYTES')
-    return len(required_commands)+len(flat)+len(drain['terminals'])
+    return len(required_commands)+len(flat)+len(terminals)

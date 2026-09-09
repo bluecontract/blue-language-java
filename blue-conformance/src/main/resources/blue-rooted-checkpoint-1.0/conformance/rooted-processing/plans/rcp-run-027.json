@@ -140,7 +140,8 @@
         },
         "expectedStatus": "APPLIED",
         "capture": "subject",
-        "stepId": "baseline-009"
+        "stepId": "baseline-009",
+        "awaitReadiness": true
       },
       {
         "op": "hostSnapshot",
