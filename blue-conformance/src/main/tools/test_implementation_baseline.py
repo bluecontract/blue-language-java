@@ -53,7 +53,7 @@ def create_minimal_runtime_tree(root: Path) -> tuple[str, ...]:
 class ImplementationBaselineTest(unittest.TestCase):
 
     def test_authoritative_inventory_is_complete_sorted_and_checked_in(self) -> None:
-        self.assertEqual(729, len(IMPLEMENTATION_BASELINE_SOURCE_PATHS))
+        self.assertEqual(741, len(IMPLEMENTATION_BASELINE_SOURCE_PATHS))
         self.assertEqual(
             tuple(sorted(IMPLEMENTATION_BASELINE_SOURCE_PATHS)),
             IMPLEMENTATION_BASELINE_SOURCE_PATHS,

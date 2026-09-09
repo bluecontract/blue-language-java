@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MANAGED_EPOCH_WITH_REPRESENTATION_SUCCESSOR_WORK",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "planIdentity",
+    "barrierIdentity",
+    "sourceReceiptIdentity",
+    "sourceDocumentId",
+    "sourceEpoch",
+    "consumerDocumentId",
+    "targetOccurrenceIdentity",
+    "targetPath",
+    "activationGeneration",
+    "expectedConsumerCommittedEpoch",
+    "expectedConsumerCommittedBlueId",
+    "expectedGraphGeneration",
+    "successorRepresentationCauseIdentity"
+  ],
+  "properties": {
+    "planIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "barrierIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceReceiptIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceDocumentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "consumerDocumentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "targetOccurrenceIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "targetPath": {
+      "type": "string",
+      "pattern": "^/(?:[^~]|~[01])*$"
+    },
+    "activationGeneration": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "expectedConsumerCommittedEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "expectedConsumerCommittedBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?$"
+    },
+    "expectedGraphGeneration": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "successorRepresentationCauseIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$comment": "Apply identity/managed_successor_constructors.py for safe portable operands and cursor cross-field constraints. Schema/hash does not authenticate the captured successor or its exact original publication. Numbered receipt retains the unconsumed anchor; successor evidence is future work."
+}

@@ -290,6 +290,14 @@ final class ClosureInvocationVerifier {
                                 revision.originalSourceCauseIdentity()));
             }
         }
+        if (selected instanceof ManagedRevisionCause) {
+            ManagedRevisionCause numbered = (ManagedRevisionCause) selected;
+            if (numbered.successorRepresentationCause().isPresent()) {
+                numbered.verifySuccessorRepresentationCause();
+                // One closed proof adjunct; this validates evidence and does not execute work.
+                verifyCause(numbered.successorRepresentationCause().get(), runtimeAccess);
+            }
+        }
         requireClaim(
                 "causeIdentity",
                 selected.causeIdentity(),

@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 final class LifecycleCyclicBindingOracle {
     private static final String OLD_FINALIZER = "sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c";
     private static final String OLD_VERIFIER = "sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84";
-    private static final String REVIEWED_FINALIZER = "sha256:d768500d434ddfb7b4150472d91387809af17f4dc80f68c2d01e48d4f2a4dde1";
-    private static final String REVIEWED_VERIFIER = "sha256:a6559a6763a49873bbdac411bb0ecdbccc7220e98c52468cc0219f003af77da2";
+    private static final String REVIEWED_FINALIZER = "sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b";
+    private static final String REVIEWED_VERIFIER = "sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834";
     private LifecycleCyclicBindingOracle() { }
 
     static String duplicate(String frozen, ClosureInvocationInput input) {

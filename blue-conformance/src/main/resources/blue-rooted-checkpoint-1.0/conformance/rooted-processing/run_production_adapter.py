@@ -1176,6 +1176,8 @@ def check_saved_original_graph(rec, contract, weights):
     def call_check(call):
         before, after = call['before'], call['after']
         receipt_prefix(before, after)
+        from check_successor_carriers import check_call_carriers
+        check_call_carriers(call, ids, require, exact_equal)
         require(type(call['quiescent']) is bool and call['paused'] is (not call['quiescent'])
                 and call['diagnostic']['code'] == ('NONE' if call['quiescent'] else 'PROCESSING_PAUSED')
                 and call['resourceFailures'] == [], 'GRAPH_DRAIN_BLOCKED_OR_FLAGS')

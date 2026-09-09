@@ -1635,6 +1635,49 @@ restart. Processor-only fixtures do not establish these host claims.
 
 ---
 
+### 19.8a Capturing a terminal goal before the final numbered application
+
+Before scheduling a numbered application which reaches a retained source view's
+terminal epoch, the host MUST determine whether that exact view includes a
+nonempty representation-only tail. It selects by the retained source-view
+publication/position and the existing attachment barrier and cutoff, not by the
+ambient latest head or equality of endpoint BlueIds. Future transitions outside
+that frozen view MUST NOT enter the selected goal. The complete original
+publications of the ordered prefix, their narrow classification, numbered anchor,
+predecessors, and original companion/rooted authority are authenticated using the
+existing representation-history verifier.
+
+If the prefix is nonempty, the work retains its first complete
+`ManagedRepresentationCause` as `successorRepresentationCause` evidence and uses
+constructor domain
+`blue-coordination-managed-epoch-with-representation-successor-work/1.0`. Its fields
+are exactly the existing numbered application-work fields plus
+`successorRepresentationCauseIdentity`. All occurrence, activation, consumer-head,
+graph, source-receipt and barrier fences remain mandatory. Execution reauthenticates
+that exact captured prefix and first step; it cannot recompute a later goal.
+The associated Contracts numbered cause uses §7.5a.1's augmented constructor.
+The work remains numbered work; its SDK `representationStep` is absent.
+
+The atomic application receipt uses domain
+`blue-coordination-managed-epoch-with-representation-successor-receipt/1.0`. It binds
+all existing numbered application fields plus `successorRepresentationCauseIdentity`
+and the exact `resultingRepresentationCursor`. That cursor MUST be the captured
+anchor position, never the first successor position. Its numbered
+`resultingSourceCursor` is still N+1 after applying numbered epoch N.
+`representationCauseIdentity` remains absent: no representation transition has yet
+executed. The new constructor is a distinct validated case, not permission for an
+arbitrary ordinary receipt to acquire a cursor. Existing ordinary and representation
+constructors, domains and validation remain unchanged when this carrier is absent.
+
+The consumer head, occurrence, anchor cursor, frozen goal, numbered application
+receipt and exact next representation work commit atomically. Crash or response
+loss after that commit reconstructs the same goal and next-work identity and does
+not repeat the numbered receipt or source events. The first and each subsequent
+representation application remain independently metered and committed under §19.8.
+The goal is not expanded by representation feedback or future source work. A real
+numbered source advance retains the ordinary barrier extension/fencing rules; it
+cannot be suppressed or accepted by relaxing next-receipt identity checks.
+
 ## 20. Other Channel specifications and extensibility
 
 ### 20.1 Exact type classification

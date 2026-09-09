@@ -4,6 +4,7 @@ import json
 from identity import constructors as I
 from identity import checkpoint_constructors as C
 from rooted_graph_checks import graph_checks
+from check_successor_carriers import check_call_carriers
 
 
 def check_representation(rec, contract, weights, variant, require, exact_equal, gas_check):
@@ -172,6 +173,7 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
             require(call['index']==index and call['selectedRootDocumentId']==ids['C'] and call['resourceFailures']==[],'REP_SELECTED_CONSUMER_OR_RESOURCES')
             require(call['paused'] is (not call['quiescent']) and call['diagnostic']['code'] == ('NONE' if call['quiescent'] else 'PROCESSING_PAUSED'),'REP_BLOCKED_AS_PROGRESS')
             receipt_prefix(call['before'],call['after'])
+            check_call_carriers(call, ids, require, exact_equal)
             if prior is not None:require(exact_equal(prior,call['before']),'REP_CALL_CONTINUITY')
             prior=call['after']
             for alias in ['P','S']:
@@ -193,6 +195,15 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
                     require(cause['fromEpoch']==cause['toEpoch']==0 and cause['beforeBlueId']==p['beforeBlueId'] and cause['afterBlueId']==p['afterBlueId'],'REP_POSITION_CAUSE_ENDPOINTS')
                 elif t['causeType']=='ManagedRevisionCause':
                     cause=t['input']['cause'];require(cause['toEpoch']==cause['fromEpoch']+1,'REP_REVISION_PLUS_ONE')
+                    future=cause['successorRepresentationCause']
+                    if future is not None:
+                        p=future['transition']
+                        require(exact_equal(p,next(x['position'] for x in final['positions'] if x['position']['positionIdentity']==p['positionIdentity']))
+                                and p['positionIdentity']==expected[0] and future['targetPositionIdentity']==expected[-1]
+                                and future['nextRevisionReceiptIdentity'] is None, 'REP_FUTURE_AUTHENTICATED_FIXED_GOAL')
+                        token=cause['targetOccurrenceIdentity'];goal=(future['targetPositionIdentity'],None)
+                        require(fixed_targets.setdefault(token,goal)==goal, 'REP_FUTURE_MOVING_GOAL')
+                        require(all(item['positionIdentity']!=p['positionIdentity'] for item in call['representationPositions']), 'REP_FUTURE_COUNTED_AS_EXECUTED')
         require(positions==expected,'REP_SKIP_REORDER_DUPLICATE_POSITION')
         require(any(e['entry']['blueId']==attach['response']['entryBlueId'] and e['disposition']=='APPLIED' for e in calls[0]['entries']),'REP_AUTHORED_ATTACH_NOT_APPLIED')
         require(exact_equal(final['records'],calls[-1]['after']),'REP_FINAL_CONSUMER_RECORDS')
@@ -209,6 +220,7 @@ def check_representation(rec, contract, weights, variant, require, exact_equal, 
             calls=phases[phase]['calls']; require(1<=len(calls)<=32 and calls[-1]['quiescent'] is True,'REP_PENDING_GRAPH_BOUND')
             for call in calls:
                 receipt_prefix(call['before'],call['after'])
+                check_call_carriers(call, ids, require, exact_equal)
                 for t in call['terminals']:
                     terminal(t)
                     if phase=='graph400' and t['causeType']=='ManagedRepresentationCause':traversed.append(t['input']['cause']['transition']['positionIdentity'])

@@ -76,6 +76,62 @@
         "checkpointReferenceProofIdentity"
       ],
       "canonicalEncoding": "Contracts domain/value SHA-256 envelope; epoch is a nonnegative safe JSON integer; other operands are strings. See identity/checkpoint_constructors.py. Hashing is not authentication."
+    },
+    "MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR": {
+      "domain": "blue-contracts-managed-revision-cause-with-representation-successor/1.0",
+      "schema": "schemas/managed-revision-successor.schema.json",
+      "fields": [
+        "targetOccurrenceIdentity",
+        "childDocumentId",
+        "fromEpoch",
+        "toEpoch",
+        "beforeBlueId",
+        "afterBlueId",
+        "originalSourceCauseIdentity",
+        "sourceRevisionReceiptIdentity",
+        "successorRepresentationCauseIdentity"
+      ],
+      "canonicalEncoding": "Contracts closed domain/value SHA-256 envelope; fromEpoch permits -1, toEpoch equals fromEpoch+1, all other operands are NFC strings. Future evidence is not executed; its original publication and frozen source goal require independent host proof."
+    },
+    "MANAGED_EPOCH_WITH_REPRESENTATION_SUCCESSOR_WORK": {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-work/1.0",
+      "schema": "schemas/managed-successor-work.schema.json",
+      "fields": [
+        "planIdentity",
+        "barrierIdentity",
+        "sourceReceiptIdentity",
+        "sourceDocumentId",
+        "sourceEpoch",
+        "consumerDocumentId",
+        "targetOccurrenceIdentity",
+        "targetPath",
+        "activationGeneration",
+        "expectedConsumerCommittedEpoch",
+        "expectedConsumerCommittedBlueId",
+        "expectedGraphGeneration",
+        "successorRepresentationCauseIdentity"
+      ],
+      "canonicalEncoding": "Coordination closed RFC8785 domain/value SHA-256 envelope. See identity/managed_successor_constructors.py; immutable numbered anchor and exact future representation cause require independent publication proof."
+    },
+    "MANAGED_EPOCH_WITH_REPRESENTATION_SUCCESSOR_RECEIPT": {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-receipt/1.0",
+      "schema": "schemas/managed-successor-receipt.schema.json",
+      "fields": [
+        "workIdentity",
+        "planIdentity",
+        "sourceReceiptIdentity",
+        "contractsInvocationIdentity",
+        "contractsResultIdentity",
+        "commitCompanionIdentity",
+        "consumerDocumentId",
+        "consumerRevisionEpoch",
+        "consumerRevisionReceiptIdentity",
+        "consumerCommittedBlueId",
+        "resultingSourceCursor",
+        "successorRepresentationCauseIdentity",
+        "resultingRepresentationCursor"
+      ],
+      "canonicalEncoding": "Coordination closed RFC8785 domain/value SHA-256 envelope. See identity/managed_successor_constructors.py; immutable numbered anchor and exact future representation cause require independent publication proof."
     }
   },
   "constraints": [

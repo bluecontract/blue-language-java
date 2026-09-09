@@ -5,6 +5,7 @@ Exact field names below are the proposed additive collector contract.
 """
 import copy
 import json
+from check_successor_carriers import SDK_WORK, API_WORK
 
 
 def check_host_timestamp(rec, rule, require, exact_equal):
@@ -19,14 +20,16 @@ def check_host_timestamp(rec, rule, require, exact_equal):
     # selectedWork is the real public auditManagedEpochApplicationWork SDK view
     # of the selected identity, captured BEFORE the original callback.
     w = h['selectedWork']
+    require(set(w) == SDK_WORK, 'TIME_SDK_WORK_INVENTORY')
     require(w['consumerDocumentId']['value'] == ids[rule['consumer']], 'TIME_CONSUMER')
     require(w['sourceDocumentId']['value'] == ids[rule['source']], 'TIME_SOURCE')
     require(w['targetPath'] == rule['targetPath'] and w['sourceEpoch'] == rule['sourceEpoch'], 'TIME_SOURCE_POSITION')
-    require(w['representationStep'] is None, 'TIME_WRONG_CAUSE_FAMILY')
+    require(w['representationStep'] is None and w['successorRepresentationStep'] is None, 'TIME_WRONG_CAUSE_FAMILY')
     selected = h['selectedWorkBefore']
-    require(set(selected) == (set(w) - {'representationStep'}) | {'representationCause','isRepresentationApplication','expectedNextSourceEpoch'}, 'TIME_SELECTED_WORK_INVENTORY')
-    require(all(exact_equal(selected[k],w[k]) for k in w if k != 'representationStep')
-            and selected['representationCause'] is None and selected['isRepresentationApplication'] is False
+    require(set(selected) == API_WORK, 'TIME_API_WORK_INVENTORY')
+    require(set(selected) == (set(w) - {'representationStep','successorRepresentationStep'}) | {'representationCause','successorRepresentationCause','isRepresentationApplication','expectedNextSourceEpoch'}, 'TIME_SELECTED_WORK_INVENTORY')
+    require(all(exact_equal(selected[k],w[k]) for k in w if k not in {'representationStep','successorRepresentationStep'})
+            and selected['representationCause'] is None and selected['successorRepresentationCause'] is None and selected['isRepresentationApplication'] is False
             and selected['expectedNextSourceEpoch'] == w['sourceEpoch'], 'TIME_SELECTED_WORK_CHANGED')
     require(h['processorCallCount'] == 1, 'TIME_EXTRA_PROCESSOR_CALL')
     require(h['drainCounts'] == {'externalEntries': 0, 'independentApplications': 0, 'localApplications': 1}, 'TIME_WRONG_ACTUAL_LANE')
@@ -70,6 +73,7 @@ def check_host_timestamp(rec, rule, require, exact_equal):
     require(change['afterBlueId'] == head['blueId'] and change['epoch'] == head['epoch'], 'TIME_RESULT_HEAD_DIFFERENT')
     require([x['blueId'] for x in actual['result']['publicEvents']] == [x['blueId'] for x in o['events']], 'TIME_ACTUAL_EVENTS_DIFFERENT')
     require(w['sourceReceiptIdentity'] == o['retainedSource']['receiptIdentity'], 'TIME_SOURCE_RECEIPT_DIFFERENT')
+    require(o['exactCause']['successorRepresentationCause'] is None, 'TIME_FUTURE_CAUSE_NOT_EXPECTED')
     require(o['exactCause']['fromEpoch'] == rule['historicalFromEpoch'] and o['exactCause']['toEpoch'] == rule['sourceEpoch'], 'TIME_CAUSE_POSITION')
     require(o['exactCause']['childDocumentId']['value'] == ids[rule['source']] and o['exactCause']['targetOccurrenceIdentity'] == w['targetOccurrenceIdentity'], 'TIME_CAUSE_TARGET')
     # Reconstruct ONLY the documented host replay projection, preserving every

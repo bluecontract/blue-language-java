@@ -1550,6 +1550,8 @@ final class ClosureExecutionSession
         }
         ManagedHistoryStep revision =
                 (ManagedHistoryStep) input.cause();
+        if (revision instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) revision).successorRepresentationCause().isPresent()) return false;
         if (revision instanceof ManagedRepresentationCause
                 && !((ManagedRepresentationCause) revision).terminalPositionReached()) return false;
         return work.kind() == WorkKind.CONTAINING_REFERENCE_UPDATE
@@ -3418,6 +3420,13 @@ final class ClosureExecutionSession
                 installedBlueId,
                 caughtUp,
                 caughtUp ? null : Long.valueOf(revision.toEpoch()));
+        if (!caughtUp && revision instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) revision).successorRepresentationCause().isPresent()) {
+            ManagedRepresentationCause successor = ((ManagedRevisionCause) revision).successorRepresentationCause().get();
+            String anchor = successor.transition().anchorReceiptIdentity();
+            reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(
+                    anchor, anchor, successor.targetPositionIdentity(), null));
+        }
         if (!caughtUp && revision instanceof ManagedRepresentationCause) {
             ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
             reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(

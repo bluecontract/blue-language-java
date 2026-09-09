@@ -6,6 +6,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
     sys.path.insert(0, str(Path(gas_check.__globals__['__file__']).resolve().parent / 'identity'))
     import constructors as I
     from rooted_graph_checks import graph_checks
+    from check_successor_carriers import check_call_carriers
     rule = contract['reconnect']; aliases = rule['aliases']; ids = rec['documentIds']
     require(aliases == ['A','B'] and set(ids) == set(aliases) and len(set(ids.values())) == 2, 'RECONNECT_DOCUMENT_INVENTORY')
     require(variant in rule['selectionByVariant'], 'RECONNECT_VARIANT')
@@ -26,6 +27,8 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
     published_originals = {}
     plan_descriptors = {}
     position_targets = {}
+    future_goals = {}
+    executed_positions = set()
 
     def managed_identity(domain,value):
         # Coordination's established 1.0 domains use portable JCS values,
@@ -153,7 +156,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
             require(work and work['workIdentity'] == app['workIdentity']
                     and work['planIdentity'] == app['planIdentity']
                     and work['sourceReceiptIdentity'] == app['sourceReceiptIdentity']
-                    and app['resultingSourceCursor'] == work['sourceEpoch'], 'RECONNECT_OWNED_SELECTED_WORK')
+                    and app['resultingSourceCursor'] == work['sourceEpoch'] + 1, 'RECONNECT_OWNED_SELECTED_WORK')
             key = (did(app['consumerDocumentId']),app['workIdentity'])
             require(key not in source_applications,'RECONNECT_DUPLICATE_OWNED_APPLICATION'); source_applications.add(key)
             terminal = next(t for t in call['terminals'] if t['invocationIdentity'] == app['contractsInvocationIdentity'])
@@ -194,7 +197,9 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
                 require(anchor['sourceOrder']['components'] <= cutoff, 'RECONNECT_FUTURE_RETAINED_INPUT')
             # Position traversal is additionally authenticated against the actual,
             # durably retained original publication inventory, not its supplied hash.
-            if terminal['causeType'] == 'ManagedRepresentationCause':
+            positional = cause if terminal['causeType'] == 'ManagedRepresentationCause' else cause['successorRepresentationCause']
+            if positional is not None:
+                cause = positional
                 tr = cause['transition']
                 originals = dict(call['progressBefore']['representationPublications'])
                 originals.update(call['progressAfter']['representationPublications'])
@@ -212,6 +217,10 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
                         and tr['beforeBlueId'] == cause['beforeBlueId'] and tr['afterBlueId'] == cause['afterBlueId'], 'RECONNECT_POSITION_ENDPOINTS')
                 token = (did(work['consumerDocumentId']),work['targetOccurrenceIdentity'],work['activationGeneration'],anchor['receiptIdentity'])
                 target = (cause['targetPositionIdentity'],cause['nextRevisionReceiptIdentity'])
+                if terminal['causeType'] == 'ManagedRevisionCause':
+                    require(future_goals.setdefault(token,target[0]) == target[0], 'RECONNECT_FUTURE_MOVING_GOAL')
+                else:
+                    executed_positions.add((token,tr['positionIdentity']))
                 require(position_targets.setdefault(token,target) == target, 'RECONNECT_POSITION_MOVING_TARGET')
                 next_id = cause['nextRevisionReceiptIdentity']
                 if next_id is not None:
@@ -314,6 +323,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
     def call_check(call):
         before, after = call['before'], call['after']
         receipt_prefix(before, after)
+        check_call_carriers(call, ids, require, exact_equal)
         require(type(call['quiescent']) is bool and call['paused'] is (not call['quiescent'])
                 and call['diagnostic']['code'] == ('NONE' if call['quiescent'] else 'PROCESSING_PAUSED')
                 and call['resourceFailures'] == [], 'GRAPH_DRAIN_BLOCKED_OR_FLAGS')
@@ -657,3 +667,5 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
             and output_events[0]['occurrenceIdentity'] == events[-1]['eventOccurrenceIdentity']
             and output_events[0]['blueId'] == events[-1]['eventBlueId']
             and exact_equal(output_events[0]['exactEvent'],events[-1]['exactEvent']), 'RECONNECT_FUTURE_EVENT_BINDING')
+
+    require(all((token,goal) in executed_positions for token,goal in future_goals.items()), "RECONNECT_FUTURE_GOAL_NOT_ACTUALLY_TRAVERSED")

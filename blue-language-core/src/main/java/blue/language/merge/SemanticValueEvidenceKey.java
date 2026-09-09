@@ -113,6 +113,13 @@ final class SemanticValueEvidenceKey {
         if (!(other instanceof SemanticValueEvidenceKey)) {
             return false;
         }
+        SemanticValueEvidenceKey that = (SemanticValueEvidenceKey) other;
+        if (hashCode != that.hashCode || kind != that.kind) {
+            return false;
+        }
+        if (kind == Kind.SCALAR) {
+            return Objects.equals(scalar, that.scalar);
+        }
         Deque<Pair> pending = new ArrayDeque<>();
         IdentityHashMap<SemanticValueEvidenceKey,
                 IdentityHashMap<SemanticValueEvidenceKey, Boolean>> compared =
@@ -132,7 +139,8 @@ final class SemanticValueEvidenceKey {
                             pair.right.scalar)) {
                 return false;
             }
-            if (alreadyCompared(pair.left, pair.right, compared)) {
+            if (pair.left.kind == Kind.SCALAR
+                    || alreadyCompared(pair.left, pair.right, compared)) {
                 continue;
             }
             if (!addElements(
@@ -310,7 +318,7 @@ final class SemanticValueEvidenceKey {
             IdentityHashMap<T, IdentityHashMap<T, Boolean>> compared) {
         IdentityHashMap<T, Boolean> rights = compared.get(left);
         if (rights == null) {
-            rights = new IdentityHashMap<>();
+            rights = new IdentityHashMap<>(1);
             compared.put(left, rights);
         }
         return rights.put(right, Boolean.TRUE) != null;

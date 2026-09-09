@@ -636,8 +636,9 @@ processor does not apply a transition chain inside that external invocation.
 Instead, Coordination supplies one exact contiguous `ManagedRevisionCause`
 invocation at a time under §2.3. Each successful invocation rebinds that same
 row and advances the cursor by exactly one. Only the invocation that reaches
-the authoritative target epoch performs final same-lineage reconciliation,
-clears the cursor, and activates the row. The occurrence binding identifies
+the authoritative target epoch and any captured terminal representation goal
+under §7.5a.1 performs final same-lineage reconciliation, clears the cursor,
+and activates the row. The occurrence binding identifies
 which stable managed document lineage the exact value denotes; an inactive row
 never contributes a graph edge.
 
@@ -878,6 +879,7 @@ ManagedRevisionCause {
     originalSourceCauseIdentity
     sourceRevisionReceiptIdentity
     sourceTransitionReceipt?       # complete receipt when source-event delivery is required
+    successorRepresentationCause?  # first future terminal-tail step; evidence only under §7.5a.1
 }
 ```
 
@@ -1705,6 +1707,20 @@ managedRevisionCauseIdentity
         afterBlueId,
         originalSourceCauseIdentity,
         sourceRevisionReceiptIdentity
+    }
+
+managedRevisionCauseWithRepresentationSuccessorIdentity
+    domain = "blue-contracts-managed-revision-cause-with-representation-successor/1.0"
+    value = {
+        targetOccurrenceIdentity,
+        childDocumentId,
+        fromEpoch,
+        toEpoch,
+        beforeBlueId,
+        afterBlueId,
+        originalSourceCauseIdentity,
+        sourceRevisionReceiptIdentity,
+        successorRepresentationCauseIdentity
     }
 
 managedTransitionOccurrenceIdentity
@@ -4077,6 +4093,61 @@ source-event misclassification negatives; per-step gas rollback; response loss,
 crash and fresh restart; and no duplicate initialization/source/downstream
 event occurrences. Pair reconnect is a separate required owner. No amended
 fixture alone establishes RC acceptance.
+
+#### 7.5a.1 Entering an authenticated terminal representation tail
+
+A numbered `ManagedRevisionCause` which reaches an epoch having a nonempty
+representation-only tail MUST preserve that tail's exact captured position goal.
+Equality of epoch numbers or exact endpoint BlueIds does not establish that the
+tail is empty. In particular, a committed X → Y → X chain contains two distinct
+positions even though its final exact identity equals its numbered anchor.
+
+For this case the numbered cause carries optional
+`successorRepresentationCause` evidence of the existing
+`ManagedRepresentationCause` type. The evidence identifies the first future
+representation step, its complete original transition proof and the captured
+terminal position. It is not another cause executed by the numbered invocation.
+The numbered cause MUST carry its complete `sourceTransitionReceipt` in this
+case; state-only compatibility evidence cannot establish the tail's numbered
+anchor. Its source DocumentId and target occurrence MUST equal the numbered cause's;
+its unchanged epoch MUST equal `toEpoch`; its exact predecessor MUST equal the
+numbered receipt's `afterBlueId`; its predecessor position MUST equal its immutable
+numbered anchor receipt identity; and its `nextRevisionReceiptIdentity` MUST be
+null. The host MUST authenticate the numbered anchor, entire ordered prefix and
+captured goal against retained original publications and the root's frozen source
+view before accepting this evidence. A goal chosen from an unbounded newest
+source history, or selected only by matching endpoint bytes, is invalid.
+
+When this evidence is present, the numbered cause retains every existing +1-epoch,
+receipt, exact predecessor, event and gas rule. It processes only that numbered
+receipt. It MUST NOT activate the occurrence, consume the future representation
+transition, emit its effects, or advance its positional cursor. Its atomic result
+installs the numbered successor and retains an inactive occurrence with
+`pendingHistoricalEpoch = toEpoch` and a `ManagedRepresentationCursor` whose
+`positionIdentity` equals `anchorReceiptIdentity`, whose `targetPositionIdentity`
+is the captured goal, and whose next numbered receipt is null. Ordinary reactions
+caused by applying the numbered receipt still execute normally. The next invocation
+uses the existing first `ManagedRepresentationCause` and advances exactly one
+position under §7.5a.
+
+The presence of this future-step evidence participates in the numbered cause's
+identity through the closed `successorRepresentationCauseIdentity` field. The
+constructor domain is
+`blue-contracts-managed-revision-cause-with-representation-successor/1.0`; its fields
+are exactly the existing managed-revision cause fields plus that field. The field
+MUST equal the complete supplied successor cause's verified identity. Absence uses
+the unchanged legacy managed-revision domain and fields. The added constructor is
+available only under the amended rooted specification/profile. Stripping or
+substituting the field while retaining the augmented identity MUST fail admission.
+The host MUST reject a legacy-shaped final revision when the selected retained
+source history requires this carrier; absence cannot bypass a proved nonempty tail.
+
+Original transition proof validation remains admission evidence under the existing
+boundary in §D.15. No new portable gas operation, fixed gas surcharge, replay of the
+source's business processing, or hidden historical loop is introduced. The ordinary
+reference patch, any actual reaction, binding/cursor identity change and resulting
+finalization retain their existing metered work. Failure restores the complete
+numbered-step input; it cannot leave only the new goal or cursor committed.
 
 ### 7.6 Applying one Handler result
 

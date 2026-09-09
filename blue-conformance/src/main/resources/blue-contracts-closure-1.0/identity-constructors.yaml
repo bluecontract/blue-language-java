@@ -220,6 +220,16 @@ constructors:
         toEpoch: Exactly fromEpoch plus 1 and always a non-negative safe integer.
         afterBlueId: Exact authenticated successor. A complete cyclic proof is required exactly for MASTER#n and is witness evidence outside this constructor because the verified afterBlueId already binds the member.
         sourceRevisionReceiptIdentity: Recomputed sourceRevisionReceiptIdentity whose repeated child, epoch, state and original-source-cause fields exactly equal this cause.
+  managedRevisionCauseWithRepresentationSuccessorIdentity:
+    domain: blue-contracts-managed-revision-cause-with-representation-successor/1.0
+    profileRule: Only the amended rooted profile; the absent-carrier constructor remains unchanged.
+    value:
+      type: object
+      fields: [targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, originalSourceCauseIdentity, sourceRevisionReceiptIdentity, successorRepresentationCauseIdentity]
+      fieldRules:
+        fromEpoch: Nonnegative safe integer or -1; unchanged numbered cursor.
+        toEpoch: Exactly fromEpoch plus 1; carrier applies only at the selected terminal epoch.
+        successorRepresentationCauseIdentity: Identity of the complete first future ManagedRepresentationCause. It has the same child and occurrence, fromEpoch/toEpoch equal to this toEpoch, beforeBlueId equal to this afterBlueId, predecessor position equal to its numbered anchor, and null nextRevisionReceiptIdentity. Host authenticates its entire captured prefix and source-view frontier; it executes no work in this numbered invocation.
   admissionCandidateIdentity:
     domain: blue-contracts-admission-candidate/1.0
     value:

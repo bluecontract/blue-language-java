@@ -1,0 +1,67 @@
+{
+  "purpose": "Independent constructor vectors; synthetic operands supply no source/history authority. Legacy absent identities are preserved.",
+  "vectors": [
+    {
+      "constructor": "MANAGED_REVISION_CAUSE",
+      "domain": "blue-contracts-managed-revision-cause/1.0",
+      "value": {
+        "targetOccurrenceIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "childDocumentId": "P",
+        "fromEpoch": -1,
+        "toEpoch": 0,
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "originalSourceCauseIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceRevisionReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "expected": "sha256:4d1bdd7153ba734b78ba4344aad92ed24171bdb506fb742bb8eff8b8664cbd63"
+    },
+    {
+      "constructor": "MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR",
+      "domain": "blue-contracts-managed-revision-cause-with-representation-successor/1.0",
+      "value": {
+        "targetOccurrenceIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "childDocumentId": "P",
+        "fromEpoch": -1,
+        "toEpoch": 0,
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "originalSourceCauseIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceRevisionReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "successorRepresentationCauseIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "expected": "sha256:9a0026400efa06492c14ee109c18edee04bab1d3e74c21298551ce316dac9986"
+    },
+    {
+      "constructor": "MANAGED_REVISION_CAUSE",
+      "domain": "blue-contracts-managed-revision-cause/1.0",
+      "value": {
+        "targetOccurrenceIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "childDocumentId": "P",
+        "fromEpoch": 4,
+        "toEpoch": 5,
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "originalSourceCauseIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceRevisionReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "expected": "sha256:4e0c89c00ec68b475637331b8a8c1df88dea81d87aa79bd78cbc218f672f7d5b"
+    },
+    {
+      "constructor": "MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR",
+      "domain": "blue-contracts-managed-revision-cause-with-representation-successor/1.0",
+      "value": {
+        "targetOccurrenceIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "childDocumentId": "P",
+        "fromEpoch": 4,
+        "toEpoch": 5,
+        "beforeBlueId": "5gFKLVTQ52SMFMEKeTxcLyEU9ki39F5tcqRLGuvEQGTj",
+        "afterBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "originalSourceCauseIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceRevisionReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "successorRepresentationCauseIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "expected": "sha256:9acc2e01d12f2db36ca1b6b77e17042cb079b7722c1afe7ad084ed1d56e12d79"
+    }
+  ]
+}

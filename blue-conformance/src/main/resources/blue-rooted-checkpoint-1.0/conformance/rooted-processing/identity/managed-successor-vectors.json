@@ -1,0 +1,237 @@
+{
+  "purpose": "Independent synthetic constructor operands; no publication or history authority. All legacy domains and shapes remain unchanged.",
+  "vectors": [
+    {
+      "domain": "blue-coordination-managed-epoch-application-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 0,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3
+      },
+      "expected": "sha256:2c5c98e8851d2de87028bf5e1b6884e46c2c655dfd567fad3beb14d946047bfe"
+    },
+    {
+      "domain": "blue-coordination-managed-representation-application-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 0,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3,
+        "representationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "expected": "sha256:5b9ebfafcd13d536b5832c635d18bd875a448026eb2daea466403ef2ec8fce31"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 0,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3,
+        "successorRepresentationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "expected": "sha256:22079acde2af825400e7b5aa69d907b476e4c00f23c21b92e5dde051a3389074"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-application-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 1
+      },
+      "expected": "sha256:fb31428d955e6c6b45980cef065f09b9b2ec3e2a9d6f6763d84035a13963a9e5"
+    },
+    {
+      "domain": "blue-coordination-managed-representation-application-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 1,
+        "representationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "resultingRepresentationCursor": null
+      },
+      "expected": "sha256:18dc2fe57031bf4a9baa77944fb4742a92ed8ba9cdd2b5e86786f6c34ce38975"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 1,
+        "successorRepresentationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "resultingRepresentationCursor": {
+          "anchorReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "positionIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "targetPositionIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "nextRevisionReceiptIdentity": null
+        }
+      },
+      "expected": "sha256:4d17dba1ffb10ee05c638782bf26f0094a2ddac1004403d577b53575328b1c95"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-application-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 5,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3
+      },
+      "expected": "sha256:12450ab58f23b4092b37de68e17f7113c5312a74f0cd79c8a08212f9398ae530"
+    },
+    {
+      "domain": "blue-coordination-managed-representation-application-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 5,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3,
+        "representationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "expected": "sha256:9410a0eac6dd5f85ab63ce6c3e99a29cc3eb90bdf0c9f4fe7d090339a586abe0"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-work/1.0",
+      "value": {
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "barrierIdentity": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "sourceDocumentId": "S",
+        "sourceEpoch": 5,
+        "consumerDocumentId": "P",
+        "targetOccurrenceIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "targetPath": "/child",
+        "activationGeneration": 1,
+        "expectedConsumerCommittedEpoch": 2,
+        "expectedConsumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "expectedGraphGeneration": 3,
+        "successorRepresentationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      },
+      "expected": "sha256:8f28df0a65bf323c25d85870eb5baf46bb1a9f4f85a6f6859be9267af816aae2"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-application-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 6
+      },
+      "expected": "sha256:d82467a378223708c1f51121ce136f14722daec9130be46d49f08211403300f6"
+    },
+    {
+      "domain": "blue-coordination-managed-representation-application-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 6,
+        "representationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "resultingRepresentationCursor": null
+      },
+      "expected": "sha256:2b7383906d542dceb9fdfe8057aab911981e94393f653cbf580807e9c616646d"
+    },
+    {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-receipt/1.0",
+      "value": {
+        "workIdentity": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "planIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "contractsInvocationIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "contractsResultIdentity": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "commitCompanionIdentity": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "consumerDocumentId": "P",
+        "consumerRevisionEpoch": 3,
+        "consumerRevisionReceiptIdentity": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "consumerCommittedBlueId": "E4545nCNu6n5dYuLHpbjYzFxDv3WRFvXVcxVAYo2MqrJ",
+        "resultingSourceCursor": 6,
+        "successorRepresentationCauseIdentity": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "resultingRepresentationCursor": {
+          "anchorReceiptIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "positionIdentity": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "targetPositionIdentity": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "nextRevisionReceiptIdentity": null
+        }
+      },
+      "expected": "sha256:870ae5f10448d66fd8657fd3a7b8403158cfb14642061af1f53a484d3fc2d964"
+    }
+  ]
+}

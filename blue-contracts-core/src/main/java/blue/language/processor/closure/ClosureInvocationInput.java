@@ -416,6 +416,16 @@ public final class ClosureInvocationInput {
         }
         ManagedDocumentSnapshot child = snapshot.managedDocument(
                 revision.childDocumentId());
+        if (revision instanceof ManagedRevisionCause) {
+            ManagedRevisionCause numbered = (ManagedRevisionCause) revision;
+            if (numbered.successorRepresentationCause().isPresent()) {
+                if (!RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY.equals(
+                        environment.contractsSpecificationIdentity()) || numbered.toEpoch() != child.epoch()) {
+                    throw new IllegalArgumentException("Numbered terminal-tail carrier requires the rooted profile and selected terminal epoch");
+                }
+                numbered.verifySuccessorRepresentationCause();
+            }
+        }
         if (revision.toEpoch() > child.epoch()) {
             throw new IllegalArgumentException(
                     "Managed-revision cause is ahead of the child durable epoch");

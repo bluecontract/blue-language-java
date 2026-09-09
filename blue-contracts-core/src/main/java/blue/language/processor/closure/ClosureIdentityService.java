@@ -104,6 +104,12 @@ final class ClosureIdentityService {
                 "toEpoch", "beforeBlueId", "afterBlueId",
                 "originalSourceCauseIdentity",
                 "sourceRevisionReceiptIdentity"),
+        MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR(
+                "blue-contracts-managed-revision-cause-with-representation-successor/1.0",
+                "targetOccurrenceIdentity", "childDocumentId", "fromEpoch",
+                "toEpoch", "beforeBlueId", "afterBlueId",
+                "originalSourceCauseIdentity", "sourceRevisionReceiptIdentity",
+                "successorRepresentationCauseIdentity"),
         MANAGED_REPRESENTATION_POSITION(
                 "blue-managed-representation-position/1",
                 "documentId", "epoch", "anchorReceiptIdentity", "predecessorPositionIdentity",
@@ -497,6 +503,20 @@ final class ClosureIdentityService {
         return identity(Constructor.MANAGED_REVISION_CAUSE, value);
     }
 
+    /** Constructs one numbered cause carrying a separately authenticated future position. */
+    String managedRevisionCauseWithRepresentationSuccessorIdentity(
+            String targetOccurrenceIdentity, DocumentId childDocumentId, long fromEpoch,
+            long toEpoch, String beforeBlueId, String afterBlueId, String originalSourceCauseIdentity,
+            String sourceRevisionReceiptIdentity, String successorRepresentationCauseIdentity) {
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("targetOccurrenceIdentity", targetOccurrenceIdentity);
+        value.putAll(sourceRevisionValue(childDocumentId, fromEpoch, toEpoch, beforeBlueId,
+                afterBlueId, originalSourceCauseIdentity));
+        value.put("sourceRevisionReceiptIdentity", sourceRevisionReceiptIdentity);
+        value.put("successorRepresentationCauseIdentity", successorRepresentationCauseIdentity);
+        return identity(Constructor.MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR, value);
+    }
+
     /** Constructs the execution-policy identity from typed policy evidence. */
     String executionPolicyIdentity(ExecutionPolicy policy) {
         ExecutionPolicy selected = Objects.requireNonNull(policy, "policy");
@@ -607,6 +627,13 @@ final class ClosureIdentityService {
             case MANAGED_REVISION:
                 ManagedRevisionCause revision =
                         (ManagedRevisionCause) selected;
+                if (revision.successorRepresentationCause().isPresent()) {
+                    return managedRevisionCauseWithRepresentationSuccessorIdentity(
+                            revision.targetOccurrenceIdentity(), revision.childDocumentId(), revision.fromEpoch(),
+                            revision.toEpoch(), revision.beforeBlueId(), revision.afterBlueId(),
+                            revision.originalSourceCauseIdentity(), revision.sourceRevisionReceiptIdentity(),
+                            revision.successorRepresentationCause().get().causeIdentity());
+                }
                 return managedRevisionCauseIdentity(
                         revision.targetOccurrenceIdentity(),
                         revision.childDocumentId(),
@@ -1058,6 +1085,12 @@ final class ClosureIdentityService {
                 return;
             case MANAGED_REVISION_CAUSE:
                 validateRevision(requireObject(value, OBJECT_VALUE), true);
+                return;
+            case MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR:
+                validateRevision(requireObject(value, OBJECT_VALUE), true);
+                requireSha256(requireObject(value, OBJECT_VALUE), "successorRepresentationCauseIdentity", false);
+                ClosureValueSupport.requireBlueId(requireNonEmptyText(requireObject(value, OBJECT_VALUE), "beforeBlueId"), "beforeBlueId");
+                ClosureValueSupport.requireBlueId(requireNonEmptyText(requireObject(value, OBJECT_VALUE), "afterBlueId"), "afterBlueId");
                 return;
             case ROOTED_CHECKPOINT_REFERENCE_PROOF:
             case ROOTED_CHECKPOINT_REPRESENTATION_POSITION:
@@ -1823,7 +1856,8 @@ final class ClosureIdentityService {
     private static boolean allowsManagedEpochCursor(
             Constructor constructor, String field) {
         if (constructor == Constructor.SOURCE_REVISION_RECEIPT
-                || constructor == Constructor.MANAGED_REVISION_CAUSE) {
+                || constructor == Constructor.MANAGED_REVISION_CAUSE
+                || constructor == Constructor.MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR) {
             return field.endsWith(".fromEpoch");
         }
         if (constructor == Constructor.MANAGED_OCCURRENCE_RESOLUTION) {

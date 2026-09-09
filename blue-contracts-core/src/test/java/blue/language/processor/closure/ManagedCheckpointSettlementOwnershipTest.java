@@ -58,6 +58,186 @@ final class ManagedCheckpointSettlementOwnershipTest {
     private static final String CHECKPOINT = "/contracts/checkpoint/entries/ownerChannel";
 
     @Test
+    void numberedTailRetainsTwoActualPositionsBeforeActivation() { numberedTail(false); }
+
+    @Test
+    void numberedTailDoesNotSkipActualReturnToTheNumberedAnchor() { numberedTail(true); }
+
+    private void numberedTail(boolean repeatedIdentity) {
+        try (Fixture fixture = new Fixture(true)) {
+            Node b = fixture.root("b", "attach", false);
+            b.getContracts().properties("embedded", embedded("/peer"));
+            Node a = fixture.root("a", "assign", false);
+            a.properties("peer", new Node().blueId(blueId(b)));
+            a.getContracts().properties("embedded", embedded("/peer"));
+            AffectedClosureSnapshot snapshot = fixture.snapshot(bodies(a, b),
+                    Collections.singletonList(fixture.binding(A, "/peer", B, blueId(b))));
+            List<Run> sourceHistory = new ArrayList<>();
+            for (int value : repeatedIdentity ? new int[]{0, 1, 0, 2} : new int[]{0, 1, 2, 3}) {
+                Run run = fixture.external(snapshot, A,
+                        event("assign-" + value).properties("business", new Node().value(value)),
+                        sourceHistory.size() + 1L, null);
+                assertSuccess(run);
+                sourceHistory.add(run);
+                snapshot = fixture.after(run.result);
+            }
+            String saved = result(sourceHistory.get(0), A).afterBlueId();
+            assertEquals(repeatedIdentity, saved.equals(result(sourceHistory.get(2), A).afterBlueId()));
+            assertNotEquals(saved, result(sourceHistory.get(1), A).afterBlueId());
+            long savedEpoch = result(sourceHistory.get(0), A).epoch();
+            Run attached = fixture.external(snapshot, B,
+                    event("attach-saved").properties("target", new Node().blueId(saved)), 5L, savedEpoch);
+            assertSuccess(attached);
+            snapshot = fixture.after(attached.result);
+            long epochBeforeAnchor = snapshot.managedDocument(A).epoch();
+            Run numberedAnchor = fixture.external(snapshot, A,
+                    event("numbered-tail-anchor").properties("business", new Node().value(9)), 6L, null);
+            assertSuccess(numberedAnchor);
+            assertEquals(epochBeforeAnchor + 1L, result(numberedAnchor, A).epoch(),
+                    "The carrier must start from a genuine numbered source commit");
+            snapshot = fixture.after(numberedAnchor.result);
+            String x = snapshot.managedDocument(A).blueId();
+            long epoch = snapshot.managedDocument(A).epoch();
+            ManagedDocumentTransitionReceipt anchor = receipt(numberedAnchor, A);
+            String predecessor = anchor.transitionReceiptIdentity();
+            List<ManagedRepresentationTransition> positions = new ArrayList<>();
+            for (int index = 1; index <= 2; index++) {
+                ManagedOccurrenceBinding pending = snapshot.occurrences().stream()
+                        .filter(row -> row.sourceDocumentId().equals(B)).findFirst().get();
+                Run historical = sourceHistory.get(index);
+                ResultingDocument historicalA = result(historical, A);
+                ManagedRevisionCause cause = ClosureEvidenceFactory.managedRevisionCause(
+                        pending.occurrenceIdentity(), historicalA.epoch() - 1L, historicalA.epoch(),
+                        historicalA.document(), receipt(historical, A), null);
+                Run applied = fixture.process(snapshot, cause);
+                assertSuccess(applied);
+                assertEquals(epoch, result(applied, A).epoch());
+                assertTrue(receipt(applied, A).emittedRootEvents().isEmpty());
+                ManagedRepresentationTransition position = new ManagedRepresentationTransition(A, epoch,
+                        anchor.transitionReceiptIdentity(), predecessor, applied.input, applied.result,
+                        receipt(applied, A).transitionReceiptIdentity());
+                positions.add(position);
+                predecessor = position.positionIdentity();
+                snapshot = fixture.after(applied.result);
+            }
+            assertNotEquals(x, positions.get(0).transitionReceipt().afterBlueId());
+            assertEquals(repeatedIdentity, x.equals(positions.get(1).transitionReceipt().afterBlueId()),
+                    "The repeated case must genuinely return to the numbered anchor's exact identity");
+            String authoritative = snapshot.managedDocument(A).blueId();
+            assertNotEquals(positions.get(0).positionIdentity(), positions.get(1).positionIdentity());
+            assertEquals(positions.get(0).positionIdentity(), positions.get(1).predecessorPositionIdentity());
+            DocumentId consumerId = new DocumentId("historical-consumer");
+            Node consumer = fixture.root("consumer", "noop", false)
+                    .properties("peer", new Node().blueId(anchor.beforeBlueId()))
+                    .properties("observed", new Node().value(0));
+            consumer.getContracts().properties("embedded", embedded("/peer"))
+                    .properties("updates", typed(RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL)
+                            .properties("path", new Node().value("/peer")))
+                    .properties("observe", handler("updates"));
+            snapshot = fixture.withPendingConsumer(snapshot, consumerId, consumer, A, epoch - 1L, anchor.beforeBlueId());
+            ManagedOccurrenceBinding occurrence = snapshot.occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+            String targetPosition = positions.get(1).positionIdentity();
+            ManagedRevisionCause originalNumbered = ClosureEvidenceFactory.managedRevisionCause(
+                    occurrence.occurrenceIdentity(), epoch - 1L, epoch,
+                    result(numberedAnchor, A).document(), anchor, null);
+            assertFalse(originalNumbered.successorRepresentationCause().isPresent());
+            ManagedRepresentationCause first = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
+                    positions.get(0), targetPosition, null, null);
+            ManagedRevisionCause carrier = originalNumbered.withSuccessorRepresentationCause(first);
+            assertNotEquals(originalNumbered.causeIdentity(), carrier.causeIdentity());
+            assertEquals(ProcessingCause.Kind.MANAGED_REVISION, carrier.kind());
+            assertEquals(originalNumbered.fromEpoch() + 1L, carrier.toEpoch());
+            assertEquals(anchor.transitionReceiptIdentity(), carrier.sourceRevisionReceiptIdentity());
+            assertEquals(anchor.originalCauseIdentity(), carrier.originalSourceCauseIdentity());
+            assertEquals(first.causeIdentity(), carrier.successorRepresentationCause().get().causeIdentity());
+            assertThrows(IllegalStateException.class, () -> carrier.withSuccessorRepresentationCause(first));
+            final String occurrenceId = occurrence.occurrenceIdentity();
+            assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
+                    new ManagedRepresentationCause(occurrenceId, positions.get(1), targetPosition, null, null)));
+            assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
+                    new ManagedRepresentationCause(hash('f'), positions.get(0), targetPosition, null, null)));
+            assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
+                    new ManagedRepresentationCause(occurrenceId, positions.get(0), targetPosition, hash('f'), null)));
+            final AffectedClosureSnapshot beforeNumbered = snapshot;
+            try (Fixture legacy = new Fixture()) {
+                assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.processClosure(
+                        beforeNumbered, carrier, Collections.emptyList(), ClosureEvidenceFactory.executionPolicy(100_000L, Collections.emptyMap(), "numbered-tail-profile"), legacy.environment));
+            }
+            ClosureInvocationInput exhaustedNumbered = ClosureEvidenceFactory.processClosure(snapshot, carrier,
+                    Collections.emptyList(), ClosureEvidenceFactory.executionPolicy(1L, Collections.emptyMap(),
+                            "numbered-tail-rollback"), fixture.environment);
+            try (BlueClosureContracts contracts = new BlueClosureContracts(fixture.owner)) {
+                ClosureAttemptResult rollback = contracts.processClosure(exhaustedNumbered);
+                assertTrue(rollback.isComplete());
+                assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, rollback.processResult().status());
+                assertEquals(snapshot.closureIdentity(), rollback.processResult().outputClosureIdentity());
+            }
+            int beforeNumberedCalls = fixture.probe.calls.size();
+            Run numbered = fixture.process(snapshot, carrier);
+            assertSuccess(numbered);
+            assertTrue(numbered.result.totalGas() > 1L);
+            assertTrue(numbered.result.publicEvents().isEmpty());
+            assertTrue(numbered.evidence.workTrace().stream()
+                    .noneMatch(work -> first.causeIdentity().equals(work.sourceOccurrenceIdentity())),
+                    "The future cause must never execute inside the numbered invocation");
+            assertEquals(Collections.singletonList("consumer:observe"),
+                    fixture.probe.calls.subList(beforeNumberedCalls, fixture.probe.calls.size()));
+            assertEquals(authoritative, result(numbered, A).afterBlueId());
+            assertEquals(epoch, result(numbered, A).epoch());
+            Run sameNumbered = fixture.process(snapshot, carrier);
+            assertEquals(numbered.result.outputClosureIdentity(), sameNumbered.result.outputClosureIdentity());
+            assertEquals(numbered.result.totalGas(), sameNumbered.result.totalGas());
+            snapshot = fixture.after(numbered.result);
+            occurrence = snapshot.occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+            assertFalse(occurrence.active(), "Epoch and endpoint equality cannot skip a nonempty captured tail");
+            assertEquals(Long.valueOf(epoch), occurrence.pendingHistoricalEpoch());
+            assertEquals(anchor.afterBlueId(), occurrence.expectedTargetBlueId());
+            assertEquals(new ManagedRepresentationCursor(anchor.transitionReceiptIdentity(), anchor.transitionReceiptIdentity(),
+                    targetPosition, null), occurrence.pendingRepresentationCursor());
+            final AffectedClosureSnapshot beforeTraversal = snapshot;
+            ManagedRepresentationCause skipped = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
+                    positions.get(1), targetPosition, null, null);
+            assertThrows(IllegalArgumentException.class, () -> fixture.process(beforeTraversal, skipped));
+            int callsBefore = fixture.probe.calls.size();
+            for (int index = 0; index < positions.size(); index++) {
+                ManagedRepresentationCause cause = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
+                        positions.get(index), targetPosition, null, null);
+                ClosureInvocationInput rollbackInput = ClosureEvidenceFactory.processClosure(snapshot, cause,
+                        Collections.emptyList(), ClosureEvidenceFactory.executionPolicy(1L, Collections.emptyMap(),
+                                "representation-return-rollback"), fixture.environment);
+                try (BlueClosureContracts contracts = new BlueClosureContracts(fixture.owner)) {
+                    ClosureAttemptResult rollback = contracts.processClosure(rollbackInput);
+                    assertTrue(rollback.isComplete());
+                    assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, rollback.processResult().status());
+                    assertEquals(snapshot.closureIdentity(), rollback.processResult().outputClosureIdentity());
+                }
+                Run traversed = fixture.process(snapshot, cause);
+                assertSuccess(traversed);
+                assertTrue(traversed.result.totalGas() > 1L);
+                assertTrue(traversed.result.publicEvents().isEmpty());
+                assertEquals(authoritative, result(traversed, A).afterBlueId());
+                assertEquals(epoch, result(traversed, A).epoch());
+                assertEquals(java.math.BigInteger.valueOf(index + 2L),
+                        result(traversed, consumerId).document().get("/observed"));
+                snapshot = fixture.after(traversed.result);
+                occurrence = snapshot.occurrences().stream()
+                        .filter(row -> row.sourceDocumentId().equals(consumerId)).findFirst().get();
+                assertEquals(index == positions.size() - 1, occurrence.active());
+                final AffectedClosureSnapshot afterTraversal = snapshot;
+                assertThrows(IllegalArgumentException.class, () -> fixture.process(afterTraversal, cause));
+            }
+            assertEquals(Arrays.asList("consumer:observe", "consumer:observe"),
+                    fixture.probe.calls.subList(callsBefore, fixture.probe.calls.size()));
+            System.out.println("GENUINE_NUMBERED_REPRESENTATION_TAIL epoch=" + epoch + " X=" + x
+                    + " Y=" + positions.get(0).transitionReceipt().afterBlueId()
+                    + " positions=" + positions.stream().map(ManagedRepresentationTransition::positionIdentity)
+                            .collect(Collectors.toList()));
+        }
+    }
+
+    @Test
     void historicalReconciliationRetainsGenuineRepeatedRepresentationPositions() {
         try (Fixture fixture = new Fixture()) {
             Node b = fixture.root("b", "attach", false);
