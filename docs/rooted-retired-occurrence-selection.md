@@ -24,3 +24,20 @@ changing that assertion. The resulting complete Contracts core suite passed all 
 tests and strict Javadoc. Existing foreign-target and same-invocation reactivation
 rejections remain unchanged. Public SDK, packaged adapter, rollback and final component
 gates remain required; these processor results do not establish RC readiness.
+
+The subsequent SDK test exposed a second adapter error: replacing the committed
+inactive row while expanding read evidence violated `RootedInputExpansion`. That
+authenticity check remains unchanged. Coordination must retain the original row
+and supply `ManagedOccurrenceEvidenceResolution` as part of the existing exact
+retry protocol. The processor consumes it at the emitted demand boundary, keeping
+the reserved generation and setting the selected historical cursor. The input
+reservation must already be inactive, have no historical cursor, refer to the same
+initialized lineage and match the original binding; a row newly retired during
+this invocation cannot qualify. The same-invocation retirement fence also remains.
+
+Result verification independently requires that exact resolution for an inactive
+reservation becoming historical, including the selected identity, epoch, lineage,
+generation and input closure. It rejects a forged pending cursor without evidence.
+The updated complete Contracts core suite passed all 529 tests and strict Javadoc.
+The SDK lifecycle, foreign-lineage, late-gas rollback and public HTTP/restart cases
+are maintained separately and must pass on the rebuilt complete dependency tuple.

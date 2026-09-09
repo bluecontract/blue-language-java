@@ -33,6 +33,85 @@ final class DifferentLineageRetargetReceiptTest {
     private static final String PATH = "/peer";
 
     @Test
+    void reservedHistoricalSelectionKeepsItsGenerationAndRequiresExactRetryEvidence() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = reservedHistoricalScenario(true, 4L, B);
+            ClosureInvocationInput input = invocation(scenario.input.snapshot, environment);
+            ManagedOccurrenceEvidenceDemand demand = historicalDemand(input, scenario.after.expectedTargetBlueId());
+            ManagedOccurrenceEvidenceResolution resolution = ManagedOccurrenceEvidenceResolution.derived(demand, B, -1L);
+            ClosureProcessRetryInput retry = ClosureProcessRetryInput.derived(input, Collections.singletonList(resolution));
+            assertEquals(retry.retryInvocationIdentity(), ClosureInvocationVerifier.verifyRetry(
+                    retry, owner.administration()::runtimeAccess).invocationIdentity());
+            ClosureProcessResult result = ClosureSuccessResultAssembler.assemble(
+                    input, executionState(scenario.output), Collections.singletonList(resolution));
+            assertTrue(result.commits());
+            assertEquals(7L, result.graphGeneration());
+            assertTrue(result.graphChanges().isEmpty());
+            assertEquals(scenario.before.occurrenceIdentity(), result.occurrenceBindings().get(0).occurrenceIdentity());
+            assertEquals(4L, result.occurrenceBindings().get(0).activationGeneration());
+            assertEquals(Long.valueOf(-1L), result.occurrenceBindings().get(0).pendingHistoricalEpoch());
+            assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output)));
+            for (ManagedOccurrenceEvidenceResolution wrong : Arrays.asList(
+                    ManagedOccurrenceEvidenceResolution.derived(demand, C, -1L),
+                    ManagedOccurrenceEvidenceResolution.derived(demand, B, 1L),
+                    ManagedOccurrenceEvidenceResolution.derived(historicalDemand(input, scenario.before.expectedTargetBlueId()), B, -1L))) {
+                assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(
+                        input, executionState(scenario.output), Collections.singletonList(wrong)));
+            }
+            assertThrows(IllegalArgumentException.class, () -> ClosureInvocationVerifier.verifyRetry(
+                    ClosureProcessRetryInput.derived(input, Collections.singletonList(
+                            ManagedOccurrenceEvidenceResolution.derived(demand, C, -1L))), owner.administration()::runtimeAccess));
+            assertThrows(IllegalArgumentException.class, () -> ClosureInvocationVerifier.verifyRetry(
+                    ClosureProcessRetryInput.derived(input, Collections.singletonList(
+                            ManagedOccurrenceEvidenceResolution.derived(demand, B, 1L))), owner.administration()::runtimeAccess));
+            for (Scenario changed : Arrays.asList(reservedHistoricalScenario(true, 5L, B), reservedHistoricalScenario(true, 4L, C))) {
+                assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(
+                        input, executionState(changed.output), Collections.singletonList(resolution)));
+            }
+            assertFalse(resolution.selectsInactiveReservation(input.snapshot(), ManagedOccurrenceBinding.derived(
+                    scenario.before.bindingPolicyIdentity(), A, ScopeAddress.embedded(PATH, 5L), B,
+                    scenario.before.expectedTargetBlueId(), false, null)), "A row retired in this invocation is not the input reservation");
+            Scenario draft = reservedHistoricalScenario(false, 4L, B);
+            ClosureInvocationInput draftInput = invocation(draft.input.snapshot, environment);
+            assertThrows(IllegalArgumentException.class, () -> ClosureInvocationVerifier.verifyRetry(
+                    ClosureProcessRetryInput.derived(draftInput, Collections.singletonList(
+                            ManagedOccurrenceEvidenceResolution.derived(historicalDemand(draftInput, draft.after.expectedTargetBlueId()), B, -1L))),
+                    owner.administration()::runtimeAccess));
+        }
+    }
+
+    private static Scenario reservedHistoricalScenario(boolean initialized, long afterGeneration, DocumentId target) {
+        Node current = new Node().name("Current reserved source");
+        if (initialized) current.contracts(new Node().properties(
+                blue.language.processor.util.ProcessorContractConstants.KEY_INITIALIZED,
+                new Node().type(new Node().blueId(blue.language.processor.registry.RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                        .properties("document", new Node().blueId(blueId(new Node().name("Saved source"))))));
+        Node foreign = new Node().name("Foreign source");
+        String old = blueId(new Node().name("Saved source"));
+        ManagedOccurrenceBinding before = ManagedOccurrenceBinding.derived(bindingPolicyIdentity(), A,
+                ScopeAddress.embedded(PATH, 4L), B, blueId(current), false, null);
+        ManagedOccurrenceBinding after = ManagedOccurrenceBinding.derived(bindingPolicyIdentity(), A,
+                ScopeAddress.embedded(PATH, afterGeneration), target, old, false, -1L);
+        SnapshotEvidence input = initializedTarget(finalizedSnapshot(7L,
+                bodies(new Node().name("Parent"), current, foreign), Collections.singletonList(before), generations()), initialized);
+        SnapshotEvidence output = initializedTarget(finalizedSnapshot(7L,
+                bodies(new Node().name("Parent").properties("peer", new Node().blueId(old)), current, foreign),
+                Collections.singletonList(after), generations()), initialized);
+        return new Scenario(input, output, before, after);
+    }
+
+    private static SnapshotEvidence initializedTarget(SnapshotEvidence evidence, boolean initialized) {
+        List<ManagedDocumentSnapshot> documents = new ArrayList<>();
+        for (ManagedDocumentSnapshot d : evidence.snapshot.managedDocuments()) {
+            documents.add(new ManagedDocumentSnapshot(d.documentId(), d.blueId(), d.document(),
+                    initialized && d.documentId().equals(B), d.terminated(), d.publicRoot(), d.epoch(), d.componentGeneration()));
+        }
+        return new SnapshotEvidence(ClosureEvidenceFactory.affectedClosure(evidence.snapshot.graphGeneration(),
+                documents, evidence.snapshot.occurrences(), evidence.snapshot.components(), evidence.snapshot.publicRootDocumentIds()), evidence.finalization);
+    }
+
+    @Test
     void assemblesOneAtomicRebindWithFreshNextGenerationIdentity() {
         try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
             ClosureEnvironment environment = environment(owner);

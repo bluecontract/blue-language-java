@@ -3212,13 +3212,17 @@ final class ClosureExecutionSession
                                 + "row");
             }
             ManagedOccurrenceBinding before = replacement.get(match);
-            if (!before.active()
+            boolean reservedSelection = resolution.selectsInactiveReservation(input.snapshot(), before)
+                    && !processEmbeddedRetirementFences.contains(
+                            new ProcessEmbeddedSurfaceReconciler.OccurrencePath(
+                                    before.sourceDocumentId(), before.sourcePath()));
+            if ((!before.active() && !reservedSelection)
                     || currentSnapshot.managedDocument(
                             resolution.targetDocumentId()) == null
-                    || before.activationGeneration()
+                    || before.active() && before.activationGeneration()
                             == ClosureValueSupport.MAX_SAFE_INTEGER) {
                 throw new IllegalArgumentException(
-                        "Managed occurrence resolution is not an active "
+                        "Managed occurrence resolution is not an eligible "
                                 + "historical reference replacement");
             }
             ManagedOccurrenceBinding after =
@@ -3227,7 +3231,7 @@ final class ClosureExecutionSession
                             before.sourceDocumentId(),
                             ScopeAddress.embedded(
                                     before.sourcePath(),
-                                    before.activationGeneration() + 1L),
+                                    before.activationGeneration() + (before.active() ? 1L : 0L)),
                             resolution.targetDocumentId(),
                             demand.suppliedValueBlueId(),
                             false,
