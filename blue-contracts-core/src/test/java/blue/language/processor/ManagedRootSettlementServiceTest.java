@@ -172,6 +172,134 @@ final class ManagedRootSettlementServiceTest {
     }
 
     @Test
+    void managedPayloadMemoRequiresExactIdentityBodyProvenanceAndInvocation() {
+        DocumentProcessor processor = payloadMemoProcessor();
+        Node event = event("canonical memo").properties("payload", new Node()
+                .type(new Node().blueId(blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID))
+                .value("unchanged").inlineValue(false)
+                .schema(new blue.language.model.Schema().minLength(new Node().value(java.math.BigInteger.ONE))));
+        ExactEventIdentityEvidence evidence = ExactEventIdentityEvidence.verify(null, event,
+                DirectBlueIdCalculator.calculateBlueId(event), null);
+        ManagedDocumentStepRequest request = payloadRequest(event, evidence.eventBlueId(),
+                ManagedDocumentWorkKind.EXTERNAL_DELIVERY);
+        try (ManagedDocumentStepRuntime runtime = new ManagedDocumentStepRuntime(processor)) {
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(request),
+                    "A direct isolated SPI request has no inherited closure admission capability");
+            ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(document(), "source", evidence,
+                    context("source", "payload-memo", "direct-admission.payload")).candidate();
+            assertNotNull(candidate);
+            FrozenNode carried = candidate.frozenPayload();
+            assertTrue(carried.isStrictCanonical());
+            long gasBeforeLookup = runtime.totalGas();
+            org.junit.jupiter.api.Assertions.assertSame(carried, runtime.carriedExternalPayload(request));
+            org.junit.jupiter.api.Assertions.assertSame(carried, runtime.carriedExternalPayload(payloadRequest(
+                    event.clone(), evidence.eventBlueId(), ManagedDocumentWorkKind.EXTERNAL_DELIVERY)));
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(
+                    event.clone().properties("tampered", new Node().value(true)), evidence.eventBlueId(),
+                    ManagedDocumentWorkKind.EXTERNAL_DELIVERY)));
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(event,
+                    DirectBlueIdCalculator.calculateBlueId(new Node().name("different identity")),
+                    ManagedDocumentWorkKind.EXTERNAL_DELIVERY)));
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(event,
+                    evidence.eventBlueId(), ManagedDocumentWorkKind.TRIGGERED_EVENT)));
+
+            Node changedInline = event.clone();
+            changedInline.getProperties().get("payload").inlineValue(true);
+            assertTrue(FrozenNode.fromResolvedNode(event).sameResolvedStructure(FrozenNode.fromResolvedNode(changedInline)));
+            assertEquals(evidence.eventBlueId(), FrozenNode.fromNode(changedInline).blueId());
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(changedInline,
+                    evidence.eventBlueId(), ManagedDocumentWorkKind.EXTERNAL_DELIVERY)),
+                    "Equal semantic identity cannot erase inline source provenance at the memo boundary");
+            Node changedKeywordType = event.clone();
+            changedKeywordType.getProperties().get("payload").getSchema().getMinLength().type(new Node()
+                    .blueId(blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID));
+            assertTrue(FrozenNode.fromResolvedNode(event).sameResolvedStructure(FrozenNode.fromResolvedNode(changedKeywordType)));
+            assertEquals(evidence.eventBlueId(), FrozenNode.fromNode(changedKeywordType).blueId());
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(changedKeywordType,
+                    evidence.eventBlueId(), ManagedDocumentWorkKind.EXTERNAL_DELIVERY)),
+                    "Equivalent schema sugar is not the recorded complete handoff representation");
+            org.junit.jupiter.api.Assertions.assertSame(carried, runtime.carriedExternalPayload(request));
+            assertEquals(gasBeforeLookup, runtime.totalGas(), "Lookup is not another semantic admission or work item");
+            runtime.close();
+            assertThrows(IllegalStateException.class, () -> runtime.carriedExternalPayload(request));
+            try (ManagedDocumentStepRuntime fresh = new ManagedDocumentStepRuntime(processor)) {
+                org.junit.jupiter.api.Assertions.assertNull(fresh.carriedExternalPayload(request),
+                        "The admission capability cannot leak into another composition session");
+            }
+        } finally {
+            processor.close();
+        }
+    }
+
+    @Test
+    void managedPayloadMemoRejectsConflictingInternalRepresentationCapabilities() {
+        DocumentProcessor processor = payloadMemoProcessor();
+        Node event = event("conflicting source mode");
+        ExactEventIdentityEvidence strict = ExactEventIdentityEvidence.verify(null, event,
+                DirectBlueIdCalculator.calculateBlueId(event), null);
+        try (ManagedDocumentStepRuntime runtime = new ManagedDocumentStepRuntime(processor)) {
+            ManagedCheckpointCandidate first = runtime.classifyExternalDelivery(document(), "source", strict,
+                    context("source", "memo-first", "direct-admission.first")).candidate();
+            assertNotNull(first);
+            // Test-only internal injection: do not claim public Source admission
+            // constructs this incompatible resolved capability for ordinary Source.
+            ExactEventIdentityEvidence incompatible = ExactEventIdentityEvidence.fromAdmitted(
+                    new ExactBlueValue(FrozenNode.fromResolvedNode(event), strict.eventBlueId()));
+            InvalidExecutionEvidenceException rejected = assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> runtime.classifyExternalDelivery(document(), "source", incompatible,
+                            context("source", "memo-conflict", "direct-admission.conflict")));
+            assertEquals("Managed external payload admission representations disagree", rejected.getMessage());
+            org.junit.jupiter.api.Assertions.assertSame(first.frozenPayload(), runtime.carriedExternalPayload(
+                    payloadRequest(event, strict.eventBlueId(), ManagedDocumentWorkKind.EXTERNAL_DELIVERY)),
+                    "The conflicting capability must not replace the retained original");
+        } finally {
+            processor.close();
+        }
+    }
+
+    @Test
+    void managedPayloadMemoPreservesCompleteCyclicMemberEvidenceWithoutRehashing() {
+        DocumentProcessor processor = payloadMemoProcessor();
+        Node placeholder = event("cyclic memo").properties("self", new Node().blueId("this#0"));
+        String memberId = blue.language.identity.CircularSetIdentityCalculator.calculateCircularSetFinalization(
+                Collections.singletonList(placeholder)).membersInInputOrder().get(0).finalBlueId();
+        Node materialized = placeholder.clone();
+        materialized.getProperties().get("self").blueId(memberId);
+        ExactEventIdentityEvidence evidence = ExactEventIdentityEvidence.verify(null, materialized, memberId,
+                blue.language.provider.CyclicSetProof.fromDeclaredPlaceholderSet(Collections.singletonList(placeholder)));
+        assertNotEquals(memberId, DirectBlueIdCalculator.calculateBlueId(materialized));
+        try (ManagedDocumentStepRuntime runtime = new ManagedDocumentStepRuntime(processor)) {
+            ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(document(), "source", evidence,
+                    context("source", "memo-cyclic", "direct-admission.cyclic")).candidate();
+            assertNotNull(candidate);
+            assertEquals(memberId, candidate.payloadBlueId());
+            org.junit.jupiter.api.Assertions.assertSame(candidate.frozenPayload(), runtime.carriedExternalPayload(
+                    payloadRequest(materialized, memberId, ManagedDocumentWorkKind.EXTERNAL_DELIVERY)));
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(
+                    new Node().blueId(memberId), memberId, ManagedDocumentWorkKind.EXTERNAL_DELIVERY)),
+                    "A materialized capability does not admit a different bare-reference handoff");
+            org.junit.jupiter.api.Assertions.assertNull(runtime.carriedExternalPayload(payloadRequest(
+                    materialized.clone().properties("tampered", new Node().value(true)), memberId,
+                    ManagedDocumentWorkKind.EXTERNAL_DELIVERY)));
+        } finally {
+            processor.close();
+        }
+    }
+
+    private static DocumentProcessor payloadMemoProcessor() {
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(SOURCE_BLUE_ID, SOURCE_TYPE, new SourceProcessor()).build();
+        return DocumentProcessor.builder().runtimeRegistry(registry)
+                .snapshotStore(new ExactDomainSnapshotManager()).build();
+    }
+
+    private static ManagedDocumentStepRequest payloadRequest(Node payload, String blueId,
+            ManagedDocumentWorkKind kind) {
+        return new ManagedDocumentStepRequest(document(), true, false, kind, "source", payload, blueId,
+                null, null, GasChargeContext.empty());
+    }
+
+    @Test
     void preservesAdmissionProvedCyclicMemberPayloadIdentity() {
         // given
         ExactDomainSnapshotManager domainStore =

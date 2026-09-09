@@ -531,15 +531,42 @@ public final class RuntimeWorkSession {
     /** Returns an already carried exact input matching one hosted output. */
     synchronized ExactBlueValue carriedExactInput(Node output) {
         ensureOpen();
-        FrozenNode supplied = FrozenNode.fromResolvedNode(
-                Objects.requireNonNull(output, "output").clone());
+        return carriedExactInput(new ExactInputLookup(FrozenNode.fromResolvedNode(
+                Objects.requireNonNull(output, "output").clone())), output, false);
+    }
+
+    /** Looks up a captured exact input without discarding its immutable source. */
+    synchronized ExactBlueValue carriedExactInput(ExactInputLookup supplied) {
+        ensureOpen();
+        return carriedExactInput(Objects.requireNonNull(supplied, "supplied"), null, true);
+    }
+
+    private ExactBlueValue carriedExactInput(
+            ExactInputLookup lookup,
+            Node mutableSource,
+            boolean requireExactReferenceRepresentation) {
+        FrozenNode supplied = lookup.supplied;
         ExactBlueValue matched = null;
         for (ExactBlueValue candidate : exactValuesSnapshot()) {
             boolean same = supplied.isReferenceOnly()
-                    ? supplied.getReferenceBlueId().equals(candidate.blueId())
+                    ? requireExactReferenceRepresentation
+                        ? supplied.resolvedStructuralKey().equals(
+                                candidate.frozenValue().resolvedStructuralKey())
+                        : supplied.getReferenceBlueId().equals(candidate.blueId())
                     : !candidate.frozenValue().isReferenceOnly()
                     && supplied.resolvedStructuralKey().equals(
                             candidate.frozenValue().resolvedStructuralKey());
+            if (!same && !supplied.isReferenceOnly()
+                    && candidate.frozenValue().isStrictCanonical()
+                    && supplied.sameResolvedStructure(candidate.frozenValue())) {
+                // Authenticate this mutable callback output against the carried
+                // canonical cursor. Interning keys also contain construction
+                // flags, so compare the complete keys in the same mode.
+                FrozenNode strictSupplied = lookup.strictValue(mutableSource);
+                same = strictSupplied != null
+                        && strictSupplied.resolvedStructuralKey().equals(
+                                candidate.frozenValue().resolvedStructuralKey());
+            }
             if (!same) {
                 continue;
             }
@@ -551,6 +578,30 @@ public final class RuntimeWorkSession {
             matched = candidate;
         }
         return matched;
+    }
+
+    /** Caches only one immutable view, never a capability match or inventory. */
+    static final class ExactInputLookup {
+        private final FrozenNode supplied;
+        private FrozenNode strictValue;
+        private boolean strictAttempted;
+
+        ExactInputLookup(FrozenNode supplied) {
+            this.supplied = Objects.requireNonNull(supplied, "supplied");
+        }
+
+        private synchronized FrozenNode strictValue(Node mutableSource) {
+            if (!strictAttempted) {
+                strictAttempted = true;
+                try {
+                    strictValue = FrozenNode.fromNode(
+                            mutableSource != null ? mutableSource : supplied.toNode());
+                } catch (IllegalArgumentException nonCanonicalOutput) {
+                    // Canonical validity is fixed by the captured source bytes.
+                }
+            }
+            return strictValue;
+        }
     }
 
     private void carryExactInputLocally(

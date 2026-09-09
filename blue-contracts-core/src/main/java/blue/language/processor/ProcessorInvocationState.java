@@ -371,8 +371,15 @@ final class ProcessorInvocationState {
     void executeIsolatedManagedRootWork(
             ManagedDocumentStepRequest request,
             ManagedDocumentStepRoute selectedRoute) {
+        executeIsolatedManagedRootWork(request, selectedRoute, null);
+    }
+
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute,
+            FrozenNode admittedExternalPayload) {
         scopeExecutor.executeIsolatedManagedRootWork(
-                request, selectedRoute);
+                request, selectedRoute, admittedExternalPayload);
     }
 
     /** Applies deterministic processor-owned cleanup before final validation. */

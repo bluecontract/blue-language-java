@@ -2024,6 +2024,106 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void managedClosurePreservesAdmittedCanonicalExternalPayloadThroughIsolatedDispatch() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        exactNodes.put(HANDLER_BLUE_ID, HANDLER_TYPE.clone());
+        exactNodes.put(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE.clone());
+        NodeProvider provider = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone()) : Collections.<Node>emptyList();
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(HANDLER_BLUE_ID, HANDLER_TYPE, probe)
+                .register(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE,
+                        new RetainedSourceChannelProcessor()).build();
+        try (DocumentProcessor owner = DocumentProcessor.builder().runtimeRegistry(registry)
+                .nodeProvider(new TestNodeProvider(provider)).build()) {
+            ClosureEnvironment environment = ClosureEvidenceFactory.environment(owner,
+                    hash('a'), RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY,
+                    "full-lifecycle-document-lineage-v1", "full-lifecycle-binding-lineage-v1",
+                    "full-lifecycle-provider-domain-v1", "full-lifecycle-external-order-v1",
+                    "full-lifecycle-portable-limits-v1", GasSchedule.contracts10().portableLimits());
+            Node body = new Node().name("Managed canonical payload carrier")
+                    .contracts(new Node()
+                            .properties("ownerChannel", typed(RETAINED_SOURCE_CHANNEL_BLUE_ID))
+                            .properties("observeExactPayload", handler("ownerChannel")));
+            String authored = blueId(body);
+            exactNodes.put(authored, body.clone());
+            installInitializedMarker(body, authored);
+            exactNodes.put(blueId(body), body.clone());
+            Node child = new Node().name("inline source with an unavailable peer")
+                    .properties("peer", new Node().blueId(blueId(new Node().name("unavailable peer"))))
+                    .contracts(new Node().properties("embedded", processEmbedded("/peer")));
+            String childId = blue.language.snapshot.FrozenNode.fromNode(child).blueId();
+            assertNotEquals(childId, blue.language.snapshot.FrozenNode.fromResolvedNode(child).blueId(),
+                    "The exact list-bearing child distinguishes canonical and resolved hashing");
+            Node event = new Node().name("Managed canonical payload")
+                    .properties("subscriptionKey", new Node().value("retained-source"))
+                    .properties("child", child);
+            String eventId = blueId(event);
+            exactNodes.put(eventId, event.clone());
+            AffectedClosureSnapshot snapshot = initializedSnapshot(finalizedSnapshot(
+                    Collections.singletonMap(A, body), Collections.<ManagedOccurrenceBinding>emptyList(),
+                    Collections.singletonList(A)), 4L, 1L);
+            ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(snapshot,
+                    ClosureEvidenceFactory.externalCause(event, eventId,
+                            ExternalOrderKey.of(Arrays.<Object>asList(Long.valueOf(1L), "canonical-a")),
+                            environment.externalOrderPolicyIdentity()),
+                    Collections.singletonList(new DirectLogicalDelivery(ManagedScopeKey.root(A),
+                            "ownerChannel", "ownerChannel", 0L)),
+                    ClosureEvidenceFactory.executionPolicy(GENEROUS_GAS,
+                            Collections.<DocumentId, Long>emptyMap(), "canonical-payload-carrier-v1"), environment)
+                    .withRootedContext(RootedProcessingContext.derive(snapshot, A,
+                            Collections.singletonMap(A, hash('c'))), hash('d'));
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+            assertTrue(attempt.isComplete(), attempt.kind() + " " + attempt.resourceDemands());
+            ClosureProcessResult result = attempt.processResult();
+            assertSuccess(result);
+            assertEquals(1, probe.executionCount);
+            assertNotNull(probe.observedExactPayload);
+            org.junit.jupiter.api.Assertions.assertSame(probe.observedExactPayload, probe.observedProcessPayload,
+                    "The same managed external payload backs the lazy PROCESS event cursor");
+            assertTrue(probe.observedExactPayload.isStrictCanonical(),
+                    "PendingWork, managed step, and handler dispatch must retain the admitted canonical cursor");
+            assertEquals(eventId, probe.observedExactPayloadIdentity);
+            assertEquals(eventId, probe.observedExactPayload.blueId());
+            assertEquals(childId, probe.observedExactPayload.getProperties().get("child").blueId());
+            assertNodeEquals(event, probe.observedExactPayload.toNode());
+            assertEquals(1L, countKind(capture.evidence, WorkKind.EXTERNAL_DELIVERY));
+            assertEquals(0L, countKind(capture.evidence, WorkKind.INITIALIZATION));
+            assertTrue(result.publicEvents().isEmpty());
+            assertFalse(result.checkpointWrites().isEmpty());
+            assertNodeEquals(body, input.snapshot().managedDocument(A).document());
+            assertNodeEquals(event, ((ExternalEventCause) input.cause()).event());
+
+            Node forgedEvent = event.clone();
+            forgedEvent.getAsNode("/child/contracts/embedded/paths").getItems().get(0).value("/forged");
+            assertNotEquals(eventId, blueId(forgedEvent));
+            ClosureInvocationInput forged = ClosureEvidenceFactory.processClosure(snapshot,
+                    ClosureEvidenceFactory.externalCause(forgedEvent, eventId,
+                            ((ExternalEventCause) input.cause()).sourceOrder(),
+                            environment.externalOrderPolicyIdentity()), input.directDeliveries(),
+                    input.executionPolicy(), environment)
+                    .withRootedContext(RootedProcessingContext.derive(snapshot, A,
+                            Collections.singletonMap(A, hash('c'))), hash('d'));
+            assertEquals(input.invocationIdentity(), forged.invocationIdentity(),
+                    "Matching claimed identities cannot authenticate changed event bytes");
+            int executionsBeforeRejection = probe.executionCount;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                assertThrows(IllegalArgumentException.class, () -> contracts.processClosure(forged));
+            }
+            assertEquals(executionsBeforeRejection, probe.executionCount,
+                    "The actual admission owner rejects the wrong body before a handler or memo fallback");
+            assertNodeEquals(body, forged.snapshot().managedDocument(A).document());
+            assertNodeEquals(event, ((ExternalEventCause) input.cause()).event());
+            assertNodeEquals(forgedEvent, ((ExternalEventCause) forged.cause()).event());
+        }
+    }
+
+    @Test
     void processingTerminationRunsLifecycleAndRollsBackWhenGasCannotCommit() {
         ProbeProcessor probe = new ProbeProcessor();
         final Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
@@ -4251,6 +4351,9 @@ final class FullLifecycleAdmissionTest {
         private int reactivationInitializationCount;
         private int dormantTargetInitializationCount;
         private int executionCount;
+        private blue.language.snapshot.FrozenNode observedExactPayload;
+        private blue.language.snapshot.FrozenNode observedProcessPayload;
+        private String observedExactPayloadIdentity;
 
         @Override
         public Class<ProbeHandler> contractType() {
@@ -4263,7 +4366,11 @@ final class FullLifecycleAdmissionTest {
                 ProcessorExecutionContext context) {
             executionCount++;
             String key = context.contractKey();
-            if ("initPatch".equals(key)) {
+            if ("observeExactPayload".equals(key)) {
+                observedExactPayload = context.frozenEvent();
+                observedProcessPayload = context.frozenProcessEvent();
+                observedExactPayloadIdentity = context.exactEventIdentityEvidence().eventBlueId();
+            } else if ("initPatch".equals(key)) {
                 if (initiated(context)) {
                     context.applyPatch(JsonPatch.add(
                             "/state",

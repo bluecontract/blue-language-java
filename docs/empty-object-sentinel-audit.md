@@ -4,10 +4,10 @@ This report records every prompt-mandated production Java search hit, then expli
 
 ## Result
 
-- Production matches: 2106
+- Production matches: 2105
 - Decision-relevant matches: 256
-- Context-only broad-search matches: 1850
-- Matches in files changed since the RC baseline: 1216
+- Context-only broad-search matches: 1849
+- Matches in files changed since the RC baseline: 1215
 - Matches in unchanged files: 890
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
@@ -23,7 +23,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `list-placeholder` | 25 |
 | `property-shape` | 52 |
 | `raw-blue-id-access` | 98 |
-| `schema-presence` | 1474 |
+| `schema-presence` | 1473 |
 
 ## Classification totals
 
@@ -55,7 +55,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `D-host-absence-from-fieldless-source-control` | 1 |
 | `E-explicit-list-hole-control` | 16 |
 | `E-invalid-fieldless-list-position` | 5 |
-| `context-only-not-empty-sentinel-decision` | 1850 |
+| `context-only-not-empty-sentinel-decision` | 1849 |
 
 ## Load-bearing decisions
 

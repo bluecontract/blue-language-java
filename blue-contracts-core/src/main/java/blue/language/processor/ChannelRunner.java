@@ -700,6 +700,17 @@ final class ChannelRunner {
                 allowTerminatingScope);
     }
 
+    boolean runHandlers(String scopePath,
+                        ContractBundle bundle,
+                        String channelKey,
+                        FrozenNode admittedEvent,
+                        String admittedEventBlueId,
+                        boolean allowTerminatingScope) {
+        return handlerDispatcher.dispatch(scopePath, bundle, channelKey,
+                admittedEvent, admittedEventBlueId,
+                Collections.<ExactBlueValue>emptyList(), allowTerminatingScope);
+    }
+
     void cleanupInactiveCheckpoints(String scopePath, ContractBundle bundle) {
         Map<String, String> activeDomains = new LinkedHashMap<>();
         for (ContractBundle.ChannelBinding channel

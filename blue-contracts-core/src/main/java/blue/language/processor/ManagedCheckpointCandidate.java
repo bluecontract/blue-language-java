@@ -155,6 +155,9 @@ public final class ManagedCheckpointCandidate {
      */
     public Node exactPayload() { return exactPayload.toNode(); }
 
+    /** Carries the already admitted immutable payload within the processor. */
+    FrozenNode frozenPayload() { return exactPayload; }
+
     /**
      * Returns the identity proved when the external payload was admitted.
      *

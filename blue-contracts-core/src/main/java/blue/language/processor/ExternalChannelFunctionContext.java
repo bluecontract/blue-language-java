@@ -68,7 +68,7 @@ public final class ExternalChannelFunctionContext {
     private final String channelKey;
     private final Access access;
     private final RuntimeWorkSession runtimeWorkSession;
-    private final FrozenNode.ResolvedStructuralKey exactEventKey;
+    private final RuntimeWorkSession.ExactInputLookup exactEvent;
 
     ExternalChannelFunctionContext(
             String scopePath,
@@ -89,10 +89,9 @@ public final class ExternalChannelFunctionContext {
                 channelKey, "channelKey");
         this.access = Objects.requireNonNull(access, "access");
         this.runtimeWorkSession = runtimeWorkSession;
-        this.exactEventKey = exactEvent != null
-                ? FrozenNode.fromResolvedNode(
-                        exactEvent.clone())
-                        .resolvedStructuralKey()
+        this.exactEvent = exactEvent != null
+                ? new RuntimeWorkSession.ExactInputLookup(
+                        FrozenNode.fromResolvedNode(exactEvent.clone()))
                 : null;
     }
 
@@ -133,13 +132,13 @@ public final class ExternalChannelFunctionContext {
      * Returns the exact identity proved when the event entered this function
      * pass.
      *
-     * <p>The lookup is deliberately representation-blind: it compares the
-     * resolved frozen structure with processor-carried exact capabilities and
-     * returns their asserted identity. It never calculates an identity from
-     * the resolved event cursor. This distinction is required when the cursor
-     * originated from an inline type or represents a member of a cyclic set,
-     * because hashing that cursor would establish a different ordinary
-     * content identity.</p>
+     * <p>The lookup returns the identity of a matching processor-carried exact
+     * capability. It compares the complete captured structure in the carried
+     * representation mode; an ordinary canonical Source view may be verified
+     * against an already admitted strict capability. A pure reference requires
+     * a matching carried reference representation. The returned identity is
+     * never derived from hashing a resolved inline-type or cyclic-member
+     * cursor, which could establish a different ordinary content identity.</p>
      *
      * @return unique admission-proved event BlueId, including a cyclic-member
      *         identity when applicable
@@ -147,7 +146,7 @@ public final class ExternalChannelFunctionContext {
      *         no longer active, missing, or ambiguous
      */
     public String exactEventBlueId() {
-        if (exactEventKey == null) {
+        if (exactEvent == null) {
             throw new IllegalStateException(
                     "External Channel exact event identity is available only "
                             + "during event evaluation");
@@ -157,26 +156,18 @@ public final class ExternalChannelFunctionContext {
             throw new IllegalStateException(
                     "External Channel exact event identity is no longer active");
         }
-        String matchedBlueId = null;
-        for (ExactBlueValue carried
-                : session.exactValuesSnapshot()) {
-            FrozenNode carriedValue = carried.frozenValue();
-            if (!exactEventKey.equals(
-                    carriedValue.resolvedStructuralKey())) {
-                continue;
-            }
-            if (matchedBlueId != null
-                    && !matchedBlueId.equals(carried.blueId())) {
-                throw new IllegalStateException(
-                        "External Channel exact event identity is ambiguous");
-            }
-            matchedBlueId = carried.blueId();
+        final ExactBlueValue matched;
+        try {
+            matched = session.carriedExactInput(exactEvent);
+        } catch (InvalidExecutionEvidenceException ambiguous) {
+            throw new IllegalStateException(
+                    "External Channel exact event identity is ambiguous", ambiguous);
         }
-        if (matchedBlueId == null) {
+        if (matched == null) {
             throw new IllegalStateException(
                     "External Channel exact event identity was not admitted");
         }
-        return matchedBlueId;
+        return matched.blueId();
     }
 
     /**
