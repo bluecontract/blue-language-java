@@ -137,7 +137,7 @@ final class ClosureEvidenceVerifier {
                             inputGraph,
                             componentGenerations(input),
                             documentBodies(asserted),
-                            asserted.occurrences()));
+                            asserted.occurrences(), asserted.rootedWitnesses()));
         } else {
             ManagedDocumentGraph assertedGraph = graph(asserted);
             Map<DocumentId, Long> expectedGenerations =
@@ -162,12 +162,7 @@ final class ClosureEvidenceVerifier {
 
     private static ManagedDocumentGraph graph(
             AffectedClosureSnapshot snapshot) {
-        ArrayList<DocumentId> documents = new ArrayList<DocumentId>();
-        for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
-            documents.add(document.documentId());
-        }
-        return ManagedDocumentGraph.fromBindings(
-                documents, snapshot.occurrences());
+        return snapshot.graph();
     }
 
     private static Map<DocumentId, Long> componentGenerations(

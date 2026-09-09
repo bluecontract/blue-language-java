@@ -1,0 +1,100 @@
+package blue.language.processor.closure;
+
+import blue.language.model.Node;
+import blue.language.model.NodeWireForm;
+import blue.language.processor.ExactEventIdentityEvidence;
+import blue.language.processor.registry.RuntimeBlueIds;
+import org.junit.jupiter.api.Test;
+import java.util.*;
+import static blue.language.processor.closure.CompositionCampaignFixture.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+/** A pending immutable source's return reference is not a calculating containing edge. */
+final class RootedHistoricalWitnessTest {
+    private static final DocumentId P = new DocumentId("P");
+    private static final DocumentId S = new DocumentId("S");
+
+    @Test void historicalReactionDoesNotRewriteTheImmutableSourceOrItsReturnReference() {
+        try (CompositionCampaignFixture fixture = new CompositionCampaignFixture(true)) {
+            Node source0 = initialized(document("source"));
+            source0.getContracts().properties("embedded", process("paths", "/peer"));
+            source0.getContracts().properties("fromPeer", embedded("/peer")).properties("react", handler("fromPeer"));
+            Node parent = document("parent").properties("child", new Node().blueId(id(source0)));
+            parent.getContracts().properties("embedded", process("paths", "/child"))
+                    .properties("fromChild", embedded("/child")).properties("react", handler("fromChild"));
+            parent = initialized(parent);
+            Node source1 = source0.clone().properties("count", new Node().value(1L))
+                    .properties("peer", new Node().blueId(id(parent)));
+            Node source2 = source1.clone().properties("count", new Node().value(2L));
+            ManagedOccurrenceBinding pending = ManagedOccurrenceBinding.derived(fixture.environment.managedBindingPolicyIdentity(),
+                    P, ScopeAddress.embedded("/child", 1L), S, id(source0), false, Long.valueOf(0L));
+            ManagedOccurrenceBinding reverse = fixture.binding(S, "/peer", P, parent, true);
+            Map<DocumentId, Node> bodies = new LinkedHashMap<>(); bodies.put(P, parent); bodies.put(S, source2);
+            AffectedClosureSnapshot raw = snapshot(bodies, Arrays.asList(pending, reverse), P);
+            List<ManagedDocumentSnapshot> initialized = new ArrayList<>();
+            for (ManagedDocumentSnapshot doc : raw.managedDocuments()) initialized.add(new ManagedDocumentSnapshot(doc.documentId(),
+                    doc.blueId(), doc.document(), true, false, doc.publicRoot(), doc.documentId().equals(S) ? 2L : 1L,
+                    doc.componentGeneration()));
+            AffectedClosureSnapshot entry = ClosureEvidenceFactory.affectedClosure(raw.graphGeneration(), initialized,
+                    raw.occurrences(), raw.components(), raw.publicRootDocumentIds());
+            String invocation = hash('e');
+            Node event = token(1);
+            ManagedRootEventOccurrence emitted = new ManagedRootEventOccurrence(0L, 0L, S,
+                    ClosureIdentityService.INSTANCE.eventOccurrenceIdentity(invocation, 0L, id(event)),
+                    ExactEventIdentityEvidence.verify(null, event, id(event), null), false);
+            ManagedDocumentTransitionReceipt receipt = ManagedDocumentTransitionReceipt.identified(invocation, 0L, S, hash('f'),
+                    id(source0), id(source1), Collections.singletonList(emitted), 5L);
+            ManagedRevisionCause cause = ClosureEvidenceFactory.managedRevisionCause(pending.occurrenceIdentity(), 0L, 1L, source1, receipt);
+            ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(entry, cause, Collections.<DirectLogicalDelivery>emptyList(),
+                    ClosureEvidenceFactory.executionPolicy(100_000L, Collections.<DocumentId, Long>emptyMap(), "rooted-witness"), fixture.environment);
+            RootedProcessingContext context = RootedProcessingContext.derive(entry, P, Collections.singletonMap(P, hash('c')));
+            input = input.withRootedContext(context, context.retainedDeliveryBasisIdentity(cause, pending, receipt.transitionReceiptIdentity()));
+            assertEquals(entry.closureIdentity(), input.snapshot().closureIdentity());
+            for (Node exact : Arrays.asList(source0, source1, source2, parent, event)) fixture.exact.put(id(exact), exact);
+            try (BlueClosureContracts contracts = new BlueClosureContracts(fixture.owner)) {
+                ClosureProcessResult result = contracts.processClosure(input).processResult();
+                assertTrue(result.commits(), diagnostic(result));
+                assertEquals(Collections.singletonList("parent:1"), fixture.reactions);
+                assertEquals(Collections.singletonList(P), result.rootedProjection().ownedDocumentIds());
+                ManagedDocumentSnapshot witness = result.rootedProjection().resultingSnapshot().managedDocument(S);
+                assertEquals(2L, witness.epoch());
+                assertEquals(id(source2), witness.blueId());
+                assertEquals(NodeWireForm.get(source2), NodeWireForm.get(witness.document()));
+                assertEquals(reverse.bindingIdentity(), result.occurrenceBindings().stream()
+                        .filter(row -> row.sourceDocumentId().equals(S)).findFirst().get().bindingIdentity());
+                assertTrue(result.managedTransitionReceipts().stream().noneMatch(value -> value.documentId().equals(S)));
+                AffectedClosureSnapshot output = result.rootedProjection().resultingSnapshot();
+                assertThrows(IllegalArgumentException.class, () -> new AffectedClosureSnapshot(output.closureIdentity(),
+                        output.graphGeneration(), output.managedDocuments(), output.occurrences(), output.occurrenceBindingSetIdentity(),
+                        output.components(), output.publicRootDocumentIds()), "A public flat-state constructor cannot assert witness authority");
+                Map<DocumentId, Node> changed = new LinkedHashMap<>();
+                for (ManagedDocumentSnapshot document : output.managedDocuments()) changed.put(document.documentId(), document.document());
+                changed.get(S).properties("count", new Node().value(99L));
+                assertThrows(IllegalArgumentException.class, () -> output.rootedWitnesses().requireUnchanged(changed, output.occurrences()));
+                List<ManagedOccurrenceBinding> missing = new ArrayList<>(output.occurrences());
+                missing.removeIf(row -> row.sourceDocumentId().equals(S));
+                assertThrows(IllegalArgumentException.class, () -> output.rootedWitnesses().requireUnchanged(bodies, missing));
+                List<ManagedOccurrenceBinding> deactivated = new ArrayList<>();
+                for (ManagedOccurrenceBinding row : output.occurrences()) deactivated.add(row.sourceDocumentId().equals(S)
+                        ? ManagedOccurrenceBinding.derived(row.bindingPolicyIdentity(), S, row.sourceAddress(), P,
+                            row.expectedTargetBlueId(), false, null) : row);
+                assertThrows(IllegalArgumentException.class, () -> output.rootedWitnesses().requireUnchanged(bodies, deactivated));
+                ClosureInvocationInput tight = ClosureEvidenceFactory.processClosure(input.snapshot(), cause,
+                        Collections.<DirectLogicalDelivery>emptyList(), ClosureEvidenceFactory.executionPolicy(result.totalGas() - 1,
+                                Collections.<DocumentId, Long>emptyMap(), "rooted-witness"), fixture.environment)
+                        .withRootedContext(context, context.retainedDeliveryBasisIdentity(cause, pending, receipt.transitionReceiptIdentity()));
+                ClosureProcessResult failed = contracts.processClosure(tight).processResult();
+                rollback(tight, failed);
+                assertEquals(blue.language.processor.ProcessorStatus.GAS_LIMIT_EXCEEDED, failed.status());
+                assertNotNull(failed.rejectedCharge());
+                assertNull(failed.rootedProjection());
+            }
+        }
+    }
+
+    private static Node initialized(Node source) {
+        String authored = id(source);
+        return source.clone().contracts(source.getContracts().clone().properties("initialized",
+                typed(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER).properties("document", new Node().blueId(authored))));
+    }
+}

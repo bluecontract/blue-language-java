@@ -564,7 +564,8 @@ public final class ClosureProcessResult {
         validateInputIdentity(input);
         ClosureEvidenceVerifier.verifySnapshot(input);
         validateCanonicalEvidence();
-        AffectedClosureSnapshot output = validateResultSnapshot();
+        AffectedClosureSnapshot output = validateResultSnapshot(reusableFinalization == null
+                ? input.rootedWitnesses() : reusableFinalization.rootedWitnesses());
         validateManagedTransitionReceipts();
         validateStatusAndRollback(input);
         validateRejectedCharge();
@@ -1194,7 +1195,7 @@ public final class ClosureProcessResult {
         return result;
     }
 
-    private AffectedClosureSnapshot validateResultSnapshot() {
+    private AffectedClosureSnapshot validateResultSnapshot(RootedWitnessFrame.State rootedWitnesses) {
         Map<String, ComponentSnapshot> components =
                 new HashMap<String, ComponentSnapshot>();
         Set<DocumentId> covered = new HashSet<DocumentId>();
@@ -1256,7 +1257,7 @@ public final class ClosureProcessResult {
                 occurrenceBindings,
                 occurrenceBindingSetIdentity,
                 resultingComponents,
-                publicRoots);
+                publicRoots, rootedWitnesses);
         String computedOutput = ClosureIdentityService.INSTANCE
                 .affectedClosureIdentity(output);
         if (!outputClosureIdentity.equals(computedOutput)) {

@@ -138,7 +138,7 @@ public final class ComponentFinalizationKernel {
                 finalizedGraph,
                 generations,
                 componentEvidence,
-                documentEvidence);
+                documentEvidence, selected.rootedWitnesses());
     }
 
     private Map<DocumentId, Node> workingBodies(
@@ -398,7 +398,7 @@ public final class ComponentFinalizationKernel {
         ArrayList<ManagedOccurrenceBinding> rebound =
                 new ArrayList<ManagedOccurrenceBinding>();
         for (ManagedOccurrenceBinding binding : graph.bindings()) {
-            if (!binding.active()) {
+            if (!graph.calculating(binding)) {
                 rebound.add(binding);
                 continue;
             }
@@ -423,7 +423,7 @@ public final class ComponentFinalizationKernel {
                     null));
         }
         return ManagedDocumentGraph.fromBindings(
-                graph.documentIds(), rebound);
+                graph.documentIds(), rebound, graph.immutableSources());
     }
 
     private static void validateFinalizedReferences(

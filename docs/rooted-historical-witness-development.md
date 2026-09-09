@@ -1,0 +1,11 @@
+# Rooted historical witness implementation — development checkpoint
+
+This implements the internal witness/calculation distinction in RCP-SCOPE-04 and RCP-OWN-01/02. It is an experimental integration checkpoint, not full RUN-007 acceptance or release readiness.
+
+Rooted input context derives immutable sources from initialized members outside the entry owners’ active forward reach, excluding authenticated births. The exact original verified snapshot and complete source binding inventory remain attached to each witness. Reordering components for the calculation graph preserves the existing closed input identity (component-state operands are already canonicalized by identity). No constructor domain, wire operand, tariff weight, cause epoch rule or public writable-member list changes.
+
+Finalization preserves the original bodies, exact identities, epochs, lifecycle state and complete binding rows of immutable sources. Their return references into calculating owners remain references to their original exact states. They are excluded from event recipient selection before work admission. Actual live joins release the corresponding witness roles; later splits cannot freeze tentative work again. The legacy public flat-state constructors remain strict and cannot assert witness provenance.
+
+The real processor fixture includes a source return-path listener and a consumer that emits another event. Only the consumer reacts; source bytes, binding identities and source receipts remain unchanged. Mutation negatives cover changed witness bytes, missing/deactivated source rows, and reconstructing a role-bearing result through the unqualified public flat-state constructor. Tight shared-gas failure retains complete rollback. Forty-three adjacent rooted/receipt/cyclic-proof tests and strict Javadoc passed before the final focused five-test gas check, which also passed with strict Javadoc.
+
+Still required: the actual SDK/MyOS saved-A5 through A10 sequence, role-preserving adapter capture and publication, historical owning proofs that alias a currently calculating lineage, live-join/current-head fences, restart, and all remaining production obligations. This checkpoint does not establish those results. The previously verified development application uses the earlier Language build and remains unchanged.

@@ -63,8 +63,10 @@ public final class RootedPublicationProjection {
                     document.epoch(), document.componentGeneration()));
             if (document.publicRoot()) publicRoots.add(document.documentId());
         }
-        this.resultingSnapshot = ClosureEvidenceFactory.affectedClosure(result.graphGeneration(), calculated,
-                result.occurrenceBindings(), result.resultingComponents(), publicRoots);
+        this.resultingSnapshot = new AffectedClosureSnapshot(result.outputClosureIdentity(), result.graphGeneration(), calculated,
+                result.occurrenceBindings(), result.occurrenceBindingSetIdentity(), result.resultingComponents(), publicRoots,
+                ownership.boundaries.get(ownership.boundaries.size() - 1).rootedWitnesses());
+        ClosureEvidenceVerifier.verifySnapshot(resultingSnapshot);
         if (!resultingSnapshot.closureIdentity().equals(result.outputClosureIdentity())) {
             throw new IllegalArgumentException("Rooted projection differs from the complete computed result");
         }

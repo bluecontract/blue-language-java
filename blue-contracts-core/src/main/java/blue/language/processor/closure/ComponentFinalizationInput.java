@@ -24,6 +24,7 @@ public final class ComponentFinalizationInput {
     private final Map<DocumentId, Long> inputComponentGenerations;
     private final ManagedDocumentGraph resultingGraph;
     private final Map<DocumentId, Node> latestLocalBodies;
+    private final RootedWitnessFrame.State rootedWitnesses;
 
     /**
      * Creates a complete finalization input and derives its resulting graph.
@@ -38,15 +39,26 @@ public final class ComponentFinalizationInput {
             Map<DocumentId, Long> inputComponentGenerations,
             Map<DocumentId, Node> latestLocalBodies,
             Collection<ManagedOccurrenceBinding> resultingBindings) {
+        this(inputGraph, inputComponentGenerations, latestLocalBodies, resultingBindings, null);
+    }
+
+    ComponentFinalizationInput(ManagedDocumentGraph inputGraph, Map<DocumentId, Long> inputComponentGenerations,
+            Map<DocumentId, Node> latestLocalBodies, Collection<ManagedOccurrenceBinding> resultingBindings,
+            RootedWitnessFrame.State rootedWitnesses) {
+        this.rootedWitnesses = rootedWitnesses;
         this.inputGraph = Objects.requireNonNull(inputGraph, "inputGraph");
         this.inputComponentGenerations = copyGenerations(
                 this.inputGraph, inputComponentGenerations);
         this.latestLocalBodies = copyBodies(latestLocalBodies);
+        if (rootedWitnesses != null) rootedWitnesses.requireUnchanged(this.latestLocalBodies, resultingBindings);
         this.resultingGraph = ManagedDocumentGraph.fromBindings(
                 this.latestLocalBodies.keySet(),
                 new ArrayList<ManagedOccurrenceBinding>(Objects.requireNonNull(
-                        resultingBindings, "resultingBindings")));
+                        resultingBindings, "resultingBindings")),
+                rootedWitnesses == null ? Collections.<DocumentId>emptySet() : rootedWitnesses.sources());
     }
+
+    RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
 
     /**
      * Returns the authoritative predecessor graph.

@@ -26,16 +26,19 @@ public final class ManagedDocumentGraph {
     private final List<ManagedOccurrenceBinding> bindings;
     private final List<ManagedOccurrenceBinding> activeBindings;
     private final Map<DocumentId, List<DocumentId>> adjacency;
+    private final Set<DocumentId> immutableSources;
 
     private ManagedDocumentGraph(
             List<DocumentId> documentIds,
             List<ManagedOccurrenceBinding> bindings,
             List<ManagedOccurrenceBinding> activeBindings,
-            Map<DocumentId, List<DocumentId>> adjacency) {
+            Map<DocumentId, List<DocumentId>> adjacency,
+            Set<DocumentId> immutableSources) {
         this.documentIds = documentIds;
         this.bindings = bindings;
         this.activeBindings = activeBindings;
         this.adjacency = adjacency;
+        this.immutableSources = Collections.unmodifiableSet(new HashSet<>(immutableSources));
     }
 
     /**
@@ -49,6 +52,11 @@ public final class ManagedDocumentGraph {
     public static ManagedDocumentGraph fromBindings(
             Collection<DocumentId> documentIds,
             Collection<ManagedOccurrenceBinding> bindings) {
+        return fromBindings(documentIds, bindings, Collections.<DocumentId>emptySet());
+    }
+
+    static ManagedDocumentGraph fromBindings(Collection<DocumentId> documentIds,
+            Collection<ManagedOccurrenceBinding> bindings, Set<DocumentId> immutableSources) {
         ArrayList<DocumentId> canonicalDocuments = copyDocuments(documentIds);
         Set<DocumentId> membership = new HashSet<DocumentId>(
                 canonicalDocuments);
@@ -62,7 +70,8 @@ public final class ManagedDocumentGraph {
             mutableAdjacency.put(documentId, new TreeSet<DocumentId>());
         }
         for (ManagedOccurrenceBinding binding : canonicalBindings) {
-            if (binding.active()) {
+            if (binding.active() && (!immutableSources.contains(binding.sourceDocumentId())
+                    || immutableSources.contains(binding.targetDocumentId()))) {
                 active.add(binding);
                 mutableAdjacency.get(binding.sourceDocumentId()).add(
                         binding.targetDocumentId());
@@ -79,7 +88,14 @@ public final class ManagedDocumentGraph {
                 Collections.unmodifiableList(canonicalDocuments),
                 Collections.unmodifiableList(canonicalBindings),
                 Collections.unmodifiableList(active),
-                Collections.unmodifiableMap(frozenAdjacency));
+                Collections.unmodifiableMap(frozenAdjacency), immutableSources);
+    }
+
+    Set<DocumentId> immutableSources() { return immutableSources; }
+
+    boolean calculating(ManagedOccurrenceBinding binding) {
+        return binding.active() && (!immutableSources.contains(binding.sourceDocumentId())
+                || immutableSources.contains(binding.targetDocumentId()));
     }
 
     /**

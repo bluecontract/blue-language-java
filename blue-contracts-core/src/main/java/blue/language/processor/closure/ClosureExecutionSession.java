@@ -170,6 +170,8 @@ final class ClosureExecutionSession
     private boolean managedRevisionReceiptReconciled;
     private boolean closed;
     private final RootedOwnershipTracker rootedOwnership;
+    private final RootedWitnessFrame rootedWitnessFrame;
+    private RootedWitnessFrame.State currentWitnesses;
 
     ClosureExecutionSession(
             DocumentProcessor owner,
@@ -181,6 +183,7 @@ final class ClosureExecutionSession
         this.input = Objects.requireNonNull(input, "input");
         this.rootedOwnership = input.rootedBinding() == null ? null
                 : new RootedOwnershipTracker(input.rootedBinding(), input.snapshot());
+        this.rootedWitnessFrame = input.rootedBinding() == null ? null : new RootedWitnessFrame(input);
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
@@ -228,8 +231,9 @@ final class ClosureExecutionSession
                 initializedDocuments.add(document.documentId());
             }
         }
-        this.inputGraph = ManagedDocumentGraph.fromBindings(
-                documentIds, currentBindings);
+        this.currentWitnesses = rootedWitnessFrame == null ? null : rootedWitnessFrame.at(currentBindings, documentIds);
+        this.inputGraph = ManagedDocumentGraph.fromBindings(documentIds, currentBindings,
+                currentWitnesses == null ? Collections.<DocumentId>emptySet() : currentWitnesses.sources());
         this.existingBlueIds = finalizationGas.existingIdentities(
                 latestBodies);
         this.stepProcessor = new ManagedDocumentStepProcessor(
@@ -2443,6 +2447,7 @@ final class ClosureExecutionSession
                 reconcileProcessEmbeddedSurfaces(owner);
         List<ManagedOccurrenceBinding> reclassified =
                 surfaceReclassification.bindings;
+        currentWitnesses = rootedWitnessFrame == null ? null : rootedWitnessFrame.at(reclassified, inputGraph.documentIds());
         ManagedDocumentGraph before = ManagedDocumentGraph.fromBindings(
                 inputGraph.documentIds(), currentBindings);
         ManagedDocumentGraph after = ManagedDocumentGraph.fromBindings(
@@ -2474,7 +2479,8 @@ final class ClosureExecutionSession
                     Objects.requireNonNull(owner, "owner"));
         }
         graphGeneration = ClosureGraphGenerationTransition.assign(
-                input.snapshot().graphGeneration(), inputGraph, after);
+                input.snapshot().graphGeneration(), ManagedDocumentGraph.fromBindings(
+                        inputGraph.documentIds(), input.snapshot().occurrences()), after);
         Map<DocumentId, Long> generations =
                 ComponentGenerationTransition.assign(
                         inputGraph,
@@ -2490,7 +2496,7 @@ final class ClosureExecutionSession
                             inputGraph,
                             inputComponentGenerations,
                             latestBodies,
-                            reclassified));
+                            reclassified, currentWitnesses));
         } finally {
             recorder.endComponentFinalizationProof(finalizationStarted);
         }
@@ -3004,6 +3010,7 @@ final class ClosureExecutionSession
                         ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
                         processEmbeddedRetirementFences);
         for (DocumentId source : sources) {
+            if (currentWitnesses != null && currentWitnesses.sources().contains(source)) continue;
             ProcessEmbeddedSurfaceReconciler.Reconciliation result =
                     processEmbeddedReconciler
                             .reconcileProjectedAfterDemandAggregation(
@@ -3355,12 +3362,12 @@ final class ClosureExecutionSession
             return finalized;
         }
         ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
-                finalized.finalizedGraph().documentIds(), rebound);
+                finalized.finalizedGraph().documentIds(), rebound, finalized.finalizedGraph().immutableSources());
         return new ComponentFinalizationResult(
                 graph,
                 finalized.componentGenerations(),
                 finalized.components(),
-                finalized.documents());
+                finalized.documents(), finalized.rootedWitnesses());
     }
 
     private ManagedOccurrenceBinding reconcileManagedRevision(
@@ -3453,7 +3460,7 @@ final class ClosureExecutionSession
                 currentBindings,
                 bindingSetIdentity,
                 components,
-                input.snapshot().publicRootDocumentIds());
+                input.snapshot().publicRootDocumentIds(), currentWitnesses);
         String closureIdentity = IDENTITIES.affectedClosureIdentity(
                 provisional);
         return new AffectedClosureSnapshot(
@@ -3463,7 +3470,7 @@ final class ClosureExecutionSession
                 currentBindings,
                 bindingSetIdentity,
                 components,
-                input.snapshot().publicRootDocumentIds());
+                input.snapshot().publicRootDocumentIds(), currentWitnesses);
     }
 
     private void recordCyclicFinalization(
@@ -3669,9 +3676,18 @@ final class ClosureExecutionSession
 
     private List<FrozenContainingEventTarget> activeContainingEventTargets(
             DocumentId targetDocumentId) {
+        List<ManagedOccurrenceBinding> calculating = currentBindings;
+        if (currentWitnesses != null && !currentWitnesses.sources().isEmpty()) {
+            calculating = new ArrayList<ManagedOccurrenceBinding>();
+            for (ManagedOccurrenceBinding binding : currentBindings) {
+                // Preserve the authentic row in the snapshot; immutable proof
+                // sources are not receiving contexts for this calculation.
+                if (!currentWitnesses.sources().contains(binding.sourceDocumentId())) calculating.add(binding);
+            }
+        }
         return ContainingEventTargetPlanner.freeze(
                 targetDocumentId,
-                currentBindings,
+                calculating,
                 ClosureAdmissionPortableLimits.limit(
                         input,
                         GasScheduleConstants.PortableLimit

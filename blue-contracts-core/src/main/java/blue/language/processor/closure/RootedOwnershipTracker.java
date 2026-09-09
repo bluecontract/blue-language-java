@@ -22,12 +22,7 @@ final class RootedOwnershipTracker {
 
     void finalized(AffectedClosureSnapshot snapshot) {
         // The session supplies the verified finalizer output, not observer diagnostics.
-        List<DocumentId> documents = new ArrayList<>();
-        for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
-            documents.add(document.documentId());
-        }
-        List<List<DocumentId>> components = new SccPartitioner().partition(
-                ManagedDocumentGraph.fromBindings(documents, snapshot.occurrences()));
+        List<List<DocumentId>> components = new SccPartitioner().partition(snapshot.graph());
         boolean changed;
         do {
             changed = false;

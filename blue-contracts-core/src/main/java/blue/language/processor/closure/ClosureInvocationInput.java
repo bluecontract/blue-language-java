@@ -308,7 +308,7 @@ public final class ClosureInvocationInput {
     private ClosureInvocationInput(ClosureInvocationInput original, RootedInvocationBinding binding) {
         operation = original.operation;
         invocationIdentity = original.invocationIdentity;
-        snapshot = original.snapshot;
+        snapshot = RootedWitnessFrame.bind(original.snapshot, binding);
         cause = original.cause;
         admissionCandidate = original.admissionCandidate;
         admissionCandidateIdentity = original.admissionCandidateIdentity;
