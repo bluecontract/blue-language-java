@@ -632,4 +632,72 @@ class LaggingReadinessTests(unittest.TestCase):
         self.value('source1')['readyThrough']['components'][2]='wrong'
         with self.assertRaisesRegex(ValueError,'READY_SOURCE_FRONTIER'):self.check()
 
+class IncomingFanoutTests(unittest.TestCase):
+    """Synthetic structural negatives; actual 5k execution is a separate gate."""
+    def record(self, count):
+        names = [f'P{i:04d}' for i in range(count)]
+        ids = {'S':'source', **{name:'initial-'+name for name in names}}
+        entry = {'actualEntry':{'blueId':'entry'}, 'entryBlueId':'entry'}
+        rows = [{'request':{'op':'start','alias':'S'}, 'response':{'initializedBlueId':'source-zero'}}]
+        before = {'sourceRecords':{'S':{'receipts':['zero']}}, 'journal':[], 'observers':[],
+                  'sourceSelectedSnapshot':{'managedDocuments':[{'documentId':{'value':'source'}}],
+                    'occurrences':[], 'components':[{'orderedMemberDocumentIds':[{'value':'source'}]}]}}
+        for name in names:
+            edge = {'active':True, 'sourcePath':'/child', 'sourceDocumentId':{'value':ids[name]},
+                    'targetDocumentId':{'value':'source'}, 'expectedTargetBlueId':'source-zero'}
+            receipt = {'receiptIdentity':'receipt-'+name}
+            old = {'alias':name, 'documentId':ids[name], 'epoch':0, 'blueId':'zero-'+name,
+                   'exactDocument':{'child':{'blueId':'source-zero'}}, 'historyBasis':{'identity':'basis-'+name},
+                   'receiptIdentities':[receipt['receiptIdentity']], 'readyThrough':None,
+                   'occurrences':[edge], 'nextLiveInput':None,
+                   'readiness':{'ready':True, 'committedBlueId':'zero-'+name, 'committedEpoch':0,
+                                'readyBlueId':'zero-'+name, 'readyEpoch':0}}
+            before['observers'].append(old)
+            rows.append({'request':{'op':'start', 'alias':name, 'admission':'FULL_HISTORY',
+                'source':'examples/iteration2/parent.yaml', 'bindings':{'/name':'RCP2 Fanout '+name,
+                '/contracts/owner/timeline/timelineId':'rcp2/fanout/'+name,
+                '/child':{'$capture':'S.initializedBlueId'}}}, 'response':{'documentId':ids[name],
+                'initialBlueId':ids[name], 'initializedBlueId':old['blueId'],
+                'initialExact':{'child':{'blueId':'source-zero'}}, 'epoch0Receipt':receipt,
+                'retained':{**old, 'receipts':[receipt]}}})
+        after = copy.deepcopy(before)
+        after['journal'] = [entry['actualEntry']]
+        after['sourceRecords']['S']['receipts'].append('one')
+        for observer in after['observers']:
+            observer['nextLiveInput']='entry'
+            observer['readiness']['ready']=False
+        for op in ('observeFanout','append','processNext','observeFanout','restart','observeFanout'):
+            rows.append({'request':{'op':op}, 'response':entry if op=='append' else {}})
+        for row in rows:row['completed']=True
+        return {'documentIds':ids, 'transcript':rows,
+                'phaseRecords':{'observersBefore':before,'observersAfter':after,'observersRestart':copy.deepcopy(after)},
+                'output':{'before':{'S':{}},'after':{'S':{}},'selectedBefore':{'S':{}},'selectedAfter':{'S':{}},
+                          'sourceBefore':{},'sourceAfter':{},'computedReceipts':[{'documentId':{'value':'source'}}]},
+                'restart':{'before':after['sourceRecords'],'after':copy.deepcopy(after['sourceRecords']),
+                           'beforeCommandCount':1,'afterCommandCount':1}}
+    def check(self, record, variant='5000-observers'):
+        rule=T.fixture(32)['expected']['contract']['incomingFanout']
+        P.check_incoming_fanout(record,rule,variant,P.require,P.exact_equal)
+    def test_both_complete_inventories_and_empty_external_sources_pass(self):
+        self.check(self.record(0),'standalone')
+        self.check(self.record(5000))
+    def test_unrelated_external_source_cannot_be_hidden(self):
+        record=self.record(5000);record['output']['sourceBefore']={'other':{}}
+        with self.assertRaisesRegex(ValueError,'FANOUT_COMPACT_SCOPE'):self.check(record)
+    def test_last_observer_inventory_receipt_state_and_pending_work_reject(self):
+        for field,value,reason in [('epoch',1,'OBSERVER_ADVANCED'),('exactDocument',{},'START_BINDING'),
+                                  ('receiptIdentities',[],'INITIAL_RECEIPT'),('nextLiveInput','bad','REQUIRED_WORK_LOST')]:
+            record=self.record(5000);record['phaseRecords']['observersBefore']['observers'][-1][field]=value
+            with self.subTest(field=field),self.assertRaisesRegex(ValueError,reason):self.check(record)
+    def test_missing_observer_is_not_smaller_successful_workload(self):
+        record=self.record(5000);record['phaseRecords']['observersBefore']['observers'].pop()
+        with self.assertRaisesRegex(ValueError,'OBSERVER_INVENTORY'):self.check(record)
+    def test_incoming_observer_cannot_be_selected_source_member(self):
+        record=self.record(5000)
+        record['phaseRecords']['observersBefore']['sourceSelectedSnapshot']['managedDocuments'].append({'documentId':{'value':'initial-P4999'}})
+        with self.assertRaisesRegex(ValueError,'SOURCE_MEMBERSHIP'):self.check(record)
+    def test_source_history_prefix_cannot_be_rewritten(self):
+        record=self.record(5000);record['phaseRecords']['observersBefore']['sourceRecords']['S']['receipts'][0]='forged'
+        with self.assertRaisesRegex(ValueError,'SOURCE_HISTORY_PREFIX'):self.check(record)
+
 if __name__=='__main__':unittest.main(verbosity=2)

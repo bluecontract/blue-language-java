@@ -47,7 +47,6 @@
       "afterEquals": {
         "S.counter": 1
       },
-      "preserveSource": true,
       "verifyIdentityEnvelopes": true,
       "requiredEvents": 1,
       "eventAnchors": [
