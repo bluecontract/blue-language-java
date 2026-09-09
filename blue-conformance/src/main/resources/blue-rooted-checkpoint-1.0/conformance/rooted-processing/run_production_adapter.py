@@ -7,6 +7,9 @@ honestly executed arbitrary code: adapters and semantic extractors remain review
 trusted test components. Recipe-only cases cannot receive PASS from this runner.
 """
 from __future__ import annotations
+from check_host_timestamp import check_host_timestamp
+from check_incoming_fanout import check_incoming_fanout
+from verify_packaged_application import verify as verify_packaged_application
 import argparse,copy,hashlib,json,re,secrets,subprocess,sys,time,zipfile
 from pathlib import Path
 HEX=re.compile(r'[0-9a-f]{64}\Z');COMMIT=re.compile(r'[0-9a-f]{40}\Z')
@@ -587,6 +590,202 @@ def check_created_child_prebirth(record, rule, variant, weights):
                 'BIRTH_QUIESCENCE_MUTATION')
 
 
+def check_birth_rollback(record, rule, variant, calibration):
+    """Birth-specific checks; the existing exact G / G-1 trace checker still runs."""
+    owner, child, unrelated = (rule[k] for k in ('owner', 'child', 'unrelatedSource'))
+    ids = record['documentIds']; oid, cid, uid = (ids[k] for k in (owner, child, unrelated))
+    require(len({oid, cid, uid}) == 3, 'BIRTH_ROLLBACK_LINEAGES')
+    o = record['output']; co = calibration['output']; p = co['birthPreparation']
+    observations = o['birthObservations']
+    before, after, restarted = (observations[rule[k]] for k in ('before', 'after', 'afterRestart'))
+    success = variant.rsplit('-', 1)[1] != 'below'
+
+    def scalar(v):
+        return v.get('value', v) if isinstance(v, dict) else v
+    def counter(node):
+        require(isinstance(node, dict) and 'counter' in node, 'BIRTH_ROLLBACK_COUNTER_MISSING')
+        value = scalar(node['counter'])
+        require(integer(value), 'BIRTH_ROLLBACK_COUNTER_KIND')
+        return value
+    def documents(input_value):
+        rows = input_value['snapshot']['managedDocuments']
+        values = {r['documentId']['value']: r for r in rows}
+        require(len(values) == len(rows), 'BIRTH_ROLLBACK_DUPLICATE_INPUT_DOCUMENT')
+        return values
+    def one(op, capture):
+        rows = [r for r in record['transcript'] if r['request'].get('op') == op
+                and r['request'].get('capture') == capture and r.get('completed') is True]
+        require(len(rows) == 1, 'BIRTH_ROLLBACK_STEP:' + capture)
+        return rows[0]
+    def initialization(evidence, input_identity):
+        require(evidence['invocationIdentity'] == input_identity, 'BIRTH_ROLLBACK_EVIDENCE_INPUT')
+        work = [w for w in evidence['workTrace'] if w['kind'] == 'INITIALIZATION'
+                and w['targetDocumentId']['value'] == cid]
+        require(len(work) == 1, 'BIRTH_ROLLBACK_INITIALIZATION_WORK_COUNT')
+        steps = [s for s in evidence['documentStepTrace'] if s['workOrdinal'] == work[0]['ordinal']]
+        require(len(steps) == 1 and steps[0]['targetDocumentId']['value'] == cid
+                and steps[0]['executionRootDocumentId']['value'] == cid
+                and steps[0]['scopePath'] == '/' and steps[0]['executionMode'] == 'ISOLATED_DOCUMENT'
+                and steps[0]['ambientContainingDocumentIds'] == [], 'BIRTH_ROLLBACK_INITIALIZATION_STEP')
+
+    # The typed-demand resolver supplies input bytes, never the gas oracle.
+    require(p['preparationPath'] == 'ACTUAL_SDK_DECLARATION_TYPED_DEMAND_EXPANSION',
+            'BIRTH_ROLLBACK_PREPARATION_PATH')
+    require(p['declaredPlanBefore'] == p['declaredPlanAfter'], 'BIRTH_ROLLBACK_PLAN_CHANGED')
+    require(p['retainedBefore'] == p['retainedAfter'] == before['retainedRecords']
+            and p['journalBefore'] == p['journalAfter'] == before['journal'], 'BIRTH_ROLLBACK_PREPARATION_PUBLISHED')
+    require(child not in p['retainedBefore'] and set(p['children']) == {child}, 'BIRTH_ROLLBACK_PRECREATED_CHILD')
+    original, expanded, reference = p['originalInput'], p['expandedInput'], co['referenceInput']
+    require(expanded == reference, 'BIRTH_ROLLBACK_REFERENCE_INPUT_SUBSTITUTED')
+    for key in ('cause', 'directDeliveries', 'directDeliverySnapshotIdentity', 'executionPolicy', 'environment'):
+        require(original[key] == expanded[key], 'BIRTH_ROLLBACK_ORIGINAL_INPUT_CHANGED:' + key)
+    original_docs, expanded_docs = documents(original), documents(expanded)
+    require(set(original_docs) == {oid} and set(expanded_docs) == {oid, cid}, 'BIRTH_ROLLBACK_INPUT_INVENTORY')
+    require(original_docs[oid] == expanded_docs[oid], 'BIRTH_ROLLBACK_OWNER_REWRITTEN_DURING_PREPARATION')
+    draft = p['children'][child]; child_input = expanded_docs[cid]
+    require(draft['documentId'] == draft['initialBlueId'] == cid
+            and draft['authoredExact'] == before['initialExact'] == child_input['document']
+            and draft['expandedSnapshot'] == child_input and child_input['blueId'] == cid
+            and child_input['initialized'] is False and child_input['terminated'] is False
+            and child_input['epoch'] == 0, 'BIRTH_ROLLBACK_REFERENCE_NOT_AUTHORED_DRAFT')
+    require(counter(child_input['document']) == rule['expectedCounter'], 'BIRTH_ROLLBACK_DRAFT_COUNTER')
+    prospective = p['prospectiveOccurrences']
+    require(len(prospective) == 1 and prospective[0] in expanded['snapshot']['occurrences']
+            and prospective[0]['active'] is False and prospective[0]['sourceDocumentId']['value'] == oid
+            and prospective[0]['targetDocumentId']['value'] == cid and prospective[0]['sourcePath'] == '/child'
+            and prospective[0]['expectedTargetBlueId'] == cid, 'BIRTH_ROLLBACK_PROSPECTIVE_EDGE')
+    initialization(co['referenceImplementationEvidence'], reference['invocationIdentity'])
+    reference_child = [r for r in co['referenceResultingDocuments'] if r['documentId']['value'] == cid]
+    require(len(reference_child) == 1 and reference_child[0]['initialized'] is True
+            and counter(reference_child[0]['document']) == rule['expectedCounter'], 'BIRTH_ROLLBACK_REFERENCE_INITIALIZATION')
+
+    # Independently match the actual expanded input; only its metering policy
+    # and derived invocation identity differ for G-1 / G / G+1 invocations.
+    actual = o['birthActualInput']
+    for key in ('operation', 'cause', 'directDeliveries', 'directDeliverySnapshotIdentity', 'environment', 'snapshot'):
+        require(actual[key] == reference[key], 'BIRTH_ROLLBACK_ACTUAL_INPUT_CHANGED:' + key)
+    entry_input = o['birthEntryInput']
+    for key in ('operation', 'snapshot', 'cause', 'directDeliveries', 'directDeliverySnapshotIdentity', 'environment'):
+        require(entry_input[key] == original[key], 'BIRTH_ROLLBACK_ENTRY_INPUT_CHANGED:' + key)
+    require(entry_input['executionPolicy'] == actual['executionPolicy']
+            and entry_input['executionPolicy']['sharedLimit'] == o['budget'], 'BIRTH_ROLLBACK_ENTRY_POLICY_MISMATCH')
+    if success:
+        require(o['identityEvidence']['baseInvocationIdentity'] == entry_input['invocationIdentity'],
+                'BIRTH_ROLLBACK_ROOTED_IDENTITY_NOT_ENTRY_INPUT')
+    initialization(o['implementationEvidence'], actual['invocationIdentity'])
+    require(o['implementationEvidence']['inputInvocationIdentity'] == actual['invocationIdentity'],
+            'BIRTH_ROLLBACK_ACTUAL_EVIDENCE_BINDING')
+
+    # These are the same original IDs supplied through the genuine public SDK.
+    draft_rows = [r for r in record['transcript'] if r['request'].get('op') == 'draft'
+                  and r['request'].get('alias') == child and r.get('completed') is True]
+    require(len(draft_rows) == 1 and draft_rows[0]['response']['published'] is False
+            and draft_rows[0]['response']['documentId'] == cid
+            and draft_rows[0]['response']['initialBlueId'] == cid
+            and draft_rows[0]['response']['exactInitial'] == before['initialExact'], 'BIRTH_ROLLBACK_DRAFT_SUBSTITUTION')
+    birth_row = one('submitManaged', rule['birthEntryCapture']); submitted = birth_row['response']
+    entry = submitted['actualEntry']; birth_time = int(rule['expectedBirthTimestampUs'])
+    providers = co['referenceProviderInputs']
+    require(len(providers) == 1, 'BIRTH_ROLLBACK_REFERENCE_PROVIDER_INVENTORY')
+    provider = providers[0]
+    require(provider['purpose'] == 'ORIGINAL_SUBMITTED_REQUEST'
+            and provider['inputEventBlueId'] == entry['blueId']
+            and provider['blueId'] == original['cause']['event']['message']['request']['blueId']
+            and entry['exact']['message']['request'] == {'blueId': provider['blueId']}
+            and provider['exact'] == entry['request'] == {'child': {'blueId': cid}}
+            and provider['cyclicProof'] is None, 'BIRTH_ROLLBACK_REFERENCE_PROVIDER_NOT_ORIGINAL_REQUEST')
+    require(birth_row['request']['root'] == owner and birth_row['request']['draft'] == child
+            and birth_row['request']['activation'] == 'FROM_NOW'
+            and birth_row['request']['expectedPath'] == '/child'
+            and birth_row['request']['requestField'] == 'child'
+            and entry['operation'] == 'attach' and entry['channel'] == 'owner'
+            and entry['timestampMicros'] == birth_time and submitted['draftDocumentId'] == cid
+            and submitted['draftInitialBlueId'] == cid and submitted['targetDocumentId'] == oid,
+            'BIRTH_ROLLBACK_MANAGED_SUBMISSION')
+    require(before['published'] is False and child not in before['retainedRecords'], 'BIRTH_ROLLBACK_CHILD_ALREADY_PUBLISHED')
+    require(before['retainedRecords'] == o['retainedBefore'] and after['retainedRecords'] == o['retainedAfter'],
+            'BIRTH_ROLLBACK_RETAINED_CAPTURE_MISMATCH')
+    require(before['journal'] == after['journal'] == restarted['journal'], 'BIRTH_ROLLBACK_JOURNAL_MUTATED')
+    require(after == restarted, 'BIRTH_ROLLBACK_RESTART_EVIDENCE')
+    for observed in (before, after, restarted):
+        require(observed['documentId'] == observed['initialBlueId'] == cid
+                and observed['initialExact'] == before['initialExact'], 'BIRTH_ROLLBACK_SAVED_INITIAL_CHANGED')
+        old = observed['retainedRecords'][unrelated]
+        require(old['documentId'] == uid and old['epoch'] == rule['requiredSourceEpoch']
+                and len(old['receipts']) == rule['requiredSourceEpoch'] + 1
+                and old == before['retainedRecords'][unrelated], 'BIRTH_ROLLBACK_UNRELATED_SOURCE_CHANGED')
+    require(o['sourceBefore'][unrelated] == o['sourceAfter'][unrelated] == before['retainedRecords'][unrelated],
+            'BIRTH_ROLLBACK_OLD_SOURCE_REEMISSION')
+    processed = [r for r in record['transcript'] if r['request'].get('op') == 'processNext']
+    require(len(processed) == 2 and [r['request']['root'] for r in processed] == [unrelated, owner]
+            and all(r.get('completed') is True for r in processed), 'BIRTH_ROLLBACK_HIDDEN_PROCESSING')
+    quiescent = [r for r in record['transcript'] if r['request'].get('op') == 'assertQuiescent']
+    require([r['request']['root'] for r in quiescent] == ([unrelated, owner, child] if success else [unrelated]),
+            'BIRTH_ROLLBACK_QUIESCENCE_INVENTORY')
+    for row in quiescent:
+        require(row.get('completed') is True and row['response']['quiescent'] is True
+                and row['response']['entries'] == [] and row['response']['before'] == row['response']['after'],
+                'BIRTH_ROLLBACK_QUIESCENCE_MUTATION')
+    cached = [r for r in record['transcript'] if r['request'].get('op') == 'cache']
+    require(len(cached) == (0 if variant.startswith('cold-') else 1), 'BIRTH_ROLLBACK_CACHE_INVENTORY')
+    for row in cached:
+        warm = row['response']['birthPreparation']
+        require(row['request']['publish'] is False and row['request']['resolveDeclaredBirth'] is True
+                and warm['retainedBefore'] == warm['retainedAfter'] == before['retainedRecords']
+                and warm['journalBefore'] == warm['journalAfter'] == before['journal']
+                and warm['expandedInput'] == expanded and warm['declaredPlanBefore'] == warm['declaredPlanAfter'],
+                'BIRTH_ROLLBACK_WARMING_PUBLISHED_OR_CHANGED_INPUT')
+    subject = one('processNext', 'subject')
+    require(subject['request']['mustSelect'] == {'$capture': rule['birthEntryCapture']}, 'BIRTH_ROLLBACK_INPUT_SELECTION')
+    # recorder.step() runs BEFORE execution. Require an accepted real charge
+    # after causal quiescence/activation, not just an INITIALIZATION trace row.
+    require(any(isinstance(c.get('reason'), str) and c['reason'].startswith('checkpoint-settlement.')
+                for c in subject['response']['fullGasTrace']), 'BIRTH_ROLLBACK_NOT_AFTER_INITIALIZATION')
+    require(o['entryOwners'] == [owner], 'BIRTH_ROLLBACK_WRONG_ORIGINAL_OWNER')
+    if not success:
+        require(after['published'] is False and after['selectedChild'] is None
+                and child not in after['retainedRecords'] and o['rollbackToInput'] is True
+                and o['commitCompanion'] is None and o['checkpointWrites'] == []
+                and o['retainedBefore'] == o['retainedAfter']
+                and o['selectedBefore'] == o['selectedAfter'], 'BIRTH_ROLLBACK_PARTIAL_PUBLICATION')
+        return
+
+    identity_check(o)
+    require(after['published'] is True, 'BIRTH_ROLLBACK_SUCCESS_CHILD_ABSENT')
+    retained = after['retainedRecords'][child]; selected = after['selectedChild']
+    require(selected['documentId']['value'] == cid and selected['initialized'] is True
+            and selected['blueId'] == retained['blueId'] and retained['epoch'] == 0
+            and counter(selected['document']) == counter(retained['exactDocument']) == rule['expectedCounter'],
+            'BIRTH_ROLLBACK_SUCCESS_HEAD')
+    receipts = retained['receipts']; require(len(receipts) == 1, 'BIRTH_ROLLBACK_DUPLICATE_INITIALIZATION')
+    receipt = receipts[0]; operation = after['sourceOperation']; basis = after['historyBasis']; admission = basis['admission']
+    require(receipt['kind'] == 'INITIALIZATION' and receipt['epoch'] == 0
+            and receipt['beforeBlueId'] is None and receipt['afterBlueId'] == retained['blueId'],
+            'BIRTH_ROLLBACK_INITIAL_RECEIPT')
+    require(basis == retained['historyBasis'] and basis['documentId'] == cid
+            and basis['initialDocumentBlueId'] == cid and admission['mode'] == 'CREATED_IN_OPERATION',
+            'BIRTH_ROLLBACK_HISTORY_BASIS')
+    order = operation['sourceOrder']['components']
+    require(len(order) == 3 and order[0] == birth_time and order[2] == entry['blueId']
+            and admission['lowerExclusiveOrder'] == {'timestampUs': str(birth_time),
+                'timelineBlueId': order[1], 'entryBlueId': order[2]}
+            and receipt['sourceOrder']['components'] == order and receipt['sourceEntry'] is None,
+            'BIRTH_ROLLBACK_LOWER_EXCLUSIVE_BOUNDARY')
+    require(admission['creatorOperationIdentity'] == operation['rootedInvocationIdentity']
+            and after['admissionInvocationIdentity'] == operation['invocationIdentity']
+            and after['admissionCompanionIdentity'] == operation['companionIdentity']
+            and receipt['commitCompanionIdentity'] == operation['companionIdentity']
+            and receipt['originalCauseIdentity'] == operation['inputCauseIdentity'], 'BIRTH_ROLLBACK_CAUSE_COMPANION')
+    require(set(r['value'] for r in operation['ownedDocuments']) == {oid, cid}, 'BIRTH_ROLLBACK_SUCCESS_OWNERS')
+    edges = [e for e in operation['occurrences'] if e['occurrenceIdentity'] == admission['birthOccurrenceIdentity']]
+    require(len(edges) == 1 and edges[0]['active'] is True and edges[0]['sourceDocumentId']['value'] == oid
+            and edges[0]['targetDocumentId']['value'] == cid and edges[0]['sourcePath'] == '/child',
+            'BIRTH_ROLLBACK_COMMITTED_OCCURRENCE')
+    transitions = [t for t in operation['transitions'] if t['transitionReceiptIdentity'] == receipt['contractsTransitionReceiptIdentity']]
+    require(len(transitions) == 1 and transitions[0]['documentId']['value'] == cid
+            and transitions[0]['afterBlueId'] == retained['blueId'], 'BIRTH_ROLLBACK_SOURCE_TRANSITION')
+
+
 def check_root_context_negatives(rec, rule, require, exact_equal):
     observed = rec['output']['rootContextNegatives']
     cases = observed['mutations']
@@ -877,6 +1076,420 @@ def check_lagging_observer(record,rule):
     require(final['readyThrough']==source2['readyThrough'] and final.get('nextLiveInput') is None,'READY_FINAL_PROGRESS')
     require(exact_equal(source2,sourceFinal),'READY_SOURCE_REWRITTEN')
 
+def check_saved_original_graph(rec, contract, weights):
+    from pathlib import Path
+    import sys
+    sys.path.insert(0,str(Path(gas_check.__globals__['__file__']).resolve().parent/'identity'))
+    import constructors as I
+    rule = contract['savedOriginalGraph']
+    aliases = rule['requiredAliases']
+    ids = rec['documentIds']
+    require(set(ids) == set(aliases) and len(set(ids.values())) == len(ids), 'GRAPH_DOCUMENT_IDS')
+    alias_of = {v: k for k, v in ids.items()}
+    rows = [r for r in rec['transcript'] if r.get('completed') is True]
+    observation = rec['output']['savedOriginalGraph']
+    require(exact_equal(observation, rec['phaseRecords'][rule['observation']]), 'GRAPH_OBSERVATION_PHASE')
+    starts = {r['request']['alias']: r['response'] for r in rows if r['request']['op'] == 'start'}
+    appends = {r['request']['capture']: r for r in rows if r['request']['op'] == 'append'}
+    require(len(starts) == len(aliases) and set(starts) == set(aliases), 'GRAPH_START_INVENTORY')
+    require(len(appends) == len([r for r in rows if r['request']['op'] == 'append']), 'GRAPH_ENTRY_CAPTURE_DUPLICATE')
+    captures = observation['captures']
+    require(set(captures) == set(starts) | set(appends), 'GRAPH_CAPTURE_INVENTORY')
+
+    def did(value):
+        require(isinstance(value, dict) and set(value) == {'value'} and isinstance(value['value'], str), 'GRAPH_RAW_DOCUMENT_ID')
+        return value['value']
+
+    def scalar(value):
+        return value['value'] if isinstance(value, dict) and 'value' in value else value
+
+    def by_id(values, field='documentId'):
+        result = {did(v[field]): v for v in values}
+        require(len(result) == len(values), 'GRAPH_DUPLICATE_DOCUMENT_ROW')
+        return result
+
+    def receipt_prefix(before, after):
+        require(set(before) == set(after) == set(aliases), 'GRAPH_RECORD_INVENTORY')
+        for alias in aliases:
+            old, new = before[alias], after[alias]
+            require(new['documentId'] == ids[alias] and old['documentId'] == ids[alias], 'GRAPH_RECORD_OWNER')
+            require(exact_equal(old['historyBasis'], new['historyBasis']), 'GRAPH_HISTORY_BASIS_CHANGED')
+            require(exact_equal(old['receipts'], new['receipts'][:len(old['receipts'])]), 'GRAPH_RECEIPT_PREFIX')
+            history = new['receipts']
+            require(history and [r['epoch'] for r in history] == list(range(len(history))), 'GRAPH_RECEIPT_EPOCHS')
+            require(new['epoch'] == history[-1]['epoch'], 'GRAPH_HOST_EPOCH')
+            require(len({r['receiptIdentity'] for r in history}) == len(history), 'GRAPH_DUPLICATE_RECEIPT')
+            require(sum(r['kind'] == 'INITIALIZATION' for r in history) == 1, 'GRAPH_INITIALIZATION_COUNT')
+            require(exact_equal(history[0], starts[alias]['epoch0Receipt']), 'GRAPH_INITIAL_RECEIPT_CHANGED')
+            require(all(did(r['documentId']) == ids[alias] for r in history), 'GRAPH_RECEIPT_OWNER')
+            require(exact_equal(new['events'], [e for r in history for e in r['emittedEvents']]), 'GRAPH_RETAINED_EVENTS')
+
+    def sccs(snapshot):
+        documents = by_id(snapshot['managedDocuments'])
+        edges = {d: set() for d in documents}
+        for edge in snapshot['occurrences']:
+            if edge['active']:
+                a, b = did(edge['sourceDocumentId']), did(edge['targetDocumentId'])
+                require(a in documents and b in documents, 'GRAPH_ACTIVE_EDGE_ENDPOINT')
+                edges[a].add(b)
+        def reach(start):
+            seen, todo = set(), [start]
+            while todo:
+                item = todo.pop()
+                if item in seen: continue
+                seen.add(item); todo.extend(edges[item] - seen)
+            return seen
+        reachable = {d: reach(d) for d in documents}
+        return [set(group) for group in sorted({tuple(sorted(e for e in documents if e in reachable[d] and d in reachable[e])) for d in documents})]
+
+    def expand_member(value, master):
+        if isinstance(value, list): return [expand_member(v, master) for v in value]
+        if isinstance(value, dict):
+            return {k: master + v[4:] if k == 'blueId' and isinstance(v, str) and v.startswith('this#')
+                    else expand_member(v, master) for k, v in value.items()}
+        return value
+
+    def snapshot_check(snapshot):
+        documents = by_id(snapshot['managedDocuments'])
+        derived = {frozenset(s) for s in sccs(snapshot)}
+        components = snapshot['components']
+        require({frozenset(did(d) for d in c['orderedMemberDocumentIds']) for c in components} == derived
+                and len(components) == len(derived), 'GRAPH_COMPONENT_SCC')
+        for component in components:
+            members = [did(d) for d in component['orderedMemberDocumentIds']]
+            blueids = component['orderedMemberBlueIds']
+            require(len(members) == len(blueids) and len(set(members)) == len(members), 'GRAPH_COMPONENT_MEMBERS')
+            require(blueids == [documents[d]['blueId'] for d in members], 'GRAPH_COMPONENT_EXACT_IDS')
+            if component['kind'] == 'CYCLIC':
+                master = component['masterBlueId']
+                proof = component['completeCyclicProof']['declaredPlaceholderSet']
+                require(len(proof) == len(members) and component['cyclicProofIdentity'], 'GRAPH_COMPLETE_CYCLIC_PROOF')
+                indices = []
+                for owner, blueid in zip(members, blueids):
+                    require(blueid.startswith(master + '#'), 'GRAPH_CYCLIC_MEMBER_ID')
+                    index = int(blueid.rsplit('#', 1)[1]); indices.append(index)
+                    require(0 <= index < len(proof), 'GRAPH_CYCLIC_MEMBER_INDEX')
+                    require(exact_equal(expand_member(proof[index], master), documents[owner]['document']), 'GRAPH_CYCLIC_PROOF_BYTES')
+                require(sorted(indices) == list(range(len(proof))), 'GRAPH_CYCLIC_MEMBER_BIJECTION')
+            else:
+                require(component['kind'] == 'ACYCLIC' and len(members) == 1
+                        and component['completeCyclicProof'] is None, 'GRAPH_ACYCLIC_COMPONENT')
+        return documents
+
+    def trace_check(gas, full, budget):
+        gas_check(gas, budget, weights)
+        require(gas['rejected'] is None and len(full) == len(gas['charges']), 'GRAPH_GAS_TRACE_LENGTH')
+        for raw, charge in zip(full, gas['charges']):
+            normalized = {'sequence':raw['sequence'], 'label':raw['namespace'].lower()+'.'+raw['counter'],
+                          'quantity':raw['quantity'], 'weight':raw['weight'], 'amount':raw['subtotal']}
+            require(exact_equal(normalized, charge), 'GRAPH_GAS_TRACE_BINDING')
+
+    publications = set()
+    source_applications = set()
+    live_applications = set()
+
+    def terminal_check(terminal, retained_before):
+        publication = terminal['publicationIdentity']
+        require(publication not in publications, 'GRAPH_DUPLICATE_TERMINAL'); publications.add(publication)
+        require(terminal['status'] == 'SUCCESS' and terminal['rollbackToInput'] is False, 'GRAPH_TERMINAL_STATUS')
+        inp, companion = terminal['input'], terminal['commitCompanion']
+        cause = inp['cause']
+        if terminal['causeType'] in ('ManagedRevisionCause','ManagedRepresentationCause'):
+            source_transition = cause['sourceTransitionReceipt']
+            require(cause['originalSourceCauseIdentity'] == source_transition['originalCauseIdentity']
+                    and cause['sourceRevisionReceiptIdentity'] == source_transition['transitionReceiptIdentity']
+                    and cause['afterBlueId'] == source_transition['afterBlueId'], 'GRAPH_MANAGED_SOURCE_CAUSE_BINDING')
+            if terminal['causeType'] == 'ManagedRevisionCause':
+                source = retained_before[alias_of[did(cause['childDocumentId'])]]
+                retained = [r for r in source['receipts'] if r['epoch'] == cause['toEpoch']]
+                require(len(retained) == 1 and retained[0]['contractsTransitionReceiptIdentity'] == source_transition['transitionReceiptIdentity']
+                        and retained[0]['originalCauseIdentity'] == cause['originalSourceCauseIdentity']
+                        and retained[0]['afterBlueId'] == cause['afterBlueId']
+                        and exact_equal(retained[0]['afterDocument'],cause['afterDocument']), 'GRAPH_MANAGED_RETAINED_SOURCE')
+        require(inp['invocationIdentity'] == terminal['invocationIdentity'] == companion['invocationIdentity'], 'GRAPH_INVOCATION_BINDING')
+        trace_check(terminal['gas'], terminal['fullGasTrace'], inp['executionPolicy']['sharedLimit'])
+        before, after = inp['snapshot'], terminal['outputSnapshot']
+        before_docs, after_docs = snapshot_check(before), snapshot_check(after)
+        require(companion['inputClosureIdentity'] == before['closureIdentity']
+                and companion['outputClosureIdentity'] == after['closureIdentity'], 'GRAPH_CLOSURE_BINDING')
+        require(companion['expectedInputGraphGeneration'] == before['graphGeneration']
+                and companion['outputGraphGeneration'] == after['graphGeneration'], 'GRAPH_GENERATION_BINDING')
+        require(companion['inputOccurrenceBindingSetIdentity'] == before['occurrenceBindingSetIdentity']
+                and companion['outputOccurrenceBindingSetIdentity'] == after['occurrenceBindingSetIdentity'], 'GRAPH_OCCURRENCE_BINDING')
+        require(exact_equal(terminal['occurrenceBindings'], after['occurrences']), 'GRAPH_OUTPUT_OCCURRENCES')
+        require({did(v['documentId']):v['blueId'] for v in companion['expectedInputDocuments']}
+                == {d:v['blueId'] for d,v in before_docs.items()}, 'GRAPH_COMPANION_INPUT_DOCUMENTS')
+        resulting = by_id(terminal['resultingDocuments'])
+        require(set(resulting) == set(after_docs), 'GRAPH_RESULT_DOCUMENT_INVENTORY')
+        require({did(v['documentId']):(v['beforeBlueId'],v['afterBlueId']) for v in companion['resultingDocuments']}
+                == {d:(v['beforeBlueId'],v['afterBlueId']) for d,v in resulting.items()}, 'GRAPH_COMPANION_OUTPUT_DOCUMENTS')
+        for owner, value in resulting.items():
+            require(value['afterBlueId'] == after_docs[owner]['blueId']
+                    and exact_equal(value['document'], after_docs[owner]['document']), 'GRAPH_RESULT_EXACT_DOCUMENT')
+        canonical = terminal['rootedContext']['canonicalRootDocumentId']
+        entry_components = [s for s in sccs(before) if canonical in s]
+        require(len(entry_components) == 1, 'GRAPH_ENTRY_OWNER_COMPONENT')
+        entry_owners = entry_components[0]
+        owner_descriptor = {'members':[{'documentId':d,'historyBasisIdentity':I.history(starts[alias_of[d]]['retained']['historyBasis'])}
+                                       for d in sorted(entry_owners)],
+                            'internalEdges':[{'occurrenceIdentity':r['occurrenceIdentity'], 'parentDocumentId':did(r['sourceDocumentId']),
+                                              'sourcePath':r['sourcePath'], 'childDocumentId':did(r['targetDocumentId']),
+                                              'activationGeneration':str(r['activationGeneration'])}
+                                             for r in before['occurrences'] if r['active']
+                                             and did(r['sourceDocumentId']) in entry_owners and did(r['targetDocumentId']) in entry_owners]}
+        require(exact_equal(I.context(owner_descriptor)[0],terminal['rootedContext']), 'GRAPH_OPERATION_CONTEXT_IDENTITY')
+        # RUN018 adds edges only. Draft2 ownership expands to final SCCs intersecting
+        # entry owners; incoming observers do not become owners by reachability.
+        expected_owners = set().union(*(s for s in sccs(after) if s & entry_owners))
+        owners = {did(v) for v in terminal['ownedDocumentIds']}
+        require(len(owners) == len(terminal['ownedDocumentIds']) and owners == expected_owners, 'GRAPH_ROOTED_OWNERSHIP')
+        require(terminal['ownedPublicEvents'] == [], 'GRAPH_ATTACHMENT_PUBLIC_EVENTS')
+        transitions = terminal['managedTransitionReceipts']
+        require(len({r['transitionReceiptIdentity'] for r in transitions}) == len(transitions), 'GRAPH_DUPLICATE_TRANSITION')
+        for receipt in transitions:
+            owner = did(receipt['documentId'])
+            require(receipt['sourceInvocationIdentity'] == inp['invocationIdentity']
+                    and receipt['originalCauseIdentity'] == (inp['cause']['originalSourceCauseIdentity']
+                        if terminal['causeType'] in ('ManagedRevisionCause','ManagedRepresentationCause')
+                        else inp['cause']['causeIdentity']), 'GRAPH_TRANSITION_CAUSE')
+            require(owner in resulting and receipt['beforeBlueId'] == resulting[owner]['beforeBlueId']
+                    and receipt['afterBlueId'] == resulting[owner]['afterBlueId'], 'GRAPH_TRANSITION_ENDPOINTS')
+            require(receipt['emittedRootEvents'] == [], 'GRAPH_ATTACHMENT_SOURCE_EVENTS')
+        return owners
+
+    def call_check(call):
+        before, after = call['before'], call['after']
+        receipt_prefix(before, after)
+        require(type(call['quiescent']) is bool and call['paused'] is (not call['quiescent'])
+                and call['diagnostic']['code'] == ('NONE' if call['quiescent'] else 'PROCESSING_PAUSED')
+                and call['resourceFailures'] == [], 'GRAPH_DRAIN_BLOCKED_OR_FLAGS')
+        selection = call['selection']
+        if selection['kind'] == 'MANAGED_EPOCH_APPLICATION':
+            selected = selection['managedEpochApplicationWork']
+            if selection['rootedRetainedRoot'] is not None:
+                require(any(a['work']['workIdentity'] == selected['workIdentity']
+                            and a['rootDocumentId'] == selection['rootedRetainedRoot']
+                            for a in call['localRetainedApplications']), 'GRAPH_SELECTED_LOCAL_WORK')
+            else:
+                require(any(a['workIdentity'] == selected['workIdentity']
+                            for a in call['ownedRetainedApplications']), 'GRAPH_SELECTED_OWNED_WORK')
+        elif selection['kind'] == 'NONE':
+            require(not call['entries'] and not call['localRetainedApplications']
+                    and not call['ownedRetainedApplications'] and call['quiescent'], 'GRAPH_NONE_SELECTION_WORK')
+        else:
+            require(selection['kind'] == 'JOURNAL' and call['entries'], 'GRAPH_JOURNAL_SELECTION')
+        require(all(a['published'] and a['publicationFailure'] is None and a['receipt'] is not None
+                    for a in call['managedAttempts']), 'GRAPH_MANAGED_ATTEMPT_FAILURE')
+        require([a['receipt']['applicationReceiptIdentity'] for a in call['managedAttempts']]
+                == [a['applicationReceiptIdentity'] for a in call['ownedRetainedApplications']], 'GRAPH_MANAGED_ATTEMPT_INVENTORY')
+        owners = set()
+        for terminal in call['terminals']: owners |= terminal_check(terminal, before)
+        for entry in call['entries']:
+            if entry['disposition'] != 'APPLIED': continue
+            source_rows = [r for r in appends.values() if r['response']['entryBlueId'] == entry['entry']['blueId']]
+            require(len(source_rows) == 1 and entry['closures'], 'GRAPH_LIVE_ENTRY_SOURCE')
+            for closure in entry['closures']:
+                terminal = next(t for t in call['terminals'] if t['publicationIdentity'] == closure['closureId'])
+                key = (entry['entry']['blueId'],terminal['rootedContext']['operationOwnerIdentity'])
+                require(key not in live_applications, 'GRAPH_DUPLICATE_RECEIVING_VIEW'); live_applications.add(key)
+                require(terminal['causeType'] == 'ExternalEventCause'
+                        and terminal['input']['cause']['eventBlueId'] == entry['entry']['blueId']
+                        and exact_equal(terminal['input']['cause']['event'],source_rows[0]['response']['exactEntry']), 'GRAPH_LIVE_EXACT_INPUT')
+        expected_publications = {c['closureId'] for e in call['entries'] for c in e['closures']}
+        expected_publications |= {a['result']['closureId'] for a in call['localRetainedApplications']}
+        for app in call['ownedRetainedApplications']:
+            matches = [t for t in call['terminals'] if t['invocationIdentity'] == app['contractsInvocationIdentity']
+                       and t['commitCompanion']['companionIdentity'] == app['commitCompanionIdentity']]
+            require(len(matches) == 1, 'GRAPH_OWNED_APPLICATION_TERMINAL')
+            expected_publications.add(matches[0]['publicationIdentity'])
+        require(expected_publications == {t['publicationIdentity'] for t in call['terminals']}, 'GRAPH_TERMINAL_INVENTORY')
+        for local in call['localRetainedApplications']:
+            work = local['work']; key = (did(local['rootDocumentId']), work['workIdentity'])
+            require(key not in source_applications, 'GRAPH_DUPLICATE_LOCAL_APPLICATION'); source_applications.add(key)
+            source = alias_of[did(work['sourceDocumentId'])]
+            terminal = next(t for t in call['terminals'] if t['publicationIdentity'] == local['result']['closureId'])
+            cause = terminal['input']['cause']
+            require(cause['targetOccurrenceIdentity'] == work['targetOccurrenceIdentity']
+                    and did(cause['childDocumentId']) == ids[source], 'GRAPH_LOCAL_TARGET_BINDING')
+            target_rows = [r for r in terminal['input']['snapshot']['occurrences']
+                           if r['occurrenceIdentity'] == work['targetOccurrenceIdentity']]
+            require(len(target_rows) == 1 and did(target_rows[0]['sourceDocumentId']) == did(work['consumerDocumentId'])
+                    and target_rows[0]['sourcePath'] == work['targetPath']
+                    and target_rows[0]['activationGeneration'] == work['activationGeneration']
+                    and target_rows[0]['expectedTargetBlueId'] == cause['beforeBlueId'], 'GRAPH_LOCAL_OCCURRENCE_BINDING')
+            if work['representationStep'] is None:
+                receipts = [r for r in before[source]['receipts'] if r['receiptIdentity'] == work['sourceReceiptIdentity']]
+                require(len(receipts) == 1 and receipts[0]['epoch'] == work['sourceEpoch'], 'GRAPH_LOCAL_SOURCE_RECEIPT')
+                terminal = next(t for t in call['terminals'] if t['publicationIdentity'] == local['result']['closureId'])
+                cause = terminal['input']['cause']; source_receipt = receipts[0]
+                require(terminal['causeType'] == 'ManagedRevisionCause' and cause['toEpoch'] == cause['fromEpoch'] + 1
+                        and cause['toEpoch'] == source_receipt['epoch'], 'GRAPH_LOCAL_EPOCH_STEP')
+                require(cause['sourceRevisionReceiptIdentity'] == source_receipt['contractsTransitionReceiptIdentity']
+                        and cause['afterBlueId'] == source_receipt['afterBlueId']
+                        and exact_equal(cause['afterDocument'], source_receipt['afterDocument'])
+                        and cause['beforeBlueId'] == (starts[source]['initialBlueId'] if source_receipt['epoch'] == 0 else source_receipt['beforeBlueId']), 'GRAPH_LOCAL_SOURCE_EXACT')
+            else:
+                step = work['representationStep']; transition = cause['transition']
+                require(terminal['causeType'] == 'ManagedRepresentationCause' and cause['fromEpoch'] == cause['toEpoch'] == work['sourceEpoch']
+                        and step['causeIdentity'] == cause['causeIdentity'] and step['beforeBlueId'] == cause['beforeBlueId']
+                        and step['afterBlueId'] == cause['afterBlueId'], 'GRAPH_REPRESENTATION_WORK_BINDING')
+                require(step['before']['anchorReceiptIdentity'] == step['after']['anchorReceiptIdentity'] == transition['anchorReceiptIdentity'] == work['sourceReceiptIdentity']
+                        and step['before']['positionIdentity'] == transition['predecessorPositionIdentity']
+                        and step['after']['positionIdentity'] == transition['positionIdentity']
+                        and step['before']['positionIdentity'] != step['after']['positionIdentity'], 'GRAPH_REPRESENTATION_POSITION')
+                require(step['before']['targetPositionIdentity'] == step['after']['targetPositionIdentity'] == cause['targetPositionIdentity']
+                        and step['before']['nextRevisionReceiptIdentity'] == step['after']['nextRevisionReceiptIdentity'] == cause['nextRevisionReceiptIdentity'], 'GRAPH_REPRESENTATION_FIXED_TARGET')
+                anchors = [r for r in before[source]['receipts'] if r['receiptIdentity'] == transition['anchorReceiptIdentity']]
+                require(len(anchors) == 1 and anchors[0]['epoch'] == work['sourceEpoch'], 'GRAPH_REPRESENTATION_ANCHOR')
+                original, committed = transition['originalInput'], transition['originalResult']
+                original_source = by_id(original['snapshot']['managedDocuments'])[ids[source]]
+                committed_source = by_id(committed['resultingDocuments'])[ids[source]]
+                proof_receipt = transition['transitionReceipt']
+                require(committed['status'] == 'SUCCESS' and original['invocationIdentity'] == committed['invocationIdentity']
+                        == committed['platformCommitCompanion']['invocationIdentity']
+                        and original_source['epoch'] == committed_source['epoch'] == work['sourceEpoch']
+                        and original_source['blueId'] == cause['beforeBlueId'] == proof_receipt['beforeBlueId']
+                        and committed_source['afterBlueId'] == cause['afterBlueId'] == proof_receipt['afterBlueId']
+                        and proof_receipt['emittedRootEvents'] == [] and proof_receipt in committed['managedTransitionReceipts']
+                        and exact_equal(committed_source['document'], cause['afterDocument']), 'GRAPH_REPRESENTATION_ORIGINAL_COMMIT')
+        for alias in aliases:
+            old, new = before[alias], after[alias]
+            if ids[alias] not in owners:
+                require(exact_equal(old, new), 'GRAPH_UNOWNED_INDEPENDENT_STATE')
+            appended = new['receipts'][len(old['receipts']):]
+            for receipt in appended:
+                matches = [(t,r) for t in call['terminals'] for r in t['managedTransitionReceipts']
+                           if did(r['documentId']) == ids[alias]
+                           and r['transitionReceiptIdentity'] == receipt['contractsTransitionReceiptIdentity']]
+                require(len(matches) == 1, 'GRAPH_PUBLISHED_RECEIPT_TRANSITION')
+                terminal, transition = matches[0]
+                require(receipt['commitCompanionIdentity'] == terminal['commitCompanion']['companionIdentity']
+                        and receipt['originalCauseIdentity'] == transition['originalCauseIdentity']
+                        and receipt['afterBlueId'] == transition['afterBlueId'] and receipt['emittedEvents'] == [], 'GRAPH_PUBLISHED_RECEIPT_BINDING')
+        return after
+
+    current = {}
+    for alias in aliases:
+        start = starts[alias]
+        require(set(captures[alias]) == {'initialBlueId','initializedBlueId','documentId','initialExact','epoch0Receipt'}
+                and exact_equal(captures[alias], {k:start[k] for k in captures[alias]}), 'GRAPH_START_CAPTURE_BINDING')
+        require(start['documentId'] == ids[alias] == start['initialBlueId'], 'GRAPH_AUTHORED_DOCUMENT_ID')
+        require(start['initialBlueId'] != start['initializedBlueId'], 'GRAPH_DISTINCT_SAVED_ORIGINAL')
+        require(exact_equal(start['initialExact']['peers'], rule['initialPeers']), 'GRAPH_PREPOPULATED_START')
+        require(start['epoch0Receipt']['epoch'] == rule['initializedEpoch'] == 0
+                and start['epoch0Receipt']['beforeBlueId'] is None
+                and start['epoch0Receipt']['afterBlueId'] == start['initializedBlueId'], 'GRAPH_INITIALIZATION_BINDING')
+        require(start['retained']['historyBasis']['initialDocumentBlueId'] == start['initialBlueId'], 'GRAPH_AUTHORED_HISTORY_BINDING')
+        current[alias] = start['retained']
+    receipt_prefix(current, current)
+    seen_nonstart = False
+    for row in rows:
+        request, response = row['request'], row['response']; op = request['op']
+        if op == 'start': require(not seen_nonstart, 'GRAPH_STARTS_NOT_SEPARATE'); continue
+        seen_nonstart = True
+        if op == 'drainUntilQuiescent':
+            phase = rec['phaseRecords'][request['capture']]
+            require(exact_equal(phase, response), 'GRAPH_DRAIN_PHASE_BINDING')
+            calls = phase['calls']
+            require(request['maxSelections'] == rule['maxSelectionsPerAttachment'] == 32
+                    and request['budgetPerCall'] == {'maxEntries':1,'maxManagedApplications':1}
+                    and 1 <= len(calls) <= 32, 'GRAPH_UNCHANGED_BOUND')
+            applied = []
+            for index, call in enumerate(calls):
+                require(call['index'] == index and exact_equal(current, call['before']), 'GRAPH_CALL_SEQUENCE')
+                require(call['quiescent'] is (index == len(calls)-1), 'GRAPH_QUIESCENT_BOUNDARY')
+                current = call_check(call)
+                for entry in call['entries']:
+                    if entry['disposition'] == 'APPLIED':
+                        entry_capture = next(r for r in appends.values() if r['response']['entryBlueId'] == entry['entry']['blueId'])
+                        parent = ids[entry_capture['request']['target']]
+                        for closure in entry['closures']:
+                            terminal = next(t for t in call['terminals'] if t['publicationIdentity'] == closure['closureId'])
+                            canonical = terminal['rootedContext']['canonicalRootDocumentId']
+                            entry_owners = next(s for s in sccs(terminal['input']['snapshot']) if canonical in s)
+                            if parent in entry_owners: applied.append(entry['entry']['blueId'])
+                    else: require(entry['disposition'] == 'NO_MATCH' and not entry['closures'], 'GRAPH_JOURNAL_DISPOSITION')
+            required = captures[request['mustApplyEntry']['$capture']]
+            require(applied.count(required) == 1, 'GRAPH_ATTACHMENT_NOT_APPLIED_ONCE')
+        elif op == 'processNext':
+            output = response['output']; structured_output(output, weights); identity_check(output)
+            require(response['closureId'] not in publications, 'GRAPH_DUPLICATE_FINITE_TERMINAL'); publications.add(response['closureId'])
+            phase = rec['phaseRecords'][request['capture']]
+            require(exact_equal(output, phase), 'GRAPH_FINITE_PHASE_BINDING')
+            trace_check(output['gas'], response['fullGasTrace'], output['budget'])
+            receipt_prefix(current, response['retainedRecords'])
+            for alias in aliases:
+                if alias not in output['ownedWrites']:
+                    require(exact_equal(current[alias], response['retainedRecords'][alias]), 'GRAPH_FINITE_UNOWNED_STATE')
+            current = response['retainedRecords']
+        elif op == 'observeGraph':
+            require(exact_equal(current, response['before']) and exact_equal(response['before'], response['after'])
+                    and exact_equal(response['records'], current), 'GRAPH_OBSERVATION_MUTATED')
+        elif op == 'restart':
+            require(exact_equal(current, response['before']) and exact_equal(response['before'], response['after']), 'GRAPH_RESTART_CHANGED')
+    require(exact_equal(current, observation['records']) and exact_equal(observation['before'], observation['after']), 'GRAPH_FINAL_RECORDS')
+    for attachment in rule['attachmentRequests']:
+        row = appends[attachment['entry']]; request, response = row['request'], row['response']
+        require(request['target'] == attachment['parent'] and request['operation'] == 'attach'
+                and request['request']['source'] == {'$capture':attachment['selection']}, 'GRAPH_SAVED_ORIGINAL_SELECTION')
+        require(scalar(response['exactEntry']['message']['request']['edge']) == attachment['path'].split('/')[-1]
+                and response['exactEntry']['message']['request']['source'] == {'blueId':starts[attachment['source']]['initialBlueId']}, 'GRAPH_EXACT_SAVED_ORIGINAL')
+    journal = observation['journal']; journal_ids = [e['blueId'] for e in journal]
+    entry_ids = [r['response']['entryBlueId'] for r in appends.values()]
+    require(journal_ids == entry_ids and len(set(entry_ids)) == len(entry_ids), 'GRAPH_JOURNAL_INVENTORY')
+    for index, row in enumerate(appends.values()):
+        entry = journal[index]; request, response = row['request'], row['response']
+        require(captures[request['capture']] == response['entryBlueId'] == entry['blueId'], 'GRAPH_ENTRY_CAPTURE_BINDING')
+        require(exact_equal(entry, response['actualEntry']) and exact_equal(entry['exact'], response['exactEntry']), 'GRAPH_EXACT_JOURNAL_BINDING')
+        require(entry['timestampMicros'] == int(request['timestampUs'])
+                and scalar(response['exactEntry']['timestamp']) == entry['timestampMicros'], 'GRAPH_ENTRY_TIME')
+    expected_edges = {(ids[a['parent']],a['path'],ids[a['source']]) for a in rule['attachmentRequests']}
+    expected_components = {frozenset(ids[a] for a in group) for group in rule['components']}
+    require(set(observation['selectedSnapshots']) == set(aliases) == set(observation['readiness']), 'GRAPH_FINAL_READ_INVENTORY')
+    all_edges, all_components = set(), set()
+    for alias in aliases:
+        record = current[alias]; snapshot = observation['selectedSnapshots'][alias]
+        documents = snapshot_check(snapshot)
+        require(ids[alias] in documents and documents[ids[alias]]['blueId'] == record['blueId']
+                and exact_equal(documents[ids[alias]]['document'], record['exactDocument']), 'GRAPH_SELECTED_CURRENT_EXACT')
+        require(exact_equal(snapshot['occurrences'], record['occurrences'])
+                and exact_equal(snapshot['components'], record['components']), 'GRAPH_SELECTED_INVENTORY')
+        for edge in snapshot['occurrences']:
+            require(edge['active'] and edge['pendingHistoricalEpoch'] is None and edge['pendingRepresentationCursor'] is None
+                    and edge['activationGeneration'] == 1, 'GRAPH_FINAL_EDGE_NOT_ACTIVE')
+            owner, target = did(edge['sourceDocumentId']), did(edge['targetDocumentId'])
+            require(edge['expectedTargetBlueId'] == documents[target]['blueId'], 'GRAPH_FINAL_EDGE_EXACT_TARGET')
+            all_edges.add((owner, edge['sourcePath'], target))
+        all_components |= {frozenset(s) for s in sccs(snapshot)}
+        ready = observation['readiness'][alias]
+        require(did(ready['documentId']) == ids[alias] and ready['ready'] is True and ready['status'] == 'READY'
+                and ready['committedEpoch'] == ready['readyEpoch'] == record['epoch']
+                and ready['committedBlueId'] == ready['readyBlueId'] == record['blueId']
+                and ready['activeBarrierIdentities'] == [] and ready['waitingCode'] is None, 'GRAPH_FINAL_READINESS')
+    require(all_edges == expected_edges and all_components == expected_components, 'GRAPH_FINAL_TOPOLOGY')
+    finite = rule['pairFinite']; pair = rec['phaseRecords'][finite['phase']]
+    require([(e['origin'],e['kind']) for e in rec['output']['events']]
+            == [(e['origin'],e['kind']) for e in contract['eventAnchors']], 'GRAPH_RING_FINITE_EVENTS')
+    for path, expected in contract['afterEquals'].items():
+        alias, field = path.split('.')
+        require(scalar(current[alias]['exactDocument'][field]) == expected, 'GRAPH_FINAL_FINITE_STATE')
+    require([(e['origin'],e['kind']) for e in pair['events']] == [(e['origin'],e['kind']) for e in finite['events']], 'GRAPH_PAIR_FINITE_EVENTS')
+    for alias, count in finite['observed'].items():
+        require(scalar(current[alias]['exactDocument']['observed']) == count, 'GRAPH_PAIR_FINITE_STATE')
+    for event in pair['events'] + rec['output']['events']:
+        retained = [e for e in current[event['origin']]['events'] if e['eventOccurrenceIdentity'] == event['occurrenceIdentity']]
+        require(len(retained) == 1 and retained[0]['eventBlueId'] == event['blueId']
+                and exact_equal(retained[0]['exactEvent'], event['exactEvent']), 'GRAPH_FINITE_EVENT_SOURCE_BINDING')
+    expected_event_origins = [e['origin'] for e in finite['events']] + [e['origin'] for e in rec['output']['events']]
+    for alias in aliases:
+        require(len(current[alias]['events']) == expected_event_origins.count(alias), 'GRAPH_NO_DUPLICATE_SOURCE_EVENTS')
+    events = [e for alias in aliases for e in current[alias]['events']]
+    require(len({e['eventOccurrenceIdentity'] for e in events}) == len(events), 'GRAPH_DUPLICATE_EVENT_OCCURRENCE')
+    restart = rec['restart']
+    require(exact_equal(restart['before'], current) and exact_equal(restart['after'], current)
+            and restart['beforeCommandCount'] == restart['afterCommandCount'] == len(entry_ids), 'GRAPH_RESTART_EVIDENCE')
+
+
 def check_runs(f,run_records,weights,calibration=None):
     require(f['input'].get('qualification')=='LITERAL_CRITICAL','RECIPE_ONLY_NOT_QUALIFIED')
     require(f['expected'].get('oracleVersion')==2,'ORACLE_VERSION')
@@ -964,6 +1577,14 @@ def check_runs(f,run_records,weights,calibration=None):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('laggingObserver'):
             check_lagging_observer(rec,contract['laggingObserver'])
+        if contract.get('incomingFanout'):
+            check_incoming_fanout(rec,contract['incomingFanout'],name,require,exact_equal)
+        if contract.get('hostTimestamp'):
+            check_host_timestamp(rec,contract['hostTimestamp'],require,exact_equal)
+        if contract.get('savedOriginalGraph'):
+            check_saved_original_graph(rec,contract,weights)
+        if contract.get('birthRollback'):
+            check_birth_rollback(rec,contract['birthRollback'],name,calibration)
         if contract.get('createdChildPreBirth'):
             check_created_child_prebirth(rec,contract['createdChildPreBirth'],name,weights)
         if contract.get('rootContextNegatives'):
@@ -1053,6 +1674,11 @@ def main():
                 provenance(run,request,art);literal_steps(request['plan'],name,run['transcript'])
             cal=read_evidence(out,response['calibration']) if 'calibration' in response else None
             if cal is not None:provenance(cal,request,art)
+            if f['expected']['contract'].get('hostTimestamp'):
+                runtime=out/'adapter-runtime'
+                origins=[value for run in runs.values() for value in (run['output']['hostTimestamp']['classOrigins'],run['output']['hostTimestamp']['freshProcess']['classOrigins'])]
+                columns=verify_packaged_application(a.artifact,art,runtime/'packaged-app',runtime/'packaged-application-identities.json',runtime/'classes',origins)
+                require(columns==sorted(f['expected']['contract']['hostTimestamp']['expectedTimestampColumns']),'TIME_V22_ARTIFACT_COLUMN_BINDING')
             rec['assertionsPassed']=check_runs(f,runs,weights,cal);rec['status']='PASS'
         except Exception as e:rec.update(status='FAIL',error=f'{type(e).__name__}: {e}')
         rec['seconds']=time.perf_counter()-start;results.append(rec)

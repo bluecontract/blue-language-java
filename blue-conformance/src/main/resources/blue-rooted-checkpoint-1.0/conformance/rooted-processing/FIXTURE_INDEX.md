@@ -1,6 +1,6 @@
 # Iteration 2 fixture index
 
-100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. 24 production obligations have literal plans; 10 remain recipe-level. All production runtime results are NOT_RUN.
+100 retained/new candidate scenario records: 66 executable abstract fixtures and 34 production obligations. 30 production obligations have literal plans; 4 remain recipe-level. All production runtime results are NOT_RUN.
 
 | ID | Kind | Qualification | Title |
 |---|---|---|---|
@@ -87,21 +87,21 @@
 | [RCP-RUN-015](fixtures/run/rcp-run-015.json) | runtime | LITERAL_CRITICAL | Equal payload events remain distinct occurrences |
 | [RCP-RUN-016](fixtures/run/rcp-run-016.json) | runtime | LITERAL_CRITICAL | An event-only source step survives restart without duplication |
 | [RCP-RUN-017](fixtures/run/rcp-run-017.json) | runtime | RECIPE_ONLY | Same-epoch representation chain uses exact predecessors |
-| [RCP-RUN-018](fixtures/run/rcp-run-018.json) | runtime | RECIPE_ONLY | Saved-original pair then ring forms without rewriting history |
+| [RCP-RUN-018](fixtures/run/rcp-run-018.json) | runtime | LITERAL_CRITICAL | Saved-original pair then ring forms without rewriting history |
 | [RCP-RUN-019](fixtures/run/rcp-run-019.json) | runtime | RECIPE_ONLY | Breaking/advancing/reconnecting preserves missed history |
 | [RCP-RUN-020](fixtures/run/rcp-run-020.json) | runtime | LITERAL_CRITICAL | Cold/warm reuse preserves full live-root charge trace and failure |
 | [RCP-RUN-021](fixtures/run/rcp-run-021.json) | runtime | LITERAL_CRITICAL | Already committed source is not rolled back by failed consumer |
 | [RCP-RUN-022](fixtures/run/rcp-run-022.json) | runtime | LITERAL_CRITICAL | Cycle gas failure rolls back its required result without meter reset |
 | [RCP-RUN-023](fixtures/run/rcp-run-023.json) | runtime | LITERAL_CRITICAL | Cycle formation and split do not change gas ownership midway |
-| [RCP-RUN-024](fixtures/run/rcp-run-024.json) | runtime | RECIPE_ONLY | New child birth failure cannot publish a half-created graph |
+| [RCP-RUN-024](fixtures/run/rcp-run-024.json) | runtime | LITERAL_CRITICAL | New child birth failure cannot publish a half-created graph |
 | [RCP-RUN-025](fixtures/run/rcp-run-025.json) | runtime | LITERAL_CRITICAL | Suspending early materialization cannot change source history |
 | [RCP-RUN-026](fixtures/run/rcp-run-026.json) | runtime | LITERAL_CRITICAL | Explicit new-from-cause remains distinct from history discovery |
 | [RCP-RUN-027](fixtures/run/rcp-run-027.json) | runtime | RECIPE_ONLY | Missing exact input creates a typed wait and exact resume |
 | [RCP-RUN-028](fixtures/run/rcp-run-028.json) | runtime | RECIPE_ONLY | Crash around publication does not lose state or duplicate events |
-| [RCP-RUN-029](fixtures/run/rcp-run-029.json) | runtime | RECIPE_ONLY | Nanosecond timestamp round-trip cannot masquerade as conflicting evidence |
+| [RCP-RUN-029](fixtures/run/rcp-run-029.json) | runtime | LITERAL_CRITICAL | Nanosecond timestamp round-trip cannot masquerade as conflicting evidence |
 | [RCP-RUN-030](fixtures/run/rcp-run-030.json) | runtime | LITERAL_CRITICAL | False and mutated root contexts must be rejected |
 | [RCP-RUN-031](fixtures/run/rcp-run-031.json) | runtime | LITERAL_CRITICAL | Foo/Gender/empty-schema identity remain correct under the new profile |
-| [RCP-RUN-032](fixtures/run/rcp-run-032.json) | runtime | RECIPE_ONLY | Large fan-out is scheduled as independent rooted obligations |
+| [RCP-RUN-032](fixtures/run/rcp-run-032.json) | runtime | LITERAL_CRITICAL | Large fan-out is scheduled as independent rooted obligations |
 | [RCP-RUN-033](fixtures/run/rcp-run-033.json) | runtime | LITERAL_CRITICAL | All four explicit attachment starting positions preserve their intended suffixes |
 | [RCP-RUN-034](fixtures/run/rcp-run-034.json) | runtime | LITERAL_CRITICAL | Source advances while a one-way observer stays behind without false readiness |
 

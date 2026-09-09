@@ -1,0 +1,725 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-024",
+  "title": "Provisional owned birth rolls back after initialization at independent G-1",
+  "inputIdentityPolicy": "Actual public managed draft and operation; no static child admission. Older source U is independently admitted and advanced before the birth. G comes only from the fresh materialized base processor.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "U",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {
+        "/name": "RCP2 Older Source",
+        "/contracts/owner/timeline/timelineId": "rcp2/older"
+      },
+      "admission": "FULL_HISTORY",
+      "stepId": "setup-002"
+    },
+    {
+      "op": "draft",
+      "alias": "T",
+      "source": "examples/iteration2/source.yaml",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "append",
+      "target": "U",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "1800000000000019",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "older19",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "processNext",
+      "root": "U",
+      "mustSelect": {
+        "$capture": "older19"
+      },
+      "budget": "DEFAULT",
+      "capture": "olderSource",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "submitManaged",
+      "root": "P",
+      "operation": "attach",
+      "channel": "owner",
+      "draft": "T",
+      "requestField": "child",
+      "expectedPath": "/child",
+      "activation": "FROM_NOW",
+      "expectedTimestampUs": "1800000000000020",
+      "capture": "birth",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "observeBirth",
+      "observer": "P",
+      "child": "T",
+      "capture": "before",
+      "stepId": "setup-007"
+    }
+  ],
+  "variants": {
+    "cold-below": [
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "cold-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cold-below-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "stepId": "cold-below-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cold-below-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-below-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "stepId": "cold-below-006"
+      }
+    ],
+    "cold-at": [
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "cold-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cold-at-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "cold-at-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cold-at-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-at-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "cold-at-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "cold-at-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "cold-at-008"
+      }
+    ],
+    "cold-above": [
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "cold-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cold-above-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "cold-above-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cold-above-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cold-above-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "cold-above-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "cold-above-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "cold-above-008"
+      }
+    ],
+    "cached-below": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "cached-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cached-below-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "stepId": "cached-below-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cached-below-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-below-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "stepId": "cached-below-006"
+      }
+    ],
+    "cached-at": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "cached-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cached-at-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "cached-at-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cached-at-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-at-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "cached-at-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "cached-at-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "cached-at-008"
+      }
+    ],
+    "cached-above": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "cached-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "cached-above-002"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "cached-above-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "cached-above-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "cached-above-005"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "cached-above-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "cached-above-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "cached-above-008"
+      }
+    ],
+    "evicted-below": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "evicted-below-001"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "evicted-below-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "evicted-below-003"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "stepId": "evicted-below-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "evicted-below-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-below-006"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "stepId": "evicted-below-007"
+      }
+    ],
+    "evicted-at": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "evicted-at-001"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "evicted-at-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "evicted-at-003"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "evicted-at-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "evicted-at-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-at-006"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "evicted-at-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "evicted-at-008"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "evicted-at-009"
+      }
+    ],
+    "evicted-above": [
+      {
+        "op": "cache",
+        "target": "P",
+        "input": {
+          "$capture": "birth"
+        },
+        "publish": false,
+        "resolveDeclaredBirth": true,
+        "stepId": "evicted-above-001"
+      },
+      {
+        "op": "evict",
+        "kind": "EXACT_VALUE_CACHE_ONLY",
+        "target": "P",
+        "stepId": "evicted-above-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "birth"
+        },
+        "calibrationInput": "AUTHENTICATED_PROSPECTIVE_BIRTH",
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "recordWorkAndSelectedViews": true,
+        "stepId": "evicted-above-003"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "after",
+        "sourcePhase": "subject",
+        "stepId": "evicted-above-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "U",
+        "stepId": "evicted-above-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "U"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "evicted-above-006"
+      },
+      {
+        "op": "observeBirth",
+        "observer": "P",
+        "child": "T",
+        "capture": "afterRestart",
+        "sourcePhase": "subject",
+        "stepId": "evicted-above-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "evicted-above-008"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "T",
+        "stepId": "evicted-above-009"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "GAS_BOUNDARY",
+    "causeKind": "LIVE",
+    "afterEqualsOnSuccess": {
+      "P.child.counter": 0,
+      "T.counter": 0,
+      "U.counter": 1
+    },
+    "writesOnSuccess": [
+      "P",
+      "T"
+    ],
+    "referenceCalibration": {
+      "root": "P",
+      "input": "birth",
+      "implementation": "independent fresh unwrapped processor over actual authenticated prospective-birth input",
+      "sameArtifactRequired": true,
+      "label": "G",
+      "mustSucceedWithinUnchangedReleaseMaximum": true
+    },
+    "expectedBySuffix": {
+      "below": "GAS_LIMIT_EXCEEDED",
+      "at": "SUCCESS",
+      "above": "SUCCESS"
+    },
+    "compareWithinBoundary": [
+      "after",
+      "gas",
+      "semanticReceipts",
+      "ownedWrites",
+      "birthObservations.after.finalSummary"
+    ],
+    "birthRollback": {
+      "owner": "P",
+      "child": "T",
+      "unrelatedSource": "U",
+      "birthEntryCapture": "birth",
+      "requiredSourceEpoch": 1,
+      "expectedCounter": 0,
+      "before": "before",
+      "after": "after",
+      "afterRestart": "afterRestart"
+    },
+    "verifyIdentityEnvelopes": false
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "draft",
+    "append",
+    "submitManaged",
+    "observeBirth",
+    "cache",
+    "evict",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ]
+}

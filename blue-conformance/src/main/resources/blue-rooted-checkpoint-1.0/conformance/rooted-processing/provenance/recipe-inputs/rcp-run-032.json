@@ -1,0 +1,61 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-032",
+  "category": "RUN",
+  "title": "Large fan-out is scheduled as independent rooted obligations",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-SCOPE-02",
+    "RCP-READY-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "LARGE_INCOMING_FANOUT",
+        "observerCount": 5000,
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.sourceSemanticMembershipEqualsStandalone",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.sourceGasEqualsStandalone",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.observersStillHaveRequiredWork",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.aggregateWorkUnboundedClaimed",
+        "op": "equals",
+        "expected": false
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

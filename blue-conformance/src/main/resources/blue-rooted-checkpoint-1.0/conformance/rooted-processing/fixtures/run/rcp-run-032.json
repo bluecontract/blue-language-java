@@ -12,45 +12,72 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "observer-template",
+        "source": "examples/iteration2/parent.yaml"
       }
     ],
-    "steps": [
-      {
-        "op": "scenario",
-        "name": "LARGE_INCOMING_FANOUT",
-        "observerCount": 5000,
-        "bind": "s"
-      }
+    "steps": [],
+    "variants": [
+      "standalone",
+      "5000-observers"
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-032.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-032.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.sourceSemanticMembershipEqualsStandalone",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.sourceGasEqualsStandalone",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.observersStillHaveRequiredWork",
-        "op": "isTrue"
-      },
-      {
-        "actual": "s.aggregateWorkUnboundedClaimed",
+        "actual": "status",
         "op": "equals",
-        "expected": false
+        "expected": "SUCCESS"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "preserveSource": true,
+      "verifyIdentityEnvelopes": true,
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "kind": "RCP2/Tick",
+          "ordinal": 0
+        }
+      ],
+      "equalAcrossVariants": [
+        "before",
+        "after",
+        "gas",
+        "events",
+        "ownedWrites",
+        "operationContext"
+      ],
+      "incomingFanout": {
+        "observerCounts": {
+          "standalone": 0,
+          "5000-observers": 5000
+        },
+        "source": "S",
+        "entryCapture": "E100",
+        "sourceTimestampUs": "100",
+        "semanticRecordAliases": [
+          "S"
+        ]
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",

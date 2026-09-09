@@ -1,0 +1,396 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-029",
+  "title": "Real root-local saved-original initialization with exact nanosecond SQL completion and fresh reopen",
+  "inputIdentityPolicy": "Save exact authored A/B/C inputs. A attaches saved original B; B attaches saved original C. A later processes B attachment and initializes only its locally pending B:/peers/c from retained C epoch zero.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/timestamp-local-node.yaml",
+      "bindings": {
+        "/name": "Tutorial graph node A",
+        "/documentId": "rooted-time-local-A",
+        "/nodeName": "A",
+        "/contracts/owner/timeline/timelineId": "rcp/time/A"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/timestamp-local-node.yaml",
+      "bindings": {
+        "/name": "Tutorial graph node B",
+        "/documentId": "rooted-time-local-B",
+        "/nodeName": "B",
+        "/contracts/owner/timeline/timelineId": "rcp/time/B"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "C",
+      "source": "examples/iteration2/timestamp-local-node.yaml",
+      "bindings": {
+        "/name": "Tutorial graph node C",
+        "/documentId": "rooted-time-local-C",
+        "/nodeName": "C",
+        "/contracts/owner/timeline/timelineId": "rcp/time/C"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "attach",
+      "channel": "owner",
+      "timestampUs": "100",
+      "request": {
+        "edge": "b",
+        "source": {
+          "$capture": "B.initialBlueId"
+        }
+      },
+      "exactDocumentPrecondition": false,
+      "capture": "Aattach",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "Aattach"
+      },
+      "budget": "DEFAULT",
+      "capture": "Aattached",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "inputFamily": "RETAINED_SUCCESSOR",
+      "capture": "Ainitialized",
+      "mustConsumePositions": [
+        0
+      ],
+      "stepId": "setup-006"
+    },
+    {
+      "op": "assertQuiescent",
+      "root": "A",
+      "stepId": "setup-007"
+    },
+    {
+      "op": "append",
+      "target": "B",
+      "operation": "attach",
+      "channel": "owner",
+      "timestampUs": "200",
+      "request": {
+        "edge": "c",
+        "source": {
+          "$capture": "C.initialBlueId"
+        }
+      },
+      "exactDocumentPrecondition": false,
+      "capture": "Battach",
+      "stepId": "setup-008"
+    },
+    {
+      "op": "processNext",
+      "root": "B",
+      "mustSelect": {
+        "$capture": "Battach"
+      },
+      "budget": "DEFAULT",
+      "capture": "Battached",
+      "stepId": "setup-009"
+    },
+    {
+      "op": "processNext",
+      "root": "B",
+      "inputFamily": "RETAINED_SUCCESSOR",
+      "capture": "Binitialized",
+      "mustConsumePositions": [
+        0
+      ],
+      "stepId": "setup-010"
+    },
+    {
+      "op": "assertQuiescent",
+      "root": "B",
+      "stepId": "setup-011"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "Battach"
+      },
+      "budget": "DEFAULT",
+      "capture": "localPending",
+      "recordWorkAndSelectedViews": true,
+      "stepId": "setup-012"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "processNext",
+        "root": "A",
+        "inputFamily": "ROOTED_RETAINED",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "mustConsumePositions": [
+          0
+        ],
+        "hostTimestamp": {
+          "completionTime": "2026-09-08T12:00:00.123456789Z",
+          "databaseName": "rooted-time",
+          "requireFreshProcessReopen": true
+        },
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "B",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "C",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B",
+          "C"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-005"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "MANAGED_REVISION",
+    "writes": [
+      "A"
+    ],
+    "afterEquals": {
+      "A.peers.b.peers.c.nodeName": "C",
+      "A.observed": 0,
+      "B.observed": 0,
+      "C.observed": 0
+    },
+    "preserveSource": true,
+    "verifyIdentityEnvelopes": true,
+    "hostTimestamp": {
+      "recordKind": "ROOTED_RETAINED_COMMAND",
+      "completionTime": "2026-09-08T12:00:00.123456789Z",
+      "observationField": "hostTimestamp",
+      "requireFreshProcessReopen": true,
+      "root": "A",
+      "consumer": "B",
+      "source": "C",
+      "targetPath": "/peers/c",
+      "sourceEpoch": 0,
+      "historicalFromEpoch": -1,
+      "rootedRetainedApplicationCount": 1,
+      "independentApplicationCount": 0,
+      "externalEntryCount": 0,
+      "expectedTimestampColumns": [
+        [
+          "MINI_COMMAND",
+          "COMPLETED_AT"
+        ],
+        [
+          "MINI_COMMAND",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_COMMAND",
+          "STARTED_AT"
+        ],
+        [
+          "MINI_COMMAND_READINESS_DEPENDENCY",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_COMPONENT_PROJECTION",
+          "COMPUTED_AT"
+        ],
+        [
+          "MINI_DOCUMENT_EPOCH",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_DOCUMENT_SESSION",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_DOCUMENT_SESSION",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_EXACT_CONTENT",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_AUTHORED_EXACT",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_CATCH_UP_BARRIER",
+          "COMPLETED_AT"
+        ],
+        [
+          "MINI_MANAGED_CATCH_UP_BARRIER",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_CATCH_UP_BARRIER",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_MANAGED_CYCLIC_EXACT_EVIDENCE",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_EPOCH_APPLICATION",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_EPOCH_APPLICATION_ATTEMPT",
+          "COMPLETED_AT"
+        ],
+        [
+          "MINI_MANAGED_EPOCH_APPLICATION_ATTEMPT",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_OCCURRENCE_CATCH_UP_CURSOR",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+          "COMPLETED_AT"
+        ],
+        [
+          "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_MANAGED_STATE_INDEX",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_OCCURRENCE_SLOT",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_PLATFORM_EVENT",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_PROCESSING_WORK",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_PROCESSING_WORK",
+          "LEASE_UNTIL"
+        ],
+        [
+          "MINI_PROCESSING_WORK",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_PROJECTION_BACKFILL",
+          "COMPLETED_AT"
+        ],
+        [
+          "MINI_RESOURCE_DEMAND",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_RESOURCE_DEMAND",
+          "SATISFIED_AT"
+        ],
+        [
+          "MINI_TIMELINE",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_TIMELINE",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_TIMELINE_ENTRY",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_TIMELINE_IMPORT",
+          "CREATED_AT"
+        ],
+        [
+          "MINI_TIMELINE_IMPORT",
+          "UPDATED_AT"
+        ],
+        [
+          "MINI_TIMELINE_IMPORT_ENTRY",
+          "IMPORTED_AT"
+        ],
+        [
+          "MINI_TIMELINE_IMPORT_RECEIPT",
+          "IMPORTED_AT"
+        ]
+      ]
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-029.json",
+    "sha256": "0d27931d34390ab95d31a7f5fe412a8dbc2e297460492f912a43215d43b93976"
+  }
+}

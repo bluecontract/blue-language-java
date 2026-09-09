@@ -12,41 +12,93 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
       },
       {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "U",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "T",
+        "source": "examples/iteration2/source.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "PROVISIONAL_CHILD_ROLLBACK",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-024.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "literalPlan": "plans/rcp-run-024.json",
+    "variants": [
+      "cold-below",
+      "cold-at",
+      "cold-above",
+      "cached-below",
+      "cached-at",
+      "cached-above",
+      "evicted-below",
+      "evicted-at",
+      "evicted-above"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-024.json"
   },
   "expected": {
+    "oracleVersion": 2,
     "assertions": [
       {
-        "actual": "s.childPublished",
+        "actual": "causeKind",
         "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.rootChanged",
-        "op": "equals",
-        "expected": false
-      },
-      {
-        "actual": "s.oldSourceHistoryUnchanged",
-        "op": "isTrue"
+        "expected": "LIVE"
       }
-    ]
+    ],
+    "contract": {
+      "scope": "GAS_BOUNDARY",
+      "causeKind": "LIVE",
+      "afterEqualsOnSuccess": {
+        "P.child.counter": 0,
+        "T.counter": 0,
+        "U.counter": 1
+      },
+      "writesOnSuccess": [
+        "P",
+        "T"
+      ],
+      "referenceCalibration": {
+        "root": "P",
+        "input": "birth",
+        "implementation": "independent fresh unwrapped processor over actual authenticated prospective-birth input",
+        "sameArtifactRequired": true,
+        "label": "G",
+        "mustSucceedWithinUnchangedReleaseMaximum": true
+      },
+      "expectedBySuffix": {
+        "below": "GAS_LIMIT_EXCEEDED",
+        "at": "SUCCESS",
+        "above": "SUCCESS"
+      },
+      "compareWithinBoundary": [
+        "after",
+        "gas",
+        "semanticReceipts",
+        "ownedWrites",
+        "birthObservations.after.finalSummary"
+      ],
+      "birthRollback": {
+        "owner": "P",
+        "child": "T",
+        "unrelatedSource": "U",
+        "birthEntryCapture": "birth",
+        "requiredSourceEpoch": 1,
+        "expectedCounter": 0,
+        "before": "before",
+        "after": "after",
+        "afterRestart": "afterRestart",
+        "expectedBirthTimestampUs": "1800000000000020"
+      }
+    }
   },
   "verification": {
     "model": "NOT_APPLICABLE",
