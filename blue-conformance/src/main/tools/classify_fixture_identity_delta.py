@@ -996,6 +996,22 @@ def reviewed_rooted_combined_transition(before_files, after_files):
     return review
 
 
+ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-checkpoint-graph-transition.json")
+ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256 = "ba46adc0241586b304f7e6fe1a9c25c1ebbee3bf1baa9a129afceaa7b5282bb4"
+
+
+def reviewed_rooted_checkpoint_graph_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the checkpoint graph amendment."""
+    data = ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed checkpoint-graph baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1454,6 +1470,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         reviewed_transition = reviewed_representation_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_rooted_combined_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_checkpoint_graph_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1500,7 +1518,9 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (ROOTED_COMBINED_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-checkpoint-graph-exact-proposed-transition"
+                else ROOTED_COMBINED_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "rooted-combined-amendment-exact-proposed-transition"
                 else REPRESENTATION_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "historical-representation-exact-proposed-transition"
