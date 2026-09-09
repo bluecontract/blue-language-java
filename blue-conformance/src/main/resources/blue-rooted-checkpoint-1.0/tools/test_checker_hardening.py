@@ -99,4 +99,26 @@ class EventTests(unittest.TestCase):
         r['baseline']['output']['events'][0]['kind']='NotTick'
         with self.assertRaisesRegex(ValueError,'EVENT_ANCHOR'):P.check_runs(f,r,T.WEIGHTS)
 
+class AuthoredInitialCyclePlanTests(unittest.TestCase):
+    def setUp(self):
+        self.plan=json.loads((T.S/'plans/rcp-run-023.json').read_text())
+        self.variant='view-A'
+        self.rows=[{'kind':'SDK_CALL','planStepId':s['stepId'],'completed':True,'request':{},'response':{}}
+                   for s in self.plan['setup']+self.plan['variants'][self.variant]]
+    def test_saved_original_has_one_explicit_genesis_successor(self):
+        self.assertEqual(self.plan['setup'][2]['request']['a'],{'$capture':'A.initialBlueId'})
+        step=self.plan['setup'][4]
+        self.assertEqual(step['stepId'],'setup-004-genesis')
+        self.assertEqual(step['mustConsumePositions'],[-1,0])
+        self.assertEqual(step['inputFamily'],'RETAINED_SUCCESSOR')
+        P.literal_steps(self.plan,self.variant,self.rows)
+    def test_omitted_genesis_completion_rejects(self):
+        rows=[r for r in self.rows if r['planStepId']!='setup-004-genesis']
+        with self.assertRaisesRegex(ValueError,'INCOMPLETE'):
+            P.literal_steps(self.plan,self.variant,rows)
+    def test_activation_assertion_before_genesis_rejects(self):
+        self.rows[4],self.rows[5]=self.rows[5],self.rows[4]
+        with self.assertRaisesRegex(ValueError,'STEP_ORDER'):
+            P.literal_steps(self.plan,self.variant,self.rows)
+
 if __name__=='__main__':unittest.main(verbosity=2)

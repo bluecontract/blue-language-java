@@ -71,6 +71,25 @@
       "stepId": "setup-004"
     },
     {
+      "op": "processNext",
+      "root": "B",
+      "inputFamily": "RETAINED_SUCCESSOR",
+      "mustConsumePositions": [
+        -1,
+        0
+      ],
+      "capture": "joinInitialization",
+      "collect": [
+        "exactBeforeAfter",
+        "orderedEvents",
+        "sourceReceipts",
+        "occurrencePositions",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-004-genesis"
+    },
+    {
       "op": "assert",
       "actual": "liveComponent(A)",
       "expectedMembers": [
