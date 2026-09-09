@@ -1,0 +1,55 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-005",
+  "category": "RUN",
+  "title": "Two channels in one document retain distinct progress",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "TWO_KEYS_DISTINCT_PREFIXES",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.deliveryOrder",
+        "op": "equals",
+        "expected": [
+          "second:E1",
+          "second:E2",
+          "first:E3"
+        ]
+      },
+      {
+        "actual": "s.finalCheckpointsVerified",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

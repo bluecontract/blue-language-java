@@ -11,45 +11,110 @@
     "isolation": "NEW_REALM",
     "documents": [
       {
-        "alias": "child",
-        "source": "examples/counter.yaml"
-      },
-      {
-        "alias": "parent",
-        "source": "examples/parent.yaml"
+        "alias": "P",
+        "source": "examples/iteration2/two-channels.yaml"
       }
     ],
     "steps": [
       {
-        "op": "scenario",
-        "name": "TWO_KEYS_DISTINCT_PREFIXES",
-        "bind": "s"
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-005.json"
       }
     ],
-    "variants": [],
-    "qualification": "RECIPE_ONLY"
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-005.json"
   },
   "expected": {
-    "assertions": [
-      {
-        "actual": "s.deliveryOrder",
-        "op": "equals",
-        "expected": [
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.log": [
           "second:E1",
           "second:E2",
           "first:E3"
         ]
       },
-      {
-        "actual": "s.finalCheckpointsVerified",
-        "op": "isTrue"
+      "requiredEvents": 1,
+      "phaseEventAnchors": {
+        "second1": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "second:E1"
+          }
+        ],
+        "second2": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "second:E2"
+          }
+        ],
+        "subject": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "first:E3"
+          }
+        ]
+      },
+      "distinctChannelProgress": {
+        "owner": "P",
+        "channels": [
+          "first",
+          "second"
+        ],
+        "phases": [
+          {
+            "capture": "second1",
+            "entries": {
+              "second": "E1"
+            }
+          },
+          {
+            "capture": "second2",
+            "entries": {
+              "second": "E2"
+            }
+          },
+          {
+            "capture": "subject",
+            "entries": {
+              "first": "E3",
+              "second": "E2"
+            }
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "second1.after.P.log": [
+            "second:E1"
+          ],
+          "second2.after.P.log": [
+            "second:E1",
+            "second:E2"
+          ]
+        }
       }
-    ]
+    },
+    "oracleVersion": 2
   },
   "verification": {
     "model": "NOT_APPLICABLE",
     "production": "NOT_RUN",
     "scope": "PRODUCTION_ADAPTER_REQUIRED",
     "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-005.json",
+    "sha256": "70b19da34e2e6762039a502e975a8ddd9e3fa869b8a3bffd7ce4953a99827a65"
   }
 }

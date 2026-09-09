@@ -315,6 +315,36 @@ def check_channel_checkpoint_history(record,rule):
         for path,value in selected['afterDocumentEquals'].items():
             require(exact_equal(lookup(receipt['afterDocument'],path),value),'CHECKPOINT_SELECTED_VALUE')
 
+def check_distinct_channel_progress(record,rule):
+    """Bind each accepted checkpoint to its own actual channel entry, never a root maximum."""
+    owner=rule['owner'];domains={};last={}
+    def completion(capture,operation):
+        rows=[t for t in record['transcript'] if t.get('request',{}).get('capture')==capture]
+        require(len(rows)==1 and rows[0].get('completed') is True
+                and rows[0]['request'].get('op')==operation,'CHANNEL_PROGRESS_COMPLETION')
+        return rows[0]
+    for phase in rule['phases']:
+        row=completion(phase['capture'],'processNext')
+        require(row['request'].get('root')==owner,'CHANNEL_PROGRESS_ROOT')
+        state=row['response'].get('retainedRecords',{}).get(owner,{})
+        require(state.get('documentId')==record['documentIds'][owner],'CHANNEL_PROGRESS_OWNER')
+        checkpoints=state.get('exactDocument',{}).get('contracts',{}).get('checkpoint',{}).get('entries',{})
+        require(set(checkpoints)==set(phase['entries']),'CHANNEL_PROGRESS_INVENTORY')
+        for channel,capture in phase['entries'].items():
+            require(channel in rule['channels'],'CHANNEL_PROGRESS_KEY')
+            entry=completion(capture,'append');checkpoint=checkpoints[channel]
+            require(entry['request'].get('target')==owner and entry['request'].get('channel')==channel,'CHANNEL_PROGRESS_INPUT')
+            domain=checkpoint.get('domain',{}).get('blueId');subject=checkpoint.get('subject',{})
+            require(isinstance(domain,str) and domain,'CHANNEL_PROGRESS_DOMAIN')
+            require(subject.get('entryBlueId',{}).get('value')==entry['response'].get('entryBlueId')
+                    and isinstance(entry['response'].get('entryBlueId'),str),'CHANNEL_PROGRESS_ENTRY')
+            require(subject.get('timestamp',{}).get('value')==int(entry['request']['timestampUs']),'CHANNEL_PROGRESS_TIME')
+            if channel in domains:require(domains[channel]==domain,'CHANNEL_PROGRESS_DOMAIN_CHANGED')
+            if channel in last and last[channel][0]==capture:
+                require(exact_equal(last[channel][1],checkpoint),'CHANNEL_PROGRESS_UNRELATED_ADVANCE')
+            domains[channel]=domain;last[channel]=(capture,checkpoint)
+    require(set(domains)==set(rule['channels']) and len(set(domains.values()))==len(domains),'CHANNEL_PROGRESS_DOMAIN_COLLAPSE')
+
 def check_recreated_occurrence(output,phases,rule,document_ids):
     owner=rule['owner'];source=document_ids[rule['source']]
     def rows(phase):
@@ -513,6 +543,8 @@ def check_runs(f,run_records,weights,calibration=None):
             check_recreated_occurrence(o,rec.get('phaseRecords',{}),contract['recreatedOccurrence'],rec['documentIds'])
         if contract.get('channelCheckpointHistory'):
             check_channel_checkpoint_history(rec,contract['channelCheckpointHistory'])
+        if contract.get('distinctChannelProgress'):
+            check_distinct_channel_progress(rec,contract['distinctChannelProgress'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):

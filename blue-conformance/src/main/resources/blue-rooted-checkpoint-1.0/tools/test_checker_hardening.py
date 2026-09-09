@@ -492,4 +492,61 @@ class RetainedRollbackRetryTests(unittest.TestCase):
         self.response['outcome']['disposition']='APPLIED'
         with self.assertRaisesRegex(ValueError,'CYCLE_RETRY_OUTCOME'):self.check()
 
+class DistinctChannelProgressTests(unittest.TestCase):
+    def setUp(self):
+        self.rule={'owner':'P','channels':['first','second'],'phases':[
+            {'capture':'one','entries':{'second':'E1'}},
+            {'capture':'two','entries':{'second':'E2'}},
+            {'capture':'subject','entries':{'first':'E3','second':'E2'}}]}
+        self.record={'documentIds':{'P':'parent'},'transcript':[]};self.states={}
+        for n,channel in [(3,'first'),(1,'second'),(2,'second')]:
+            self.record['transcript'].append({'completed':True,'request':{'op':'append','capture':f'E{n}',
+                'target':'P','channel':channel,'timestampUs':str(n)},'response':{'entryBlueId':f'exact-{n}'}})
+        for phase in self.rule['phases']:
+            entries={channel:{'domain':{'blueId':f'domain-{channel}'},'subject':{
+                'entryBlueId':{'value':'exact-'+entry[-1]},'timestamp':{'value':int(entry[-1])}}}
+                for channel,entry in phase['entries'].items()}
+            self.states[phase['capture']]=entries
+            self.record['transcript'].append({'completed':True,'request':{'op':'processNext',
+                'root':'P','capture':phase['capture']},'response':{'retainedRecords':{'P':{
+                    'documentId':'parent','exactDocument':{'contracts':{'checkpoint':{'entries':entries}}}}}}})
+    def check(self):P.check_distinct_channel_progress(self.record,self.rule)
+    def test_independent_checkpoints_pass(self):self.check()
+    def test_document_maximum_cannot_replace_two_entries(self):
+        self.states['subject']['second']['subject']=copy.deepcopy(self.states['subject']['first']['subject'])
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_ENTRY'):self.check()
+    def test_unhandled_channel_has_no_successful_checkpoint(self):
+        self.states['one']['first']=copy.deepcopy(self.states['one']['second'])
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_INVENTORY'):self.check()
+    def test_missing_checkpoint_rejects(self):
+        self.states['subject'].pop('second')
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_INVENTORY'):self.check()
+    def test_wrong_checkpoint_timestamp_rejects(self):
+        self.states['two']['second']['subject']['timestamp']['value']=3
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_TIME'):self.check()
+    def test_missing_domain_rejects(self):
+        self.states['one']['second'].pop('domain')
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_DOMAIN'):self.check()
+    def test_changed_domain_rejects(self):
+        self.states['two']['second']['domain']['blueId']='changed'
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_DOMAIN_CHANGED'):self.check()
+    def test_shared_domain_rejects(self):
+        self.states['subject']['first']['domain']['blueId']='domain-second'
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_DOMAIN_COLLAPSE'):self.check()
+    def test_changed_unrelated_checkpoint_bytes_rejects(self):
+        self.states['subject']['second']['extra']='unaccounted-change'
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_UNRELATED_ADVANCE'):self.check()
+    def test_wrong_target_channel_rejects(self):
+        self.record['transcript'][0]['request']['channel']='second'
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_INPUT'):self.check()
+    def test_duplicate_completion_rejects(self):
+        self.record['transcript'].append(copy.deepcopy(self.record['transcript'][-1]))
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_COMPLETION'):self.check()
+    def test_unexecuted_phase_rejects(self):
+        self.record['transcript'][-1]['completed']=False
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_COMPLETION'):self.check()
+    def test_wrong_root_rejects(self):
+        self.record['transcript'][-1]['request']['root']='another'
+        with self.assertRaisesRegex(ValueError,'CHANNEL_PROGRESS_ROOT'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)
