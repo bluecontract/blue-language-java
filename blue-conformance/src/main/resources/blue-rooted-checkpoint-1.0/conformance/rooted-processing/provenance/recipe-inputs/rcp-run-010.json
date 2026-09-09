@@ -1,0 +1,57 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-010",
+  "category": "RUN",
+  "title": "Descendant listener survives a silent intermediate document",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "SILENT_INTERMEDIATE_DESCENDANT_EVENT",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.middleHandlerInvocations",
+        "op": "equals",
+        "expected": 0
+      },
+      {
+        "actual": "s.rootDescendantDeliveries",
+        "op": "equals",
+        "expected": 1
+      },
+      {
+        "actual": "s.sourcePublicEmissions",
+        "op": "equals",
+        "expected": 1
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

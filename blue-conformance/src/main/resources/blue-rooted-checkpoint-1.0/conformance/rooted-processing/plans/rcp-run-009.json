@@ -1,0 +1,169 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-009",
+  "title": "No listener still permits required reference advancement",
+  "inputIdentityPolicy": "Exact initialized source captures; independently owned heads never replace root-local views.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "M",
+      "source": "examples/iteration2/silent-container.yaml",
+      "bindings": {
+        "/name": "RCP2 Silent Middle",
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/silent-container.yaml",
+      "bindings": {
+        "/name": "RCP2 Silent Root",
+        "/child": {
+          "$capture": "M.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E1",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E1"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "baseline-002",
+        "recordWorkAndSelectedViews": true
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E1"
+        },
+        "budget": "DEFAULT",
+        "capture": "sourcePublication",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-006"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SILENT_MIDDLE",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.child.child.counter": 1,
+      "S.counter": 0,
+      "M.child.counter": 0
+    },
+    "requiredEvents": 0,
+    "eventAnchors": [],
+    "preserveSource": true,
+    "silentMiddle": "M",
+    "selectedExactAdvanced": [
+      "S",
+      "M",
+      "P"
+    ],
+    "computedSourceEvent": {
+      "origin": "S",
+      "ordinal": 0,
+      "kind": "RCP2/Tick"
+    },
+    "phaseEventAnchors": {
+      "sourcePublication": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "sourcePublication.after.S.counter": 1,
+        "sourcePublication.after.P.child.child.counter": 1,
+        "sourcePublication.after.M.child.counter": 0,
+        "sourcePublication.ownedWrites": [
+          "S"
+        ]
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-009.json",
+    "sha256": "dfa9b2f25988efbbaed4a705266f3dfe7590e161ec1ca8c3c0ea9f070e9023ce"
+  }
+}

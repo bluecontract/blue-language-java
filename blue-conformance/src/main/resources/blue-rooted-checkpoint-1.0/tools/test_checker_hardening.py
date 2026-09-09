@@ -257,4 +257,53 @@ class LiteralSourceTests(unittest.TestCase):
         self.plan['setup'][0]['source']='examples/not-yaml.json'
         with self.assertRaisesRegex(ValueError,'LITERAL_SOURCE_PATH'):self.load()
 
+class SilentMiddleTests(unittest.TestCase):
+    def setUp(self):
+        self.ids={'S':'source','M':'middle','P':'parent'}
+        self.contract={'silentMiddle':'M','selectedExactAdvanced':['S','M','P'],
+                       'computedSourceEvent':{'origin':'S','ordinal':0,'kind':'RCP2/Tick'}}
+        self.output={'implementationEvidence':{'complete':True,'invocationIdentity':'actual',
+            'inputInvocationIdentity':'actual','workTrace':[{'ordinal':0,'kind':'CONTAINING_REFERENCE_UPDATE',
+            'targetDocumentId':{'value':'middle'}}], 'documentStepTrace':[{'workOrdinal':0,'targetDocumentId':{'value':'middle'}}]},
+            'selectedBefore':{},'selectedAfter':{},'computedEvents':[copy.deepcopy(self.contract['computedSourceEvent'])]}
+        for alias,identity in self.ids.items():
+            self.output['selectedBefore'][alias]={'documentId':identity,'blueId':'before-'+alias,'exactDocument':{'counter':0}}
+            self.output['selectedAfter'][alias]={'documentId':identity,'blueId':'after-'+alias,'exactDocument':{'counter':1}}
+        event=self.output['computedEvents'][0];event['transitionReceiptIdentity']='computed-source'
+        self.output['computedReceipts']=[{'documentId':{'value':'source'},'beforeBlueId':'before-S',
+            'afterBlueId':'after-S','transitionReceiptIdentity':'computed-source',
+            'emittedRootEvents':[{k:v for k,v in event.items() if k not in ('origin','kind','transitionReceiptIdentity')}]}]
+    def check(self):P.check_silent_middle(self.output,self.contract,self.ids)
+    def test_complete_reference_work_passes(self):self.check()
+    def test_incomplete_evidence_rejects(self):
+        self.output['implementationEvidence']['complete']=False
+        with self.assertRaisesRegex(ValueError,'SILENT_INCOMPLETE'):self.check()
+    def test_other_invocation_rejects(self):
+        self.output['implementationEvidence']['invocationIdentity']='other'
+        with self.assertRaisesRegex(ValueError,'SILENT_WRONG_INVOCATION'):self.check()
+    def test_hidden_middle_handler_work_rejects(self):
+        self.output['implementationEvidence']['workTrace'][0]['kind']='EMBEDDED_EVENT'
+        with self.assertRaisesRegex(ValueError,'SILENT_MIDDLE_HANDLER_WORK'):self.check()
+    def test_unadvanced_reference_rejects(self):
+        self.output['selectedAfter']['M']=copy.deepcopy(self.output['selectedBefore']['M'])
+        with self.assertRaisesRegex(ValueError,'SILENT_REFERENCE_NOT_ADVANCED'):self.check()
+    def test_wrong_lineage_rejects(self):
+        self.output['selectedAfter']['M']['documentId']='different'
+        with self.assertRaisesRegex(ValueError,'SILENT_SELECTED_LINEAGE'):self.check()
+    def test_duplicate_source_emission_rejects(self):
+        self.output['computedEvents']*=2
+        with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_EVENT_COUNT'):self.check()
+    def test_unbound_source_receipt_rejects(self):
+        self.output['computedReceipts'][0]['transitionReceiptIdentity']='other'
+        with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_RECEIPT_BINDING'):self.check()
+    def test_wrong_source_position_rejects(self):
+        self.output['computedReceipts'][0]['afterBlueId']='other'
+        with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_RECEIPT_POSITION'):self.check()
+    def test_different_receipted_event_rejects(self):
+        self.output['computedReceipts'][0]['emittedRootEvents'][0]['ordinal']=7
+        with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_RECEIPT_EVENTS'):self.check()
+    def test_wrong_source_event_kind_rejects(self):
+        self.output['computedEvents'][0]['kind']='other'
+        with self.assertRaisesRegex(ValueError,'SILENT_SOURCE_EVENT_ANCHOR'):self.check()
+
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -278,6 +278,41 @@ def check_multiple_history(o,contract,weights,document_ids):
     require(all(observed[p]==v['positions'] for p,v in expected.items()),'MULTI_WRONG_SUFFIX')
     if 'applicationOrder' in contract:require(order==contract['applicationOrder'],'MULTI_WRONG_ORDER')
 
+def check_silent_middle(output,contract,document_ids):
+    evidence=output.get('implementationEvidence',{})
+    require(evidence.get('complete') is True,'SILENT_INCOMPLETE_WORK')
+    require(evidence.get('invocationIdentity')==evidence.get('inputInvocationIdentity')
+            and isinstance(evidence.get('invocationIdentity'),str),'SILENT_WRONG_INVOCATION')
+    work=evidence.get('workTrace');steps=evidence.get('documentStepTrace')
+    require(isinstance(work,list) and work and isinstance(steps,list) and len(steps)==len(work),'SILENT_WORK_EVIDENCE')
+    middle=document_ids[contract['silentMiddle']]
+    for ordinal,(item,step) in enumerate(zip(work,steps)):
+        require(item.get('ordinal')==ordinal and step.get('workOrdinal')==ordinal
+                and step.get('targetDocumentId')==item.get('targetDocumentId'),'SILENT_WORK_ORDER')
+        if item['targetDocumentId']['value']==middle:
+            require(item.get('kind')=='CONTAINING_REFERENCE_UPDATE','SILENT_MIDDLE_HANDLER_WORK')
+    before=output.get('selectedBefore',{});after=output.get('selectedAfter',{})
+    for alias in contract['selectedExactAdvanced']:
+        require(alias in before and alias in after,'SILENT_SELECTED_VIEW_MISSING')
+        a=before[alias];b=after[alias]
+        require(a.get('documentId')==b.get('documentId')==document_ids[alias],'SILENT_SELECTED_LINEAGE')
+        require(isinstance(a.get('blueId'),str) and isinstance(b.get('blueId'),str)
+                and a['blueId']!=b['blueId'] and a.get('exactDocument')!=b.get('exactDocument'),'SILENT_REFERENCE_NOT_ADVANCED')
+    anchor=contract['computedSourceEvent']
+    events=[e for e in output.get('computedEvents',[]) if e.get('origin')==anchor['origin']]
+    require(len(events)==1,'SILENT_SOURCE_EVENT_COUNT')
+    require(all(exact_equal(events[0].get(k),v) for k,v in anchor.items()),'SILENT_SOURCE_EVENT_ANCHOR')
+    source=anchor['origin'];identity=document_ids[source]
+    receipts=[r for r in output.get('computedReceipts',[]) if r.get('documentId',{}).get('value')==identity]
+    require(len(receipts)==1,'SILENT_SOURCE_RECEIPT')
+    receipt=receipts[0];event=events[0]
+    require(receipt.get('beforeBlueId')==before[source]['blueId']
+            and receipt.get('afterBlueId')==after[source]['blueId'],'SILENT_SOURCE_RECEIPT_POSITION')
+    require(event.get('transitionReceiptIdentity')==receipt.get('transitionReceiptIdentity')
+            and isinstance(event.get('transitionReceiptIdentity'),str),'SILENT_SOURCE_RECEIPT_BINDING')
+    normalized={k:v for k,v in event.items() if k not in ('origin','kind','transitionReceiptIdentity')}
+    require(exact_equal(receipt.get('emittedRootEvents'),[normalized]),'SILENT_SOURCE_RECEIPT_EVENTS')
+
 def check_phase_events(phases,anchors,weights):
     """Bind every named phase to its complete ordered literal event inventory."""
     for name,expected in anchors.items():
@@ -363,6 +398,7 @@ def check_runs(f,run_records,weights,calibration=None):
             require(after.get('epoch',-1)>=contract['sourceEpochMinimum'],'SOURCE_REWIND')
             require(sorted(o.get('liveCycle',[]))==sorted(contract['requireLiveCycle']),'LIVE_JOIN_MISSING')
         if scope=='HISTORY_MULTIPLE':check_multiple_history(o,contract,weights,rec['documentIds'])
+        if scope=='SILENT_MIDDLE':check_silent_middle(o,contract,rec['documentIds'])
         if contract.get('phaseEventAnchors'):
             check_phase_events(rec.get('phaseRecords',{}),contract['phaseEventAnchors'],weights)
         if contract.get('derivedAfter'):

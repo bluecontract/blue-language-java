@@ -1,6 +1,6 @@
 {
   "schema": "blue-rooted-literal-plans/1.0-draft.2",
-  "count": 12,
+  "count": 14,
   "fixtures": [
     "RCP-RUN-001",
     "RCP-RUN-002",
@@ -8,6 +8,8 @@
     "RCP-RUN-006",
     "RCP-RUN-007",
     "RCP-RUN-008",
+    "RCP-RUN-009",
+    "RCP-RUN-010",
     "RCP-RUN-011",
     "RCP-RUN-014",
     "RCP-RUN-020",
@@ -16,6 +18,6 @@
     "RCP-RUN-025"
   ],
   "status": "AUTHORED_NOT_RUN_PRODUCTION",
-  "remainingRecipes": 22,
+  "remainingRecipes": 20,
   "rules": "No current-state substitution; captures real exact IDs; no private synthetic receipts."
 }
