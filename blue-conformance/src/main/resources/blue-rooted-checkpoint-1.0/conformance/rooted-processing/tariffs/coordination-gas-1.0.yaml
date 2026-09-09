@@ -1,0 +1,62 @@
+schedule: blue-coordination/gas/1.0
+specificationVersion: '1.0'
+languageVersion: '1.0'
+contractsVersion: '1.0'
+bexVersion: '2.0'
+status: production
+numericWeightsStatus: provisional pending calibration; counter names, ownership, formulas, and trace order are frozen
+ownership:
+  contracts: Generic processor, Language semantic work, patch application, checkpoints, lifecycle, and internal event delivery.
+  bex: BEX compilation and runtime work under its own exact child ledger.
+  coordination: Timeline, Operation routing, and selected workflow normalization not already owned by Contracts or BEX.
+counters:
+- name: timelineHeaderRead
+  weight: 1
+  unit: one immutable Timeline Entry header field read
+- name: timelineBindingCompared
+  weight: 2
+  unit: one exact Timeline or Actor binding comparison
+- name: compositeMemberVisited
+  weight: 2
+  unit: one referenced member Channel visited
+- name: allTimelinesMemberVisited
+  weight: 2
+  unit: one effective same-scope Timeline-derived Channel visited
+- name: operationRequestFieldRead
+  weight: 1
+  unit: one required Operation Request dispatch field read
+- name: operationTargetLookup
+  weight: 3
+  unit: one exact same-scope target Channel lookup
+- name: operationCandidateTested
+  weight: 4
+  unit: one effective Operation candidate tested
+- name: workflowStepVisited
+  weight: 1
+  unit: one selected workflow step header visited
+- name: workflowStepExecuted
+  weight: 3
+  unit: one selected workflow step executed
+- name: updateDocumentStep
+  weight: 3
+  unit: one Update Document step normalized; patch work belongs to Contracts
+- name: triggerEventStep
+  weight: 3
+  unit: one Trigger Event step normalized; event routing belongs to Contracts
+- name: terminateProcessingStep
+  weight: 3
+  unit: one graceful termination step normalized
+- name: computeStepEntered
+  weight: 3
+  unit: one Compute step admitted; BEX work belongs to the BEX child ledger
+- name: computeDefinitionResolved
+  weight: 3
+  unit: one exact Compute Definition resolved
+limits:
+  maxCompositeMembers: 1024
+  maxAllTimelinesMembers: 4096
+  maxWorkflowSteps: 4096
+  maxOperationCandidatesPerChannel: 4096
+  maxCoordinationRuntimeGasPerProcess: 100000
+identityAlgorithm: sha256 of UTF-8 canonical JSON with packageIdentity set to null
+packageIdentity: sha256:45ab8de5985255ba947c5abb6e44cdbd61ca56b5c9fe8ea2617d60e729f26293

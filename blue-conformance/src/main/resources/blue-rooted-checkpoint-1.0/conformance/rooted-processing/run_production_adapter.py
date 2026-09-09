@@ -45,6 +45,39 @@ def integer(x,minval=0):return type(x) is int and x>=minval
 
 def digest_bytes(b):return hashlib.sha256(b).hexdigest()
 
+def verified_tariff_weights(suite):
+    """Derive the complete allowed table from three pinned governing manifests."""
+    table=json.loads((suite/'tariff-weights.json').read_text())
+    sources=table.get('packagedTariffs',[])
+    require(len(sources)==3 and {s['role'] for s in sources}=={'contracts','bex','coordination'},'TARIFF_SOURCE_INVENTORY')
+    texts={}
+    for source in sources:
+        path=Path(source['path'])
+        require(not path.is_absolute() and '..' not in path.parts,'TARIFF_SOURCE_PATH')
+        data=(suite/path).read_bytes()
+        require(digest_bytes(data)==source['sha256'],'TARIFF_SOURCE_HASH')
+        texts[source['role']]=data.decode()
+    expected={}
+    def add(namespace,pairs):
+        for name,weight in pairs:
+            key=namespace+'.'+name
+            require(key not in expected,'TARIFF_COUNTER_COLLISION')
+            expected[key]=int(weight)
+    blocks=re.findall(r'^  (processor|semantic):\n    counterCount: (\d+)\n    counters:\n((?:      \w+: \d+\n)+)',texts['contracts'],re.M)
+    require(len(blocks)==2,'CONTRACTS_TARIFF_SHAPE')
+    for namespace,count,body in blocks:
+        pairs=re.findall(r'^      (\w+): (\d+)$',body,re.M)
+        require(len(pairs)==int(count),'CONTRACTS_TARIFF_COUNT');add(namespace,pairs)
+    match=re.search(r'^counterCount: (\d+)\ncounters:\n((?:  \w+: \d+\n)+)',texts['bex'],re.M)
+    require(match is not None,'BEX_TARIFF_SHAPE')
+    pairs=re.findall(r'^  (\w+): (\d+)$',match[2],re.M)
+    require(len(pairs)==int(match[1]),'BEX_TARIFF_COUNT');add('bex',pairs);add('runtime',pairs)
+    pairs=re.findall(r'^- name: (\w+)\n  weight: (\d+)$',texts['coordination'],re.M)
+    require(pairs and len(pairs)==len(re.findall(r'^- name:',texts['coordination'],re.M)),'COORDINATION_TARIFF_SHAPE')
+    add('runtime',pairs)
+    require(exact_equal(expected,table['weights']),'TARIFF_DERIVATION_MISMATCH')
+    return expected
+
 def check_artifact(path,expected):
     require(path.is_file(),'ARTIFACT_MISSING')
     actual=digest_bytes(path.read_bytes())
@@ -331,7 +364,7 @@ def main():
     if not(a.adapter_command and a.artifact and a.artifact_sha256 and a.source_lock and a.source_lock_sha256 and a.output):ap.error('adapter command, independently pinned artifact and output are required; no adapter is NOT_RUN')
     command=json.loads(a.adapter_command);require(isinstance(command,list) and command and all(isinstance(x,str) and x for x in command),'ADAPTER_COMMAND')
     art=check_artifact(a.artifact,a.artifact_sha256);deps=embedded_entries(a.artifact);require(deps,'USE_PACKAGED_MYOS_JAR_WITH_ACTUAL_DEPENDENCIES')
-    weights=json.loads((suite/'tariff-weights.json').read_text())['weights'];spec=digest_bytes((package/'manifests/specification-set.json').read_bytes())
+    weights=verified_tariff_weights(suite);spec=digest_bytes((package/'manifests/specification-set.json').read_bytes())
     lock=source_lock(a.source_lock,a.source_lock_sha256,art,deps,spec)
     results=[];evidenceRoot=a.output.parent/(a.output.stem+'-evidence');evidenceRoot.mkdir(parents=True,exist_ok=False)
     for row in rows:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """H1-H3 checker regressions. Synthetic records only, not runtime conformance."""
-import copy,json,unittest
+import copy,json,unittest,shutil,tempfile
+from pathlib import Path
 import test_iteration2 as T
 P=T.P
 
@@ -46,6 +47,28 @@ class CompletionTests(unittest.TestCase):
     def test_duplicate_plan_id_rejects(self):
         p=copy.deepcopy(self.plan);p['setup'][1]['stepId']=p['setup'][0]['stepId']
         with self.assertRaisesRegex(ValueError,'DUPLICATE_PLAN'):self.check(self.records,p)
+
+class TariffBindingTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.suite=Path(self.temp.name)
+        shutil.copy2(T.S/'tariff-weights.json',self.suite/'tariff-weights.json')
+        shutil.copytree(T.S/'tariffs',self.suite/'tariffs')
+    def change(self,mutate):
+        path=self.suite/'tariff-weights.json';value=json.loads(path.read_text())
+        mutate(value);path.write_text(json.dumps(value))
+    def test_complete_hosted_table_derives_from_exact_manifests(self):
+        self.assertEqual(T.WEIGHTS,P.verified_tariff_weights(self.suite))
+    def test_unreviewed_counter_cannot_extend_table(self):
+        self.change(lambda x:x['weights'].update({'runtime.futureUnreviewedCounter':1}))
+        with self.assertRaisesRegex(ValueError,'TARIFF_DERIVATION_MISMATCH'):P.verified_tariff_weights(self.suite)
+    def test_existing_weight_cannot_change(self):
+        self.change(lambda x:x['weights'].update({'runtime.functionCalled':3}))
+        with self.assertRaisesRegex(ValueError,'TARIFF_DERIVATION_MISMATCH'):P.verified_tariff_weights(self.suite)
+    def test_modified_source_bytes_fail_before_derivation(self):
+        path=self.suite/'tariffs/coordination-gas-1.0.yaml'
+        path.write_text(path.read_text().replace('weight: 3','weight: 4',1))
+        with self.assertRaisesRegex(ValueError,'TARIFF_SOURCE_HASH'):P.verified_tariff_weights(self.suite)
 
 class GasTests(unittest.TestCase):
     def check(self,r,cal=None):P.check_runs(T.fixture(20),r,T.WEIGHTS,cal or T.calibration())

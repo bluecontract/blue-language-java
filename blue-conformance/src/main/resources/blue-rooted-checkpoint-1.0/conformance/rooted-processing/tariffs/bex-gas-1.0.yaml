@@ -1,0 +1,91 @@
+manifestType: blue-bex-gas-manifest
+schedule: blue-bex/gas/2.0
+specification: Blue BEX
+specificationVersion: '2.0'
+status: implementation-baseline-pending-calibration
+unit: gas
+hostSchedule: blue-contracts/gas/1.0
+counterCount: 30
+counters:
+  expressionEvaluated: 1
+  statementExecuted: 1
+  functionCalled: 2
+  intrinsicCalled: 5
+  documentRead: 2
+  eventRead: 1
+  processingEventRead: 1
+  currentContractRead: 1
+  stepsRead: 1
+  bindingRead: 1
+  variableRead: 1
+  constantRead: 1
+  resultValueRead: 2
+  pointerSegmentRead: 1
+  pointerSegmentWritten: 1
+  objectMemberRead: 1
+  listItemRead: 1
+  collectionItemVisited: 1
+  collectionItemProduced: 1
+  textBlockExamined: 1
+  textBlockConstructed: 1
+  integerLimbOperation: 1
+  comparisonNodeVisited: 1
+  sortComparison: 1
+  patchAppended: 5
+  eventAppended: 5
+  transientObjectMemberProduced: 1
+  transientListItemProduced: 1
+  blueOutputBoundary: 5
+  nodeIdentityRequested: 5
+admissionRule: Admit quantity * weight before work into a child ledger bounded by the exact remaining Contracts budget.
+mergeRule: Merge the ordered child ledger into the parent exactly once; a local limit may only reduce the remaining budget.
+formulas:
+  textBlocks:
+    blockCodePoints: 64
+    fullScan: ceil(codePointLength / 64)
+    construction: ceil(constructedCodePointLength / 64)
+    comparison: charge blocks actually read from each operand
+  integerLimbs:
+    radix: 2^32
+    minimumLimbs: 1
+    equalityOrOrdering: L(a) + L(b)
+    additionOrSubtraction: max(L(a), L(b)) + 1
+    multiplication: L(a) * L(b)
+    divisionOrRemainder: L(a) * L(b)
+    decimalScaleAlignment: same unscaled Integer formula plus one operation
+  collectionIteration:
+    input: collectionItemVisited once per evaluated item
+    output: collectionItemProduced once per produced item
+    dynamicObject: transientObjectMemberProduced per retained field
+    dynamicList: transientListItemProduced per item
+    shortCircuit: no charges for skipped items
+  sorting:
+    algorithm: stable bottom-up merge sort
+    initialRunWidth: 1
+    mergeOrder: left-to-right
+    equalSelection: left
+    widthProgression: double after each pass
+    comparisonCharges:
+    - sortComparison
+    - comparisonNodeVisited
+    - scalar content work
+  blueBoundary:
+    everyValue: blueOutputBoundary += 1
+    existingExactValue: no recursive construction or size charge
+    transientValue: Contracts semantic identity establishment is merged once
+    nodeBlueIdTransient: nodeIdentityRequested + blueOutputBoundary + Contracts identity establishment
+forbiddenPortableMetering:
+- recursive estimatedSize
+- serialized payload bytes at patch or event boundary
+- UTF-16 length
+- cache-dependent discounts
+- opaque implementation-selected gasConsumed
+fixtureRequirements:
+- one exact microfixture per named counter
+- operator behavior vectors
+- representation-blind inline/reference variants
+- shared-meter exhaustion prefix
+- intrinsic named-ledger fixture
+identityAlgorithm: sha256 of UTF-8 canonical JSON with packageIdentity set to null
+packageIdentity: sha256:41247c820d91a12fdfc17fd9e787a5d8d668d8acc5954fdcb131715bf9e6147d
+numericWeightsStatus: provisional pending calibration; counter names, ownership, formulas, and trace order are frozen for implementation

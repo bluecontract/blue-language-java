@@ -8,6 +8,10 @@
     {
       "path": "baseline/current-repository/source/bex/src/test/resources/conformance/bex/gas-manifest.yaml",
       "sha256": "1f689e0cf51b0f9afa6b18a640e0c755470921a7b0d66f62bfc2206679de640d"
+    },
+    {
+      "path": "tariffs/coordination-gas-1.0.yaml",
+      "sha256": "9fcdc22563152cdd8cb37f9ea739477ced5f7a9e3088aecaf246812c3a3c6bab"
     }
   ],
   "weights": {
@@ -96,7 +100,74 @@
     "bex.transientObjectMemberProduced": 1,
     "bex.transientListItemProduced": 1,
     "bex.blueOutputBoundary": 5,
-    "bex.nodeIdentityRequested": 5
+    "bex.nodeIdentityRequested": 5,
+    "runtime.timelineHeaderRead": 1,
+    "runtime.timelineBindingCompared": 2,
+    "runtime.compositeMemberVisited": 2,
+    "runtime.allTimelinesMemberVisited": 2,
+    "runtime.operationRequestFieldRead": 1,
+    "runtime.operationTargetLookup": 3,
+    "runtime.operationCandidateTested": 4,
+    "runtime.workflowStepVisited": 1,
+    "runtime.workflowStepExecuted": 3,
+    "runtime.updateDocumentStep": 3,
+    "runtime.triggerEventStep": 3,
+    "runtime.terminateProcessingStep": 3,
+    "runtime.computeStepEntered": 3,
+    "runtime.computeDefinitionResolved": 3,
+    "runtime.expressionEvaluated": 1,
+    "runtime.statementExecuted": 1,
+    "runtime.functionCalled": 2,
+    "runtime.intrinsicCalled": 5,
+    "runtime.documentRead": 2,
+    "runtime.eventRead": 1,
+    "runtime.processingEventRead": 1,
+    "runtime.currentContractRead": 1,
+    "runtime.stepsRead": 1,
+    "runtime.bindingRead": 1,
+    "runtime.variableRead": 1,
+    "runtime.constantRead": 1,
+    "runtime.resultValueRead": 2,
+    "runtime.pointerSegmentRead": 1,
+    "runtime.pointerSegmentWritten": 1,
+    "runtime.objectMemberRead": 1,
+    "runtime.listItemRead": 1,
+    "runtime.collectionItemVisited": 1,
+    "runtime.collectionItemProduced": 1,
+    "runtime.textBlockExamined": 1,
+    "runtime.textBlockConstructed": 1,
+    "runtime.integerLimbOperation": 1,
+    "runtime.comparisonNodeVisited": 1,
+    "runtime.sortComparison": 1,
+    "runtime.patchAppended": 5,
+    "runtime.eventAppended": 5,
+    "runtime.transientObjectMemberProduced": 1,
+    "runtime.transientListItemProduced": 1,
+    "runtime.blueOutputBoundary": 5,
+    "runtime.nodeIdentityRequested": 5
   },
-  "note": "Exact weights preserved from supplied manifests. This checks reported arithmetic; independent work-count oracle/maintained conformance remains required."
+  "note": "Exact weights preserved from supplied manifests. This checks reported arithmetic; independent work-count oracle/maintained conformance remains required.",
+  "hostedRuntimeBinding": {
+    "bexNamespace": "runtime",
+    "coordinationNamespace": "runtime",
+    "collisionPolicy": "reject",
+    "sourceCoordinationCommit": "44aa25b47a72d70ea3ce5e575b3a28def7559501"
+  },
+  "packagedTariffs": [
+    {
+      "role": "contracts",
+      "path": "tariffs/contracts-gas-1.0.yaml",
+      "sha256": "54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8"
+    },
+    {
+      "role": "bex",
+      "path": "tariffs/bex-gas-1.0.yaml",
+      "sha256": "1f689e0cf51b0f9afa6b18a640e0c755470921a7b0d66f62bfc2206679de640d"
+    },
+    {
+      "role": "coordination",
+      "path": "tariffs/coordination-gas-1.0.yaml",
+      "sha256": "9fcdc22563152cdd8cb37f9ea739477ced5f7a9e3088aecaf246812c3a3c6bab"
+    }
+  ]
 }
