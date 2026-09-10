@@ -1059,6 +1059,21 @@ def reviewed_rooted_retired_witness_transition(before_files, after_files):
         return None
     return review
 
+ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-source-conventions-transition.json")
+ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256 = "723c21cc90403d82482a509f9ad481ac825f1b7b2feef05f00ff75e5cef4d381"
+
+
+def reviewed_rooted_source_conventions_transition(before_files, after_files):
+    """Select only the exact reviewed pair for the verified source-conventions correction."""
+    data = ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed source-conventions binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
 
 def cevo_release_integrity_violations(
     before_root: Path,
@@ -1526,6 +1541,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         reviewed_transition = reviewed_rooted_canonical_managed_payload_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_rooted_retired_witness_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_source_conventions_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
