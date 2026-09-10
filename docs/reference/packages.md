@@ -34,7 +34,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
 | `blue.language.processor` | 127 | present |
-| `blue.language.processor.closure` | 65 | present |
+| `blue.language.processor.closure` | 67 | present |
 | `blue.language.processor.model` | 19 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -466,6 +466,8 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.PublicEventOccurrence`
 - `blue.language.processor.closure.RejectedCharge`
 - `blue.language.processor.closure.ResultingDocument`
+- `blue.language.processor.closure.RootedProcessingContext`
+- `blue.language.processor.closure.RootedPublicationProjection`
 - `blue.language.processor.closure.SccPartitioner`
 - `blue.language.processor.closure.ScopeAddress`
 - `blue.language.processor.closure.SubscriptionDelta`
