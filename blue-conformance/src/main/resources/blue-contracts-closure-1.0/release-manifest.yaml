@@ -815,7 +815,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedDemandDiscovery.java
     sha256: 11d6b801f7516f774be8455b4b5ce64e753c0767e17687979d3f8fd624e5e692
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java
-    sha256: dd6cb64f2c16093b3d9ef2113a52165907499b26ca864afc9cf4cf75d8985b53
+    sha256: ecf2dc4ad67b4f16962c503423c8308e1f0c6160816b506903449aa31d06015e
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java
     sha256: 06b793d1244df2af02e6e77f18529f08bb8cdd74afc493f7a1500057e0695cab
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBirthRetry.java
@@ -1540,4 +1540,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:7379f9a6dff5a58faa5f9c329f3d22d494efde0f6bb3f0258eeedf9dff7c5ab8
+releaseIdentity: sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced

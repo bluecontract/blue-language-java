@@ -27,9 +27,9 @@ class RootedSemanticBaselineBindingTest {
         restoreReviewedBinding(rooted, historical, "release", "packageIdentity",
                 "sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce8281260689109162a68aea");
         restoreReviewedBinding(rooted, historical, "release", "contractsReleaseIdentity",
-                "sha256:7379f9a6dff5a58faa5f9c329f3d22d494efde0f6bb3f0258eeedf9dff7c5ab8");
+                "sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced");
         restoreReviewedBinding(rooted, historical, "packages", "contractsRelease",
-                "sha256:7379f9a6dff5a58faa5f9c329f3d22d494efde0f6bb3f0258eeedf9dff7c5ab8");
+                "sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced");
         restoreReviewedBinding(rooted, historical, "packages", "contractsFixtures",
                 "sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3");
         restoreReviewedBinding(rooted, historical, "gas", "oraclePackageIdentity",
