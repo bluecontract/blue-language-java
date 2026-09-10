@@ -16414,10 +16414,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 294,
+      "line": 296,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
@@ -16429,10 +16429,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 311,
+      "line": 313,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
@@ -16444,10 +16444,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 488,
+      "line": 490,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
@@ -31619,10 +31619,10 @@
       "E-invalid-fieldless-list-position": 5,
       "context-only-not-empty-sentinel-decision": 1849
     },
-    "changedFileHitCount": 1219,
+    "changedFileHitCount": 1222,
     "contextOnlyHitCount": 1849,
     "decisionRelevantHitCount": 256,
     "productionHitCount": 2105,
-    "unchangedFileHitCount": 886
+    "unchangedFileHitCount": 883
   }
 }
