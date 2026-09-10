@@ -27,6 +27,7 @@ public final class ManagedRevisionCause extends ProcessingCause implements Manag
     private final String sourceRevisionReceiptIdentity;
     private final ManagedDocumentTransitionReceipt sourceTransitionReceipt;
     private final CyclicSetProof afterCyclicProof;
+    private final ManagedRepresentationCause successorRepresentationCause;
 
     /**
      * Creates one contiguous authenticated managed revision.
@@ -222,6 +223,16 @@ public final class ManagedRevisionCause extends ProcessingCause implements Manag
             String sourceRevisionReceiptIdentity,
             ManagedDocumentTransitionReceipt sourceTransitionReceipt,
             CyclicSetProof afterCyclicProof) {
+        this(causeIdentity, targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch,
+                beforeBlueId, afterBlueId, afterDocument, originalSourceCauseIdentity,
+                sourceRevisionReceiptIdentity, sourceTransitionReceipt, afterCyclicProof, null);
+    }
+
+    private ManagedRevisionCause(String causeIdentity, String targetOccurrenceIdentity,
+            DocumentId childDocumentId, long fromEpoch, long toEpoch, String beforeBlueId,
+            String afterBlueId, Node afterDocument, String originalSourceCauseIdentity,
+            String sourceRevisionReceiptIdentity, ManagedDocumentTransitionReceipt sourceTransitionReceipt,
+            CyclicSetProof afterCyclicProof, ManagedRepresentationCause successorRepresentationCause) {
         super(causeIdentity);
         this.targetOccurrenceIdentity =
                 ClosureValueSupport.requireSha256Identity(
@@ -253,6 +264,7 @@ public final class ManagedRevisionCause extends ProcessingCause implements Manag
                         sourceRevisionReceiptIdentity,
                         "sourceRevisionReceiptIdentity");
         this.sourceTransitionReceipt = sourceTransitionReceipt;
+        this.successorRepresentationCause = successorRepresentationCause;
         boolean cyclicAfter = BlueIds.hasCyclicMemberSeparator(
                 this.afterBlueId);
         if (cyclicAfter) {
@@ -266,6 +278,52 @@ public final class ManagedRevisionCause extends ProcessingCause implements Manag
         this.afterCyclicProof = copyProof(afterCyclicProof);
         if (sourceTransitionReceipt != null) {
             verifyTypedReceipt(sourceTransitionReceipt);
+        }
+        verifySuccessorRepresentationCause();
+    }
+
+    /**
+     * Binds the first future step of a host-authenticated terminal representation tail.
+     * This numbered cause still executes exactly one numbered revision.
+     * The host must authenticate the entire captured prefix and its frozen source view.
+     * @param successor complete first representation cause, used only as future evidence
+     * @return a new numbered cause with an identity-bound successor goal
+     */
+    public ManagedRevisionCause withSuccessorRepresentationCause(ManagedRepresentationCause successor) {
+        if (successorRepresentationCause != null) {
+            throw new IllegalStateException("A numbered successor goal is already frozen");
+        }
+        ManagedRepresentationCause selected = Objects.requireNonNull(successor, "successor");
+        String identity = ClosureIdentityService.INSTANCE.managedRevisionCauseWithRepresentationSuccessorIdentity(
+                targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId,
+                afterBlueId, originalSourceCauseIdentity, sourceRevisionReceiptIdentity, selected.causeIdentity());
+        return new ManagedRevisionCause(identity, targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch,
+                beforeBlueId, afterBlueId, afterDocument, originalSourceCauseIdentity,
+                sourceRevisionReceiptIdentity, sourceTransitionReceipt, afterCyclicProof, selected);
+    }
+
+    /**
+     * Returns the first future representation step without executing or consuming it.
+     * @return optional complete successor evidence; empty for unchanged ordinary causes
+     */
+    public Optional<ManagedRepresentationCause> successorRepresentationCause() {
+        return Optional.ofNullable(successorRepresentationCause);
+    }
+
+    void verifySuccessorRepresentationCause() {
+        if (successorRepresentationCause == null) return;
+        ManagedRepresentationCause successor = successorRepresentationCause;
+        ManagedRepresentationTransition first = successor.transition();
+        if (sourceTransitionReceipt == null
+                || !successor.causeIdentity().equals(successor.recomputedIdentity())
+                || !targetOccurrenceIdentity.equals(successor.targetOccurrenceIdentity())
+                || !childDocumentId.equals(successor.childDocumentId())
+                || successor.fromEpoch() != toEpoch || successor.toEpoch() != toEpoch
+                || !afterBlueId.equals(successor.beforeBlueId())
+                || !first.anchorReceiptIdentity().equals(first.predecessorPositionIdentity())
+                || first.anchorReceiptIdentity().equals(successor.targetPositionIdentity())
+                || successor.nextRevisionReceiptIdentity() != null) {
+            throw new IllegalArgumentException("Numbered successor is not the authenticated first terminal-tail position");
         }
     }
 

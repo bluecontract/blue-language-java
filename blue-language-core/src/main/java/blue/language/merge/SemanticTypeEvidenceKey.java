@@ -557,7 +557,7 @@ final class SemanticTypeEvidenceKey {
             IdentityHashMap<T, IdentityHashMap<T, Boolean>> compared) {
         IdentityHashMap<T, Boolean> rights = compared.get(left);
         if (rights == null) {
-            rights = new IdentityHashMap<>();
+            rights = new IdentityHashMap<>(1);
             compared.put(left, rights);
         }
         return rights.put(right, Boolean.TRUE) != null;

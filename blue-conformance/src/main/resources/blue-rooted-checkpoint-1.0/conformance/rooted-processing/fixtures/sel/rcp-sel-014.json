@@ -1,0 +1,61 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-014",
+  "category": "SEL",
+  "title": "Different histories can share an empty checkpoint",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "A",
+            "entry": "A:1"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "B",
+        "entries": [
+          {
+            "timestamp": 2,
+            "timeline": "B",
+            "entry": "B:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "A:1",
+        "receivers": [
+          "A"
+        ]
+      },
+      {
+        "entry": "B:2",
+        "receivers": [
+          "B"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

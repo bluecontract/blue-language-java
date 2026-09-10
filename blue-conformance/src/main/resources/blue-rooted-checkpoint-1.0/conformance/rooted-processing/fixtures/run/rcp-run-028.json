@@ -1,0 +1,80 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-028",
+  "category": "RUN",
+  "title": "Crash around publication does not lose state or duplicate events",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "source",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "consumer",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-028.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-028.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "PACKAGED_PROCESS_FAULT_MATRIX",
+      "faultCuts": {
+        "lanes": [
+          "LIVE",
+          "OWNED_RETAINED"
+        ],
+        "cuts": [
+          "beforeCommit",
+          "afterCommitBeforeAck",
+          "beforeNotification",
+          "afterCursorWriteAttempt"
+        ],
+        "maxConcurrentLanes": 1,
+        "startupSeconds": 60,
+        "cutSeconds": 60,
+        "commandSeconds": 45,
+        "freshJvmInstances": 36,
+        "control": "fork of actual PROCESSING claim H2 backup",
+        "termination": "owned Popen SIGKILL after exact fsynced cut marker",
+        "coldRead": "separate read-only JDBC JVM before Spring recovery",
+        "duplicates": "same command UUID, key and exact request",
+        "gas": "each actual invocation separately checked against unchanged tariff and full trace"
+      }
+    },
+    "assertions": [
+      {
+        "actual": "s.partialResultsPublished",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.allRecoveredSemanticsMatch",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.duplicatePublicEmissions",
+        "op": "equals",
+        "expected": 0
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

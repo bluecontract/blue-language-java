@@ -1,0 +1,69 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-021",
+  "category": "RUN",
+  "title": "Already committed source is not rolled back by failed consumer",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-07",
+    "RCP-OWN-05",
+    "RCP-READY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-021.json"
+      }
+    ],
+    "variants": [
+      "committed-source"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-021.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "GAS_LIMIT_EXCEEDED"
+      }
+    ],
+    "contract": {
+      "scope": "FAILED_ROOT",
+      "causeKind": "LIVE",
+      "expectedStatus": "GAS_LIMIT_EXCEEDED",
+      "writes": [],
+      "afterEquals": {
+        "S.counter": 1,
+        "P.seen": 0,
+        "P.child.counter": 0
+      },
+      "preserveSource": true
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

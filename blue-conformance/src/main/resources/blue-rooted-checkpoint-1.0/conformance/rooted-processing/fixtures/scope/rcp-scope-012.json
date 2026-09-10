@@ -1,0 +1,28 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-012",
+  "category": "SCOPE",
+  "title": "Ten-thousand one-way observers do not enlarge the source root",
+  "kind": "graph-generated",
+  "requirements": [
+    "RCP-SCOPE-02",
+    "RCP-READY-05"
+  ],
+  "input": {
+    "generator": "observer-fanout",
+    "observers": 10000,
+    "root": "Agreement"
+  },
+  "expected": {
+    "reachableCount": 1,
+    "reachable": [
+      "Agreement"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,6 @@
+type:
+  name: Foo
+  bar:
+    type: Integer
+name: test
+bar: tekst a Foo ma bar jako integer

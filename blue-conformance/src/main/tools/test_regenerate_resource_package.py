@@ -58,6 +58,13 @@ class RegenerateResourcePackageTest(unittest.TestCase):
             )
 
             staged_contracts = release_root / "conformance/contracts"
+            self.assertEqual(
+                (REPOSITORY_ROOT / regenerator.ROOTED_COMPANION).read_bytes(),
+                (release_root / "specifications" / regenerator.ROOTED_COMPANION.name).read_bytes(),
+            )
+            self.assertEqual([], regenerator.compare_packages(
+                REPOSITORY_ROOT / regenerator.ROOTED_CONFORMANCE,
+                release_root / "conformance/rooted-processing"))
             canonical_fixtures = (
                 REPOSITORY_ROOT / regenerator.CANONICAL_ORDINARY_FIXTURES
             )
@@ -124,6 +131,8 @@ class RegenerateResourcePackageTest(unittest.TestCase):
                 "MANIFEST.sha256",
                 "package-manifest.yaml",
                 "specifications/blue-contracts-and-processor-specification-1.0.md",
+                "specifications/rooted-checkpoint-processing-1.0-draft.md",
+                "conformance/rooted-processing/identity-constructors.json",
                 "reference/blue-language-specification-1.0.md",
                 "tools/regenerate_package.py",
                 "tools/build_release_archive.py",

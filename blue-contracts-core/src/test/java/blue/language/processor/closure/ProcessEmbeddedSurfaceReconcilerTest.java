@@ -522,6 +522,56 @@ final class ProcessEmbeddedSurfaceReconcilerTest {
                 mismatch.code());
     }
 
+    @Test
+    void shouldRebindCommittedRetirementToExactCurrentStateWithoutRetargeting() {
+        // given
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot prior = document(B, "prior-b");
+        ManagedDocumentSnapshot current = document(B, "current-b");
+        ProcessEmbeddedSurfaceReconciler.Reconciliation removed = reconciler.reconcileProjected(
+                A, source.document(), Collections.<ManagedProcessEmbeddedPath>emptyList(),
+                Collections.singletonList(binding(A, "/peer", 1L, prior, true)),
+                Arrays.asList(source, prior), noFences());
+        ManagedOccurrenceBinding reserved = only(removed.bindings(), A, "/peer");
+        Node readded = source.document().properties("peer", current.document());
+
+        // when
+        ProcessEmbeddedSurfaceReconciler.Reconciliation result = reconciler.reconcileProjected(
+                A, readded, Collections.singletonList(path("/peer")), removed.bindings(),
+                Arrays.asList(source, current), noFences());
+        ManagedOccurrenceBinding active = only(result.bindings(), A, "/peer");
+
+        // then
+        assertTrue(active.active());
+        assertEquals(2L, active.activationGeneration());
+        assertEquals(reserved.occurrenceIdentity(), active.occurrenceIdentity());
+        assertEquals(current.blueId(), active.expectedTargetBlueId());
+        assertFalse(reserved.bindingIdentity().equals(active.bindingIdentity()));
+        assertEquals(1, result.transitions().size());
+        assertEquals(Collections.singleton(active.occurrenceIdentity()), result.activatedOccurrenceIdentities());
+        org.junit.jupiter.api.Assertions.assertThrows(ClosureCapabilityGapException.class,
+                () -> reconciler.reconcileProjected(A, readded, Collections.singletonList(path("/peer")),
+                        removed.bindings(), Arrays.asList(source, current), removed.retiredOccurrencePaths()));
+        // A fresh prospective row cannot acquire different exact draft bytes through this rule.
+        org.junit.jupiter.api.Assertions.assertThrows(InvalidExecutionEvidenceException.class,
+                () -> reconciler.reconcileProjected(A, readded, Collections.singletonList(path("/peer")),
+                        Collections.singletonList(binding(A, "/peer", 1L, prior, false)),
+                        Arrays.asList(source, current), noFences()));
+        ManagedDocumentSnapshot draft = new ManagedDocumentSnapshot(B, current.blueId(), current.document(),
+                false, false, false, 0L, 0L);
+        org.junit.jupiter.api.Assertions.assertThrows(InvalidExecutionEvidenceException.class,
+                () -> reconciler.reconcileProjected(A, readded, Collections.singletonList(path("/peer")),
+                        removed.bindings(), Arrays.asList(source, draft), noFences()));
+        // The actual inserted bytes still must establish the reserved lineage's frozen target.
+        ManagedDocumentSnapshot unrelated = document(C, "unrelated-c");
+        for (Node wrong : Arrays.asList(prior.document(), unrelated.document(), new Node().name("forged"))) {
+            org.junit.jupiter.api.Assertions.assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> reconciler.reconcileProjected(A, source.document().properties("peer", wrong),
+                            Collections.singletonList(path("/peer")), removed.bindings(),
+                            Arrays.asList(source, current, unrelated), noFences()));
+        }
+    }
+
     private static ManagedDocumentSnapshot document(
             DocumentId id,
             String name) {

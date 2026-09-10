@@ -609,8 +609,9 @@ final class ClosureInvocationVerifierTest {
                         "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
                         "blue-contracts-1.0-portable-limits",
                         Collections.<String, Long>emptyMap()),
-                ClosureRuntimeDescriptor.CYCLIC_FINALIZER_IDENTITY,
-                ClosureRuntimeDescriptor.CYCLIC_PROOF_VERIFIER_IDENTITY);
+                // Frozen C-CLO-34 is historical evidence, independent of current runtime bindings.
+                "sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c",
+                "sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84");
     }
 
     private static ClosureEnvironment environment(String bindingPolicy) {

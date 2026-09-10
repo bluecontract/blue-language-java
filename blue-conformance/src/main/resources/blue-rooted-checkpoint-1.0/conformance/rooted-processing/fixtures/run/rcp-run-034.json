@@ -1,0 +1,112 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-034",
+  "category": "RUN",
+  "title": "Source advances while a one-way observer stays behind without false readiness",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-READY-01",
+    "RCP-READY-02",
+    "RCP-READY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-034.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-034.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "S.counter": 2,
+        "P.seen": 2,
+        "P.log": [
+          1,
+          2
+        ],
+        "P.child.counter": 2
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "laggingObserver": {
+        "observer": "P",
+        "source": "S",
+        "original": "oldP",
+        "lagging": [
+          "lag1P",
+          "lag2P",
+          "restartP"
+        ],
+        "sourceReads": [
+          "source1",
+          "source2"
+        ],
+        "firstPending": "E100",
+        "secondPending": "E150",
+        "afterFirst": "after1P",
+        "final": "finalP",
+        "finalSource": "finalS"
+      },
+      "extraChecks": {
+        "baseline": {
+          "firstSource.ownedWrites": [
+            "S"
+          ],
+          "firstSource.after.S.counter": 1,
+          "firstSource.after.P.seen": 0,
+          "secondSource.ownedWrites": [
+            "S"
+          ],
+          "secondSource.after.S.counter": 2,
+          "secondSource.after.P.seen": 0,
+          "firstObserver.ownedWrites": [
+            "P"
+          ],
+          "firstObserver.after.P.seen": 1,
+          "firstObserver.after.S.counter": 2
+        }
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-034.json",
+    "sha256": "b1cc12db9e4bb39841864d585007040349cf584bc5b4d2b3e11f1fab95dea90a"
+  }
+}

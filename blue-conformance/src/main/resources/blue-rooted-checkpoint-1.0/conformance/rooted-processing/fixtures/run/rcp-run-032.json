@@ -1,0 +1,87 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-032",
+  "category": "RUN",
+  "title": "Large fan-out is scheduled as independent rooted obligations",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-SCOPE-02",
+    "RCP-READY-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "observer-template",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "standalone",
+      "5000-observers"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-032.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-032.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "verifyIdentityEnvelopes": true,
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "kind": "RCP2/Tick",
+          "ordinal": 0
+        }
+      ],
+      "equalAcrossVariants": [
+        "before",
+        "after",
+        "gas",
+        "events",
+        "ownedWrites",
+        "operationContext"
+      ],
+      "incomingFanout": {
+        "observerCounts": {
+          "standalone": 0,
+          "5000-observers": 5000
+        },
+        "source": "S",
+        "entryCapture": "E100",
+        "sourceTimestampUs": "100",
+        "semanticRecordAliases": [
+          "S"
+        ]
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

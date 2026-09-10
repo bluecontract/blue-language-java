@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blue:history-basis:1.0-draft.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentId",
+    "initialDocumentBlueId",
+    "runtimeSemanticsIdentity",
+    "admission"
+  ],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Also NFC, no NUL, at most 512 UTF-8 bytes; checked by constructor."
+    },
+    "initialDocumentBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+      "description": "Grammar only; production content evidence must independently authenticate."
+    },
+    "runtimeSemanticsIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "admission": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "FULL_HISTORY"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "lowerExclusiveOrder"
+          ],
+          "properties": {
+            "mode": {
+              "const": "FROM_FRONTIER"
+            },
+            "lowerExclusiveOrder": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "timestampUs",
+                "timelineBlueId",
+                "entryBlueId"
+              ],
+              "properties": {
+                "timestampUs": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]*)$",
+                  "description": "Also <= 9007199254740991."
+                },
+                "timelineBlueId": {
+                  "type": "string",
+                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                  "description": "Grammar only; production content evidence must independently authenticate."
+                },
+                "entryBlueId": {
+                  "type": "string",
+                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                  "description": "Grammar only; production content evidence must independently authenticate."
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "lowerExclusiveOrder"
+          ],
+          "properties": {
+            "mode": {
+              "const": "FROM_NOW"
+            },
+            "lowerExclusiveOrder": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "timestampUs",
+                    "timelineBlueId",
+                    "entryBlueId"
+                  ],
+                  "properties": {
+                    "timestampUs": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)$",
+                      "description": "Also <= 9007199254740991."
+                    },
+                    "timelineBlueId": {
+                      "type": "string",
+                      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                      "description": "Grammar only; production content evidence must independently authenticate."
+                    },
+                    "entryBlueId": {
+                      "type": "string",
+                      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                      "description": "Grammar only; production content evidence must independently authenticate."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "BEGINNING"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "creatorOperationIdentity",
+            "birthOccurrenceIdentity",
+            "lowerExclusiveOrder"
+          ],
+          "properties": {
+            "mode": {
+              "const": "CREATED_IN_OPERATION"
+            },
+            "creatorOperationIdentity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "birthOccurrenceIdentity": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "lowerExclusiveOrder": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "timestampUs",
+                "timelineBlueId",
+                "entryBlueId"
+              ],
+              "properties": {
+                "timestampUs": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]*)$",
+                  "description": "Also <= 9007199254740991."
+                },
+                "timelineBlueId": {
+                  "type": "string",
+                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                  "description": "Grammar only; production content evidence must independently authenticate."
+                },
+                "entryBlueId": {
+                  "type": "string",
+                  "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(#(0|[1-9][0-9]*))?$",
+                  "description": "Grammar only; production content evidence must independently authenticate."
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-WORK-007",
+  "category": "WORK",
+  "title": "Zero budget commits no processing effect",
+  "kind": "reaction",
+  "requirements": [
+    "RCP-ORDER-05",
+    "RCP-GRAPH-02",
+    "RCP-READY-04"
+  ],
+  "input": {
+    "route": {},
+    "start": "A",
+    "ttl": 0,
+    "budget": 0,
+    "costModel": "ONE_UNIT_PER_DELIVERY_NOT_BLUE_GAS"
+  },
+  "expected": {
+    "status": "OUT_OF_GAS",
+    "committed": [],
+    "gas": 0
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

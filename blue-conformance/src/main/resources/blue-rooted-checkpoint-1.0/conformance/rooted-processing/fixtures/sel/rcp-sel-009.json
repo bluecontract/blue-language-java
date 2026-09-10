@@ -1,0 +1,55 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-009",
+  "category": "SEL",
+  "title": "Inactive bindings do not become live subscriptions",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A/in",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          }
+        ],
+        "cursor": 0,
+        "active": false
+      },
+      {
+        "address": "B/in",
+        "entries": [
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "T:2",
+        "receivers": [
+          "B/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

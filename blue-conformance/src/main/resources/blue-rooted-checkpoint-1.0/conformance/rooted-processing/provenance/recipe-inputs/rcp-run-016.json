@@ -1,0 +1,61 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-016",
+  "category": "RUN",
+  "title": "An event-only source step survives restart without duplication",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "EVENT_ONLY_RETAINED_APPLICATION",
+        "bind": "s"
+      },
+      {
+        "op": "restartAndCompare",
+        "target": "s",
+        "bind": "restart"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.numberedEpochRequiredToAdvance",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.applicationPositionAdvanced",
+        "op": "isTrue"
+      },
+      {
+        "actual": "restart.duplicateEmissions",
+        "op": "equals",
+        "expected": 0
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

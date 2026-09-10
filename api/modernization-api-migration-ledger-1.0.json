@@ -1015,6 +1015,16 @@
       ]
     },
     {
+      "id": "rooted-checkpoint-draft2-public-evidence-types",
+      "requirement": "Reviewed Iteration 2 rooted-checkpoint profile: entry owner context, local calculation versus owned publication, authenticated historical checkpoint representation; blue-rooted-checkpoint-1.0 specifications and conformance obligations.",
+      "rationale": "Record only the exact two current public classes RootedProcessingContext and RootedPublicationProjection. The first derives frozen entry ownership from complete verified forward graph and established history evidence. The second exposes processor-created owned publication, dependency views, actual topology boundaries and checkpoint-reference proof; it has no public constructor that can manufacture ownership or proof. This addition records implemented rooted evidence APIs and does not authorize supplied hashes as commit authority, alter runtime/gas behavior, accept future API inventory changes, or establish release readiness. All historical baseline identities and previous exact approvals are unchanged.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.processor.closure.RootedProcessingContext",
+        "public/protected class added: blue.language.processor.closure.RootedPublicationProjection"
+      ]
+    },
+    {
       "id": "stabilization-canonical-processing-input",
       "requirement": "docs/canonical-processing-api-review.md",
       "rationale": "Record only the additive default processing SPI introduced by 35de814a to preserve strict canonical input through snapshot-manager decorators. Existing implementations retain binary compatibility and fail closed with UnsupportedOperationException when they do not support canonical resolution. Implementations that support it delegate to the canonical resolver while preserving deferred paths; no fallback interprets completed list payloads as Source append overlays. The original Source resolution methods and all 351 incompatible and 537 earlier additive ledger entries remain unchanged.",

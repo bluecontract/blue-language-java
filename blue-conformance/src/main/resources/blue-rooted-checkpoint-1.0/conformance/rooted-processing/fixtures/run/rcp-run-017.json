@@ -1,0 +1,88 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-017",
+  "category": "RUN",
+  "title": "Same-epoch pending-target and rooted checkpoint chains use exact predecessors",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-06",
+    "RCP-OWN-02",
+    "RCP-OWN-04",
+    "RCP-CAUSE-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml"
+      },
+      {
+        "alias": "C",
+        "source": "examples/iteration2/representation-017-consumer.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/representation-017-legacy-a.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/representation-017-legacy-b.yaml"
+      },
+      {
+        "alias": "legacyC",
+        "source": "examples/iteration2/representation-017-legacy-c.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "checkpoint-tail",
+      "checkpoint-intermediate",
+      "local-work",
+      "owned-checkpoint",
+      "pending-target"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-017.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-017.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "verifyIdentityEnvelopes": true,
+      "representationHistory": {
+        "maxSelections": 32,
+        "checkpointPositionCount": 2,
+        "pendingPositionCount": 1,
+        "sourceEpoch": 0,
+        "pendingEpoch": 2,
+        "variants": [
+          "checkpoint-tail",
+          "checkpoint-intermediate",
+          "local-work",
+          "owned-checkpoint",
+          "pending-target"
+        ]
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

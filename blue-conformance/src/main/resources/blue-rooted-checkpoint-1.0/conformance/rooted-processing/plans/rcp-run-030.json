@@ -1,0 +1,302 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-030",
+  "title": "Actual admitted-context and publication mutation rejection with unchanged histories",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "productionStatus": "NOT_RUN",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "R",
+      "source": "examples/iteration2/context-reverse-parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "P.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/historical-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/historical-a.yaml",
+      "bindings": {
+        "/peer": {
+          "$capture": "B.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "inspectRootContextNegatives",
+        "root": "P",
+        "reverse": "R",
+        "input": {
+          "$capture": "E100"
+        },
+        "capture": "rootContextNegatives",
+        "stepId": "baseline-003",
+        "sourceDocument": "S"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "101",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EA101",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "EA101"
+        },
+        "budget": "DEFAULT",
+        "capture": "witnessSourceFirst",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "150",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EA150",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "EA150"
+        },
+        "budget": "DEFAULT",
+        "capture": "witnessSourceSecond",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "A.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EB200",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "EB200"
+        },
+        "budget": "DEFAULT",
+        "capture": "witnessAttachment",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "budget": "DEFAULT",
+        "capture": "witnessApplication",
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "inspectHistoricalWitnessPromotion",
+        "root": "B",
+        "sourceEpoch": 1,
+        "capture": "readWitnessMadeWritable",
+        "stepId": "baseline-011",
+        "sourceDocument": "A"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P",
+          "R",
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-012"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "S"
+    ],
+    "afterEquals": {
+      "S.counter": 1
+    },
+    "requiredEvents": 1,
+    "eventAnchors": [
+      {
+        "origin": "S",
+        "ordinal": 0,
+        "kind": "RCP2/Tick"
+      }
+    ],
+    "verifyIdentityEnvelopes": true,
+    "rootContextNegatives": {
+      "observationField": "rootContextNegatives",
+      "root": "P",
+      "source": "S",
+      "reverse": "R",
+      "historicalRoot": "B",
+      "historicalSource": "A",
+      "requiredMutations": [
+        "extraReverseParent",
+        "missingForwardChild",
+        "readWitnessMadeWritable",
+        "wrongRoot",
+        "wrongHistoryBasis",
+        "tamperedPublicationSet"
+      ]
+    }
+  },
+  "allowedPrimitives": [
+    "append",
+    "inspectHistoricalWitnessPromotion",
+    "inspectRootContextNegatives",
+    "processNext",
+    "restart",
+    "start"
+  ]
+}

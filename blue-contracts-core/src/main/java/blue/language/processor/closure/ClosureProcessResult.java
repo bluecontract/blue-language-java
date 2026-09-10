@@ -15,6 +15,7 @@ import java.util.Set;
 /** Complete immutable result of one deterministic affected-closure attempt. */
 public final class ClosureProcessResult {
 
+    private final RootedPublicationProjection rootedProjection;
     private final ProcessorStatus status;
     private final String invocationIdentity;
     private final String inputClosureIdentity;
@@ -488,6 +489,7 @@ public final class ClosureProcessResult {
             Set<DocumentId> supplementalGasDocumentIds,
             List<ManagedOccurrenceEvidenceResolution>
                     managedOccurrenceResolutions) {
+        this.rootedProjection = null;
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
         this.status = Objects.requireNonNull(status, "status");
@@ -562,7 +564,8 @@ public final class ClosureProcessResult {
         validateInputIdentity(input);
         ClosureEvidenceVerifier.verifySnapshot(input);
         validateCanonicalEvidence();
-        AffectedClosureSnapshot output = validateResultSnapshot();
+        AffectedClosureSnapshot output = validateResultSnapshot(reusableFinalization == null
+                ? input.rootedWitnesses() : reusableFinalization.rootedWitnesses());
         validateManagedTransitionReceipts();
         validateStatusAndRollback(input);
         validateRejectedCharge();
@@ -581,6 +584,48 @@ public final class ClosureProcessResult {
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }
+    }
+
+    /**
+     * Returns the processor-derived rooted publication distinction, if present.
+     * @return immutable rooted projection, or null for legacy/failure results
+     */
+    public RootedPublicationProjection rootedProjection() { return rootedProjection; }
+
+    ClosureProcessResult withRootedProjection(RootedOwnershipTracker.Snapshot ownership) {
+        return ownership == null ? this : new ClosureProcessResult(this, ownership);
+    }
+
+    private ClosureProcessResult(ClosureProcessResult base, RootedOwnershipTracker.Snapshot ownership) {
+        status = base.status;
+        invocationIdentity = base.invocationIdentity;
+        inputClosureIdentity = base.inputClosureIdentity;
+        outputClosureIdentity = base.outputClosureIdentity;
+        graphGeneration = base.graphGeneration;
+        resultingDocuments = base.resultingDocuments;
+        resultingComponents = base.resultingComponents;
+        occurrenceBindings = base.occurrenceBindings;
+        occurrenceBindingSetIdentity = base.occurrenceBindingSetIdentity;
+        graphChanges = base.graphChanges;
+        graphChangesIdentity = base.graphChangesIdentity;
+        subscriptionDeltas = base.subscriptionDeltas;
+        subscriptionDeltasIdentity = base.subscriptionDeltasIdentity;
+        checkpointWrites = base.checkpointWrites;
+        checkpointWritesIdentity = base.checkpointWritesIdentity;
+        publicEvents = base.publicEvents;
+        publicEventsIdentity = base.publicEventsIdentity;
+        totalGas = base.totalGas;
+        gasTrace = base.gasTrace;
+        gasTraceIdentity = base.gasTraceIdentity;
+        rejectedCharge = base.rejectedCharge;
+        rejectedWorkOccurrence = base.rejectedWorkOccurrence;
+        platformCommitCompanion = base.platformCommitCompanion;
+        diagnostic = base.diagnostic;
+        documentTransitionEvidence = base.documentTransitionEvidence;
+        managedTransitionReceipts = base.managedTransitionReceipts;
+        managedTransitionReceiptsIdentity = base.managedTransitionReceiptsIdentity;
+        managedTransitionReceiptSurfacePresent = base.managedTransitionReceiptSurfacePresent;
+        rootedProjection = new RootedPublicationProjection(base, ownership);
     }
 
     private static Set<DocumentId> candidateGasDocumentIds(
@@ -1150,7 +1195,7 @@ public final class ClosureProcessResult {
         return result;
     }
 
-    private AffectedClosureSnapshot validateResultSnapshot() {
+    private AffectedClosureSnapshot validateResultSnapshot(RootedWitnessFrame.State rootedWitnesses) {
         Map<String, ComponentSnapshot> components =
                 new HashMap<String, ComponentSnapshot>();
         Set<DocumentId> covered = new HashSet<DocumentId>();
@@ -1212,7 +1257,7 @@ public final class ClosureProcessResult {
                 occurrenceBindings,
                 occurrenceBindingSetIdentity,
                 resultingComponents,
-                publicRoots);
+                publicRoots, rootedWitnesses);
         String computedOutput = ClosureIdentityService.INSTANCE
                 .affectedClosureIdentity(output);
         if (!outputClosureIdentity.equals(computedOutput)) {

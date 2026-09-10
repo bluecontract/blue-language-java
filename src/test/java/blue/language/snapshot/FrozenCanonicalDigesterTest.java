@@ -39,6 +39,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FrozenCanonicalDigesterTest {
 
     @Test
+    void shouldPreservePresentEmptySchemaInOptimizedIdentity() {
+        // given
+        Node scalar = new Node().type(new Node().blueId(INTEGER_TYPE_BLUE_ID))
+                .value(BigInteger.valueOf(3L)).schema(new Schema());
+        List<Node> cases = Arrays.asList(scalar,
+                new Node().properties(Collections.singletonMap("child", scalar)),
+                new Node().items(scalar));
+        List<Node> absent = Arrays.asList(scalar.clone().schema(null),
+                new Node().properties(Collections.singletonMap("child", scalar.clone().schema(null))),
+                new Node().items(scalar.clone().schema(null)));
+        // when
+        List<FrozenNode> frozenCases = new ArrayList<>();
+        for (Node candidate : cases) frozenCases.add(FrozenNode.fromNode(candidate));
+
+        // then
+        assertEquals("4SrR9s5T8u24vn5vLB5nPh3eSUtmeGR9uD2uDxLyvpzt",
+                DirectBlueIdCalculator.calculateBlueId(scalar));
+        for (int index = 0; index < cases.size(); index++) {
+            FrozenNode frozen = frozenCases.get(index);
+            AtomicInteger fallbacks = new AtomicInteger();
+            FrozenCanonicalDigester.Observer observer = new FrozenCanonicalDigester.Observer() {
+                @Override
+                public void genericFallback() { fallbacks.incrementAndGet(); }
+            };
+            String expected = DirectBlueIdCalculator.calculateBlueId(cases.get(index));
+            assertEquals(expected, FrozenCanonicalDigester.calculateGenericOracle(frozen));
+            assertEquals(expected, FrozenCanonicalDigester.calculateBlueId(frozen, observer));
+            assertEquals(expected, frozen.blueId());
+            assertEquals(0, fallbacks.get());
+            assertFalse(expected.equals(DirectBlueIdCalculator.calculateBlueId(absent.get(index))));
+        }
+    }
+
+    @Test
     void shouldRejectFieldlessFrozenBuilderBeforeCanonicalDigest() {
         // given
         FrozenNode fieldless = FrozenNodeBuilder.builder()

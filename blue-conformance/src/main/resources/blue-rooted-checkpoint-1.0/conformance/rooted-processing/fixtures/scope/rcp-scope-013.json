@@ -1,0 +1,26 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-013",
+  "category": "SCOPE",
+  "title": "A real forward fan-in still counts toward the portable boundary",
+  "kind": "graph-generated",
+  "requirements": [
+    "RCP-READY-05"
+  ],
+  "input": {
+    "generator": "root-fanin",
+    "members": 4096,
+    "root": "Agreement",
+    "managedDocumentLimit": 4096
+  },
+  "expected": {
+    "reachableCount": 4097,
+    "limitDecision": "EXCEEDS_LIMIT"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

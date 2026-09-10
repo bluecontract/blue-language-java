@@ -1,0 +1,439 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-006",
+  "title": "Two occurrences of A5 and A8 apply distinct successor suffixes",
+  "inputIdentityPolicy": "Only exact public SDK captures; no current-state substitution.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/historical-a.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "101",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA101",
+      "stepId": "setup-002"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA101"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-1",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 1,
+      "capture": "A1",
+      "requireActualEpoch": true,
+      "stepId": "setup-004"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "102",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA102",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA102"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-2",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 2,
+      "capture": "A2",
+      "requireActualEpoch": true,
+      "stepId": "setup-007"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "103",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA103",
+      "stepId": "setup-008"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA103"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-3",
+      "stepId": "setup-009"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 3,
+      "capture": "A3",
+      "requireActualEpoch": true,
+      "stepId": "setup-010"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "104",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA104",
+      "stepId": "setup-011"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA104"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-4",
+      "stepId": "setup-012"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 4,
+      "capture": "A4",
+      "requireActualEpoch": true,
+      "stepId": "setup-013"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "105",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA105",
+      "stepId": "setup-014"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA105"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-5",
+      "stepId": "setup-015"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 5,
+      "capture": "A5",
+      "requireActualEpoch": true,
+      "stepId": "setup-016"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "106",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA106",
+      "stepId": "setup-017"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA106"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-6",
+      "stepId": "setup-018"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 6,
+      "capture": "A6",
+      "requireActualEpoch": true,
+      "stepId": "setup-019"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "107",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA107",
+      "stepId": "setup-020"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA107"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-7",
+      "stepId": "setup-021"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 7,
+      "capture": "A7",
+      "requireActualEpoch": true,
+      "stepId": "setup-022"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "108",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA108",
+      "stepId": "setup-023"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA108"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-8",
+      "stepId": "setup-024"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 8,
+      "capture": "A8",
+      "requireActualEpoch": true,
+      "stepId": "setup-025"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "109",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA109",
+      "stepId": "setup-026"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA109"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-9",
+      "stepId": "setup-027"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 9,
+      "capture": "A9",
+      "requireActualEpoch": true,
+      "stepId": "setup-028"
+    },
+    {
+      "op": "append",
+      "target": "A",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "110",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EA110",
+      "stepId": "setup-029"
+    },
+    {
+      "op": "processNext",
+      "root": "A",
+      "mustSelect": {
+        "$capture": "EA110"
+      },
+      "budget": "DEFAULT",
+      "capture": "A-step-10",
+      "stepId": "setup-030"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "A",
+      "epoch": 10,
+      "capture": "A10",
+      "requireActualEpoch": true,
+      "stepId": "setup-031"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/multi-history-parent.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-032"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "left": {
+            "$capture": "A5.blueId"
+          },
+          "right": {
+            "$capture": "A8.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EP200",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EP200"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachment",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "repeat": 7,
+        "capture": "subject",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-004"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_MULTIPLE",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "A.counter": 10,
+      "P.leftLog": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "P.rightLog": [
+        9,
+        10
+      ],
+      "P.left.counter": 10,
+      "P.right.counter": 10
+    },
+    "requiredApplicationCount": 7,
+    "occurrenceSuffixes": {
+      "/left": {
+        "source": "A",
+        "positions": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "/right": {
+        "source": "A",
+        "positions": [
+          9,
+          10
+        ]
+      }
+    },
+    "preserveSource": true,
+    "sourceAliases": [
+      "A"
+    ],
+    "requiredEvents": 0
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-006.json",
+    "sha256": "ad2ff8610abd3799985365dc54a23094377b796f5fcbd127d4a76a5c97422fd0"
+  }
+}

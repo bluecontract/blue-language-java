@@ -1,0 +1,786 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-019",
+  "title": "Break a saved-original pair, advance its source while apart, and reconnect from exact saved history before queued future input",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/graph-019-a.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initialExact",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-start-a"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/graph-019-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initialExact",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-start-b"
+    }
+  ],
+  "variants": {
+    "saved-authored": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "saved-authored-001"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E100"
+        },
+        "mustApplyEntry": {
+          "$capture": "E100"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "firstAttachment",
+        "stepId": "saved-authored-002"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "edge": "a",
+          "source": {
+            "$capture": "A.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "saved-authored-003"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E200"
+        },
+        "mustApplyEntry": {
+          "$capture": "E200"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "firstCycle",
+        "stepId": "saved-authored-004"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "250",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E250",
+        "stepId": "saved-authored-005"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E250"
+        },
+        "mustApplyEntry": {
+          "$capture": "E250"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "oldEvent",
+        "stepId": "saved-authored-006"
+      },
+      {
+        "op": "captureHeadReceipt",
+        "target": "B",
+        "mustHaveSourceEntry": {
+          "$capture": "E250"
+        },
+        "capture": "B250",
+        "stepId": "saved-authored-007"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "joined",
+        "stepId": "saved-authored-008"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "detach",
+        "channel": "owner",
+        "timestampUs": "300",
+        "request": {
+          "edge": "b"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E300",
+        "stepId": "saved-authored-009"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E300"
+        },
+        "mustApplyEntry": {
+          "$capture": "E300"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "split",
+        "stepId": "saved-authored-010"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "detached",
+        "stepId": "saved-authored-011"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-authored-012"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "350",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E350",
+        "stepId": "saved-authored-013"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E350"
+        },
+        "mustApplyEntry": {
+          "$capture": "E350"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "missedEvent",
+        "stepId": "saved-authored-014"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "apartAdvanced",
+        "stepId": "saved-authored-015"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "500",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E500",
+        "stepId": "saved-authored-016"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "400",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "saved-authored-017"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "touch",
+        "channel": "owner",
+        "timestampUs": "450",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E450",
+        "stepId": "saved-authored-018"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E400"
+        },
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "reconnect",
+        "stepId": "saved-authored-019"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "reconnectedAt400",
+        "stepId": "saved-authored-020"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-authored-021"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E450"
+        },
+        "mustApplyEntry": {
+          "$capture": "E450"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "marker450",
+        "stepId": "saved-authored-022"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "markedAt450",
+        "stepId": "saved-authored-023"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E500"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "saved-authored-024"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "final",
+        "stepId": "saved-authored-025"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-authored-026"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "saved-authored-027"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "B",
+        "stepId": "saved-authored-028"
+      }
+    ],
+    "saved-retained": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "saved-retained-001"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E100"
+        },
+        "mustApplyEntry": {
+          "$capture": "E100"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "firstAttachment",
+        "stepId": "saved-retained-002"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "edge": "a",
+          "source": {
+            "$capture": "A.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "saved-retained-003"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E200"
+        },
+        "mustApplyEntry": {
+          "$capture": "E200"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "firstCycle",
+        "stepId": "saved-retained-004"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "250",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E250",
+        "stepId": "saved-retained-005"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E250"
+        },
+        "mustApplyEntry": {
+          "$capture": "E250"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "oldEvent",
+        "stepId": "saved-retained-006"
+      },
+      {
+        "op": "captureHeadReceipt",
+        "target": "B",
+        "mustHaveSourceEntry": {
+          "$capture": "E250"
+        },
+        "capture": "B250",
+        "stepId": "saved-retained-007"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "joined",
+        "stepId": "saved-retained-008"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "detach",
+        "channel": "owner",
+        "timestampUs": "300",
+        "request": {
+          "edge": "b"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E300",
+        "stepId": "saved-retained-009"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E300"
+        },
+        "mustApplyEntry": {
+          "$capture": "E300"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "split",
+        "stepId": "saved-retained-010"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "detached",
+        "stepId": "saved-retained-011"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-retained-012"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "350",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E350",
+        "stepId": "saved-retained-013"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E350"
+        },
+        "mustApplyEntry": {
+          "$capture": "E350"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "missedEvent",
+        "stepId": "saved-retained-014"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "apartAdvanced",
+        "stepId": "saved-retained-015"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "500",
+        "request": {
+          "to": "A",
+          "next": "stop"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E500",
+        "stepId": "saved-retained-016"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "400",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B250.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "saved-retained-017"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "touch",
+        "channel": "owner",
+        "timestampUs": "450",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E450",
+        "stepId": "saved-retained-018"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E400"
+        },
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "reconnect",
+        "stepId": "saved-retained-019"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "reconnectedAt400",
+        "stepId": "saved-retained-020"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-retained-021"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E450"
+        },
+        "mustApplyEntry": {
+          "$capture": "E450"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "marker450",
+        "stepId": "saved-retained-022"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "markedAt450",
+        "stepId": "saved-retained-023"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E500"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "saved-retained-024"
+      },
+      {
+        "op": "observeReconnect",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "capture": "final",
+        "stepId": "saved-retained-025"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "saved-retained-026"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "saved-retained-027"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "B",
+        "stepId": "saved-retained-028"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "A",
+      "B"
+    ],
+    "requiredEvents": 1,
+    "eventAnchors": [
+      {
+        "origin": "B",
+        "kind": "Tutorial/Graph Token",
+        "ordinal": 0
+      }
+    ],
+    "reconnect": {
+      "aliases": [
+        "A",
+        "B"
+      ],
+      "maxSelectionsPerPhase": 32,
+      "path": "/peers/b",
+      "source": "B",
+      "consumer": "A",
+      "oldEvent": "E250",
+      "missedEvent": "E350",
+      "cutoffEntry": "E400",
+      "markerEntry": "E450",
+      "futureEntry": "E500",
+      "selectionByVariant": {
+        "saved-authored": "B.initialBlueId",
+        "saved-retained": "B250.blueId"
+      },
+      "observedAt400ByVariant": {
+        "saved-authored": 3,
+        "saved-retained": 2
+      },
+      "observedAt500ByVariant": {
+        "saved-authored": 4,
+        "saved-retained": 3
+      },
+      "sourceEventsAt400": 2,
+      "sourceEventsAt500": 3,
+      "restarts": [
+        "detached",
+        "reconnectedAt400",
+        "final"
+      ]
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "drainThroughEntry",
+    "captureHeadReceipt",
+    "observeReconnect",
+    "processNext",
+    "restart",
+    "assertQuiescent"
+  ],
+  "notes": "Three proposed evidence/scheduling primitives use existing SDK APIs. The future entry is genuinely queued but is not independently processed before the reconnect. Existing RootedFrozenFrontierTest separately owns both independent-head publication schedules.",
+  "captures": "Actual public SDK starts, fixed retained receipt captured before detachment, exact journal requests, cutoff selections, complete source/position/companion evidence. No production qualification from authoring."
+}

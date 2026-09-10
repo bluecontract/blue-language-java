@@ -1,0 +1,83 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-006",
+  "category": "SEL",
+  "title": "Two Timelines interleave",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A/x",
+        "entries": [
+          {
+            "timestamp": 10,
+            "timeline": "X",
+            "entry": "X:10"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "X",
+            "entry": "X:30"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "A/y",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "Y",
+            "entry": "Y:20"
+          },
+          {
+            "timestamp": 40,
+            "timeline": "Y",
+            "entry": "Y:40"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "X:10",
+        "receivers": [
+          "A/x"
+        ]
+      },
+      {
+        "entry": "Y:20",
+        "receivers": [
+          "A/y"
+        ]
+      },
+      {
+        "entry": "X:30",
+        "receivers": [
+          "A/x"
+        ]
+      },
+      {
+        "entry": "Y:40",
+        "receivers": [
+          "A/y"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

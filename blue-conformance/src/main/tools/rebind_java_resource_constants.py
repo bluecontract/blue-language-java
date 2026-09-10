@@ -74,6 +74,8 @@ def main():
         constant(report, name, value)
     constant("blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixturePackage.java",
              "CONTRACTS_RELEASE_IDENTITY", read(closure + "release-manifest.yaml")["releaseIdentity"])
+    constant("blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+             "PACKAGE_IDENTITY", read(resources + "blue-contracts-representation-1.0/manifest.json")["packageIdentity"])
     constant("blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
              "PACKAGE_IDENTITY", read(closure + "fixtures/manifest.yaml")["packageIdentity"])
     constant("blue-conformance/src/test/java/blue/language/conformance/contracts/closure/ClosureConformanceHarnessTest.java",

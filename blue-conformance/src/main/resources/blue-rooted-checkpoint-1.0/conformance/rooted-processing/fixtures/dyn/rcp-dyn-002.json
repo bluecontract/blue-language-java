@@ -1,0 +1,118 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-002",
+  "category": "DYN",
+  "title": "Two imported histories are merged rather than drained child by child",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "attach": [
+        {
+          "kind": "attach",
+          "address": "R/a",
+          "entries": [
+            {
+              "timestamp": 6,
+              "timeline": "A",
+              "entry": "A:6"
+            },
+            {
+              "timestamp": 9,
+              "timeline": "A",
+              "entry": "A:9"
+            }
+          ],
+          "cursor": 0
+        },
+        {
+          "kind": "attach",
+          "address": "R/c",
+          "entries": [
+            {
+              "timestamp": 7,
+              "timeline": "C",
+              "entry": "C:7"
+            },
+            {
+              "timestamp": 8,
+              "timeline": "C",
+              "entry": "C:8"
+            }
+          ],
+          "cursor": 0
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "attach",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "A:6",
+        "receivers": [
+          "R/a"
+        ]
+      },
+      {
+        "entry": "C:7",
+        "receivers": [
+          "R/c"
+        ]
+      },
+      {
+        "entry": "C:8",
+        "receivers": [
+          "R/c"
+        ]
+      },
+      {
+        "entry": "A:9",
+        "receivers": [
+          "R/a"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

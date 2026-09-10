@@ -1,0 +1,198 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-005",
+  "title": "Two channel keys retain independently bound progress despite reverse physical submission order",
+  "inputIdentityPolicy": "Queue first:E3 before second:E1/E2; the actual driver must select second:E1, second:E2, first:E3.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/two-channels.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "firstOperation",
+        "channel": "first",
+        "timestampUs": "3",
+        "request": {
+          "mark": "first:E3"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E3",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "secondOperation",
+        "channel": "second",
+        "timestampUs": "1",
+        "request": {
+          "mark": "second:E1"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E1",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "secondOperation",
+        "channel": "second",
+        "timestampUs": "2",
+        "request": {
+          "mark": "second:E2"
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E2",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E1"
+        },
+        "budget": "DEFAULT",
+        "capture": "second1",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E2"
+        },
+        "budget": "DEFAULT",
+        "capture": "second2",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E3"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-008"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.log": [
+        "second:E1",
+        "second:E2",
+        "first:E3"
+      ]
+    },
+    "requiredEvents": 1,
+    "phaseEventAnchors": {
+      "second1": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "second:E1"
+        }
+      ],
+      "second2": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "second:E2"
+        }
+      ],
+      "subject": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "first:E3"
+        }
+      ]
+    },
+    "distinctChannelProgress": {
+      "owner": "P",
+      "channels": [
+        "first",
+        "second"
+      ],
+      "phases": [
+        {
+          "capture": "second1",
+          "entries": {
+            "second": "E1"
+          }
+        },
+        {
+          "capture": "second2",
+          "entries": {
+            "second": "E2"
+          }
+        },
+        {
+          "capture": "subject",
+          "entries": {
+            "first": "E3",
+            "second": "E2"
+          }
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "second1.after.P.log": [
+          "second:E1"
+        ],
+        "second2.after.P.log": [
+          "second:E1",
+          "second:E2"
+        ]
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-005.json",
+    "sha256": "70b19da34e2e6762039a502e975a8ddd9e3fa869b8a3bffd7ce4953a99827a65"
+  }
+}

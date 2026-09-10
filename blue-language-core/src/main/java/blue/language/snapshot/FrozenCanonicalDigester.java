@@ -278,7 +278,7 @@ final class FrozenCanonicalDigester {
             }
             addReference(fields, KEY_ENUM, accumulator);
         }
-        return fields.isEmpty() ? null : hashFields(fields, observer);
+        return hashFields(fields, observer);
     }
 
     private static Object schemaValue(Node node) {

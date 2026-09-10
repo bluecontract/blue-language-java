@@ -1,0 +1,57 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-006",
+  "category": "HIST",
+  "title": "Failure at one successor retains earlier committed application only",
+  "kind": "history",
+  "requirements": [
+    "RCP-HISTORY-02",
+    "RCP-HISTORY-03",
+    "RCP-PROGRESS-03"
+  ],
+  "input": {
+    "position": 5,
+    "value": 5,
+    "receipts": [
+      {
+        "position": 6,
+        "before": 5,
+        "after": 6,
+        "events": [
+          "e6"
+        ]
+      },
+      {
+        "position": 7,
+        "before": 6,
+        "after": 7,
+        "events": [
+          "e7"
+        ]
+      },
+      {
+        "position": 8,
+        "before": 7,
+        "after": 8,
+        "events": [
+          "e8"
+        ]
+      }
+    ],
+    "failAt": 7
+  },
+  "expected": {
+    "position": 6,
+    "value": 6,
+    "events": [
+      "e6"
+    ],
+    "status": "APPLICATION_FAILED"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

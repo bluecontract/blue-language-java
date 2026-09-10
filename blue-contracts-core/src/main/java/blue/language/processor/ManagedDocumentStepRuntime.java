@@ -31,6 +31,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     private final ManagedDocumentStepContinuation continuation;
     private final ManagedRootSurfaceResolver rootSurfaceResolver;
     private final ManagedDocumentStepRouteClassifier routeClassifier;
+    private final Map<String, Map<FrozenNode.ResolvedStructuralKey, FrozenNode>>
+            admittedExternalPayloads = new java.util.LinkedHashMap<>();
     private boolean closed;
 
     /**
@@ -152,6 +154,10 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         ProcessorMarkerStore.collapseInitializationDocuments(
                 document, owner.snapshotManager());
         Node exactPayload = admitted.exactPayload();
+        final FrozenNode carriedPayload = selectedRoute == null
+                ? carriedExternalPayload(admitted) : null;
+        ProcessorEngine.ProcessEventSnapshotFactory processEventFactory = carriedPayload == null
+                ? FrozenNode::fromResolvedNode : ignoredSource -> carriedPayload;
         Node processEvent = admitted.workKind()
                 == ManagedDocumentWorkKind.EXTERNAL_DELIVERY
                 ? exactPayload
@@ -172,7 +178,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 owner,
                 document,
                 processEvent,
-                FrozenNode::fromResolvedNode,
+                processEventFactory,
                 sharedGasContext,
                 stepContinuation,
                 owner.snapshotManager() != null
@@ -185,7 +191,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                              admitted.attribution())) {
             try {
                 execution.executeIsolatedManagedRootWork(
-                        admitted, selectedRoute);
+                        admitted, selectedRoute, carriedPayload);
             } catch (RunTerminationException terminated) {
                 /* Ordinary Root termination is control flow; failure follows. */
             }
@@ -628,12 +634,39 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                      sharedGasContext.withAttribution(
                              Objects.requireNonNull(
                                      attribution, "attribution"))) {
-            return settlementService().classifyExternalDelivery(
-                    exactRoot,
-                    rawChannelKey,
-                    exactEvent,
-                    attribution);
+            ManagedExternalDeliveryClassification classification =
+                    settlementService().classifyExternalDelivery(
+                            exactRoot, rawChannelKey, exactEvent, attribution);
+            if (classification.state()
+                    == ManagedExternalDeliveryClassification.State.ACCEPTED_NEW
+                    && classification.candidate() != null) {
+                ManagedCheckpointCandidate candidate = classification.candidate();
+                FrozenNode payload = candidate.frozenPayload();
+                // The public step DTO carries this Node projection. Capture its
+                // complete handoff key without hashing or changing the capability.
+                FrozenNode.ResolvedStructuralKey handoff = FrozenNode.fromResolvedNode(
+                        payload.toNode()).resolvedStructuralKey();
+                FrozenNode previous = admittedExternalPayloads.computeIfAbsent(candidate.payloadBlueId(),
+                        ignoredKey -> new java.util.LinkedHashMap<>()).putIfAbsent(handoff, payload);
+                if (previous != null && !previous.resolvedStructuralKey().equals(payload.resolvedStructuralKey())) {
+                    throw new InvalidExecutionEvidenceException(
+                            "Managed external payload admission representations disagree");
+                }
+            }
+            return classification;
         }
+    }
+
+    /** Recovers only an exact Phase-B capability from this composition session. */
+    FrozenNode carriedExternalPayload(ManagedDocumentStepRequest request) {
+        ensureOpen();
+        if (request.workKind() != ManagedDocumentWorkKind.EXTERNAL_DELIVERY) {
+            return null;
+        }
+        Map<FrozenNode.ResolvedStructuralKey, FrozenNode> admitted =
+                admittedExternalPayloads.get(request.matchingEventBlueId());
+        return admitted == null ? null : admitted.get(FrozenNode.fromResolvedNode(
+                request.exactPayload()).resolvedStructuralKey());
     }
 
     /**
@@ -808,6 +841,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             return;
         }
         closed = true;
+        admittedExternalPayloads.clear();
         owner.close();
     }
 

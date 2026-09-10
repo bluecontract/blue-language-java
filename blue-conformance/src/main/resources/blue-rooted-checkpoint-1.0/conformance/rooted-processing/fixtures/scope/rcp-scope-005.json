@@ -1,0 +1,40 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-005",
+  "category": "SCOPE",
+  "title": "Shared Agreement is independent of both one-way Orders",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "Agreement",
+      "Order1",
+      "Order2"
+    ],
+    "edges": [
+      [
+        "Order1",
+        "Agreement"
+      ],
+      [
+        "Order2",
+        "Agreement"
+      ]
+    ],
+    "root": "Agreement"
+  },
+  "expected": {
+    "reachable": [
+      "Agreement"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

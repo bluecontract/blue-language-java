@@ -404,6 +404,14 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBir
 blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershipTracker.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java

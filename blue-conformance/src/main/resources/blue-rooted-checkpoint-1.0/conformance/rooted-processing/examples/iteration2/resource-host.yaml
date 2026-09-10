@@ -1,0 +1,28 @@
+name: dynamic exact-resource host
+children: {}
+contracts:
+  embedded:
+    type: Process Embedded
+    collectionPaths:
+      - /children
+  ownerChannel:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: labs/dynamic-resource/alice
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  attach:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request:
+      child: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: add
+              path: /children/one
+              val: {$binding: event/message/request/child}
+          - $return: true

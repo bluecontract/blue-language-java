@@ -1,0 +1,57 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-024",
+  "category": "RUN",
+  "title": "New child birth failure cannot publish a half-created graph",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-BIRTH-04",
+    "RCP-OWN-06"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "PROVISIONAL_CHILD_ROLLBACK",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.childPublished",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.rootChanged",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.oldSourceHistoryUnchanged",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

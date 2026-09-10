@@ -1,0 +1,739 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-017",
+  "title": "Traverse exact committed checkpoint and pending-target positions, reject unproved substitutions",
+  "setup": [],
+  "variants": {
+    "checkpoint-tail": [
+      {
+        "op": "start",
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-tail-000"
+      },
+      {
+        "op": "start",
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml",
+        "bindings": {
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-tail-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitUnmatched",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "checkpoint-tail-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "checkpoint-tail-003"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitUnmatched",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "checkpoint-tail-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "secondCheckpoint",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "checkpoint-tail-005"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "P",
+        "epoch": 0,
+        "capture": "originalChain",
+        "representationClass": "ROOTED_CHECKPOINT",
+        "checkNegatives": true,
+        "stepId": "checkpoint-tail-006"
+      },
+      {
+        "op": "start",
+        "alias": "C",
+        "source": "examples/iteration2/representation-017-consumer.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-tail-007"
+      },
+      {
+        "op": "append",
+        "target": "C",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "400",
+        "request": {
+          "child": {
+            "$capture": "P.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "checkpoint-tail-008"
+      },
+      {
+        "op": "drainRootHistory",
+        "root": "C",
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "maxSelections": 32,
+        "capture": "traversal",
+        "stepId": "checkpoint-tail-009"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "P",
+        "epoch": 0,
+        "capture": "final",
+        "representationClass": "ROOTED_CHECKPOINT",
+        "checkNegatives": false,
+        "stepId": "checkpoint-tail-010"
+      },
+      {
+        "op": "restart",
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "checkpoint-tail-011"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "C",
+        "stepId": "checkpoint-tail-012"
+      }
+    ],
+    "checkpoint-intermediate": [
+      {
+        "op": "start",
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-intermediate-000"
+      },
+      {
+        "op": "start",
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml",
+        "bindings": {
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-intermediate-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitUnmatched",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "checkpoint-intermediate-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "checkpoint-intermediate-003"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "emitUnmatched",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "checkpoint-intermediate-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "secondCheckpoint",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "checkpoint-intermediate-005"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "seal",
+        "channel": "owner",
+        "timestampUs": "300",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E300",
+        "stepId": "checkpoint-intermediate-006"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E300"
+        },
+        "budget": "DEFAULT",
+        "capture": "seal",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "checkpoint-intermediate-007"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "P",
+        "epoch": 0,
+        "capture": "originalChain",
+        "representationClass": "ROOTED_CHECKPOINT",
+        "checkNegatives": true,
+        "stepId": "checkpoint-intermediate-008"
+      },
+      {
+        "op": "start",
+        "alias": "C",
+        "source": "examples/iteration2/representation-017-consumer.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "checkpoint-intermediate-009"
+      },
+      {
+        "op": "append",
+        "target": "C",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "400",
+        "request": {
+          "child": {
+            "$capture": "P.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "checkpoint-intermediate-010"
+      },
+      {
+        "op": "drainRootHistory",
+        "root": "C",
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "maxSelections": 32,
+        "capture": "traversal",
+        "stepId": "checkpoint-intermediate-011"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "P",
+        "epoch": 0,
+        "capture": "final",
+        "representationClass": "ROOTED_CHECKPOINT",
+        "checkNegatives": false,
+        "stepId": "checkpoint-intermediate-012"
+      },
+      {
+        "op": "restart",
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "checkpoint-intermediate-013"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "C",
+        "stepId": "checkpoint-intermediate-014"
+      }
+    ],
+    "local-work": [
+      {
+        "op": "start",
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "local-work-000"
+      },
+      {
+        "op": "start",
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml",
+        "bindings": {
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "local-work-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "local-work-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "local-work-003"
+      },
+      {
+        "op": "inspectRepresentationRejection",
+        "publicationPhase": "subject",
+        "sourceDocument": "P",
+        "capture": "final",
+        "counterexample": "local-work",
+        "stepId": "local-work-004"
+      },
+      {
+        "op": "restart",
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "local-work-005"
+      }
+    ],
+    "owned-checkpoint": [
+      {
+        "op": "start",
+        "alias": "S",
+        "source": "examples/iteration2/representation-017-source.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "owned-checkpoint-000"
+      },
+      {
+        "op": "start",
+        "alias": "P",
+        "source": "examples/iteration2/representation-017-parent.yaml",
+        "bindings": {
+          "/child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "owned-checkpoint-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "noop",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "owned-checkpoint-002"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "owned-checkpoint-003"
+      },
+      {
+        "op": "inspectRepresentationRejection",
+        "publicationPhase": "subject",
+        "sourceDocument": "S",
+        "capture": "final",
+        "counterexample": "owned-checkpoint",
+        "stepId": "owned-checkpoint-004"
+      },
+      {
+        "op": "restart",
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "owned-checkpoint-005"
+      }
+    ],
+    "pending-target": [
+      {
+        "op": "start",
+        "alias": "A",
+        "source": "examples/iteration2/representation-017-legacy-a.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "pending-target-000"
+      },
+      {
+        "op": "start",
+        "alias": "B",
+        "source": "examples/iteration2/representation-017-legacy-b.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "pending-target-001"
+      },
+      {
+        "op": "start",
+        "alias": "C",
+        "source": "examples/iteration2/representation-017-legacy-c.yaml",
+        "bindings": {},
+        "admission": "FULL_HISTORY",
+        "capture": [
+          "initialBlueId",
+          "initialExact",
+          "initializedBlueId",
+          "documentId",
+          "epoch0Receipt"
+        ],
+        "stepId": "pending-target-002"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "pending-target-003"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E100"
+        },
+        "mustApplyEntry": {
+          "$capture": "E100"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "graph100",
+        "stepId": "pending-target-004"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "ownerChannel",
+        "timestampUs": "200",
+        "request": {
+          "edge": "a",
+          "source": {
+            "$capture": "A.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "pending-target-005"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E200"
+        },
+        "mustApplyEntry": {
+          "$capture": "E200"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "graph200",
+        "stepId": "pending-target-006"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "A",
+        "epoch": 2,
+        "capture": "pendingTail",
+        "representationClass": "PENDING_TARGET",
+        "checkNegatives": true,
+        "stepId": "pending-target-007"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "ownerChannel",
+        "timestampUs": "300",
+        "request": {
+          "edge": "c",
+          "source": {
+            "$capture": "C.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E300",
+        "stepId": "pending-target-008"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E300"
+        },
+        "mustApplyEntry": {
+          "$capture": "E300"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "graph300",
+        "stepId": "pending-target-009"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "A",
+        "epoch": 2,
+        "capture": "originalChain",
+        "representationClass": "PENDING_TARGET",
+        "checkNegatives": true,
+        "stepId": "pending-target-010"
+      },
+      {
+        "op": "append",
+        "target": "C",
+        "operation": "attach",
+        "channel": "ownerChannel",
+        "timestampUs": "400",
+        "request": {
+          "edge": "a",
+          "source": {
+            "$capture": "A.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "pending-target-011"
+      },
+      {
+        "op": "drainThroughEntry",
+        "through": {
+          "$capture": "E400"
+        },
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "maxSelections": 32,
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "capture": "graph400",
+        "stepId": "pending-target-012"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "touch",
+        "channel": "ownerChannel",
+        "timestampUs": "500",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E500",
+        "stepId": "pending-target-013"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E500"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "pending-target-014"
+      },
+      {
+        "op": "observeRepresentation",
+        "sourceDocument": "A",
+        "epoch": 2,
+        "capture": "final",
+        "representationClass": "PENDING_TARGET",
+        "checkNegatives": false,
+        "stepId": "pending-target-015"
+      },
+      {
+        "op": "restart",
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "pending-target-016"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "pending-target-017"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "verifyIdentityEnvelopes": true,
+    "representationHistory": {
+      "maxSelections": 32,
+      "checkpointPositionCount": 2,
+      "pendingPositionCount": 1,
+      "sourceEpoch": 0,
+      "pendingEpoch": 2,
+      "variants": [
+        "checkpoint-tail",
+        "checkpoint-intermediate",
+        "local-work",
+        "owned-checkpoint",
+        "pending-target"
+      ]
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "append",
+    "assertQuiescent",
+    "drainRootHistory",
+    "drainThroughEntry",
+    "inspectRepresentationRejection",
+    "observeRepresentation",
+    "processNext",
+    "restart",
+    "start"
+  ],
+  "notes": "Root-local checkpoint traversal preserves independent S/P. The old pending-target graph uses the unchanged journal cutoff driver. SDK retained-store reconstruction does not replace fresh JVM MyOS acceptance."
+}

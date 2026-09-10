@@ -1,0 +1,48 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-019",
+  "category": "SEL",
+  "title": "Reject duplicated receiving addresses",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 1,
+            "timeline": "T",
+            "entry": "T:1"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 2,
+            "timeline": "T",
+            "entry": "T:2"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "error": "DUPLICATE_BINDING"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

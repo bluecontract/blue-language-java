@@ -1,0 +1,61 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-034",
+  "category": "RUN",
+  "title": "Source advances while a one-way observer stays behind without false readiness",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-READY-01",
+    "RCP-READY-02",
+    "RCP-READY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "LAGGING_OBSERVER_FORWARD_READINESS",
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.sourceNextInputCommitted",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.consumerStillPending",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.consumerClaimsUnappliedFrontier",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.consumerOldReadyViewRemainsExact",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

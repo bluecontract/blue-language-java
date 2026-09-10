@@ -1,0 +1,274 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-016",
+  "title": "An event-only source step survives restart without duplication",
+  "inputIdentityPolicy": "Saved initialized source before either real event-only step; actual retained host positions and unchanged processor epochs are observed separately. No source receipt is synthesized.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/event-only-source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "S",
+      "operation": "emitOnly",
+      "channel": "owner",
+      "timestampUs": "100",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E100",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "S",
+      "mustSelect": {
+        "$capture": "E100"
+      },
+      "budget": "DEFAULT",
+      "capture": "firstSource",
+      "recordWorkAndSelectedViews": true,
+      "stepId": "setup-004"
+    },
+    {
+      "op": "append",
+      "target": "S",
+      "operation": "emitOnly",
+      "channel": "owner",
+      "timestampUs": "150",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E150",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "processNext",
+      "root": "S",
+      "mustSelect": {
+        "$capture": "E150"
+      },
+      "budget": "DEFAULT",
+      "capture": "secondSource",
+      "recordWorkAndSelectedViews": true,
+      "stepId": "setup-006"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "S",
+      "epoch": 2,
+      "requireActualEpoch": true,
+      "capture": "actualSource2",
+      "stepId": "setup-007"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "beforeAttachRestart",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E200"
+        },
+        "budget": "DEFAULT",
+        "capture": "attachment",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "mustConsumePositions": [
+          0,
+          1
+        ],
+        "capture": "subject",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "betweenApplicationsRestart",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "mustConsumePositions": [
+          1,
+          2
+        ],
+        "capture": "subject",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "S",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-010"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_MULTIPLE",
+    "causeKind": "MANAGED_REVISION",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.seen": 0,
+      "P.log": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "P.child.counter": 0,
+      "S.counter": 0
+    },
+    "requiredApplicationCount": 2,
+    "occurrenceSuffixes": {
+      "/child": {
+        "source": "S",
+        "positions": [
+          1,
+          2
+        ]
+      }
+    },
+    "applicationOrder": [
+      [
+        "S",
+        100
+      ],
+      [
+        "S",
+        150
+      ]
+    ],
+    "perApplicationEquals": {
+      "P.seen": 0,
+      "S.counter": 0
+    },
+    "preserveSource": true,
+    "sourceAliases": [
+      "S"
+    ],
+    "requiredEvents": 0,
+    "phaseEventAnchors": {
+      "firstSource": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        },
+        {
+          "origin": "S",
+          "ordinal": 1,
+          "kind": "RCP2/Tick"
+        }
+      ],
+      "secondSource": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        },
+        {
+          "origin": "S",
+          "ordinal": 1,
+          "kind": "RCP2/Tick"
+        }
+      ]
+    },
+    "extraChecks": {
+      "baseline": {
+        "firstSource.selectedBefore.S.epoch": 0,
+        "firstSource.selectedAfter.S.epoch": 0,
+        "firstSource.after.S.counter": 0,
+        "firstSource.ownedWrites": [
+          "S"
+        ],
+        "secondSource.selectedBefore.S.epoch": 1,
+        "secondSource.selectedAfter.S.epoch": 1,
+        "secondSource.after.S.counter": 0,
+        "secondSource.ownedWrites": [
+          "S"
+        ]
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "captureEpoch",
+    "restart",
+    "assertQuiescent"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-016.json",
+    "sha256": "70c87341376b80c6e0adfbabbc08222392bf94119c9c749efac4cce66ee1b71c"
+  }
+}

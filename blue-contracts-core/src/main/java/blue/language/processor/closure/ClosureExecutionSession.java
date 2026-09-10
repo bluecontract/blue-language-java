@@ -169,6 +169,9 @@ final class ClosureExecutionSession
     private boolean managedRevisionActivationCompleted;
     private boolean managedRevisionReceiptReconciled;
     private boolean closed;
+    private final RootedOwnershipTracker rootedOwnership;
+    private final RootedWitnessFrame rootedWitnessFrame;
+    private RootedWitnessFrame.State currentWitnesses;
 
     ClosureExecutionSession(
             DocumentProcessor owner,
@@ -178,6 +181,9 @@ final class ClosureExecutionSession
             ExactEventIdentityEvidence externalEventIdentityEvidence,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
         this.input = Objects.requireNonNull(input, "input");
+        this.rootedOwnership = input.rootedBinding() == null ? null
+                : new RootedOwnershipTracker(input.rootedBinding(), input.snapshot());
+        this.rootedWitnessFrame = input.rootedBinding() == null ? null : new RootedWitnessFrame(input);
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
@@ -225,8 +231,9 @@ final class ClosureExecutionSession
                 initializedDocuments.add(document.documentId());
             }
         }
-        this.inputGraph = ManagedDocumentGraph.fromBindings(
-                documentIds, currentBindings);
+        this.currentWitnesses = rootedWitnessFrame == null ? null : rootedWitnessFrame.at(currentBindings, documentIds);
+        this.inputGraph = ManagedDocumentGraph.fromBindings(documentIds, currentBindings,
+                currentWitnesses == null ? Collections.<DocumentId>emptySet() : currentWitnesses.sources());
         this.existingBlueIds = finalizationGas.existingIdentities(
                 latestBodies);
         this.stepProcessor = new ManagedDocumentStepProcessor(
@@ -1543,6 +1550,8 @@ final class ClosureExecutionSession
         }
         ManagedHistoryStep revision =
                 (ManagedHistoryStep) input.cause();
+        if (revision instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) revision).successorRepresentationCause().isPresent()) return false;
         if (revision instanceof ManagedRepresentationCause
                 && !((ManagedRepresentationCause) revision).terminalPositionReached()) return false;
         return work.kind() == WorkKind.CONTAINING_REFERENCE_UPDATE
@@ -2440,6 +2449,7 @@ final class ClosureExecutionSession
                 reconcileProcessEmbeddedSurfaces(owner);
         List<ManagedOccurrenceBinding> reclassified =
                 surfaceReclassification.bindings;
+        currentWitnesses = rootedWitnessFrame == null ? null : rootedWitnessFrame.at(reclassified, inputGraph.documentIds());
         ManagedDocumentGraph before = ManagedDocumentGraph.fromBindings(
                 inputGraph.documentIds(), currentBindings);
         ManagedDocumentGraph after = ManagedDocumentGraph.fromBindings(
@@ -2471,7 +2481,8 @@ final class ClosureExecutionSession
                     Objects.requireNonNull(owner, "owner"));
         }
         graphGeneration = ClosureGraphGenerationTransition.assign(
-                input.snapshot().graphGeneration(), inputGraph, after);
+                input.snapshot().graphGeneration(), ManagedDocumentGraph.fromBindings(
+                        inputGraph.documentIds(), input.snapshot().occurrences()), after);
         Map<DocumentId, Long> generations =
                 ComponentGenerationTransition.assign(
                         inputGraph,
@@ -2487,7 +2498,7 @@ final class ClosureExecutionSession
                             inputGraph,
                             inputComponentGenerations,
                             latestBodies,
-                            reclassified));
+                            reclassified, currentWitnesses));
         } finally {
             recorder.endComponentFinalizationProof(finalizationStarted);
         }
@@ -2584,6 +2595,9 @@ final class ClosureExecutionSession
         }
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
+        if (rootedOwnership != null) {
+            rootedOwnership.finalized(currentSnapshot, boundary.kind());
+        }
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);
         if (owner != null
@@ -2998,6 +3012,7 @@ final class ClosureExecutionSession
                         ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
                         processEmbeddedRetirementFences);
         for (DocumentId source : sources) {
+            if (currentWitnesses != null && currentWitnesses.sources().contains(source)) continue;
             ProcessEmbeddedSurfaceReconciler.Reconciliation result =
                     processEmbeddedReconciler
                             .reconcileProjectedAfterDemandAggregation(
@@ -3132,9 +3147,11 @@ final class ClosureExecutionSession
     private void requireAvailableProcessEmbeddedResources(
             Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
             ProcessEmbeddedSurfaceReconciler.DemandContext demandContext) {
+        Map<DocumentId, Node> calculatingBodies = new LinkedHashMap<DocumentId, Node>();
+        for (DocumentId source : projected.keySet()) calculatingBodies.put(source, latestBodies.get(source));
         List<ClosureResourceDemand> demands =
                 processEmbeddedReconciler.resourceDemands(
-                        latestBodies,
+                        calculatingBodies,
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
@@ -3158,7 +3175,7 @@ final class ClosureExecutionSession
         applyManagedOccurrenceResolutions(selected);
         List<ClosureResourceDemand> remaining =
                 processEmbeddedReconciler.resourceDemands(
-                        latestBodies,
+                        calculatingBodies,
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
@@ -3197,13 +3214,17 @@ final class ClosureExecutionSession
                                 + "row");
             }
             ManagedOccurrenceBinding before = replacement.get(match);
-            if (!before.active()
+            boolean reservedSelection = resolution.selectsInactiveReservation(input.snapshot(), before)
+                    && !processEmbeddedRetirementFences.contains(
+                            new ProcessEmbeddedSurfaceReconciler.OccurrencePath(
+                                    before.sourceDocumentId(), before.sourcePath()));
+            if ((!before.active() && !reservedSelection)
                     || currentSnapshot.managedDocument(
                             resolution.targetDocumentId()) == null
-                    || before.activationGeneration()
+                    || before.active() && before.activationGeneration()
                             == ClosureValueSupport.MAX_SAFE_INTEGER) {
                 throw new IllegalArgumentException(
-                        "Managed occurrence resolution is not an active "
+                        "Managed occurrence resolution is not an eligible "
                                 + "historical reference replacement");
             }
             ManagedOccurrenceBinding after =
@@ -3212,7 +3233,7 @@ final class ClosureExecutionSession
                             before.sourceDocumentId(),
                             ScopeAddress.embedded(
                                     before.sourcePath(),
-                                    before.activationGeneration() + 1L),
+                                    before.activationGeneration() + (before.active() ? 1L : 0L)),
                             resolution.targetDocumentId(),
                             demand.suppliedValueBlueId(),
                             false,
@@ -3246,6 +3267,9 @@ final class ClosureExecutionSession
                 new LinkedHashMap<DocumentId,
                         List<ManagedProcessEmbeddedPath>>();
         for (DocumentId source : sources) {
+            // Witness surfaces were authenticated with their original exact graph.
+            // Comparing them with this invocation's newer owner is a false retarget.
+            if (currentWitnesses != null && currentWitnesses.sources().contains(source)) continue;
             result.put(
                     source,
                     stepProcessor.projectManagedProcessEmbeddedSurface(
@@ -3321,7 +3345,8 @@ final class ClosureExecutionSession
         for (ManagedOccurrenceBinding binding
                 : finalized.finalizedGraph().bindings()) {
             if (binding.active()
-                    || binding.pendingHistoricalEpoch() != null) {
+                    || binding.pendingHistoricalEpoch() != null
+                    || finalized.finalizedGraph().immutableSources().contains(binding.sourceDocumentId())) {
                 rebound.add(binding);
                 continue;
             }
@@ -3349,12 +3374,12 @@ final class ClosureExecutionSession
             return finalized;
         }
         ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
-                finalized.finalizedGraph().documentIds(), rebound);
+                finalized.finalizedGraph().documentIds(), rebound, finalized.finalizedGraph().immutableSources());
         return new ComponentFinalizationResult(
                 graph,
                 finalized.componentGenerations(),
                 finalized.components(),
-                finalized.documents());
+                finalized.documents(), finalized.rootedWitnesses());
     }
 
     private ManagedOccurrenceBinding reconcileManagedRevision(
@@ -3396,6 +3421,13 @@ final class ClosureExecutionSession
                 installedBlueId,
                 caughtUp,
                 caughtUp ? null : Long.valueOf(revision.toEpoch()));
+        if (!caughtUp && revision instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) revision).successorRepresentationCause().isPresent()) {
+            ManagedRepresentationCause successor = ((ManagedRevisionCause) revision).successorRepresentationCause().get();
+            String anchor = successor.transition().anchorReceiptIdentity();
+            reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(
+                    anchor, anchor, successor.targetPositionIdentity(), null));
+        }
         if (!caughtUp && revision instanceof ManagedRepresentationCause) {
             ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
             reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(
@@ -3447,7 +3479,7 @@ final class ClosureExecutionSession
                 currentBindings,
                 bindingSetIdentity,
                 components,
-                input.snapshot().publicRootDocumentIds());
+                input.snapshot().publicRootDocumentIds(), currentWitnesses);
         String closureIdentity = IDENTITIES.affectedClosureIdentity(
                 provisional);
         return new AffectedClosureSnapshot(
@@ -3457,7 +3489,7 @@ final class ClosureExecutionSession
                 currentBindings,
                 bindingSetIdentity,
                 components,
-                input.snapshot().publicRootDocumentIds());
+                input.snapshot().publicRootDocumentIds(), currentWitnesses);
     }
 
     private void recordCyclicFinalization(
@@ -3663,9 +3695,18 @@ final class ClosureExecutionSession
 
     private List<FrozenContainingEventTarget> activeContainingEventTargets(
             DocumentId targetDocumentId) {
+        List<ManagedOccurrenceBinding> calculating = currentBindings;
+        if (currentWitnesses != null && !currentWitnesses.sources().isEmpty()) {
+            calculating = new ArrayList<ManagedOccurrenceBinding>();
+            for (ManagedOccurrenceBinding binding : currentBindings) {
+                // Preserve the authentic row in the snapshot; immutable proof
+                // sources are not receiving contexts for this calculation.
+                if (!currentWitnesses.sources().contains(binding.sourceDocumentId())) calculating.add(binding);
+            }
+        }
         return ContainingEventTargetPlanner.freeze(
                 targetDocumentId,
-                currentBindings,
+                calculating,
                 ClosureAdmissionPortableLimits.limit(
                         input,
                         GasScheduleConstants.PortableLimit
@@ -3797,7 +3838,8 @@ final class ClosureExecutionSession
                 checkpointMutations,
                 epochAdvanceDocuments,
                 transitionEvidence,
-                managedRootEvents);
+                managedRootEvents,
+                rootedOwnership == null ? null : rootedOwnership.snapshot());
     }
 
     @Override

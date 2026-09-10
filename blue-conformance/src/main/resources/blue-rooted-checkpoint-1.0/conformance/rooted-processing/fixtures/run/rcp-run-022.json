@@ -1,0 +1,85 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-022",
+  "category": "RUN",
+  "title": "Cycle gas failure rolls back its required result without meter reset",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-READY-04"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "B",
+        "source": "examples/iteration2/cycle-b.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/cycle-a.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-022.json"
+      }
+    ],
+    "variants": [
+      "view-A-below",
+      "view-A-at",
+      "view-A-above",
+      "view-B-below",
+      "view-B-at",
+      "view-B-above"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-022.json"
+  },
+  "expected": {
+    "contract": {
+      "scope": "GAS_BOUNDARY",
+      "causeKind": "LIVE",
+      "afterEqualsOnSuccess": {
+        "A.phase": "done",
+        "B.phase": "relayed"
+      },
+      "writesOnSuccess": [
+        "A",
+        "B"
+      ],
+      "expectedBySuffix": {
+        "below": "GAS_LIMIT_EXCEEDED",
+        "at": "SUCCESS",
+        "above": "SUCCESS"
+      },
+      "compareWithinBoundary": [
+        "after",
+        "events",
+        "gas",
+        "semanticReceipts",
+        "ownedWrites"
+      ],
+      "retainedRollbackAndRetry": true,
+      "referenceCalibration": {
+        "root": "A",
+        "input": "E100",
+        "implementation": "independently materialized uncached actual Contracts processor",
+        "sameArtifactRequired": true,
+        "label": "G",
+        "mustSucceedWithinUnchangedReleaseMaximum": true
+      }
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-022.json",
+    "sha256": "fa81d344ea38a6c6b7db5ee334779ef7f1020eb2e351de5018a83eca4bfdfe20"
+  }
+}

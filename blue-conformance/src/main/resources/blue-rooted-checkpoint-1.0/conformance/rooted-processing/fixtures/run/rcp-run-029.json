@@ -1,0 +1,227 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-029",
+  "category": "RUN",
+  "title": "Real root-local saved-original initialization with exact nanosecond SQL completion and fresh reopen",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "A",
+        "source": "examples/iteration2/timestamp-local-node.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/timestamp-local-node.yaml"
+      },
+      {
+        "alias": "C",
+        "source": "examples/iteration2/timestamp-local-node.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-029.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-029.json"
+  },
+  "expected": {
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "MANAGED_REVISION",
+      "writes": [
+        "A"
+      ],
+      "afterEquals": {
+        "A.peers.b.peers.c.nodeName": "C",
+        "A.observed": 0,
+        "B.observed": 0,
+        "C.observed": 0
+      },
+      "preserveSource": true,
+      "verifyIdentityEnvelopes": true,
+      "hostTimestamp": {
+        "recordKind": "ROOTED_RETAINED_COMMAND",
+        "completionTime": "2026-09-08T12:00:00.123456789Z",
+        "observationField": "hostTimestamp",
+        "requireFreshProcessReopen": true,
+        "root": "A",
+        "consumer": "B",
+        "source": "C",
+        "targetPath": "/peers/c",
+        "sourceEpoch": 0,
+        "historicalFromEpoch": -1,
+        "rootedRetainedApplicationCount": 1,
+        "independentApplicationCount": 0,
+        "externalEntryCount": 0,
+        "expectedTimestampColumns": [
+          [
+            "MINI_COMMAND",
+            "COMPLETED_AT"
+          ],
+          [
+            "MINI_COMMAND",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_COMMAND",
+            "STARTED_AT"
+          ],
+          [
+            "MINI_COMMAND_READINESS_DEPENDENCY",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_COMPONENT_PROJECTION",
+            "COMPUTED_AT"
+          ],
+          [
+            "MINI_DOCUMENT_EPOCH",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_DOCUMENT_SESSION",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_DOCUMENT_SESSION",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_EXACT_CONTENT",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_AUTHORED_EXACT",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_CATCH_UP_BARRIER",
+            "COMPLETED_AT"
+          ],
+          [
+            "MINI_MANAGED_CATCH_UP_BARRIER",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_CATCH_UP_BARRIER",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_MANAGED_CYCLIC_EXACT_EVIDENCE",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_EPOCH_APPLICATION",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_EPOCH_APPLICATION_ATTEMPT",
+            "COMPLETED_AT"
+          ],
+          [
+            "MINI_MANAGED_EPOCH_APPLICATION_ATTEMPT",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_OCCURRENCE_CATCH_UP_CURSOR",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+            "COMPLETED_AT"
+          ],
+          [
+            "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_MANAGED_OCCURRENCE_CATCH_UP_PLAN",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_MANAGED_STATE_INDEX",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_OCCURRENCE_SLOT",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_PLATFORM_EVENT",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_PROCESSING_WORK",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_PROCESSING_WORK",
+            "LEASE_UNTIL"
+          ],
+          [
+            "MINI_PROCESSING_WORK",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_PROJECTION_BACKFILL",
+            "COMPLETED_AT"
+          ],
+          [
+            "MINI_RESOURCE_DEMAND",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_RESOURCE_DEMAND",
+            "SATISFIED_AT"
+          ],
+          [
+            "MINI_TIMELINE",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_TIMELINE",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_TIMELINE_ENTRY",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_TIMELINE_IMPORT",
+            "CREATED_AT"
+          ],
+          [
+            "MINI_TIMELINE_IMPORT",
+            "UPDATED_AT"
+          ],
+          [
+            "MINI_TIMELINE_IMPORT_ENTRY",
+            "IMPORTED_AT"
+          ],
+          [
+            "MINI_TIMELINE_IMPORT_RECEIPT",
+            "IMPORTED_AT"
+          ]
+        ]
+      }
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

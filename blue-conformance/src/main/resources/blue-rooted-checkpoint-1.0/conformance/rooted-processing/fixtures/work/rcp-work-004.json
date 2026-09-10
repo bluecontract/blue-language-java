@@ -1,0 +1,33 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-WORK-004",
+  "category": "WORK",
+  "title": "Fresh same-payload reemission cannot be deduplicated",
+  "kind": "reaction",
+  "requirements": [
+    "RCP-ORDER-05",
+    "RCP-GRAPH-02",
+    "RCP-READY-04"
+  ],
+  "input": {
+    "route": {
+      "A": "B",
+      "B": "A"
+    },
+    "start": "A",
+    "ttl": null,
+    "budget": 7,
+    "costModel": "ONE_UNIT_PER_DELIVERY_NOT_BLUE_GAS"
+  },
+  "expected": {
+    "status": "OUT_OF_GAS",
+    "committed": [],
+    "gas": 7
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

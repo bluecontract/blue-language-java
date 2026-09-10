@@ -23,6 +23,7 @@ public final class AffectedClosureSnapshot {
     private final List<ComponentSnapshot> components;
     private final List<DocumentId> publicRootDocumentIds;
     private final Map<DocumentId, ManagedDocumentSnapshot> documentsById;
+    private final RootedWitnessFrame.State rootedWitnesses;
 
     /**
      * Creates one closed authoritative affected-closure state.
@@ -43,6 +44,15 @@ public final class AffectedClosureSnapshot {
             String occurrenceBindingSetIdentity,
             List<ComponentSnapshot> components,
             List<DocumentId> publicRootDocumentIds) {
+        this(closureIdentity, graphGeneration, managedDocuments, occurrences, occurrenceBindingSetIdentity,
+                components, publicRootDocumentIds, null);
+    }
+
+    AffectedClosureSnapshot(String closureIdentity, long graphGeneration,
+            List<ManagedDocumentSnapshot> managedDocuments, List<ManagedOccurrenceBinding> occurrences,
+            String occurrenceBindingSetIdentity, List<ComponentSnapshot> components,
+            List<DocumentId> publicRootDocumentIds, RootedWitnessFrame.State rootedWitnesses) {
+        this.rootedWitnesses = rootedWitnesses;
         this.closureIdentity = ClosureValueSupport.requireSha256Identity(
                 closureIdentity, "closureIdentity");
         this.graphGeneration = ClosureValueSupport.requireSafeInteger(
@@ -57,9 +67,17 @@ public final class AffectedClosureSnapshot {
         this.components = immutableComponents(components);
         this.publicRootDocumentIds = immutableCanonicalDocumentIds(
                 publicRootDocumentIds, "publicRootDocumentIds");
+        if (rootedWitnesses != null) rootedWitnesses.requireUnchanged(this);
         validateOccurrenceEndpoints();
         validateComponentPartition();
         validatePublicRoots();
+    }
+
+    RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
+
+    ManagedDocumentGraph graph() {
+        return ManagedDocumentGraph.fromBindings(documentsById.keySet(), occurrences,
+                rootedWitnesses == null ? Collections.<DocumentId>emptySet() : rootedWitnesses.sources());
     }
 
     /**
@@ -147,6 +165,7 @@ public final class AffectedClosureSnapshot {
     }
 
     private void validateOccurrenceEndpoints() {
+        ManagedDocumentGraph graph = graph();
         for (ManagedOccurrenceBinding occurrence : occurrences) {
             ManagedDocumentSnapshot source = documentsById.get(
                     occurrence.sourceDocumentId());
@@ -156,7 +175,7 @@ public final class AffectedClosureSnapshot {
                 throw new IllegalArgumentException(
                         "Occurrence endpoint is outside the affected closure");
             }
-            if (occurrence.active()
+            if (graph.calculating(occurrence)
                     && !target.blueId().equals(
                             occurrence.expectedTargetBlueId())) {
                 throw new IllegalArgumentException(
@@ -197,8 +216,7 @@ public final class AffectedClosureSnapshot {
                     "Components do not partition all managed documents");
         }
 
-        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
-                documentsById.keySet(), occurrences);
+        ManagedDocumentGraph graph = graph();
         List<List<DocumentId>> expected = new SccPartitioner().partition(graph);
         if (expected.size() != components.size()) {
             throw new IllegalArgumentException(

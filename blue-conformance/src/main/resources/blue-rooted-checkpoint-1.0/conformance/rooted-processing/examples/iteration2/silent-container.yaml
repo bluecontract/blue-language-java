@@ -1,0 +1,5 @@
+name: RCP2 Silent Container
+contracts:
+  embedded:
+    type: Process Embedded
+    paths: [/child]

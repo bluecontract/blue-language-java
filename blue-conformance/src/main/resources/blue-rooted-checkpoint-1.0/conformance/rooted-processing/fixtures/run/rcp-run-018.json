@@ -1,0 +1,171 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-018",
+  "category": "RUN",
+  "title": "Saved-original pair then ring forms without rewriting history",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "P",
+        "source": "examples/iteration2/graph-018-p.yaml"
+      },
+      {
+        "alias": "Q",
+        "source": "examples/iteration2/graph-018-q.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/graph-018-a.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/graph-018-b.yaml"
+      },
+      {
+        "alias": "C",
+        "source": "examples/iteration2/graph-018-c.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "pair-then-ring"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-018.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-018.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "A",
+        "B",
+        "C"
+      ],
+      "afterEquals": {
+        "P.observed": 1,
+        "Q.observed": 0,
+        "A.observed": 1,
+        "B.observed": 1,
+        "C.observed": 0
+      },
+      "requiredEvents": 2,
+      "eventAnchors": [
+        {
+          "origin": "C",
+          "kind": "Tutorial/Graph Token",
+          "ordinal": 0
+        },
+        {
+          "origin": "B",
+          "kind": "Tutorial/Graph Token",
+          "ordinal": 1
+        }
+      ],
+      "savedOriginalGraph": {
+        "observation": "graph",
+        "requiredAliases": [
+          "P",
+          "Q",
+          "A",
+          "B",
+          "C"
+        ],
+        "maxSelectionsPerAttachment": 32,
+        "attachmentRequests": [
+          {
+            "entry": "E100",
+            "parent": "P",
+            "path": "/peers/q",
+            "source": "Q",
+            "selection": "Q.initialBlueId",
+            "phase": "pairFirst"
+          },
+          {
+            "entry": "E200",
+            "parent": "Q",
+            "path": "/peers/p",
+            "source": "P",
+            "selection": "P.initialBlueId",
+            "phase": "pairJoined"
+          },
+          {
+            "entry": "E400",
+            "parent": "A",
+            "path": "/peers/b",
+            "source": "B",
+            "selection": "B.initialBlueId",
+            "phase": "ringFirst"
+          },
+          {
+            "entry": "E500",
+            "parent": "B",
+            "path": "/peers/c",
+            "source": "C",
+            "selection": "C.initialBlueId",
+            "phase": "ringSecond"
+          },
+          {
+            "entry": "E600",
+            "parent": "C",
+            "path": "/peers/a",
+            "source": "A",
+            "selection": "A.initialBlueId",
+            "phase": "ringJoined"
+          }
+        ],
+        "components": [
+          [
+            "P",
+            "Q"
+          ],
+          [
+            "A",
+            "B",
+            "C"
+          ]
+        ],
+        "pairFinite": {
+          "phase": "pairFinite",
+          "observed": {
+            "P": 1,
+            "Q": 0
+          },
+          "events": [
+            {
+              "origin": "Q",
+              "kind": "Tutorial/Graph Token"
+            }
+          ]
+        },
+        "initialPeers": {},
+        "initializedEpoch": 0,
+        "verifyEveryReceiptPrefix": true,
+        "verifyNoAttachmentSourceEvents": true,
+        "verifyActualCallsAndGas": true,
+        "verifyRestarts": true
+      },
+      "verifyIdentityEnvelopes": true
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

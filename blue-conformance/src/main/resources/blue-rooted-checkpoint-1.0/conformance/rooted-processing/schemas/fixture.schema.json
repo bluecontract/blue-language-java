@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:blue:rooted-processing-fixture:1.0-draft.1",
+  "title": "Rooted processing fixture — draft source schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "category",
+    "title",
+    "kind",
+    "requirements",
+    "input",
+    "expected",
+    "verification"
+  ],
+  "properties": {
+    "schema": {
+      "const": "blue-rooted-processing-fixture/1.0-draft.1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^RCP-[A-Z]+-[0-9]{3}$"
+    },
+    "category": {
+      "enum": [
+        "SEL",
+        "SCOPE",
+        "DYN",
+        "HIST",
+        "WORK",
+        "RUN"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5
+    },
+    "kind": {
+      "enum": [
+        "selector",
+        "safe-window",
+        "terminal-progress",
+        "graph",
+        "graph-generated",
+        "dynamic",
+        "history",
+        "historical-read",
+        "position-chain",
+        "reaction",
+        "runtime"
+      ]
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^RCP-[A-Z]+-[0-9]{2}$"
+      }
+    },
+    "input": {
+      "type": "object"
+    },
+    "expected": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "production",
+        "scope",
+        "artifactBindingRequired"
+      ],
+      "properties": {
+        "model": {
+          "enum": [
+            "NOT_RUN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "production": {
+          "const": "NOT_RUN"
+        },
+        "scope": {
+          "enum": [
+            "ABSTRACT_MODEL",
+            "PRODUCTION_ADAPTER_REQUIRED"
+          ]
+        },
+        "artifactBindingRequired": {
+          "const": true
+        }
+      }
+    },
+    "recipeProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^provenance/recipe-inputs/rcp-run-[0-9]{3}\\.json$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "runtime"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "input": {
+            "required": [
+              "isolation",
+              "documents",
+              "steps",
+              "variants"
+            ],
+            "properties": {
+              "isolation": {
+                "const": "NEW_REALM"
+              },
+              "documents": {
+                "type": "array"
+              },
+              "steps": {
+                "type": "array"
+              },
+              "variants": {
+                "type": "array"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "qualification",
+                    "literalPlan"
+                  ],
+                  "properties": {
+                    "qualification": {
+                      "const": "LITERAL_CRITICAL"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "literalPlan": {
+                      "type": "string",
+                      "pattern": "^plans/rcp-run-[0-9]{3}\\.json$"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "steps": {
+                      "minItems": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "expected": {
+            "oneOf": [
+              {
+                "required": [
+                  "assertions"
+                ],
+                "properties": {
+                  "assertions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "$ref": "#/$defs/assertion"
+                    }
+                  }
+                },
+                "not": {
+                  "required": [
+                    "oracleVersion"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "oracleVersion",
+                  "contract"
+                ],
+                "properties": {
+                  "oracleVersion": {
+                    "const": 2
+                  },
+                  "assertions": {
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                      "$ref": "#/$defs/assertion"
+                    }
+                  },
+                  "contract": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "minProperties": 3,
+                        "required": [
+                          "scope",
+                          "causeKind"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "enum": [
+                              "SUCCESSFUL_ROOT",
+                              "FAILED_ROOT",
+                              "HISTORY_SEQUENCE",
+                              "HISTORY_MULTIPLE",
+                              "GAS_BOUNDARY",
+                              "COLLECTION_SEQUENCE",
+                              "SILENT_MIDDLE",
+                              "EQUAL_PAYLOAD_OCCURRENCES"
+                            ]
+                          },
+                          "causeKind": {
+                            "enum": [
+                              "LIVE",
+                              "MANAGED_REVISION"
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "scope",
+                          "faultCuts"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "const": "PACKAGED_PROCESS_FAULT_MATRIX"
+                          },
+                          "faultCuts": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "lanes",
+                              "cuts",
+                              "maxConcurrentLanes",
+                              "startupSeconds",
+                              "cutSeconds",
+                              "commandSeconds",
+                              "freshJvmInstances",
+                              "control",
+                              "termination",
+                              "coldRead",
+                              "duplicates",
+                              "gas"
+                            ],
+                            "properties": {
+                              "lanes": {
+                                "const": [
+                                  "LIVE",
+                                  "OWNED_RETAINED"
+                                ]
+                              },
+                              "cuts": {
+                                "const": [
+                                  "beforeCommit",
+                                  "afterCommitBeforeAck",
+                                  "beforeNotification",
+                                  "afterCursorWriteAttempt"
+                                ]
+                              },
+                              "maxConcurrentLanes": {
+                                "const": 1
+                              },
+                              "startupSeconds": {
+                                "const": 60
+                              },
+                              "cutSeconds": {
+                                "const": 60
+                              },
+                              "commandSeconds": {
+                                "const": 45
+                              },
+                              "freshJvmInstances": {
+                                "const": 36
+                              },
+                              "control": {
+                                "const": "fork of actual PROCESSING claim H2 backup"
+                              },
+                              "termination": {
+                                "const": "owned Popen SIGKILL after exact fsynced cut marker"
+                              },
+                              "coldRead": {
+                                "const": "separate read-only JDBC JVM before Spring recovery"
+                              },
+                              "duplicates": {
+                                "const": "same command UUID, key and exact request"
+                              },
+                              "gas": {
+                                "const": "each actual invocation separately checked against unchanged tariff and full trace"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "scope",
+                          "resourceContinuation"
+                        ],
+                        "properties": {
+                          "scope": {
+                            "const": "PACKAGED_RESOURCE_CONTINUATION"
+                          },
+                          "resourceContinuation": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "observationField",
+                              "sourceFiles",
+                              "commandSeconds",
+                              "sourceWaitSeconds",
+                              "restartBoundary",
+                              "wrongUploadCode",
+                              "captureMultiplicity",
+                              "sourceMultiplicity",
+                              "sourceKind",
+                              "entryIdentity",
+                              "gas"
+                            ],
+                            "properties": {
+                              "observationField": {
+                                "const": "resourceContinuation"
+                              },
+                              "sourceFiles": {
+                                "const": [
+                                  "examples/iteration2/resource-host.yaml",
+                                  "examples/iteration2/resource-child.template.yaml",
+                                  "examples/iteration2/resource-correct.yaml",
+                                  "examples/iteration2/resource-wrong.yaml"
+                                ]
+                              },
+                              "commandSeconds": {
+                                "const": 45
+                              },
+                              "sourceWaitSeconds": {
+                                "const": 45
+                              },
+                              "restartBoundary": {
+                                "const": "MYOS_RUNTIME_REBUILDER"
+                              },
+                              "wrongUploadCode": {
+                                "const": "EXACT_NODE_IDENTITY_MISMATCH"
+                              },
+                              "captureMultiplicity": {
+                                "const": "exact frozen sourceHistoryCaptures from original typed suspension"
+                              },
+                              "sourceMultiplicity": {
+                                "const": "one next-source command per retained exact selection; same source command resumes after its exact body upload"
+                              },
+                              "sourceKind": {
+                                "const": "ADMISSION for the included timeless authored child; no prepopulation, fabricated history or source business entry"
+                              },
+                              "entryIdentity": {
+                                "const": "same exact saved entry and request through capture, source prerequisite, original continuation and replay"
+                              },
+                              "gas": {
+                                "const": "each actual complete processor invocation separately checked; pre-admission typed waits have no fabricated terminal or charge"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "verification": {
+            "properties": {
+              "scope": {
+                "const": "ABSTRACT_MODEL"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actual",
+        "op"
+      ],
+      "properties": {
+        "actual": {
+          "type": "string",
+          "minLength": 1
+        },
+        "op": {
+          "enum": [
+            "equals",
+            "isTrue",
+            "allEqual"
+          ]
+        },
+        "expected": {}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "equals"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "expected"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

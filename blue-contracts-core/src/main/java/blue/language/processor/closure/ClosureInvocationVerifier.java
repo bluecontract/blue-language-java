@@ -127,12 +127,13 @@ final class ClosureInvocationVerifier {
                 }
             }
             if (active == null || !(active.active()
+                    || resolution.selectsInactiveReservation(base.snapshot(), active)
                     || (isVerifiedManagedReceiptEventSource(base, active)
                             && !active.targetDocumentId().equals(
                                     resolution.targetDocumentId())))) {
                 throw new IllegalArgumentException(
                         "A managed-occurrence process retry requires an "
-                                + "active source row or verified different-lineage receipt event");
+                                + "active source row, initialized same-lineage reservation, or verified different-lineage receipt event");
             }
         }
         return new Verification(
@@ -287,6 +288,14 @@ final class ClosureInvocationVerifier {
                                 revision.beforeBlueId(),
                                 revision.afterBlueId(),
                                 revision.originalSourceCauseIdentity()));
+            }
+        }
+        if (selected instanceof ManagedRevisionCause) {
+            ManagedRevisionCause numbered = (ManagedRevisionCause) selected;
+            if (numbered.successorRepresentationCause().isPresent()) {
+                numbered.verifySuccessorRepresentationCause();
+                // One closed proof adjunct; this validates evidence and does not execute work.
+                verifyCause(numbered.successorRepresentationCause().get(), runtimeAccess);
             }
         }
         requireClaim(

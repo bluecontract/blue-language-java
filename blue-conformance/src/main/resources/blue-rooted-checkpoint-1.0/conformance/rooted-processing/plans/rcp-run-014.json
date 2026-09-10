@@ -1,0 +1,217 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-014",
+  "title": "Diamond with noncommutative literal log",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "D",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/diamond-b.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "D.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "C",
+      "source": "examples/iteration2/diamond-c.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "D.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "start",
+      "alias": "R",
+      "source": "examples/iteration2/diamond-root.yaml",
+      "bindings": {
+        "/b": {
+          "$capture": "B.initializedBlueId"
+        },
+        "/c": {
+          "$capture": "C.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-004"
+    }
+  ],
+  "variants": {
+    "forward-enumeration": [
+      {
+        "op": "append",
+        "target": "D",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "forward-enumeration-001"
+      },
+      {
+        "op": "processNext",
+        "root": "R",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "forward-enumeration-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "R"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "forward-enumeration-003"
+      }
+    ],
+    "reverse-enumeration": [
+      {
+        "op": "cache",
+        "target": "R",
+        "enumeration": "REVERSED",
+        "publish": false,
+        "stepId": "reverse-enumeration-001"
+      },
+      {
+        "op": "append",
+        "target": "D",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "reverse-enumeration-002"
+      },
+      {
+        "op": "processNext",
+        "root": "R",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "reverse-enumeration-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "R"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "reverse-enumeration-004"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "R"
+    ],
+    "afterEquals": {
+      "R.b.seen": 1,
+      "R.c.seen": 1
+    },
+    "derivedAfter": {
+      "R.log": {
+        "function": "canonicalComponentOrder",
+        "members": [
+          "B",
+          "C"
+        ],
+        "outputLabels": [
+          "B",
+          "C"
+        ],
+        "input": "captured real member DocumentIds, unsigned UTF-8 order, no driver-provided expected log"
+      }
+    },
+    "requiredEvents": 0,
+    "equalAcrossVariants": [
+      "after.R",
+      "gas.charges",
+      "gas.total",
+      "semanticReceipts"
+    ]
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

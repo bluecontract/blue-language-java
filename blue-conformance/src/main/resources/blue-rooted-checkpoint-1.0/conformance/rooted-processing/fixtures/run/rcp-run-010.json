@@ -1,0 +1,111 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-010",
+  "category": "RUN",
+  "title": "Descendant listener survives a silent intermediate document",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "M",
+        "source": "examples/iteration2/silent-container.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/silent-descendant-observer.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-010.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-010.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SILENT_MIDDLE",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.child.child.counter": 1,
+        "S.counter": 0,
+        "M.child.counter": 0,
+        "P.seen": 1
+      },
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "RCP2/DescendantObserved"
+        }
+      ],
+      "preserveSource": true,
+      "silentMiddle": "M",
+      "selectedExactAdvanced": [
+        "S",
+        "M",
+        "P"
+      ],
+      "computedSourceEvent": {
+        "origin": "S",
+        "ordinal": 0,
+        "kind": "RCP2/Tick"
+      },
+      "phaseEventAnchors": {
+        "sourcePublication": [
+          {
+            "origin": "S",
+            "ordinal": 0,
+            "kind": "RCP2/Tick"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "sourcePublication.after.S.counter": 1,
+          "sourcePublication.after.P.child.child.counter": 1,
+          "sourcePublication.after.M.child.counter": 0,
+          "sourcePublication.ownedWrites": [
+            "S"
+          ],
+          "sourcePublication.after.P.seen": 1
+        }
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-010.json",
+    "sha256": "6f9efd8f14641c4f141ec72ea7130e2f9ce733d3e114eb0b08b39d964336a2ac"
+  }
+}

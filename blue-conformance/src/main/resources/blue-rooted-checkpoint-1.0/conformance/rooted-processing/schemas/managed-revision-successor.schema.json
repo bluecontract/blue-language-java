@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "targetOccurrenceIdentity",
+    "childDocumentId",
+    "fromEpoch",
+    "toEpoch",
+    "beforeBlueId",
+    "afterBlueId",
+    "originalSourceCauseIdentity",
+    "sourceRevisionReceiptIdentity",
+    "successorRepresentationCauseIdentity"
+  ],
+  "properties": {
+    "targetOccurrenceIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "childDocumentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fromEpoch": {
+      "type": "integer",
+      "minimum": -1,
+      "maximum": 9007199254740991
+    },
+    "toEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "beforeBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?$"
+    },
+    "afterBlueId": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?$"
+    },
+    "originalSourceCauseIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceRevisionReceiptIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "successorRepresentationCauseIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$comment": "Also require toEpoch=fromEpoch+1 and all typed source/first-successor joins in Contracts \u00a77.5a.1; schema/hash alone is not history authority."
+}

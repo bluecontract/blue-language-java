@@ -1,0 +1,347 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-011",
+  "title": "Initially empty Orders collection receives later members",
+  "inputIdentityPolicy": "Start with orders: {}; attach actual saved initialized member references only after listener registration.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/empty-orders.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "payment",
+      "source": "examples/collection-payment.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/collection-order-a.yaml",
+      "bindings": {
+        "/nested": {
+          "$capture": "payment.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/collection-order-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "start",
+      "alias": "unrelated",
+      "source": "examples/collection-order-b.yaml",
+      "bindings": {
+        "/documentId": "rc-collection-unrelated",
+        "/contracts/ownerChannel/timeline/timelineId": "rc/collection/unrelated"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {
+          "orderKey": "first",
+          "order": {
+            "$capture": "A.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EaddA",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EaddA"
+        },
+        "budget": "DEFAULT",
+        "capture": "addA",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "addOrder",
+        "channel": "ownerChannel",
+        "timestampUs": "150",
+        "request": {
+          "orderKey": "second",
+          "order": {
+            "$capture": "B.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "EaddB",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EaddB"
+        },
+        "budget": "DEFAULT",
+        "capture": "addB",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "200",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EA",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EA"
+        },
+        "budget": "DEFAULT",
+        "capture": "first",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "300",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EB",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EB"
+        },
+        "budget": "DEFAULT",
+        "capture": "second",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "append",
+        "target": "payment",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "400",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "Epayment",
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "Epayment"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "append",
+        "target": "unrelated",
+        "operation": "emitSignal",
+        "channel": "ownerChannel",
+        "timestampUs": "500",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "Eunrelated",
+        "stepId": "baseline-011"
+      },
+      {
+        "op": "processNext",
+        "root": "unrelated",
+        "mustSelect": {
+          "$capture": "Eunrelated"
+        },
+        "budget": "DEFAULT",
+        "capture": "irrelevant",
+        "stepId": "baseline-012"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-013"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-014"
+      }
+    ]
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-011.json",
+    "sha256": "380528047da4b9b4bdddc523887396c13b971b47680203ed1a0db048818780c8"
+  },
+  "outputContract": {
+    "scope": "COLLECTION_SEQUENCE",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "P.directMemberEvents": 2,
+      "P.descendantEvents": 3,
+      "P.orders.first.signalCount": 1,
+      "P.orders.second.signalCount": 1,
+      "P.orders.first.nested.signalCount": 1
+    },
+    "requiredEvents": 1,
+    "eventAnchors": [
+      {
+        "origin": "P",
+        "ordinal": 0,
+        "kind": "descendant-observed"
+      }
+    ],
+    "preserveSource": true,
+    "extraChecks": {
+      "baseline": {
+        "addA.before.P.orders": {},
+        "addA.before.P.directMemberEvents": 0,
+        "addA.before.P.descendantEvents": 0,
+        "addA.events": [],
+        "addB.events": [],
+        "addA.status": "SUCCESS",
+        "addA.after.P.directMemberEvents": 0,
+        "addA.after.P.descendantEvents": 0,
+        "addB.status": "SUCCESS",
+        "addB.after.P.directMemberEvents": 0,
+        "addB.after.P.descendantEvents": 0,
+        "first.status": "SUCCESS",
+        "first.after.P.directMemberEvents": 1,
+        "first.after.P.descendantEvents": 1,
+        "second.status": "SUCCESS",
+        "second.after.P.directMemberEvents": 2,
+        "second.after.P.descendantEvents": 2,
+        "irrelevant.status": "SUCCESS",
+        "irrelevant.after.P.directMemberEvents": 2,
+        "irrelevant.after.P.descendantEvents": 3,
+        "first.events.0.origin": "P",
+        "first.events.0.ordinal": 0,
+        "first.events.0.kind": "direct-observed",
+        "first.events.1.origin": "P",
+        "first.events.1.ordinal": 1,
+        "first.events.1.kind": "descendant-observed",
+        "second.events.0.origin": "P",
+        "second.events.0.ordinal": 0,
+        "second.events.0.kind": "direct-observed",
+        "second.events.1.origin": "P",
+        "second.events.1.ordinal": 1,
+        "second.events.1.kind": "descendant-observed",
+        "irrelevant.ownedWrites": [
+          "unrelated"
+        ],
+        "irrelevant.events.0.origin": "unrelated",
+        "irrelevant.events.0.kind": "collection-signal"
+      }
+    },
+    "phaseEventAnchors": {
+      "addA": [],
+      "addB": [],
+      "first": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "direct-observed"
+        },
+        {
+          "origin": "P",
+          "ordinal": 1,
+          "kind": "descendant-observed"
+        }
+      ],
+      "second": [
+        {
+          "origin": "P",
+          "ordinal": 0,
+          "kind": "direct-observed"
+        },
+        {
+          "origin": "P",
+          "ordinal": 1,
+          "kind": "descendant-observed"
+        }
+      ],
+      "irrelevant": [
+        {
+          "origin": "unrelated",
+          "ordinal": 0,
+          "kind": "collection-signal"
+        }
+      ]
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "append",
+    "assertQuiescent",
+    "processNext",
+    "restart",
+    "start"
+  ]
+}

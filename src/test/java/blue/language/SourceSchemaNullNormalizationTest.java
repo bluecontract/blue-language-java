@@ -48,6 +48,32 @@ final class SourceSchemaNullNormalizationTest {
     }
 
     @Test
+    void shouldPreserveEmptySchemaAcrossSourceSnapshotAndExactGraphIdentity() {
+        // given
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node source = language.codec().parseSource(
+                    "type: Integer\nschema: {}\nvalue: 3\n", BlueFormat.YAML);
+            Node canonical = language.identity().canonicalIdentityInput(source);
+            String expected = "4SrR9s5T8u24vn5vLB5nPh3eSUtmeGR9uD2uDxLyvpzt";
+            // when
+            blue.language.merge.ResolvedSnapshot snapshot = language.snapshots().resolve(source);
+
+            // then
+            assertEquals(expected, language.identity().sourceDocumentBlueId(source));
+            assertEquals(expected, language.identity().directBlueId(canonical));
+            assertEquals(NodeWireForm.get(canonical), NodeWireForm.get(snapshot.canonicalRoot()));
+            assertNotNull(snapshot.canonicalRoot().getSchema());
+            assertEquals(expected, snapshot.blueId());
+            assertEquals(expected, language.identity().directBlueId(snapshot.canonicalRoot()));
+            assertEquals(expected, language.identity().sourceDocumentBlueId(
+                    language.resolution().minimize(source)));
+            Node expanded = language.graph().expand(canonical);
+            assertNotNull(expanded.getSchema());
+            assertEquals(expected, language.graph().collapse(expanded).getBlueId());
+        }
+    }
+
+    @Test
     void shouldRetainScalarKeywordSourceNullUntilMandatoryPreprocessing() {
         // given
         try (BlueLanguage language = BlueLanguage.builder().build()) {

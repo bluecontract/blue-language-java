@@ -1,0 +1,100 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-015",
+  "category": "RUN",
+  "title": "Equal payload events remain distinct occurrences",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-02"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/two-equal-events.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-015.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-015.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "EQUAL_PAYLOAD_OCCURRENCES",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "P.seen": 1,
+        "P.log": [
+          1,
+          1
+        ],
+        "P.child.counter": 1,
+        "S.counter": 0
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "sourceAlias": "S",
+      "consumerAlias": "P",
+      "phaseEventAnchors": {
+        "sourcePublication": [
+          {
+            "origin": "S",
+            "ordinal": 0,
+            "kind": "RCP2/Tick"
+          },
+          {
+            "origin": "S",
+            "ordinal": 1,
+            "kind": "RCP2/Tick"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "sourcePublication.after.S.counter": 1,
+          "sourcePublication.after.P.log": [
+            1,
+            1
+          ],
+          "sourcePublication.ownedWrites": [
+            "S"
+          ]
+        }
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-015.json",
+    "sha256": "e7fc0481a8697501684cd5ad44a0fd1ea47703afbca564bf8fcab2c4b4a4c875"
+  }
+}

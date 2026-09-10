@@ -1,0 +1,74 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-009",
+  "category": "DYN",
+  "title": "Same-entry source set is frozen before fresh birth",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/a",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/b",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "attach": [
+        {
+          "kind": "born",
+          "address": "R/new",
+          "entries": [
+            {
+              "timestamp": 20,
+              "timeline": "R",
+              "entry": "attach"
+            }
+          ],
+          "cursor": 0
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "attach",
+        "receivers": [
+          "R/a",
+          "R/b"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

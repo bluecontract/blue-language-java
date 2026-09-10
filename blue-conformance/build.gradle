@@ -33,6 +33,32 @@ tasks.register('historicalRepresentationConformanceTest', JavaExec) {
 tasks.named('check') { dependsOn tasks.named('historicalRepresentationConformanceTest') }
 tasks.named('releaseConformanceTest') { dependsOn tasks.named('historicalRepresentationConformanceTest') }
 
+// These are checker-sensitivity tests; real rooted runtime acceptance is separate.
+def rootedCheckerTasks = ['Harness', 'Iteration2', 'CheckerHardening', 'CheckpointIdentity', 'ResourceAdmissionBindings', 'ResourceFollowupBindings', 'ReconnectIdentityBindings'].collect { suffix ->
+    def scripts = [Harness: 'test_harness.py', Iteration2: 'test_iteration2.py',
+                   CheckerHardening: 'test_checker_hardening.py',
+                   CheckpointIdentity: 'test_checkpoint_identity.py',
+                   ResourceAdmissionBindings: 'test_resource_admission_bindings.py',
+                   ResourceFollowupBindings: 'test_resource_followup_bindings.py',
+                   ReconnectIdentityBindings: 'test_reconnect_identity_bindings.py']
+    tasks.register("rooted${suffix}Test", Exec) {
+        group = 'verification'
+        description = "Runs the reviewed rooted ${suffix} checker tests (no runtime claim)."
+        def root = layout.projectDirectory.dir('src/main/resources/blue-rooted-checkpoint-1.0')
+        workingDir root
+        commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+                '-B', root.file("tools/${scripts[suffix]}").asFile.absolutePath
+        inputs.dir(root)
+    }
+}
+tasks.register('rootedCheckerTest') {
+    group = 'verification'
+    description = 'Verifies the imported rooted checker and its mutation negatives.'
+    dependsOn rootedCheckerTasks
+}
+tasks.named('check') { dependsOn tasks.named('rootedCheckerTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('rootedCheckerTest') }
+
 tasks.register('exportFullLifecycleFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath

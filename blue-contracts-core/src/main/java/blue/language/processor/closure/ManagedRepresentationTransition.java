@@ -26,6 +26,7 @@ public final class ManagedRepresentationTransition {
     private final ManagedDocumentTransitionReceipt transition;
     private final ResultingDocument after;
     private final String positionIdentity;
+    private final String checkpointReferenceProofIdentity;
 
     /**
      * Verifies complete evidence for one permitted same-epoch representation change.
@@ -89,13 +90,32 @@ public final class ManagedRepresentationTransition {
                 && !transition.beforeBlueId().equals(transition.afterBlueId())
                 && transition.emittedRootEvents().isEmpty(),
                 "Representation evidence changes source events or exact endpoints");
-        require(reconcilesPendingTarget(originalInput, originalResult, documentId),
-                "Representation source is not the selected pending historical target");
+        boolean pendingTarget = reconcilesPendingTarget(originalInput, originalResult, documentId);
+        checkpointReferenceProofIdentity = pendingTarget ? null : rootedCheckpointReferenceProof();
+        require(pendingTarget || checkpointReferenceProofIdentity != null,
+                "Representation source is neither the selected pending historical target nor a proved rooted checkpoint reference");
         require(referenceOnly(before.document(), after.document(),
                 owned(originalInput.snapshot().occurrences()), owned(originalResult.occurrenceBindings())),
                 "Representation body change lacks complete same-lineage binding proof");
-        positionIdentity = ClosureIdentityService.INSTANCE.identity(
-                ClosureIdentityService.Constructor.MANAGED_REPRESENTATION_POSITION, identityValue());
+        positionIdentity = ClosureIdentityService.INSTANCE.identity(checkpointReferenceProofIdentity == null
+                ? ClosureIdentityService.Constructor.MANAGED_REPRESENTATION_POSITION
+                : ClosureIdentityService.Constructor.ROOTED_CHECKPOINT_REPRESENTATION_POSITION, identityValue());
+    }
+
+    private String rootedCheckpointReferenceProof() {
+        RootedPublicationProjection rooted = originalResult.rootedProjection();
+        if (!(originalInput.cause() instanceof ExternalEventCause) || rooted == null
+                || !RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY.equals(
+                        originalInput.environment().contractsSpecificationIdentity())
+                || !rooted.context().entryOwners().contains(documentId) || !rooted.owns(documentId)
+                || !rooted.inputSnapshot().closureIdentity().equals(originalInput.snapshot().closureIdentity())
+                || originalInput.directDeliveries().isEmpty()
+                || originalInput.directDeliveries().stream().anyMatch(delivery -> rooted.owns(delivery.targetDocumentId()))
+                || originalResult.checkpointWrites().stream().anyMatch(write ->
+                        write.targetManagedScopeKey().documentId().equals(documentId))
+                || !RootedCheckpointReferenceGraph.verifies(originalInput.snapshot(),
+                        rooted.resultingSnapshot(), originalResult.graphChanges())) return null;
+        return rooted.checkpointReferenceProofIdentity(documentId).orElse(null);
     }
 
     private List<ManagedOccurrenceBinding> owned(List<ManagedOccurrenceBinding> rows) {
@@ -190,8 +210,17 @@ public final class ManagedRepresentationTransition {
         value.put("inputClosureIdentity", originalResult.inputClosureIdentity());
         value.put("outputClosureIdentity", originalResult.outputClosureIdentity());
         value.put("commitCompanionIdentity", originalResult.platformCommitCompanion().companionIdentity());
+        if (checkpointReferenceProofIdentity != null) value.put("checkpointReferenceProofIdentity", checkpointReferenceProofIdentity);
         return value;
     }
+    /**
+     * Returns the separately bound rooted checkpoint proof, absent for the unchanged pending-target class.
+     * @return processor-produced original rooted proof identity when this position uses that domain
+     */
+    public java.util.Optional<String> rootedCheckpointReferenceProofIdentity() {
+        return java.util.Optional.ofNullable(checkpointReferenceProofIdentity);
+    }
+
     /**
      * Returns the authoritative source lineage.
      *

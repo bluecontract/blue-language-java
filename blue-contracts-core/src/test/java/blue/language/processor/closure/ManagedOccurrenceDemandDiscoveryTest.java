@@ -36,6 +36,66 @@ final class ManagedOccurrenceDemandDiscoveryTest {
             new ProcessEmbeddedSurfaceReconciler();
 
     @Test
+    void retiredReservationRequestsEvidenceForAnOlderSavedReference() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot current = document(B, "target-current");
+        String saved = blueId(new Node().name("target-saved"));
+        ManagedOccurrenceBinding reserved = binding(A, "/peer", 2L, current, false);
+        Node readded = source.document().properties("peer", new Node().blueId(saved));
+
+        List<ClosureResourceDemand> missing = reconciler.resourceDemands(
+                A, readded, Collections.singletonList(path("/peer")),
+                Collections.singletonList(reserved), Arrays.asList(source, current), context(false));
+        assertEquals(1, missing.size());
+        assertTrue(missing.get(0) instanceof ExactNodeDemand);
+        assertEquals(saved, missing.get(0).suppliedValueBlueId());
+
+        List<ClosureResourceDemand> available = reconciler.resourceDemands(
+                A, readded, Collections.singletonList(path("/peer")),
+                Collections.singletonList(reserved), Arrays.asList(source, current), context(true));
+        assertEquals(1, available.size());
+        assertTrue(available.get(0) instanceof ManagedOccurrenceEvidenceDemand);
+        assertEquals(saved, available.get(0).suppliedValueBlueId());
+        assertEquals(A, available.get(0).sourceDocumentId());
+        assertEquals("/peer", available.get(0).sourcePath());
+        assertFalse(reserved.active());
+        assertEquals(2L, reserved.activationGeneration());
+        assertEquals(current.blueId(), reserved.expectedTargetBlueId());
+    }
+
+    @Test
+    void retiredReservationCannotUseAnActiveLineagesPriorFinalizationShortcut() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot current = document(B, "target-current");
+        String saved = blueId(new Node().name("target-saved"));
+        List<ClosureResourceDemand> demands = reconciler.resourceDemands(
+                A, source.document().properties("peer", new Node().blueId(saved)),
+                Collections.singletonList(path("/peer")),
+                Collections.singletonList(binding(A, "/peer", 2L, current, false)),
+                Arrays.asList(source, current), contextWithPriorFinalizedReference(B, saved, false));
+        assertEquals(1, demands.size());
+        assertTrue(demands.get(0) instanceof ExactNodeDemand);
+    }
+
+    @Test
+    void retiredReservationDoesNotTreatAnotherFrozenLineageAsItsTarget() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot target = document(B, "reserved-target");
+        ManagedDocumentSnapshot foreign = document(C, "foreign-target");
+        List<ManagedOccurrenceBinding> reserved = Collections.singletonList(
+                binding(A, "/peer", 2L, target, false));
+        Node supplied = source.document().properties("peer", foreign.document());
+        List<ManagedDocumentSnapshot> documents = Arrays.asList(source, target, foreign);
+        List<ClosureResourceDemand> demands = reconciler.resourceDemands(
+                A, supplied, Collections.singletonList(path("/peer")), reserved, documents, context(false));
+        assertEquals(1, demands.size());
+        assertTrue(demands.get(0) instanceof ManagedOccurrenceEvidenceDemand);
+        assertThrows(blue.language.processor.InvalidExecutionEvidenceException.class,
+                () -> reconciler.reconcileProjected(A, supplied, Collections.singletonList(path("/peer")),
+                        reserved, documents, Collections.emptySet()));
+    }
+
+    @Test
     void missingPureExactReferenceProducesExactNodeDemandAtItsSourcePath() {
         ManagedDocumentSnapshot source = document(A, "source-a");
         String missingBlueId = blueId(new Node().name("provider target"));

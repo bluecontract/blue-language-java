@@ -1,0 +1,319 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-013",
+  "title": "Historical retarget does not read the retired or latest wrong source",
+  "inputIdentityPolicy": "Retarget B to saved initialized C0; immutable C1/C2 receipts precede attachment250 while published C3 at500 remains a future LIVE input.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {
+        "/name": "RCP2 Retired B",
+        "/contracts/owner/timeline/timelineId": "rcp2/retired-b"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "C",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {
+        "/name": "RCP2 Retarget C",
+        "/contracts/owner/timeline/timelineId": "rcp2/retarget-c"
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "B.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "append",
+      "target": "B",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "100",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EB100",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "processNext",
+      "root": "P",
+      "mustSelect": {
+        "$capture": "EB100"
+      },
+      "budget": "DEFAULT",
+      "capture": "fromB",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "append",
+      "target": "C",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "110",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EC110",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "processNext",
+      "root": "C",
+      "mustSelect": {
+        "$capture": "EC110"
+      },
+      "budget": "DEFAULT",
+      "capture": "C110",
+      "stepId": "setup-007"
+    },
+    {
+      "op": "append",
+      "target": "C",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "210",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EC210",
+      "stepId": "setup-008"
+    },
+    {
+      "op": "processNext",
+      "root": "C",
+      "mustSelect": {
+        "$capture": "EC210"
+      },
+      "budget": "DEFAULT",
+      "capture": "C210",
+      "stepId": "setup-009"
+    },
+    {
+      "op": "append",
+      "target": "C",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "500",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "EC500",
+      "stepId": "setup-010"
+    },
+    {
+      "op": "processNext",
+      "root": "C",
+      "mustSelect": {
+        "$capture": "EC500"
+      },
+      "budget": "DEFAULT",
+      "capture": "C500",
+      "stepId": "setup-011"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "250",
+        "request": {
+          "child": {
+            "$capture": "C.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "Eattach",
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "Eattach"
+        },
+        "budget": "DEFAULT",
+        "capture": "retarget",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "repeat": 2,
+        "capture": "subject",
+        "mustConsumePositions": [
+          0,
+          1,
+          2
+        ],
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "EB100"
+        },
+        "budget": "DEFAULT",
+        "capture": "retiredFirst",
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "600",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "EB600",
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "EB600"
+        },
+        "budget": "DEFAULT",
+        "capture": "retiredLater",
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "EC500"
+        },
+        "budget": "DEFAULT",
+        "capture": "newSource",
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "restart",
+        "scope": "same-durable-stores",
+        "capture": "restart",
+        "stepId": "baseline-009"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "HISTORY_MULTIPLE",
+    "causeKind": "MANAGED_REVISION",
+    "afterEquals": {
+      "P.seen": 2,
+      "P.log": [
+        1,
+        1,
+        2
+      ],
+      "P.child.counter": 2,
+      "B.counter": 0,
+      "C.counter": 3
+    },
+    "requiredApplicationCount": 2,
+    "occurrenceSuffixes": {
+      "/child": {
+        "source": "C",
+        "positions": [
+          1,
+          2
+        ]
+      }
+    },
+    "applicationOrder": [
+      [
+        "C",
+        110
+      ],
+      [
+        "C",
+        210
+      ]
+    ],
+    "preserveSource": true,
+    "sourceAliases": [
+      "B",
+      "C"
+    ],
+    "requiredEvents": 0,
+    "extraChecks": {
+      "baseline": {
+        "fromB.after.P.log": [
+          1
+        ],
+        "retiredFirst.after.P.log": [
+          1,
+          1,
+          2
+        ],
+        "retiredLater.after.P.log": [
+          1,
+          1,
+          2
+        ],
+        "retiredLater.after.B.counter": 2,
+        "newSource.causeKind": "LIVE",
+        "newSource.after.P.log": [
+          1,
+          1,
+          2,
+          3
+        ],
+        "newSource.after.P.seen": 3,
+        "newSource.after.P.child.counter": 3,
+        "newSource.after.C.counter": 3
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "assertQuiescent",
+    "restart"
+  ],
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-013.json",
+    "sha256": "a06bf3c6eab0c812e2759bff09db3aa11e02261671e0103fa3b95a9ba7aa1796"
+  }
+}

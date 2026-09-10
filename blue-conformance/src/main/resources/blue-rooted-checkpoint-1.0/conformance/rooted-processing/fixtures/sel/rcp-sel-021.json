@@ -1,0 +1,46 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-021",
+  "category": "SEL",
+  "title": "A known lower completeness bound prevents selecting a later visible entry",
+  "kind": "safe-window",
+  "requirements": [
+    "RCP-ORDER-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/A",
+        "entries": [
+          {
+            "timestamp": 30,
+            "timeline": "A",
+            "entry": "A:30"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "R/B",
+        "entries": [],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "completeBefore": {
+      "A": 40,
+      "B": 25
+    }
+  },
+  "expected": {
+    "status": "WAITING_FOR_EVIDENCE",
+    "next": null
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

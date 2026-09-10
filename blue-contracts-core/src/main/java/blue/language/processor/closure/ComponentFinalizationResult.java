@@ -23,12 +23,20 @@ public final class ComponentFinalizationResult {
     private final Map<DocumentId, Long> componentGenerations;
     private final List<FinalizedComponentEvidence> components;
     private final Map<DocumentId, FinalizedDocumentEvidence> documents;
+    private final RootedWitnessFrame.State rootedWitnesses;
 
     ComponentFinalizationResult(
             ManagedDocumentGraph finalizedGraph,
             Map<DocumentId, Long> componentGenerations,
             List<FinalizedComponentEvidence> components,
             Map<DocumentId, FinalizedDocumentEvidence> documents) {
+        this(finalizedGraph, componentGenerations, components, documents, null);
+    }
+
+    ComponentFinalizationResult(ManagedDocumentGraph finalizedGraph, Map<DocumentId, Long> componentGenerations,
+            List<FinalizedComponentEvidence> components, Map<DocumentId, FinalizedDocumentEvidence> documents,
+            RootedWitnessFrame.State rootedWitnesses) {
+        this.rootedWitnesses = rootedWitnesses;
         this.finalizedGraph = Objects.requireNonNull(
                 finalizedGraph, "finalizedGraph");
         this.componentGenerations = immutableGenerations(
@@ -37,6 +45,8 @@ public final class ComponentFinalizationResult {
         this.documents = immutableDocuments(documents);
         validateCoverageAndOrder();
     }
+
+    RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
 
     /**
      * Returns the complete active/inactive binding graph after exact rebasing.

@@ -77,12 +77,16 @@ final class ProspectiveBirthRetry {
         AffectedClosureSnapshot expanded = ClosureEvidenceFactory.affectedClosure(
                 before.graphGeneration(), new ArrayList<>(documents.values()), bindings,
                 sorted, before.publicRootDocumentIds());
+        ClosureInvocationInput prepared;
         if (input.operation() == ClosureInvocationInput.Operation.ADMIT_CLOSURE) {
-            return ClosureEvidenceFactory.admitClosure(expanded, (AdmissionCause) input.cause(),
+            prepared = ClosureEvidenceFactory.admitClosure(expanded, (AdmissionCause) input.cause(),
                     null, input.executionPolicy(), input.environment());
+        } else {
+            prepared = ClosureEvidenceFactory.processClosure(expanded, input.cause(), input.directDeliveries(),
+                    input.executionPolicy(), input.environment());
         }
-        return ClosureEvidenceFactory.processClosure(expanded, input.cause(), input.directDeliveries(),
-                input.executionPolicy(), input.environment());
+        return input.rootedBinding() == null ? prepared : prepared.withRootedBinding(
+                input.rootedBinding().withAuthenticatedBirths(ordered));
     }
 
     private static String pathKey(DocumentId source, String path) {

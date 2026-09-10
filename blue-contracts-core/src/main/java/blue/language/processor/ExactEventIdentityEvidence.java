@@ -94,6 +94,27 @@ public final class ExactEventIdentityEvidence {
                     FrozenNode.fromResolvedNode(event), claimed);
         }
 
+        // Ordinary exact input admission already has to establish this identity.
+        // Retain that operation's strict immutable cursor rather than discarding
+        // it and later handing a resolved-identity cursor to hosted runtimes.
+        FrozenNode canonical = null;
+        if (!CanonicalIdentityEvidence.requiresEffectiveTypeIdentity(event)) {
+            try {
+                canonical = FrozenNode.fromNode(event);
+            } catch (IllegalArgumentException nonCanonicalSource) {
+                // Preserve the existing Language-owned Source fallback below.
+            }
+        }
+        if (canonical != null) {
+            String calculated = canonical.blueId();
+            if (!claimed.equals(calculated)) {
+                throw new IllegalArgumentException(
+                        "eventBlueId does not identify exact Source event: claimed="
+                                + claimed + ", calculated=" + calculated);
+            }
+            return new ExactEventIdentityEvidence(canonical, claimed);
+        }
+
         String calculated = CheckpointIdentityCalculator.identity(
                 event,
                 runtimeAccess != null

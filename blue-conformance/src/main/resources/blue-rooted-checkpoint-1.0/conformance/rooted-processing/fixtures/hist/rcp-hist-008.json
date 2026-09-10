@@ -1,0 +1,36 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-008",
+  "category": "HIST",
+  "title": "Repeating an applied receipt is not another event",
+  "kind": "history",
+  "requirements": [
+    "RCP-HISTORY-02",
+    "RCP-HISTORY-03",
+    "RCP-PROGRESS-03"
+  ],
+  "input": {
+    "position": 6,
+    "value": 6,
+    "receipts": [
+      {
+        "position": 6,
+        "before": 5,
+        "after": 6,
+        "events": [
+          "e6"
+        ]
+      }
+    ],
+    "failAt": null
+  },
+  "expected": {
+    "error": "NONCONTIGUOUS_POSITION"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

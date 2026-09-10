@@ -1,0 +1,66 @@
+orders: {}
+documentId: preview-orders-root
+directMemberEvents: 0
+descendantEvents: 0
+contracts:
+  embedded:
+    type: Process Embedded
+    collectionPaths:
+      - /orders
+  directMembers:
+    type: Embedded Collection Event Channel
+    order: 10
+    collectionPath: /orders
+    event: {type: Coordination/Event, kind: collection-signal}
+  countDirectMembers:
+    type: Coordination/Sequential Workflow
+    order: 10
+    channel: directMembers
+    event: {type: Coordination/Event, kind: collection-signal}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /directMemberEvents
+              val: {$add: [{$document: /directMemberEvents}, 1]}
+          - $appendEvent: {type: Coordination/Event, kind: direct-observed}
+          - $return: true
+  allCollectionDescendants:
+    type: Embedded Collection Event Channel
+    order: 20
+    collectionPath: /orders
+    includeDescendants: true
+    event: {type: Coordination/Event, kind: collection-signal}
+  countCollectionDescendants:
+    type: Coordination/Sequential Workflow
+    order: 20
+    channel: allCollectionDescendants
+    event: {type: Coordination/Event, kind: collection-signal}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /descendantEvents
+              val: {$add: [{$document: /descendantEvents}, 1]}
+          - $appendEvent: {type: Coordination/Event, kind: descendant-observed}
+          - $return: true
+  ownerChannel:
+    type: Coordination/Timeline Channel
+    timeline: {type: MyOS/MyOS Timeline, timelineId: rc/collection/alice}
+    actor: {type: MyOS/Principal Actor, accountId: alice}
+  addOrder:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request:
+      orderKey: {type: Text, schema: {required: true}}
+      order: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: add
+              path: {$pointerJoin: [orders, {$event: /message/request/orderKey}]}
+              val: {$event: /message/request/order}
+          - $return: true

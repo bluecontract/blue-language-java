@@ -1,0 +1,23 @@
+documentId: rc-collection-order-b
+signalCount: 0
+contracts:
+  embedded:
+    type: Process Embedded
+    paths: [/nested]
+  ownerChannel:
+    type: Coordination/Timeline Channel
+    timeline: {type: MyOS/MyOS Timeline, timelineId: rc/collection/alice}
+    actor: {type: MyOS/Principal Actor, accountId: alice}
+  emitSignal:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /signalCount
+              val: {$add: [{$document: /signalCount}, 1]}
+          - $appendEvent: {type: Coordination/Event, kind: collection-signal}
+          - $return: true

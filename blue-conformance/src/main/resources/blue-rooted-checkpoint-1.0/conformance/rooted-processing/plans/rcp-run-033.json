@@ -1,0 +1,489 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-033",
+  "title": "All four explicit attachment starting positions preserve their intended suffixes",
+  "inputIdentityPolicy": "Each variant uses its exact saved authored/initialized/retained/current ID, after the same two real source operations. No inferred epoch or substituted current snapshot.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "S",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "100",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E100",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "S",
+      "mustSelect": {
+        "$capture": "E100"
+      },
+      "budget": "DEFAULT",
+      "capture": "source1",
+      "stepId": "setup-004"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "S",
+      "epoch": 1,
+      "requireActualEpoch": true,
+      "capture": "S1",
+      "stepId": "setup-005"
+    },
+    {
+      "op": "append",
+      "target": "S",
+      "operation": "tick",
+      "channel": "owner",
+      "timestampUs": "150",
+      "request": {},
+      "exactDocumentPrecondition": false,
+      "capture": "E150",
+      "stepId": "setup-006"
+    },
+    {
+      "op": "processNext",
+      "root": "S",
+      "mustSelect": {
+        "$capture": "E150"
+      },
+      "budget": "DEFAULT",
+      "capture": "source2",
+      "stepId": "setup-007"
+    },
+    {
+      "op": "captureEpoch",
+      "target": "S",
+      "epoch": 2,
+      "requireActualEpoch": true,
+      "capture": "S2",
+      "stepId": "setup-008"
+    },
+    {
+      "op": "read",
+      "target": "S",
+      "capture": "sourceBefore",
+      "stepId": "setup-009"
+    }
+  ],
+  "variants": {
+    "authored": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "S.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "ATTACH",
+        "stepId": "authored-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "ATTACH"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "authored-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "authored-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "authored-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "authored-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "authored-006"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "authored-007"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "authored-008"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "authored-009"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "finalParent",
+        "recordProjection": true,
+        "stepId": "authored-010"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "sourceAfter",
+        "stepId": "authored-011"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "authored-012"
+      }
+    ],
+    "epochZero": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "S.initializedBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "ATTACH",
+        "stepId": "epochZero-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "ATTACH"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "epochZero-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "epochZero-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "epochZero-004"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "epochZero-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "epochZero-006"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "epochZero-007"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "finalParent",
+        "recordProjection": true,
+        "stepId": "epochZero-008"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "sourceAfter",
+        "stepId": "epochZero-009"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "epochZero-010"
+      }
+    ],
+    "retainedEpochOne": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "S1.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "ATTACH",
+        "stepId": "retainedEpochOne-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "ATTACH"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "retainedEpochOne-002"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "inputFamily": "RETAINED_SUCCESSOR",
+        "capture": "imports",
+        "stepId": "retainedEpochOne-003"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "retainedEpochOne-004"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "retainedEpochOne-005"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "finalParent",
+        "recordProjection": true,
+        "stepId": "retainedEpochOne-006"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "sourceAfter",
+        "stepId": "retainedEpochOne-007"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "retainedEpochOne-008"
+      }
+    ],
+    "current": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "child": {
+            "$capture": "S2.blueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "ATTACH",
+        "stepId": "current-001"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "ATTACH"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "stepId": "current-002"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "current-003"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "finalParent",
+        "recordProjection": true,
+        "stepId": "current-004"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "sourceAfter",
+        "stepId": "current-005"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "current-006"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "S.counter": 2
+    },
+    "requiredEvents": 0,
+    "preserveSource": true,
+    "fourAttachmentPositions": {
+      "source": "S",
+      "consumer": "P",
+      "imports": "imports",
+      "sourceBefore": "sourceBefore",
+      "sourceAfter": "sourceAfter",
+      "finalParent": "finalParent",
+      "positionsByVariant": {
+        "authored": [
+          0,
+          1,
+          2
+        ],
+        "epochZero": [
+          1,
+          2
+        ],
+        "retainedEpochOne": [
+          2
+        ],
+        "current": []
+      },
+      "referencesByVariant": {
+        "authored": "S.initialBlueId",
+        "epochZero": "S.initializedBlueId",
+        "retainedEpochOne": "S1.blueId",
+        "current": "S2.blueId"
+      },
+      "logsByVariant": {
+        "authored": [
+          1,
+          2
+        ],
+        "epochZero": [
+          1,
+          2
+        ],
+        "retainedEpochOne": [
+          2
+        ],
+        "current": []
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "captureEpoch",
+    "processNext",
+    "read",
+    "restart",
+    "assertQuiescent"
+  ]
+}

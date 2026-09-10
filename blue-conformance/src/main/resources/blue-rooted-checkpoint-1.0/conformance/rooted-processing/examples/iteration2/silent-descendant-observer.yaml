@@ -1,0 +1,23 @@
+name: RCP2 Silent Descendant Observer
+seen: 0
+contracts:
+  embedded:
+    type: Process Embedded
+    paths: [/child]
+  fromGrandchild:
+    type: Embedded Node Channel
+    sourcePath: /child/child
+    event: {type: Coordination/Event, kind: RCP2/Tick}
+  observe:
+    type: Coordination/Sequential Workflow
+    channel: fromGrandchild
+    event: {type: Coordination/Event, kind: RCP2/Tick}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /seen
+              val: {$add: [{$document: /seen}, 1]}
+          - $appendEvent: {type: Coordination/Event, kind: RCP2/DescendantObserved}
+          - $return: true

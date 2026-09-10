@@ -1,0 +1,29 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-011",
+  "category": "HIST",
+  "title": "Reordered same-epoch predecessor fails",
+  "kind": "position-chain",
+  "requirements": [
+    "RCP-HISTORY-06"
+  ],
+  "input": {
+    "start": "5:base",
+    "steps": [
+      {
+        "from": "5:r1",
+        "to": "5:r2",
+        "epoch": 5
+      }
+    ]
+  },
+  "expected": {
+    "error": "WRONG_POSITION_PREDECESSOR"
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

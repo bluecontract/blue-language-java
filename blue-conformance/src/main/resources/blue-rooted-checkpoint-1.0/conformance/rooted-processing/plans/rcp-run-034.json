@@ -1,0 +1,302 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-034",
+  "title": "Source advances while a one-way observer stays behind without false readiness",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "S",
+      "source": "examples/iteration2/source.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/parent.yaml",
+      "bindings": {
+        "/child": {
+          "$capture": "S.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    }
+  ],
+  "variants": {
+    "baseline": [
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "oldP",
+        "recordReadiness": true,
+        "stepId": "baseline-001"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "baseline-002"
+      },
+      {
+        "op": "append",
+        "target": "S",
+        "operation": "tick",
+        "channel": "owner",
+        "timestampUs": "150",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E150",
+        "stepId": "baseline-003"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "firstSource",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-004"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "lag1P",
+        "recordReadiness": true,
+        "stepId": "baseline-005"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "source1",
+        "recordReadiness": true,
+        "stepId": "baseline-006"
+      },
+      {
+        "op": "processNext",
+        "root": "S",
+        "mustSelect": {
+          "$capture": "E150"
+        },
+        "budget": "DEFAULT",
+        "capture": "secondSource",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-007"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "lag2P",
+        "recordReadiness": true,
+        "stepId": "baseline-008"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "source2",
+        "recordReadiness": true,
+        "stepId": "baseline-009"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-010"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "restartP",
+        "recordReadiness": true,
+        "stepId": "baseline-011"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": "DEFAULT",
+        "capture": "firstObserver",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-012"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "after1P",
+        "recordReadiness": true,
+        "stepId": "baseline-013"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E150"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "collect": [
+          "exactBeforeAfter",
+          "channelCheckpoints",
+          "ownedRecords",
+          "orderedEvents",
+          "receipts",
+          "gasTrace",
+          "inputContext"
+        ],
+        "stepId": "baseline-014"
+      },
+      {
+        "op": "read",
+        "target": "P",
+        "capture": "finalP",
+        "recordReadiness": true,
+        "stepId": "baseline-015"
+      },
+      {
+        "op": "read",
+        "target": "S",
+        "capture": "finalS",
+        "recordReadiness": true,
+        "stepId": "baseline-016"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "baseline-017"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "S",
+          "P"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "baseline-018"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "P"
+    ],
+    "afterEquals": {
+      "S.counter": 2,
+      "P.seen": 2,
+      "P.log": [
+        1,
+        2
+      ],
+      "P.child.counter": 2
+    },
+    "requiredEvents": 0,
+    "preserveSource": true,
+    "laggingObserver": {
+      "observer": "P",
+      "source": "S",
+      "original": "oldP",
+      "lagging": [
+        "lag1P",
+        "lag2P",
+        "restartP"
+      ],
+      "sourceReads": [
+        "source1",
+        "source2"
+      ],
+      "firstPending": "E100",
+      "secondPending": "E150",
+      "afterFirst": "after1P",
+      "final": "finalP",
+      "finalSource": "finalS"
+    },
+    "extraChecks": {
+      "baseline": {
+        "firstSource.ownedWrites": [
+          "S"
+        ],
+        "firstSource.after.S.counter": 1,
+        "firstSource.after.P.seen": 0,
+        "secondSource.ownedWrites": [
+          "S"
+        ],
+        "secondSource.after.S.counter": 2,
+        "secondSource.after.P.seen": 0,
+        "firstObserver.ownedWrites": [
+          "P"
+        ],
+        "firstObserver.after.P.seen": 1,
+        "firstObserver.after.S.counter": 2
+      }
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert",
+    "assertQuiescent"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter."
+}

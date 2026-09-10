@@ -1,0 +1,46 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-011",
+  "category": "SCOPE",
+  "title": "A return path makes previously separate consumers relevant",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "R",
+      "S",
+      "X"
+    ],
+    "edges": [
+      [
+        "R",
+        "S"
+      ],
+      [
+        "S",
+        "X"
+      ],
+      [
+        "X",
+        "R"
+      ]
+    ],
+    "root": "R"
+  },
+  "expected": {
+    "reachable": [
+      "R",
+      "S",
+      "X"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SEL-007",
+  "category": "SEL",
+  "title": "Timeline ASCII tie break ignores input array order",
+  "kind": "selector",
+  "requirements": [
+    "RCP-ORDER-01",
+    "RCP-PROGRESS-01"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "Z",
+        "entries": [
+          {
+            "timestamp": 10,
+            "timeline": "Z",
+            "entry": "ez"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      },
+      {
+        "address": "A",
+        "entries": [
+          {
+            "timestamp": 10,
+            "timeline": "A",
+            "entry": "ea"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ]
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "ea",
+        "receivers": [
+          "A"
+        ]
+      },
+      {
+        "entry": "ez",
+        "receivers": [
+          "Z"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

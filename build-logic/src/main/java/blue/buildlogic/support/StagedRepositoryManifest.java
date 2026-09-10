@@ -89,6 +89,19 @@ public final class StagedRepositoryManifest {
         String contractsRelease = sha256Identity(
                 requiredText(release, "releaseIdentity"),
                 "Contracts release identity");
+        JsonNode canonicalRelease = release.deepCopy();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) canonicalRelease).putNull("releaseIdentity");
+        try {
+            byte[] canonicalBytes = new org.erdtman.jcs.JsonCanonicalizer(
+                    canonicalRelease.toString()).getEncodedUTF8();
+            String recomputed = "sha256:" + java.util.HexFormat.of().formatHex(
+                    java.security.MessageDigest.getInstance("SHA-256").digest(canonicalBytes));
+            if (!contractsRelease.equals(recomputed)) {
+                throw new GradleException("Contracts release identity does not authenticate its manifest bytes");
+            }
+        } catch (IOException | java.security.NoSuchAlgorithmException invalid) {
+            throw new GradleException("Cannot authenticate the Contracts release manifest", invalid);
+        }
         return new Bindings(
                 commit,
                 sourceTree,

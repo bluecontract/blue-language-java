@@ -1,0 +1,135 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-012",
+  "category": "RUN",
+  "title": "Removed/re-added key has a distinct occurrence and correct later event",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "P",
+        "source": "examples/iteration2/removable-orders.yaml"
+      },
+      {
+        "alias": "S",
+        "source": "examples/collection-order-b.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-012.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-012.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "P.directMemberEvents": 2,
+        "P.descendantEvents": 2,
+        "P.orders.same.signalCount": 1,
+        "S.signalCount": 1
+      },
+      "requiredApplicationCount": 1,
+      "occurrenceSuffixes": {
+        "/orders/same": {
+          "source": "S",
+          "positions": [
+            1
+          ]
+        }
+      },
+      "applicationOrder": [
+        [
+          "S",
+          200
+        ]
+      ],
+      "preserveSource": true,
+      "sourceAliases": [
+        "S"
+      ],
+      "requiredEvents": 2,
+      "recreatedOccurrence": {
+        "owner": "P",
+        "source": "S",
+        "path": "/orders/same",
+        "first": "firstAttach",
+        "removed": "removed",
+        "readded": "readded",
+        "later": "later"
+      },
+      "phaseEventAnchors": {
+        "firstAttach": [],
+        "removed": [],
+        "readded": [],
+        "firstDelivery": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "direct-observed"
+          },
+          {
+            "origin": "P",
+            "ordinal": 1,
+            "kind": "descendant-observed"
+          }
+        ],
+        "later": [
+          {
+            "origin": "P",
+            "ordinal": 0,
+            "kind": "direct-observed"
+          },
+          {
+            "origin": "P",
+            "ordinal": 1,
+            "kind": "descendant-observed"
+          }
+        ]
+      },
+      "extraChecks": {
+        "baseline": {
+          "firstDelivery.after.P.directMemberEvents": 1,
+          "firstDelivery.after.P.descendantEvents": 1,
+          "removed.after.P.orders": {},
+          "readded.after.P.directMemberEvents": 1,
+          "readded.after.P.descendantEvents": 1,
+          "later.after.P.directMemberEvents": 3,
+          "later.after.P.descendantEvents": 3,
+          "later.after.P.orders.same.signalCount": 2,
+          "later.after.S.signalCount": 2
+        }
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-012.json",
+    "sha256": "fd6b86bfb7ebcd72ad657c5d54585b1520d12a3b417b4bf0968073a1918325c0"
+  }
+}

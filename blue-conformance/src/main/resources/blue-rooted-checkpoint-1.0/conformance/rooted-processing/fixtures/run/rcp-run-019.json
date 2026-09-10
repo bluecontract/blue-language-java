@@ -1,0 +1,98 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-019",
+  "category": "RUN",
+  "title": "Breaking/advancing/reconnecting preserves missed history",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-07",
+    "RCP-GRAPH-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "A",
+        "source": "examples/iteration2/graph-019-a.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/graph-019-b.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "saved-authored",
+      "saved-retained"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-019.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-019.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "A",
+        "B"
+      ],
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "B",
+          "kind": "Tutorial/Graph Token",
+          "ordinal": 0
+        }
+      ],
+      "reconnect": {
+        "aliases": [
+          "A",
+          "B"
+        ],
+        "maxSelectionsPerPhase": 32,
+        "path": "/peers/b",
+        "source": "B",
+        "consumer": "A",
+        "oldEvent": "E250",
+        "missedEvent": "E350",
+        "cutoffEntry": "E400",
+        "markerEntry": "E450",
+        "futureEntry": "E500",
+        "selectionByVariant": {
+          "saved-authored": "B.initialBlueId",
+          "saved-retained": "B250.blueId"
+        },
+        "observedAt400ByVariant": {
+          "saved-authored": 3,
+          "saved-retained": 2
+        },
+        "observedAt500ByVariant": {
+          "saved-authored": 4,
+          "saved-retained": 3
+        },
+        "sourceEventsAt400": 2,
+        "sourceEventsAt500": 3,
+        "restarts": [
+          "detached",
+          "reconnectedAt400",
+          "final"
+        ]
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

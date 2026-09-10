@@ -1,0 +1,28 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-HIST-009",
+  "category": "HIST",
+  "title": "Historical handler reads the selected B2 not ambient current B",
+  "kind": "historical-read",
+  "requirements": [
+    "RCP-HISTORY-04"
+  ],
+  "input": {
+    "selected": "B2",
+    "values": {
+      "B2": 10,
+      "Bcurrent": 100
+    },
+    "increment": 1
+  },
+  "expected": {
+    "result": 11,
+    "wrongLatestResult": 101
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

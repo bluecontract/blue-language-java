@@ -334,8 +334,22 @@ def package_files(root: Path = ROOT) -> list[Path]:
     return release_inventory_files(root, EXCLUDED_PACKAGE_PATHS)
 
 
+def package_file_role(relative: str) -> str:
+    """Project the closed normative specification and conformance package roots."""
+    normative_prefixes = (
+        "specifications/", "conformance/contracts/", "conformance/rooted-processing/",
+        "companions/rooted-checkpoint/specifications/",
+        "companions/rooted-checkpoint/conformance/rooted-processing/",
+    )
+    normative_bindings = {
+        "companions/rooted-checkpoint-manifest.json",
+        "companions/rooted-checkpoint/manifests/specification-set.json",
+    }
+    return "normative" if relative.startswith(normative_prefixes) or relative in normative_bindings else "informative"
+
+
 def build_package_manifest(release: dict[str, Any]) -> dict[str, Any]:
-    files = [file_entry(ROOT, path, "normative" if path.relative_to(ROOT).as_posix().startswith(("specifications/", "conformance/contracts/")) else "informative") for path in package_files()]
+    files = [file_entry(ROOT, path, package_file_role(path.relative_to(ROOT).as_posix())) for path in package_files()]
     manifest: dict[str, Any] = {
         "manifestType": "blue-contracts-specification-package",
         "packageName": "blue-contracts-and-processor-specification-1.0-final",

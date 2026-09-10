@@ -1,0 +1,433 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-022",
+  "title": "Live cyclic gas rollback, exact reference trace and retained retry",
+  "inputIdentityPolicy": "Captured real BlueIds only; $capture objects are runner substitutions, never Blue wire fields.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/cycle-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/cycle-a.yaml",
+      "bindings": {
+        "/peer": {
+          "$capture": "B.initializedBlueId"
+        }
+      },
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "append",
+      "target": "B",
+      "operation": "connectA",
+      "channel": "ownerChannel",
+      "timestampUs": "90",
+      "request": {
+        "a": {
+          "$capture": "A.initialBlueId"
+        }
+      },
+      "exactDocumentPrecondition": false,
+      "capture": "E90",
+      "stepId": "setup-003"
+    },
+    {
+      "op": "processNext",
+      "root": "B",
+      "mustSelect": {
+        "$capture": "E90"
+      },
+      "budget": "DEFAULT",
+      "capture": "join",
+      "collect": [
+        "exactBeforeAfter",
+        "channelCheckpoints",
+        "ownedRecords",
+        "orderedEvents",
+        "receipts",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "processNext",
+      "root": "B",
+      "inputFamily": "RETAINED_SUCCESSOR",
+      "mustConsumePositions": [
+        -1,
+        0
+      ],
+      "capture": "joinInitialization",
+      "collect": [
+        "exactBeforeAfter",
+        "orderedEvents",
+        "sourceReceipts",
+        "occurrencePositions",
+        "gasTrace",
+        "inputContext"
+      ],
+      "stepId": "setup-004-genesis"
+    },
+    {
+      "op": "assert",
+      "actual": "liveComponent(A)",
+      "expectedMembers": [
+        "A",
+        "B"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "view-A-below": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-A-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-A-below-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-A-below-003"
+      },
+      {
+        "op": "retry",
+        "root": "A",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-A-below-004"
+      }
+    ],
+    "view-A-at": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-A-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-A-at-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-A-at-003"
+      },
+      {
+        "op": "retry",
+        "root": "A",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-A-at-004"
+      }
+    ],
+    "view-A-above": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-A-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-A-above-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-A-above-003"
+      },
+      {
+        "op": "retry",
+        "root": "A",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-A-above-004"
+      }
+    ],
+    "view-B-below": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-B-below-001"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": -1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-B-below-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-B-below-003"
+      },
+      {
+        "op": "retry",
+        "root": "B",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-B-below-004"
+      }
+    ],
+    "view-B-at": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-B-at-001"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 0
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-B-at-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-B-at-003"
+      },
+      {
+        "op": "retry",
+        "root": "B",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-B-at-004"
+      }
+    ],
+    "view-B-above": [
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "startFinite",
+        "channel": "ownerChannel",
+        "timestampUs": "100",
+        "request": {},
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "view-B-above-001"
+      },
+      {
+        "op": "processNext",
+        "root": "B",
+        "mustSelect": {
+          "$capture": "E100"
+        },
+        "budget": {
+          "fromIndependentReferenceCalibration": "G",
+          "delta": 1
+        },
+        "capture": "subject",
+        "recordRetainedRollback": true,
+        "stepId": "view-B-above-002"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "A",
+          "B"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "view-B-above-003"
+      },
+      {
+        "op": "retry",
+        "root": "B",
+        "input": {
+          "$capture": "E100"
+        },
+        "prior": "subject",
+        "stepId": "view-B-above-004"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "GAS_BOUNDARY",
+    "causeKind": "LIVE",
+    "afterEqualsOnSuccess": {
+      "A.phase": "done",
+      "B.phase": "relayed"
+    },
+    "writesOnSuccess": [
+      "A",
+      "B"
+    ],
+    "expectedBySuffix": {
+      "below": "GAS_LIMIT_EXCEEDED",
+      "at": "SUCCESS",
+      "above": "SUCCESS"
+    },
+    "compareWithinBoundary": [
+      "after",
+      "events",
+      "gas",
+      "semanticReceipts",
+      "ownedWrites"
+    ],
+    "retainedRollbackAndRetry": true,
+    "referenceCalibration": {
+      "root": "A",
+      "input": "E100",
+      "implementation": "independently materialized uncached actual Contracts processor",
+      "sameArtifactRequired": true,
+      "label": "G",
+      "mustSucceedWithinUnchangedReleaseMaximum": true
+    }
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "read",
+    "captureEpoch",
+    "cache",
+    "evict",
+    "setWait",
+    "releaseWait",
+    "restart",
+    "assert",
+    "retry"
+  ],
+  "captures": "Exact API/SDK values captured after real steps; no epoch/body fabricated by the adapter.",
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-022.json",
+    "sha256": "fa81d344ea38a6c6b7db5ee334779ef7f1020eb2e351de5018a83eca4bfdfe20"
+  }
+}

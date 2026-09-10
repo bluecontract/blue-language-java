@@ -1,0 +1,112 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-033",
+  "category": "RUN",
+  "title": "All four explicit attachment starting positions preserve their intended suffixes",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-HISTORY-01"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-033.json"
+      }
+    ],
+    "variants": [
+      "authored",
+      "epochZero",
+      "retainedEpochOne",
+      "current"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-033.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "P"
+      ],
+      "afterEquals": {
+        "S.counter": 2
+      },
+      "requiredEvents": 0,
+      "preserveSource": true,
+      "fourAttachmentPositions": {
+        "source": "S",
+        "consumer": "P",
+        "imports": "imports",
+        "sourceBefore": "sourceBefore",
+        "sourceAfter": "sourceAfter",
+        "finalParent": "finalParent",
+        "positionsByVariant": {
+          "authored": [
+            0,
+            1,
+            2
+          ],
+          "epochZero": [
+            1,
+            2
+          ],
+          "retainedEpochOne": [
+            2
+          ],
+          "current": []
+        },
+        "referencesByVariant": {
+          "authored": "S.initialBlueId",
+          "epochZero": "S.initializedBlueId",
+          "retainedEpochOne": "S1.blueId",
+          "current": "S2.blueId"
+        },
+        "logsByVariant": {
+          "authored": [
+            1,
+            2
+          ],
+          "epochZero": [
+            1,
+            2
+          ],
+          "retainedEpochOne": [
+            2
+          ],
+          "current": []
+        }
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-033.json",
+    "sha256": "cabd24e7e5aaece9dce0b47d52a047a49828be836e543bbcb4e9197cbdf87af1"
+  }
+}

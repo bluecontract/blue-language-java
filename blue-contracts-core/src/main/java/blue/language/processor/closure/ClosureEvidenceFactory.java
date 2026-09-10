@@ -58,6 +58,41 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
+     * Expands rooted read evidence using complete independently verified source views.
+     * Historical proof members may differ from a calculating view of the same lineage.
+     * Original owners, documents, deliveries, cause and meter remain unchanged.
+     *
+     * @param original frozen rooted input
+     * @param graphGeneration exact expanded inventory generation
+     * @param documents selected primary document views, including every original
+     * @param occurrences complete selected binding inventory
+     * @param sourceProofs complete retained source snapshots authenticating immutable witnesses
+     * @return expanded input with the original rooted authority
+     */
+    public static ClosureInvocationInput rootedReadExpansion(ClosureInvocationInput original,
+            long graphGeneration, List<ManagedDocumentSnapshot> documents,
+            List<ManagedOccurrenceBinding> occurrences, List<AffectedClosureSnapshot> sourceProofs) {
+        return RootedInputExpansion.prepare(original, graphGeneration, documents, occurrences, sourceProofs);
+    }
+
+    /**
+     * Captures host retained positions alongside an unchanged, successful rooted result.
+     * The host must bind these positions to its atomically stored receipts; this factory
+     * verifies exact ownership, the permitted single host increment, and all source proofs.
+     * It neither edits the processor result nor authenticates a host's durable storage.
+     *
+     * @param result successful processor-owned rooted result
+     * @param retainedEpochs complete actual retained positions of the derived owners
+     * @return independently verified snapshot preserving all exact values and witness roles
+     */
+    public static AffectedClosureSnapshot rootedRetainedSnapshot(ClosureProcessResult result,
+            Map<DocumentId, Long> retainedEpochs) {
+        if (!Objects.requireNonNull(result, "result").commits() || result.rootedProjection() == null)
+            throw new IllegalArgumentException("Retained positions require a successful rooted result");
+        return result.rootedProjection().retainedSnapshot(retainedEpochs);
+    }
+
+    /**
      * Captures one exact production environment from a configured processor.
      *
      * @param processor configured ordinary processor used by the closure

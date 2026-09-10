@@ -1,0 +1,41 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-004",
+  "category": "SCOPE",
+  "title": "Sibling Order is outside Order1 root",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "Agreement",
+      "Order1",
+      "Order2"
+    ],
+    "edges": [
+      [
+        "Order1",
+        "Agreement"
+      ],
+      [
+        "Order2",
+        "Agreement"
+      ]
+    ],
+    "root": "Order1"
+  },
+  "expected": {
+    "reachable": [
+      "Agreement",
+      "Order1"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

@@ -50,6 +50,163 @@ final class RuntimeWorkSessionTest {
             memberVisitCatalog();
 
     @Test
+    void shouldRetainTheStrictAdmittedCursorWhenAHostedFunctionReturnsItsSource() {
+        // given
+        Node event = new Node().properties("paths", new Node().items(Collections.singletonList(
+                new Node().type(new Node().blueId(
+                        blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID)).value("/peer"))))
+                .properties("peer", new Node().blueId(DirectBlueIdCalculator.calculateBlueId(
+                        new Node().value("unavailable peer"))));
+        FrozenNode strict = FrozenNode.fromNode(event);
+        FrozenNode resolved = FrozenNode.fromResolvedNode(event);
+        GasMeter gas = new GasMeter();
+        RuntimeWorkSession session = processing(gas);
+        try {
+            // when
+            session.carryExactInput(strict, strict.blueId());
+            long beforeLookup = gas.totalGas();
+            ExactBlueValue carried = session.carriedExactInput(event.clone());
+
+            // then
+            assertFalse(strict.resolvedStructuralKey().equals(resolved.resolvedStructuralKey()),
+                    "Structural interning keys include construction mode");
+            assertTrue(strict.sameResolvedStructure(resolved));
+            assertNotNull(carried, "Exact channel payload lookup must recognize the already admitted source");
+            assertEquals(strict.blueId(), carried.blueId());
+            org.junit.jupiter.api.Assertions.assertSame(strict, carried.frozenValue(),
+                    "Retain the exact canonical cursor rather than readmit or relabel the resolved output");
+            assertEquals(beforeLookup, gas.totalGas());
+            assertTrue(session.stagedTrace().isEmpty());
+
+            Node tampered = event.clone();
+            tampered.getProperties().get("paths").getItems().get(0).value("/elsewhere");
+            org.junit.jupiter.api.Assertions.assertNull(session.carriedExactInput(tampered));
+            Node annotated = event.clone().blueId(DirectBlueIdCalculator.calculateBlueId(
+                    new Node().value("wrong expanded annotation")));
+            org.junit.jupiter.api.Assertions.assertNull(session.carriedExactInput(annotated),
+                    "The comparison must preserve exact body annotations");
+            Node changedType = event.clone();
+            changedType.getProperties().get("paths").getItems().get(0)
+                    .type(new Node().blueId(DirectBlueIdCalculator.calculateBlueId(
+                            new Node().name("Different nominal text type"))));
+            org.junit.jupiter.api.Assertions.assertNull(session.carriedExactInput(changedType),
+                    "A matching payload string does not establish the same typed value");
+            assertEquals(beforeLookup, gas.totalGas());
+            assertTrue(session.stagedTrace().isEmpty());
+        } finally {
+            session.suspend();
+            session.close();
+        }
+    }
+
+    @Test
+    void shouldRejectConflictingCarriedIdentitiesAcrossStrictAndResolvedRepresentations() {
+        // given
+        Node event = new Node().properties("value", new Node().value("same exact source"));
+        FrozenNode strict = FrozenNode.fromNode(event);
+        FrozenNode resolved = FrozenNode.fromResolvedNode(event);
+        String wrongId = DirectBlueIdCalculator.calculateBlueId(new Node().name("unrelated source"));
+        RuntimeWorkSession session = processing(new GasMeter());
+        try {
+            // when
+            session.carryExactInput(strict, strict.blueId());
+            // Deliberately inject a conflicting trusted-input capability through this
+            // package-private seam; this is not public external-event admission.
+            session.carryExactInput(resolved, wrongId);
+
+            // then
+            InvalidExecutionEvidenceException failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> session.carriedExactInput(event.clone()));
+            assertTrue(failure.getMessage().contains("disagree on hosted output identity"));
+        } finally {
+            session.suspend();
+            session.close();
+        }
+    }
+
+    @Test
+    void shouldNotReuseCanonicalCapabilityForDifferentInlineProvenance() {
+        // given
+        Node input = new Node().properties("payload", new Node().value("unchanged").inlineValue(false));
+        Node output = input.clone();
+        output.getProperties().get("payload").inlineValue(true);
+        FrozenNode carriedSource = FrozenNode.fromNode(input);
+        FrozenNode strictOutput = FrozenNode.fromNode(output);
+        FrozenNode resolvedOutput = FrozenNode.fromResolvedNode(output);
+        GasMeter gas = new GasMeter();
+        RuntimeWorkSession session = processing(gas);
+        try {
+            // when
+            session.carryExactInput(carriedSource, carriedSource.blueId());
+            ExactBlueValue outputCapability = session.carriedExactInput(output);
+
+            // then
+            assertEquals(carriedSource.blueId(), strictOutput.blueId(),
+                    "Both are valid canonical values with the same semantic identity");
+            assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
+                    "The preliminary observed-content filter deliberately omits inline provenance");
+            assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
+                    "The complete same-mode key must preserve inline provenance");
+            org.junit.jupiter.api.Assertions.assertNull(outputCapability,
+                    "Equal identity and the preliminary filter cannot replace the complete exact-content check");
+            ExactBlueValue original = session.carriedExactInput(input.clone());
+            assertNotNull(original);
+            org.junit.jupiter.api.Assertions.assertSame(carriedSource, original.frozenValue());
+            assertEquals(0L, gas.totalGas());
+            assertTrue(session.stagedTrace().isEmpty());
+            assertFalse(input.getProperties().get("payload").isInlineValue());
+            assertTrue(output.getProperties().get("payload").isInlineValue());
+        } finally {
+            session.suspend();
+            session.close();
+        }
+    }
+
+    @Test
+    void shouldNotReuseCanonicalCapabilityForDifferentSchemaKeywordProvenance() {
+        // given
+        Node input = new Node().properties("payload", new Node().value("unchanged")
+                .schema(new blue.language.model.Schema().minLength(
+                        new Node().value(java.math.BigInteger.ONE))));
+        Node output = input.clone();
+        output.getProperties().get("payload").getSchema().getMinLength().type(new Node().blueId(
+                blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID));
+        FrozenNode carriedSource = FrozenNode.fromNode(input);
+        FrozenNode strictOutput = FrozenNode.fromNode(output);
+        FrozenNode resolvedOutput = FrozenNode.fromResolvedNode(output);
+        GasMeter gas = new GasMeter();
+        RuntimeWorkSession session = processing(gas);
+        try {
+            // when
+            session.carryExactInput(carriedSource, carriedSource.blueId());
+            ExactBlueValue outputCapability = session.carriedExactInput(output);
+
+            // then
+            assertEquals(carriedSource.blueId(), strictOutput.blueId(),
+                    "Implicit and explicit Integer schema sugar has the same canonical identity");
+            assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
+                    "The preliminary schema wire comparison omits implicit scalar type provenance");
+            assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
+                    "The complete same-mode key retains schema keyword type evidence");
+            org.junit.jupiter.api.Assertions.assertNull(outputCapability,
+                    "Schema wire equivalence alone must not return the original source capability");
+            ExactBlueValue original = session.carriedExactInput(input.clone());
+            assertNotNull(original);
+            org.junit.jupiter.api.Assertions.assertSame(carriedSource, original.frozenValue());
+            assertEquals(0L, gas.totalGas());
+            assertTrue(session.stagedTrace().isEmpty());
+            org.junit.jupiter.api.Assertions.assertNull(input.getProperties().get("payload").getSchema()
+                    .getMinLength().getType());
+            assertEquals(blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID,
+                    output.getProperties().get("payload").getSchema().getMinLength().getType().getBlueId());
+        } finally {
+            session.suspend();
+            session.close();
+        }
+    }
+
+    @Test
     void shouldNotReadmitCyclicMemberRootUnderItsDirectHash() {
         // given
         Node input = new Node().properties(

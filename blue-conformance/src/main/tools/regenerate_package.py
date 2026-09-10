@@ -45,6 +45,7 @@ from package_hygiene import (
     release_inventory_files,
 )
 from release_regenerate_package import regenerate_generated_surfaces
+from rooted_release_layout import stage_rooted_companion
 
 
 TOOLS_ROOT = Path(__file__).resolve().parent
@@ -52,6 +53,13 @@ REPOSITORY_ROOT = TOOLS_ROOT.parents[3]
 CONTRACTS_SPECIFICATION = Path(
     "blue-contracts-core/src/main/resources/specifications/"
     "blue-contracts-and-processor-specification-1.0.md"
+)
+ROOTED_COMPANION = CONTRACTS_SPECIFICATION.with_name(
+    "rooted-checkpoint-processing-1.0-draft.md"
+)
+ROOTED_CONFORMANCE = Path(
+    "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/"
+    "conformance/rooted-processing"
 )
 LANGUAGE_SPECIFICATION = Path(
     "blue-language-core/src/main/resources/specifications/"
@@ -153,6 +161,15 @@ def stage_release_shell(
         repository_root / LANGUAGE_SPECIFICATION,
         release_root / "reference/blue-language-specification-1.0.md",
     )
+    # Appendix E binds this exact companion and its conformance obligations.
+    # A complete release must retain those operands, not a dangling spec link.
+    if ROOTED_COMPANION.name in (repository_root / CONTRACTS_SPECIFICATION).read_text(encoding="utf-8"):
+        copy_file(repository_root / ROOTED_COMPANION,
+                  release_root / "specifications" / ROOTED_COMPANION.name)
+        copy_tree(repository_root / ROOTED_CONFORMANCE,
+                  release_root / "conformance/rooted-processing")
+        stage_rooted_companion(
+            repository_root / ROOTED_CONFORMANCE.parents[1], release_root)
     copy_tree(package_root, release_root / "conformance/contracts")
     # The closure release is the published superset of the ordinary fixture
     # package and the production runtime registry.  Refresh those mirrors from

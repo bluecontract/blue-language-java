@@ -1,0 +1,123 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-010",
+  "category": "DYN",
+  "title": "Two generations selecting different source checkpoints remain independent",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "attach": [
+        {
+          "kind": "attach",
+          "address": "R/l",
+          "entries": [
+            {
+              "timestamp": 1,
+              "timeline": "T",
+              "entry": "T:1"
+            },
+            {
+              "timestamp": 2,
+              "timeline": "T",
+              "entry": "T:2"
+            },
+            {
+              "timestamp": 3,
+              "timeline": "T",
+              "entry": "T:3"
+            }
+          ],
+          "cursor": 0
+        },
+        {
+          "kind": "attach",
+          "address": "R/r",
+          "entries": [
+            {
+              "timestamp": 1,
+              "timeline": "T",
+              "entry": "T:1"
+            },
+            {
+              "timestamp": 2,
+              "timeline": "T",
+              "entry": "T:2"
+            },
+            {
+              "timestamp": 3,
+              "timeline": "T",
+              "entry": "T:3"
+            }
+          ],
+          "cursor": 2
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "attach",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "T:1",
+        "receivers": [
+          "R/l"
+        ]
+      },
+      {
+        "entry": "T:2",
+        "receivers": [
+          "R/l"
+        ]
+      },
+      {
+        "entry": "T:3",
+        "receivers": [
+          "R/l",
+          "R/r"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

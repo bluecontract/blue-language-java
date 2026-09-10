@@ -1,0 +1,51 @@
+name: Embedded Counter Host
+documentId: tutorial-embedded-host
+observedCounter: -1
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+      - /child
+  ownerChannel:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: tutorial/embedding/alice
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  attachChild:
+    type: Coordination/Sequential Workflow Operation
+    channel: ownerChannel
+    request:
+      child: {}
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: add
+              path: /child
+              val:
+                $binding: event/message/request/child
+          - $return: true
+  fromChild:
+    type: Embedded Node Channel
+    sourcePath: /child
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Embedded Counter Changed
+  reflectChild:
+    type: Coordination/Sequential Workflow
+    channel: fromChild
+    event:
+      type: Coordination/Event
+      kind: Tutorial/Embedded Counter Changed
+    steps:
+      - type: Coordination/Compute
+        do:
+          - $appendChange:
+              op: replace
+              path: /observedCounter
+              val:
+                $document: /child/counter
+          - $return: true

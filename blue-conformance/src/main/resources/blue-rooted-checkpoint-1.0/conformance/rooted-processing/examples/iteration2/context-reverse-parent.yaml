@@ -1,0 +1,56 @@
+name: RCP2 Reverse Parent
+seen: 0
+log: []
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+    - /child
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/reverse
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  attach:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request:
+      child: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /child
+          val:
+            $binding: event/message/request/child
+      - $return: true
+  fromChild:
+    type: Embedded Node Channel
+    sourcePath: /child
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+  observe:
+    type: Coordination/Sequential Workflow
+    channel: fromChild
+    event:
+      type: Coordination/Event
+      kind: RCP2/Tick
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: replace
+          path: /seen
+          val:
+            $document: /child/counter
+      - $appendChange:
+          op: add
+          path: /log/-
+          val:
+            $document: /child/counter
+      - $return: true

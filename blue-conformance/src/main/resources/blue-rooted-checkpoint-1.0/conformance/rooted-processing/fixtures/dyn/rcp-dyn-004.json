@@ -1,0 +1,83 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-DYN-004",
+  "category": "DYN",
+  "title": "Genuinely born channel does not receive its creating entry",
+  "kind": "dynamic",
+  "requirements": [
+    "RCP-ORDER-06",
+    "RCP-GRAPH-05",
+    "RCP-PROGRESS-02"
+  ],
+  "input": {
+    "bindings": [
+      {
+        "address": "R/in",
+        "entries": [
+          {
+            "timestamp": 20,
+            "timeline": "R",
+            "entry": "attach"
+          },
+          {
+            "timestamp": 30,
+            "timeline": "R",
+            "entry": "later"
+          }
+        ],
+        "cursor": 0,
+        "active": true
+      }
+    ],
+    "edits": {
+      "attach": [
+        {
+          "kind": "born",
+          "address": "R/new",
+          "entries": [
+            {
+              "timestamp": 1,
+              "timeline": "R",
+              "entry": "old"
+            },
+            {
+              "timestamp": 20,
+              "timeline": "R",
+              "entry": "attach"
+            },
+            {
+              "timestamp": 30,
+              "timeline": "R",
+              "entry": "later"
+            }
+          ],
+          "cursor": 0
+        }
+      ]
+    },
+    "maxSteps": 100
+  },
+  "expected": {
+    "trace": [
+      {
+        "entry": "attach",
+        "receivers": [
+          "R/in"
+        ]
+      },
+      {
+        "entry": "later",
+        "receivers": [
+          "R/in",
+          "R/new"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

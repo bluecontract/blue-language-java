@@ -1,0 +1,8 @@
+name: dynamic child waiting for exact content
+peer:
+  blueId: <MISSING_BLUE_ID>
+contracts:
+  embedded:
+    type: Process Embedded
+    paths:
+      - /peer

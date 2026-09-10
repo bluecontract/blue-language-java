@@ -1,0 +1,89 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-027",
+  "category": "RUN",
+  "title": "Missing exact input creates a typed wait and exact resume",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-SCOPE-05",
+    "RCP-PROGRESS-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "resource-host",
+        "source": "examples/iteration2/resource-host.yaml"
+      },
+      {
+        "alias": "resource-child.template",
+        "source": "examples/iteration2/resource-child.template.yaml"
+      },
+      {
+        "alias": "resource-correct",
+        "source": "examples/iteration2/resource-correct.yaml"
+      },
+      {
+        "alias": "resource-wrong",
+        "source": "examples/iteration2/resource-wrong.yaml"
+      }
+    ],
+    "steps": [],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-027.json",
+    "originalRecipe": "provenance/recipe-inputs/rcp-run-027.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "contract": {
+      "scope": "PACKAGED_RESOURCE_CONTINUATION",
+      "resourceContinuation": {
+        "observationField": "resourceContinuation",
+        "sourceFiles": [
+          "examples/iteration2/resource-host.yaml",
+          "examples/iteration2/resource-child.template.yaml",
+          "examples/iteration2/resource-correct.yaml",
+          "examples/iteration2/resource-wrong.yaml"
+        ],
+        "commandSeconds": 45,
+        "sourceWaitSeconds": 45,
+        "restartBoundary": "MYOS_RUNTIME_REBUILDER",
+        "wrongUploadCode": "EXACT_NODE_IDENTITY_MISMATCH",
+        "captureMultiplicity": "exact frozen sourceHistoryCaptures from original typed suspension",
+        "sourceMultiplicity": "one next-source command per retained exact selection; same source command resumes after its exact body upload",
+        "sourceKind": "ADMISSION for the included timeless authored child; no prepopulation, fabricated history or source business entry",
+        "entryIdentity": "same exact saved entry and request through capture, source prerequisite, original continuation and replay",
+        "gas": "each actual complete processor invocation separately checked; pre-admission typed waits have no fabricated terminal or charge"
+      }
+    },
+    "assertions": [
+      {
+        "actual": "s.wrongUploadSatisfiedDemand",
+        "op": "equals",
+        "expected": false
+      },
+      {
+        "actual": "s.sameLogicalCommandResumed",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.duplicateEffects",
+        "op": "equals",
+        "expected": 0
+      },
+      {
+        "actual": "restart.exactStateAndHistoryEqual",
+        "op": "isTrue"
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

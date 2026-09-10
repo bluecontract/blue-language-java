@@ -1,0 +1,102 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-030",
+  "category": "RUN",
+  "title": "False and mutated root contexts must be rejected",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-ID-01",
+    "RCP-ID-02",
+    "RCP-ID-03",
+    "RCP-ID-05",
+    "RCP-SCOPE-04",
+    "RCP-SCOPE-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "S",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/parent.yaml"
+      },
+      {
+        "alias": "R",
+        "source": "examples/iteration2/context-reverse-parent.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/historical-b.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-030.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-030.json"
+  },
+  "expected": {
+    "oracleVersion": 2,
+    "assertions": [
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "S"
+      ],
+      "afterEquals": {
+        "S.counter": 1
+      },
+      "requiredEvents": 1,
+      "eventAnchors": [
+        {
+          "origin": "S",
+          "ordinal": 0,
+          "kind": "RCP2/Tick"
+        }
+      ],
+      "verifyIdentityEnvelopes": true,
+      "rootContextNegatives": {
+        "observationField": "rootContextNegatives",
+        "root": "P",
+        "source": "S",
+        "reverse": "R",
+        "historicalRoot": "B",
+        "historicalSource": "A",
+        "requiredMutations": [
+          "extraReverseParent",
+          "missingForwardChild",
+          "readWitnessMadeWritable",
+          "wrongRoot",
+          "wrongHistoryBasis",
+          "tamperedPublicationSet"
+        ]
+      }
+    }
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

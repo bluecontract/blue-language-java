@@ -1,0 +1,146 @@
+{
+  "schema": "blue-rooted-identity-constructors/1.0-draft.2",
+  "status": "NORMATIVE_CANDIDATE_NOT_PRODUCTION",
+  "specification": "RCP-1 \u00a710.1\u201310.6",
+  "canonicalEncoding": "RFC8785 JCS restricted to closed ASCII-key objects, arrays and valid Unicode strings; see identity/constructors.py. SHA-256 of UTF-8 {domain,value}, prefix sha256:. Not BlueIds.",
+  "constructors": {
+    "DocumentHistoryBasis": {
+      "domain": "blue-document-history-basis/1.0-draft.2",
+      "schema": "schemas/history-basis.schema.json"
+    },
+    "OperationOwner": {
+      "domain": "blue-operation-owner/1.0-draft.2",
+      "schema": "schemas/operation-owner.schema.json"
+    },
+    "RootProcessingContext": {
+      "domain": "blue-contracts-root-processing-context/1.0-draft.2",
+      "schema": "schemas/root-context.schema.json"
+    },
+    "DeliveryBasis": {
+      "domain": "blue-rooted-delivery-basis/1.0-draft.2",
+      "schema": "schemas/delivery-basis.schema.json"
+    },
+    "rootedInvocationIdentity": {
+      "domain": "blue-contracts-rooted-invocation/1.0-draft.2",
+      "fields": [
+        "baseInvocationIdentity",
+        "rootProcessingContextIdentity",
+        "deliveryBasisIdentity"
+      ]
+    },
+    "rootedCommitCompanionIdentity": {
+      "domain": "blue-contracts-rooted-commit-companion/1.0-draft.2",
+      "fields": [
+        "baseCommitCompanionIdentity",
+        "rootedInvocationIdentity",
+        "rootProcessingContextIdentity"
+      ]
+    },
+    "rootedTerminalKey": {
+      "domain": "blue-coordination-rooted-terminal-key/1.0-draft.2",
+      "fields": [
+        "operationOwnerIdentity",
+        "deliveryBasisIdentity"
+      ]
+    },
+    "ROOTED_CHECKPOINT_REFERENCE_PROOF": {
+      "domain": "blue-rooted-checkpoint-reference-proof/1.0-draft.2",
+      "schema": "schemas/checkpoint-reference-proof.schema.json",
+      "fields": [
+        "documentId",
+        "beforeBlueId",
+        "afterBlueId",
+        "checkpointInputClosureIdentity",
+        "checkpointOutputClosureIdentity",
+        "rootProcessingContextIdentity",
+        "rootedInvocationIdentity",
+        "rootedCommitCompanionIdentity"
+      ],
+      "canonicalEncoding": "Contracts domain/value SHA-256 envelope; epoch is a nonnegative safe JSON integer; other operands are strings. See identity/checkpoint_constructors.py. Hashing is not authentication."
+    },
+    "ROOTED_CHECKPOINT_REPRESENTATION_POSITION": {
+      "domain": "blue-rooted-checkpoint-representation-position/1.0-draft.2",
+      "schema": "schemas/checkpoint-representation-position.schema.json",
+      "fields": [
+        "documentId",
+        "epoch",
+        "anchorReceiptIdentity",
+        "predecessorPositionIdentity",
+        "beforeBlueId",
+        "afterBlueId",
+        "transitionReceiptIdentity",
+        "originalInvocationIdentity",
+        "inputClosureIdentity",
+        "outputClosureIdentity",
+        "commitCompanionIdentity",
+        "checkpointReferenceProofIdentity"
+      ],
+      "canonicalEncoding": "Contracts domain/value SHA-256 envelope; epoch is a nonnegative safe JSON integer; other operands are strings. See identity/checkpoint_constructors.py. Hashing is not authentication."
+    },
+    "MANAGED_REVISION_CAUSE_WITH_REPRESENTATION_SUCCESSOR": {
+      "domain": "blue-contracts-managed-revision-cause-with-representation-successor/1.0",
+      "schema": "schemas/managed-revision-successor.schema.json",
+      "fields": [
+        "targetOccurrenceIdentity",
+        "childDocumentId",
+        "fromEpoch",
+        "toEpoch",
+        "beforeBlueId",
+        "afterBlueId",
+        "originalSourceCauseIdentity",
+        "sourceRevisionReceiptIdentity",
+        "successorRepresentationCauseIdentity"
+      ],
+      "canonicalEncoding": "Contracts closed domain/value SHA-256 envelope; fromEpoch permits -1, toEpoch equals fromEpoch+1, all other operands are NFC strings. Future evidence is not executed; its original publication and frozen source goal require independent host proof."
+    },
+    "MANAGED_EPOCH_WITH_REPRESENTATION_SUCCESSOR_WORK": {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-work/1.0",
+      "schema": "schemas/managed-successor-work.schema.json",
+      "fields": [
+        "planIdentity",
+        "barrierIdentity",
+        "sourceReceiptIdentity",
+        "sourceDocumentId",
+        "sourceEpoch",
+        "consumerDocumentId",
+        "targetOccurrenceIdentity",
+        "targetPath",
+        "activationGeneration",
+        "expectedConsumerCommittedEpoch",
+        "expectedConsumerCommittedBlueId",
+        "expectedGraphGeneration",
+        "successorRepresentationCauseIdentity"
+      ],
+      "canonicalEncoding": "Coordination closed RFC8785 domain/value SHA-256 envelope. See identity/managed_successor_constructors.py; immutable numbered anchor and exact future representation cause require independent publication proof."
+    },
+    "MANAGED_EPOCH_WITH_REPRESENTATION_SUCCESSOR_RECEIPT": {
+      "domain": "blue-coordination-managed-epoch-with-representation-successor-receipt/1.0",
+      "schema": "schemas/managed-successor-receipt.schema.json",
+      "fields": [
+        "workIdentity",
+        "planIdentity",
+        "sourceReceiptIdentity",
+        "contractsInvocationIdentity",
+        "contractsResultIdentity",
+        "commitCompanionIdentity",
+        "consumerDocumentId",
+        "consumerRevisionEpoch",
+        "consumerRevisionReceiptIdentity",
+        "consumerCommittedBlueId",
+        "resultingSourceCursor",
+        "successorRepresentationCauseIdentity",
+        "resultingRepresentationCursor"
+      ],
+      "canonicalEncoding": "Coordination closed RFC8785 domain/value SHA-256 envelope. See identity/managed_successor_constructors.py; immutable numbered anchor and exact future representation cause require independent publication proof."
+    }
+  },
+  "constraints": [
+    "Authenticate operands before wrapping; these functions do not validate Blue processing",
+    "Only the selected root live SCC canonicalizes view entrypoints",
+    "Original semantic Operation Request target remains inside exact cause",
+    "Freeze entry context across dynamic merge/split/retry",
+    "Production identity generation/release conformance NOT_RUN",
+    "FROM_NOW alone may use the exact closed BEGINNING bound; actual beginning admission requires RCP-ID-01a authority independently of envelope hashing",
+    "Checkpoint-reference positions require the exact original processor-derived boundary proof and both base and rooted committed authority under Contracts \u00a72.3a.1; envelopes alone do not prove permission or history continuity"
+  ]
+}

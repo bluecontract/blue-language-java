@@ -48,6 +48,7 @@ public final class ClosureInvocationInput {
     private final String directDeliverySnapshotIdentity;
     private final ExecutionPolicy executionPolicy;
     private final ClosureEnvironment environment;
+    private final RootedInvocationBinding rootedBinding;
 
     private ClosureInvocationInput(
             Operation operation,
@@ -84,6 +85,7 @@ public final class ClosureInvocationInput {
         this.executionPolicy = Objects.requireNonNull(
                 executionPolicy, "executionPolicy");
         this.environment = Objects.requireNonNull(environment, "environment");
+        this.rootedBinding = null;
         validateOperationShape();
         validateSnapshotReferences();
     }
@@ -263,7 +265,58 @@ public final class ClosureInvocationInput {
                 directDeliveries,
                 directDeliverySnapshotIdentity,
                 executionPolicy,
-                environment);
+                environment).withRootedBinding(rootedBinding);
+    }
+
+    /**
+     * Binds a verified entry context while preserving the base 1.0 constructor.
+     * History and receiving evidence must be authenticated by the admission owner.
+     *
+     * @param context context derived from this exact entry snapshot
+     * @param deliveryBasisIdentity authenticated draft.2 receiving/cause identity
+     * @return new immutable input carrying the frozen rooted adjunct
+     */
+    public ClosureInvocationInput withRootedContext(RootedProcessingContext context,
+            String deliveryBasisIdentity) {
+        if (rootedBinding != null) {
+            throw new IllegalArgumentException("An admitted rooted context cannot be replaced");
+        }
+        return withRootedBinding(new RootedInvocationBinding(this, context, deliveryBasisIdentity));
+    }
+
+    /**
+     * Preserves the original rooted owner, cause and meter while adding exact read evidence.
+     * The complete original input remains immutable; added rows cannot activate an edge
+     * from an existing input document. Actual demand/receipt authentication still runs
+     * at the ordinary processor boundary before the added evidence can be consumed.
+     *
+     * @param original previously suspended rooted input
+     * @return augmented input carrying the same frozen rooted context
+     * @throws IllegalArgumentException if this is not a monotone exact read expansion
+     */
+    public ClosureInvocationInput withRootedReadExpansionOf(ClosureInvocationInput original) {
+        RootedInputExpansion.verify(Objects.requireNonNull(original, "original"), this);
+        return withRootedBinding(original.rootedBinding());
+    }
+
+    RootedInvocationBinding rootedBinding() { return rootedBinding; }
+
+    ClosureInvocationInput withRootedBinding(RootedInvocationBinding binding) {
+        return binding == null ? this : new ClosureInvocationInput(this, binding);
+    }
+
+    private ClosureInvocationInput(ClosureInvocationInput original, RootedInvocationBinding binding) {
+        operation = original.operation;
+        invocationIdentity = original.invocationIdentity;
+        snapshot = RootedWitnessFrame.bind(original.snapshot, binding);
+        cause = original.cause;
+        admissionCandidate = original.admissionCandidate;
+        admissionCandidateIdentity = original.admissionCandidateIdentity;
+        directDeliveries = original.directDeliveries;
+        directDeliverySnapshotIdentity = original.directDeliverySnapshotIdentity;
+        executionPolicy = original.executionPolicy;
+        environment = original.environment;
+        rootedBinding = Objects.requireNonNull(binding, "binding");
     }
 
     private void validateOperationShape() {
@@ -363,6 +416,16 @@ public final class ClosureInvocationInput {
         }
         ManagedDocumentSnapshot child = snapshot.managedDocument(
                 revision.childDocumentId());
+        if (revision instanceof ManagedRevisionCause) {
+            ManagedRevisionCause numbered = (ManagedRevisionCause) revision;
+            if (numbered.successorRepresentationCause().isPresent()) {
+                if (!RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY.equals(
+                        environment.contractsSpecificationIdentity()) || numbered.toEpoch() != child.epoch()) {
+                    throw new IllegalArgumentException("Numbered terminal-tail carrier requires the rooted profile and selected terminal epoch");
+                }
+                numbered.verifySuccessorRepresentationCause();
+            }
+        }
         if (revision.toEpoch() > child.epoch()) {
             throw new IllegalArgumentException(
                     "Managed-revision cause is ahead of the child durable epoch");

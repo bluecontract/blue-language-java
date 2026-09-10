@@ -1,0 +1,105 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-006",
+  "category": "RUN",
+  "title": "Two occurrences of A5 and A8 apply distinct successor suffixes",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-PROGRESS-03",
+    "RCP-HISTORY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/multi-history-parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-006.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-006.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "MANAGED_REVISION"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "A.counter": 10,
+        "P.leftLog": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "P.rightLog": [
+          9,
+          10
+        ],
+        "P.left.counter": 10,
+        "P.right.counter": 10
+      },
+      "requiredApplicationCount": 7,
+      "occurrenceSuffixes": {
+        "/left": {
+          "source": "A",
+          "positions": [
+            6,
+            7,
+            8,
+            9,
+            10
+          ]
+        },
+        "/right": {
+          "source": "A",
+          "positions": [
+            9,
+            10
+          ]
+        }
+      },
+      "preserveSource": true,
+      "sourceAliases": [
+        "A"
+      ],
+      "requiredEvents": 0
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-006.json",
+    "sha256": "ad2ff8610abd3799985365dc54a23094377b796f5fcbd127d4a76a5c97422fd0"
+  }
+}

@@ -1,0 +1,25 @@
+name: RCP2 Event Only Source
+counter: 0
+contracts:
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/source
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  emitOnly:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendEvent:
+          type: Coordination/Event
+          kind: RCP2/Tick
+      - $appendEvent:
+          type: Coordination/Event
+          kind: RCP2/Tick
+      - $return: true

@@ -1,0 +1,91 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-007",
+  "category": "RUN",
+  "title": "Exact A10/B-attaches-A5 and live cycle join",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-CAUSE-01",
+    "RCP-CAUSE-02",
+    "RCP-HISTORY-03",
+    "RCP-HISTORY-04",
+    "RCP-HISTORY-05",
+    "RCP-OWN-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "B",
+        "source": "examples/iteration2/historical-b.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-007.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-007.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "MANAGED_REVISION"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "HISTORY_SEQUENCE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "A.counter": 10,
+        "B.seen": 10,
+        "B.log": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "positionSequence": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "preserveSourceReceiptPrefix": true,
+      "newSourceEvents": 0,
+      "sourceEpochMinimum": 10,
+      "requireLiveCycle": [
+        "A",
+        "B"
+      ],
+      "requiredApplicationCount": 5
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

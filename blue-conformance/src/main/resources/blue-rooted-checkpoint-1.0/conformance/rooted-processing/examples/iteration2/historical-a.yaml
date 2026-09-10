@@ -1,0 +1,58 @@
+name: RCP2 Historical A
+counter: 0
+contracts:
+  owner:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp2/a
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  tick:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: replace
+          path: /counter
+          val:
+            $add:
+            - $document: /counter
+            - 1
+      - $appendEvent:
+          type: Coordination/Event
+          kind: RCP2/Tick
+      - $return: true
+  embedded:
+    type: Process Embedded
+    paths:
+    - /peer
+  attach:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request:
+      peer: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /peer
+          val:
+            $binding: event/message/request/peer
+      - $return: true
+  detach:
+    type: Coordination/Sequential Workflow Operation
+    channel: owner
+    request: {}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: remove
+          path: /peer
+      - $return: true

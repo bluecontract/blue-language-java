@@ -1,0 +1,64 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-030",
+  "category": "RUN",
+  "title": "False and mutated root contexts must be rejected",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-ID-01",
+    "RCP-ID-02",
+    "RCP-ID-03",
+    "RCP-ID-05",
+    "RCP-SCOPE-04",
+    "RCP-SCOPE-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "child",
+        "source": "examples/counter.yaml"
+      },
+      {
+        "alias": "parent",
+        "source": "examples/parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "scenario",
+        "name": "ROOT_CONTEXT_NEGATIVES",
+        "mutations": [
+          "extraReverseParent",
+          "missingForwardChild",
+          "readWitnessMadeWritable",
+          "wrongRoot",
+          "wrongHistoryBasis",
+          "tamperedPublicationSet"
+        ],
+        "bind": "s"
+      }
+    ],
+    "variants": [],
+    "qualification": "RECIPE_ONLY"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "s.allMutationsRejected",
+        "op": "isTrue"
+      },
+      {
+        "actual": "s.anyPartialPublication",
+        "op": "equals",
+        "expected": false
+      }
+    ]
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

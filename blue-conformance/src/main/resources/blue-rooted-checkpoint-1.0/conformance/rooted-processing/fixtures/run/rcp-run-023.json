@@ -1,0 +1,97 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-023",
+  "category": "RUN",
+  "title": "Cycle formation and split do not change gas ownership midway",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-GRAPH-05",
+    "RCP-ID-02",
+    "RCP-ID-03",
+    "RCP-ID-04",
+    "RCP-OWN-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "B",
+        "source": "examples/iteration2/cycle-b.yaml"
+      },
+      {
+        "alias": "A",
+        "source": "examples/iteration2/cycle-a.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-023.json"
+      }
+    ],
+    "variants": [
+      "view-A",
+      "view-B"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-023.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "A",
+        "B"
+      ],
+      "afterEquals": {
+        "A.phase": "done",
+        "B.phase": "relayed"
+      },
+      "requiredEvents": 2,
+      "equalAcrossVariants": [
+        "after",
+        "events",
+        "ownedWrites",
+        "operationContext",
+        "deliveryBasisIdentity",
+        "rootedInvocationIdentity",
+        "rootedTerminalKey",
+        "gas",
+        "semanticReceipts",
+        "rootedCommitCompanionIdentity"
+      ],
+      "additionalPhase": {
+        "instruction": "After the subject receipt is compared, submit the literal detach input below in each realm. Do not include the different future partition in the earlier invocation key.",
+        "input": {
+          "target": "B",
+          "operation": "detachA",
+          "channel": "ownerChannel",
+          "timestampUs": "110",
+          "request": {}
+        },
+        "expected": "entry owners A/B remain frozen for detach; next component selections are singletons; old exact subject key/receipt is unchanged"
+      },
+      "verifyIdentityEnvelopes": true
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

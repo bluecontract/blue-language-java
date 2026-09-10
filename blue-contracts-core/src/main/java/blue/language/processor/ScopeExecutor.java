@@ -188,6 +188,13 @@ final class ScopeExecutor {
     void executeIsolatedManagedRootWork(
             ManagedDocumentStepRequest request,
             ManagedDocumentStepRoute selectedRoute) {
+        executeIsolatedManagedRootWork(request, selectedRoute, null);
+    }
+
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute,
+            FrozenNode admittedExternalPayload) {
         Objects.requireNonNull(request, "request");
         ManagedDocumentWorkKind kind = request.workKind();
         String channelKey = request.channelKey();
@@ -244,6 +251,12 @@ final class ScopeExecutor {
                     exactPayload,
                     occurrenceEvent,
                     matchingEventBlueId);
+        } else if (admittedExternalPayload != null) {
+            if (kind != ManagedDocumentWorkKind.EXTERNAL_DELIVERY || selectedRoute != null) {
+                throw new IllegalStateException("Carried external payload has another work role");
+            }
+            channelRunner.runHandlers(JsonPointer.ROOT, dispatchBundle, channel.key(),
+                    admittedExternalPayload, matchingEventBlueId, false);
         } else {
             channelRunner.runHandlers(
                     JsonPointer.ROOT,

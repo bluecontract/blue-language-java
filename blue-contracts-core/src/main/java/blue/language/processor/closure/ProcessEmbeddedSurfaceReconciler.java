@@ -241,9 +241,11 @@ final class ProcessEmbeddedSurfaceReconciler {
                     && binding.pendingHistoricalEpoch() == null) {
                 ManagedDocumentSnapshot exact = documents.get(
                         binding.targetDocumentId());
+                // A committed retirement keeps its lineage/generation while exact target state may advance.
+                // Fresh reservations and uninitialized drafts still require their original exact binding.
                 if (exact == null
-                        || !binding.expectedTargetBlueId().equals(
-                                exact.blueId())
+                        || (!binding.expectedTargetBlueId().equals(exact.blueId())
+                                && !(exact.initialized() && binding.activationGeneration() > 1L))
                         || !ManagedOccurrenceTargetVerifier
                                 .establishesExactTarget(value, exact)) {
                     throw invalidProspectiveOccurrence(path);

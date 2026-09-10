@@ -1,0 +1,289 @@
+{
+  "name": "Tutorial graph node B",
+  "documentId": "rooted-reconnect-019-B",
+  "nodeName": "B",
+  "peers": {},
+  "touches": 0,
+  "observed": 0,
+  "contracts": {
+    "embedded": {
+      "type": "Process Embedded",
+      "collectionPaths": [
+        "/peers"
+      ]
+    },
+    "owner": {
+      "type": "Coordination/Timeline Channel",
+      "timeline": {
+        "type": "MyOS/MyOS Timeline",
+        "timelineId": "rcp/reconnect/B"
+      },
+      "actor": {
+        "type": "MyOS/Principal Actor",
+        "accountId": "alice"
+      }
+    },
+    "attach": {
+      "type": "Coordination/Sequential Workflow Operation",
+      "channel": "owner",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$appendChange": {
+                "op": "add",
+                "path": {
+                  "$pointerJoin": [
+                    "peers",
+                    {
+                      "$binding": "event/message/request/edge"
+                    }
+                  ]
+                },
+                "val": {
+                  "$binding": "event/message/request/source"
+                }
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "request": {
+        "edge": {
+          "type": "Text",
+          "schema": {
+            "required": true
+          }
+        },
+        "source": {}
+      }
+    },
+    "detach": {
+      "type": "Coordination/Sequential Workflow Operation",
+      "channel": "owner",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$appendChange": {
+                "op": "remove",
+                "path": {
+                  "$pointerJoin": [
+                    "peers",
+                    {
+                      "$binding": "event/message/request/edge"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "request": {
+        "edge": {
+          "type": "Text",
+          "schema": {
+            "required": true
+          }
+        }
+      }
+    },
+    "retarget": {
+      "type": "Coordination/Sequential Workflow Operation",
+      "channel": "owner",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$appendChange": {
+                "op": "replace",
+                "path": {
+                  "$pointerJoin": [
+                    "peers",
+                    {
+                      "$binding": "event/message/request/edge"
+                    }
+                  ]
+                },
+                "val": {
+                  "$binding": "event/message/request/source"
+                }
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "request": {
+        "edge": {
+          "type": "Text",
+          "schema": {
+            "required": true
+          }
+        },
+        "source": {}
+      }
+    },
+    "touch": {
+      "type": "Coordination/Sequential Workflow Operation",
+      "channel": "owner",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$appendChange": {
+                "op": "replace",
+                "path": "/touches",
+                "val": {
+                  "$add": [
+                    {
+                      "$document": "/touches"
+                    },
+                    1
+                  ]
+                }
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "request": {}
+    },
+    "emit": {
+      "type": "Coordination/Sequential Workflow Operation",
+      "channel": "owner",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$appendEvent": {
+                "type": "Coordination/Event",
+                "kind": "Tutorial/Graph Token",
+                "to": {
+                  "$binding": "event/message/request/to"
+                },
+                "next": {
+                  "$binding": "event/message/request/next"
+                }
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "request": {
+        "to": {
+          "type": "Text",
+          "schema": {
+            "required": true
+          }
+        },
+        "next": {
+          "type": "Text",
+          "schema": {
+            "required": true
+          }
+        }
+      }
+    },
+    "fromMembers": {
+      "type": "Embedded Collection Event Channel",
+      "collectionPath": "/peers",
+      "event": {
+        "type": "Coordination/Event",
+        "kind": "Tutorial/Graph Token"
+      }
+    },
+    "receive": {
+      "type": "Coordination/Sequential Workflow",
+      "channel": "fromMembers",
+      "steps": [
+        {
+          "type": "Coordination/Compute",
+          "do": [
+            {
+              "$if": {
+                "cond": {
+                  "$eq": [
+                    {
+                      "$event": "/event/to"
+                    },
+                    {
+                      "$document": "/nodeName"
+                    }
+                  ]
+                },
+                "then": [
+                  {
+                    "$appendChange": {
+                      "op": "replace",
+                      "path": "/observed",
+                      "val": {
+                        "$add": [
+                          {
+                            "$document": "/observed"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "$if": {
+                      "cond": {
+                        "$ne": [
+                          {
+                            "$event": "/event/next"
+                          },
+                          "stop"
+                        ]
+                      },
+                      "then": [
+                        {
+                          "$appendEvent": {
+                            "type": "Coordination/Event",
+                            "kind": "Tutorial/Graph Token",
+                            "to": {
+                              "$event": "/event/next"
+                            },
+                            "next": "stop"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "$return": true
+            }
+          ]
+        }
+      ],
+      "event": {
+        "type": "Coordination/Event",
+        "kind": "Tutorial/Graph Token"
+      }
+    }
+  }
+}

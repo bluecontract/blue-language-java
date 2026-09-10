@@ -1,0 +1,138 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-008",
+  "category": "RUN",
+  "title": "Two historical sources interleave by cause order",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-ORDER-04",
+    "RCP-HISTORY-03"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "A",
+        "source": "examples/iteration2/historical-a.yaml"
+      },
+      {
+        "alias": "C",
+        "source": "examples/iteration2/historical-a.yaml"
+      },
+      {
+        "alias": "P",
+        "source": "examples/iteration2/multi-history-parent.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-008.json"
+      }
+    ],
+    "variants": [
+      "baseline"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-008.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "MANAGED_REVISION"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "HISTORY_MULTIPLE",
+      "causeKind": "MANAGED_REVISION",
+      "afterEquals": {
+        "A.counter": 2,
+        "C.counter": 2,
+        "P.leftLog": [
+          1,
+          2
+        ],
+        "P.rightLog": [
+          1,
+          2
+        ],
+        "P.order": [
+          "left",
+          "right",
+          "right",
+          "left"
+        ],
+        "P.marked": false
+      },
+      "requiredApplicationCount": 4,
+      "occurrenceSuffixes": {
+        "/left": {
+          "source": "A",
+          "positions": [
+            1,
+            2
+          ]
+        },
+        "/right": {
+          "source": "C",
+          "positions": [
+            1,
+            2
+          ]
+        }
+      },
+      "applicationOrder": [
+        [
+          "A",
+          60
+        ],
+        [
+          "C",
+          70
+        ],
+        [
+          "C",
+          80
+        ],
+        [
+          "A",
+          90
+        ]
+      ],
+      "perApplicationEquals": {
+        "P.marked": false
+      },
+      "preserveSource": true,
+      "sourceAliases": [
+        "A",
+        "C"
+      ],
+      "requiredEvents": 0,
+      "extraChecks": {
+        "baseline": {
+          "later.status": "SUCCESS",
+          "later.causeKind": "LIVE",
+          "later.after.P.marked": true
+        }
+      }
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  },
+  "recipeProvenance": {
+    "path": "provenance/recipe-inputs/rcp-run-008.json",
+    "sha256": "0ea49b293baa1dfe50b145fefe9f44860d99c481a58d72a2f000a5344137f532"
+  }
+}

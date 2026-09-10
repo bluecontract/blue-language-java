@@ -980,6 +980,117 @@ def reviewed_representation_transition(before_files, after_files):
     return review
 
 
+ROOTED_COMBINED_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-combined-amendment-transition.json")
+ROOTED_COMBINED_REVIEW_INPUT_SHA256 = "03b572322640c4872fd0882ce374451400827dbe7ec56c339c750113d14ee1a4"
+
+
+def reviewed_rooted_combined_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the combined rooted amendment."""
+    data = ROOTED_COMBINED_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_COMBINED_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed rooted-combined baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
+ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-checkpoint-graph-transition.json")
+ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256 = "ba46adc0241586b304f7e6fe1a9c25c1ebbee3bf1baa9a129afceaa7b5282bb4"
+
+
+def reviewed_rooted_checkpoint_graph_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the checkpoint graph amendment."""
+    data = ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed checkpoint-graph baseline bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
+ROOTED_TERMINAL_TAIL_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-terminal-tail-transition.json")
+ROOTED_TERMINAL_TAIL_REVIEW_INPUT_SHA256 = "77cc287f1b31352bc2f46e6bf081408ac5c53b115e57246132a780d3c9ddd9d1"
+
+
+def reviewed_rooted_terminal_tail_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the terminal-tail amendment."""
+    data = ROOTED_TERMINAL_TAIL_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_TERMINAL_TAIL_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed terminal-tail review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
+ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-canonical-managed-payload-transition.json")
+ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256 = "360efb656606435a81c8d701274cc8a1acb3d50f051ea880e298c87e87110cb0"
+
+
+def reviewed_rooted_canonical_managed_payload_transition(before_files, after_files):
+    """Select only the reviewed complete inventory pair for the canonical managed payload correction."""
+    data = ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed canonical managed payload review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
+ROOTED_RETIRED_WITNESS_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-retired-witness-transition.json")
+ROOTED_RETIRED_WITNESS_REVIEW_INPUT_SHA256 = "f642a9f449d00380f9c1a2f7166c3266e4e105cc9e0202c50f4384fb20a9ee83"
+
+
+def reviewed_rooted_retired_witness_transition(before_files, after_files):
+    """Select only the exact reviewed pair for the immutable retired-witness source repair."""
+    data = ROOTED_RETIRED_WITNESS_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_RETIRED_WITNESS_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed retired witness source-binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-source-conventions-transition.json")
+ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256 = "723c21cc90403d82482a509f9ad481ac825f1b7b2feef05f00ff75e5cef4d381"
+
+
+def reviewed_rooted_source_conventions_transition(before_files, after_files):
+    """Select only the exact reviewed pair for the verified source-conventions correction."""
+    data = ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed source-conventions binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
+ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-retired-slot-transition.json")
+ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256 = "7e3dc379751c9309ea3a7f0a3f36ed2faaabc795307939a0f494c67a4c0e21a0"
+
+
+def reviewed_rooted_retired_slot_transition(before_files, after_files):
+    """Select only the exact reviewed pair for the verified retired-slot correction."""
+    data = ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed retired-slot binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1436,11 +1547,36 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
     reviewed_transition = reviewed_typed_patch_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_representation_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_combined_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_checkpoint_graph_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_terminal_tail_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_canonical_managed_payload_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_retired_witness_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_source_conventions_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_retired_slot_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
     if cevo_release_present and not integrity_violations:
         for row in rows:
+            if (reviewed_transition is not None
+                    and reviewed_transition["id"] == "rooted-terminal-tail-exact-proposed-transition"
+                    and row["path"] == "identity-constructors.yaml"):
+                # This exact pair includes one independently reviewed normative constructor addition.
+                row["unexpected"] = False
+                row["categories"] = [SEMANTIC]
+                row.pop("reason", None)
+                for difference in row["differences"]:
+                    difference["category"] = SEMANTIC
+                row["reviewedTransition"] = reviewed_transition["id"]
+                continue
             if row["path"] not in GENERATED_RELEASE_MANIFESTS:
                 continue
             row["unexpected"] = False
@@ -1482,7 +1618,21 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (REPRESENTATION_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-retired-slot-exact-generated-transition"
+                else ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-source-conventions-exact-generated-transition"
+                else ROOTED_RETIRED_WITNESS_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-retired-witness-exact-generated-transition"
+                else ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-canonical-managed-payload-exact-proposed-transition"
+                else ROOTED_TERMINAL_TAIL_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-terminal-tail-exact-proposed-transition"
+                else ROOTED_CHECKPOINT_GRAPH_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-checkpoint-graph-exact-proposed-transition"
+                else ROOTED_COMBINED_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-combined-amendment-exact-proposed-transition"
+                else REPRESENTATION_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "historical-representation-exact-proposed-transition"
                 else TYPED_PATCH_REVIEW_INPUT_SHA256),
             "beforeSourceCommit": reviewed_transition["before"]["sourceCommit"],

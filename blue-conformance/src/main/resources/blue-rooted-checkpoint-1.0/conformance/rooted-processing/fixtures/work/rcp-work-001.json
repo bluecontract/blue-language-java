@@ -1,0 +1,59 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-WORK-001",
+  "category": "WORK",
+  "title": "Finite pair countdown",
+  "kind": "reaction",
+  "requirements": [
+    "RCP-ORDER-05",
+    "RCP-GRAPH-02",
+    "RCP-READY-04"
+  ],
+  "input": {
+    "route": {
+      "A": "B",
+      "B": "A"
+    },
+    "start": "A",
+    "ttl": 4,
+    "budget": 5,
+    "costModel": "ONE_UNIT_PER_DELIVERY_NOT_BLUE_GAS"
+  },
+  "expected": {
+    "status": "COMMITTED",
+    "committed": [
+      [
+        "A",
+        4,
+        0
+      ],
+      [
+        "B",
+        3,
+        1
+      ],
+      [
+        "A",
+        2,
+        2
+      ],
+      [
+        "B",
+        1,
+        3
+      ],
+      [
+        "A",
+        0,
+        4
+      ]
+    ],
+    "gas": 5
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

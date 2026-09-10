@@ -1,0 +1,534 @@
+{
+  "schema": "blue-rooted-literal-plan/1.0-draft.2",
+  "fixtureId": "RCP-RUN-018",
+  "title": "Saved-original pair, then a separate three-node ring, with real journal prerequisites",
+  "inputIdentityPolicy": "Capture actual authored BlueIds before each start; all five documents start independently with peers {} before any attachment. All attachment values select the saved authored IDs.",
+  "setup": [
+    {
+      "op": "start",
+      "alias": "P",
+      "source": "examples/iteration2/graph-018-p.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-001"
+    },
+    {
+      "op": "start",
+      "alias": "Q",
+      "source": "examples/iteration2/graph-018-q.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-002"
+    },
+    {
+      "op": "start",
+      "alias": "A",
+      "source": "examples/iteration2/graph-018-a.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-003"
+    },
+    {
+      "op": "start",
+      "alias": "B",
+      "source": "examples/iteration2/graph-018-b.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-004"
+    },
+    {
+      "op": "start",
+      "alias": "C",
+      "source": "examples/iteration2/graph-018-c.yaml",
+      "bindings": {},
+      "admission": "FULL_HISTORY",
+      "capture": [
+        "initialBlueId",
+        "initializedBlueId",
+        "documentId",
+        "epoch0Receipt"
+      ],
+      "stepId": "setup-005"
+    }
+  ],
+  "variants": {
+    "pair-then-ring": [
+      {
+        "op": "append",
+        "target": "P",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "100",
+        "request": {
+          "edge": "q",
+          "source": {
+            "$capture": "Q.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E100",
+        "stepId": "pair-ring-001"
+      },
+      {
+        "op": "drainUntilQuiescent",
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "maxSelections": 32,
+        "mustApplyEntry": {
+          "$capture": "E100"
+        },
+        "capture": "pairFirst",
+        "collect": [
+          "fullSelections",
+          "fullExactInputsResults",
+          "fullReceipts",
+          "ownedPublicEvents",
+          "selectedViews",
+          "perCallRetainedRecords",
+          "perInvocationGas",
+          "occurrenceProgress",
+          "readiness"
+        ],
+        "stepId": "pair-ring-002"
+      },
+      {
+        "op": "append",
+        "target": "Q",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "200",
+        "request": {
+          "edge": "p",
+          "source": {
+            "$capture": "P.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E200",
+        "stepId": "pair-ring-003"
+      },
+      {
+        "op": "drainUntilQuiescent",
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "maxSelections": 32,
+        "mustApplyEntry": {
+          "$capture": "E200"
+        },
+        "capture": "pairJoined",
+        "collect": [
+          "fullSelections",
+          "fullExactInputsResults",
+          "fullReceipts",
+          "ownedPublicEvents",
+          "selectedViews",
+          "perCallRetainedRecords",
+          "perInvocationGas",
+          "occurrenceProgress",
+          "readiness"
+        ],
+        "stepId": "pair-ring-004"
+      },
+      {
+        "op": "assert",
+        "actual": "liveComponent(P)",
+        "expectedMembers": [
+          "P",
+          "Q"
+        ],
+        "stepId": "pair-ring-005"
+      },
+      {
+        "op": "append",
+        "target": "Q",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "300",
+        "request": {
+          "to": "P",
+          "next": "stop"
+        },
+        "capture": "E300",
+        "stepId": "pair-ring-006"
+      },
+      {
+        "op": "processNext",
+        "root": "P",
+        "mustSelect": {
+          "$capture": "E300"
+        },
+        "budget": "DEFAULT",
+        "capture": "pairFinite",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "pair-ring-007"
+      },
+      {
+        "op": "append",
+        "target": "A",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "400",
+        "request": {
+          "edge": "b",
+          "source": {
+            "$capture": "B.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E400",
+        "stepId": "pair-ring-008"
+      },
+      {
+        "op": "drainUntilQuiescent",
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "maxSelections": 32,
+        "mustApplyEntry": {
+          "$capture": "E400"
+        },
+        "capture": "ringFirst",
+        "collect": [
+          "fullSelections",
+          "fullExactInputsResults",
+          "fullReceipts",
+          "ownedPublicEvents",
+          "selectedViews",
+          "perCallRetainedRecords",
+          "perInvocationGas",
+          "occurrenceProgress",
+          "readiness"
+        ],
+        "stepId": "pair-ring-009"
+      },
+      {
+        "op": "append",
+        "target": "B",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "500",
+        "request": {
+          "edge": "c",
+          "source": {
+            "$capture": "C.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E500",
+        "stepId": "pair-ring-010"
+      },
+      {
+        "op": "drainUntilQuiescent",
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "maxSelections": 32,
+        "mustApplyEntry": {
+          "$capture": "E500"
+        },
+        "capture": "ringSecond",
+        "collect": [
+          "fullSelections",
+          "fullExactInputsResults",
+          "fullReceipts",
+          "ownedPublicEvents",
+          "selectedViews",
+          "perCallRetainedRecords",
+          "perInvocationGas",
+          "occurrenceProgress",
+          "readiness"
+        ],
+        "stepId": "pair-ring-011"
+      },
+      {
+        "op": "append",
+        "target": "C",
+        "operation": "attach",
+        "channel": "owner",
+        "timestampUs": "600",
+        "request": {
+          "edge": "a",
+          "source": {
+            "$capture": "A.initialBlueId"
+          }
+        },
+        "exactDocumentPrecondition": false,
+        "capture": "E600",
+        "stepId": "pair-ring-012"
+      },
+      {
+        "op": "drainUntilQuiescent",
+        "budgetPerCall": {
+          "maxEntries": 1,
+          "maxManagedApplications": 1
+        },
+        "maxSelections": 32,
+        "mustApplyEntry": {
+          "$capture": "E600"
+        },
+        "capture": "ringJoined",
+        "collect": [
+          "fullSelections",
+          "fullExactInputsResults",
+          "fullReceipts",
+          "ownedPublicEvents",
+          "selectedViews",
+          "perCallRetainedRecords",
+          "perInvocationGas",
+          "occurrenceProgress",
+          "readiness"
+        ],
+        "stepId": "pair-ring-013"
+      },
+      {
+        "op": "assert",
+        "actual": "liveComponent(A)",
+        "expectedMembers": [
+          "A",
+          "B",
+          "C"
+        ],
+        "stepId": "pair-ring-014"
+      },
+      {
+        "op": "append",
+        "target": "C",
+        "operation": "emit",
+        "channel": "owner",
+        "timestampUs": "700",
+        "request": {
+          "to": "B",
+          "next": "A"
+        },
+        "capture": "E700",
+        "stepId": "pair-ring-015"
+      },
+      {
+        "op": "processNext",
+        "root": "A",
+        "mustSelect": {
+          "$capture": "E700"
+        },
+        "budget": "DEFAULT",
+        "capture": "subject",
+        "recordWorkAndSelectedViews": true,
+        "stepId": "pair-ring-016"
+      },
+      {
+        "op": "observeGraph",
+        "capture": "graph",
+        "roots": [
+          "P",
+          "Q",
+          "A",
+          "B",
+          "C"
+        ],
+        "record": [
+          "authoredCaptures",
+          "initialReceipts",
+          "allAttachmentEntries",
+          "completeSelectedViews",
+          "readyStates",
+          "completeRetainedRecords",
+          "fullJournal",
+          "retainedTerminals"
+        ],
+        "stepId": "pair-ring-017"
+      },
+      {
+        "op": "restart",
+        "roots": [
+          "P",
+          "Q",
+          "A",
+          "B",
+          "C"
+        ],
+        "submitNewEntries": false,
+        "assertExactRetainedState": true,
+        "stepId": "pair-ring-018"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "P",
+        "stepId": "pair-ring-019"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "Q",
+        "stepId": "pair-ring-020"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "A",
+        "stepId": "pair-ring-021"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "B",
+        "stepId": "pair-ring-022"
+      },
+      {
+        "op": "assertQuiescent",
+        "root": "C",
+        "stepId": "pair-ring-023"
+      }
+    ]
+  },
+  "outputContract": {
+    "scope": "SUCCESSFUL_ROOT",
+    "causeKind": "LIVE",
+    "writes": [
+      "A",
+      "B",
+      "C"
+    ],
+    "afterEquals": {
+      "P.observed": 1,
+      "Q.observed": 0,
+      "A.observed": 1,
+      "B.observed": 1,
+      "C.observed": 0
+    },
+    "requiredEvents": 2,
+    "eventAnchors": [
+      {
+        "origin": "C",
+        "kind": "Tutorial/Graph Token",
+        "ordinal": 0
+      },
+      {
+        "origin": "B",
+        "kind": "Tutorial/Graph Token",
+        "ordinal": 1
+      }
+    ],
+    "savedOriginalGraph": {
+      "observation": "graph",
+      "requiredAliases": [
+        "P",
+        "Q",
+        "A",
+        "B",
+        "C"
+      ],
+      "maxSelectionsPerAttachment": 32,
+      "attachmentRequests": [
+        {
+          "entry": "E100",
+          "parent": "P",
+          "path": "/peers/q",
+          "source": "Q",
+          "selection": "Q.initialBlueId",
+          "phase": "pairFirst"
+        },
+        {
+          "entry": "E200",
+          "parent": "Q",
+          "path": "/peers/p",
+          "source": "P",
+          "selection": "P.initialBlueId",
+          "phase": "pairJoined"
+        },
+        {
+          "entry": "E400",
+          "parent": "A",
+          "path": "/peers/b",
+          "source": "B",
+          "selection": "B.initialBlueId",
+          "phase": "ringFirst"
+        },
+        {
+          "entry": "E500",
+          "parent": "B",
+          "path": "/peers/c",
+          "source": "C",
+          "selection": "C.initialBlueId",
+          "phase": "ringSecond"
+        },
+        {
+          "entry": "E600",
+          "parent": "C",
+          "path": "/peers/a",
+          "source": "A",
+          "selection": "A.initialBlueId",
+          "phase": "ringJoined"
+        }
+      ],
+      "components": [
+        [
+          "P",
+          "Q"
+        ],
+        [
+          "A",
+          "B",
+          "C"
+        ]
+      ],
+      "pairFinite": {
+        "phase": "pairFinite",
+        "observed": {
+          "P": 1,
+          "Q": 0
+        },
+        "events": [
+          {
+            "origin": "Q",
+            "kind": "Tutorial/Graph Token"
+          }
+        ]
+      },
+      "initialPeers": {},
+      "initializedEpoch": 0,
+      "verifyEveryReceiptPrefix": true,
+      "verifyNoAttachmentSourceEvents": true,
+      "verifyActualCallsAndGas": true,
+      "verifyRestarts": true
+    },
+    "verifyIdentityEnvelopes": true
+  },
+  "productionStatus": "NOT_RUN",
+  "allowedPrimitives": [
+    "start",
+    "append",
+    "processNext",
+    "drainUntilQuiescent",
+    "observeGraph",
+    "assert",
+    "restart",
+    "assertQuiescent"
+  ],
+  "captures": "Actual public SDK values and retained exact evidence. Proposed drainUntilQuiescent/observeGraph primitives are not implemented yet."
+}

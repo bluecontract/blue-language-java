@@ -9876,9 +9876,21 @@ def validate_static_package_laws() -> None:
         in demand_constructor.get("value", {}).get("order", ""),
         "closure resource-demand registry does not forbid kind ordering",
     )
-    require(not any("bex" in path.name.lower() or "blue-bex" in path.as_posix().lower() for path in ROOT.rglob("*") if path.is_file()), "BEX file included in Contracts package")
-    specs = sorted(path.name for path in (ROOT / "specifications").glob("*.md"))
-    require(specs == ["blue-contracts-and-processor-specification-1.0.md"], f"unexpected specification documents: {specs}")
+    from rooted_release_layout import validate_release_layout
+    validate_release_layout(ROOT, SPEC, require)
+
+
+def validate_package_file_roles(package: dict[str, Any]) -> None:
+    """Independently reject mislabelled normative inputs in the outer manifest."""
+    prefixes = ("specifications/", "conformance/contracts/", "conformance/rooted-processing/",
+                "companions/rooted-checkpoint/specifications/",
+                "companions/rooted-checkpoint/conformance/rooted-processing/")
+    bindings = {"companions/rooted-checkpoint-manifest.json",
+                "companions/rooted-checkpoint/manifests/specification-set.json"}
+    for row in package["files"]:
+        relative = row["path"]
+        expected = "normative" if relative.startswith(prefixes) or relative in bindings else "informative"
+        require(row.get("role") == expected, "outer package file role mismatch: " + relative)
 
 
 def validate_manifests() -> dict[str, Any]:
@@ -9919,6 +9931,7 @@ def validate_manifests() -> dict[str, Any]:
         "source archive provenance must not participate in release identity",
     )
     package = verify_manifest(PACKAGE_MANIFEST, "packageIdentity")
+    validate_package_file_roles(package)
     verify_listed_files(ROOT, package["files"])
     require(package["contractsReleaseIdentity"] == release["releaseIdentity"], "package/release binding mismatch")
     return {"registry": registry, "gas": gas, "fixtures": fixtures, "oracles": oracles, "release": release, "package": package}
@@ -10092,6 +10105,9 @@ def main() -> None:
     reference_output = run_command([sys.executable, str(ROOT / "tools/reference_scenarios.py")])
     reference = json.loads(reference_output)
     require(reference["status"] == "SEMANTIC_REFERENCE_VALID", "semantic reference scenarios failed")
+    progress("rooted companion package/checker/model validation")
+    from rooted_release_layout import validate_rooted_companion_checks
+    rooted_companion = validate_rooted_companion_checks(ROOT, run_command, require)
     progress("Java templates")
     java = validate_java_templates()
     progress("source archive provenance")
@@ -10121,6 +10137,7 @@ def main() -> None:
         "managedRevisionSequenceFixtures": managed_revision_fixtures,
         "removeReaddFixtures": remove_readd_fixtures,
         "javaTemplates": java,
+        "rootedCompanion": rooted_companion,
         "sourceArchive": source,
         "implementationConformanceClaimed": False,
     }

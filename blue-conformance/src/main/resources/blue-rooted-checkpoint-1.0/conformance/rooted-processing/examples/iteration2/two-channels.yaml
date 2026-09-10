@@ -1,0 +1,51 @@
+name: RCP5 Two Independent Channels
+log: []
+contracts:
+  first:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp5/first
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  firstOperation:
+    type: Coordination/Sequential Workflow Operation
+    channel: first
+    request:
+      mark: {type: Text}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /log/-
+          val: {$binding: event/message/request/mark}
+      - $appendEvent:
+          type: Coordination/Event
+          kind: {$binding: event/message/request/mark}
+      - $return: true
+  second:
+    type: Coordination/Timeline Channel
+    timeline:
+      type: MyOS/MyOS Timeline
+      timelineId: rcp5/second
+    actor:
+      type: MyOS/Principal Actor
+      accountId: alice
+  secondOperation:
+    type: Coordination/Sequential Workflow Operation
+    channel: second
+    request:
+      mark: {type: Text}
+    steps:
+    - type: Coordination/Compute
+      do:
+      - $appendChange:
+          op: add
+          path: /log/-
+          val: {$binding: event/message/request/mark}
+      - $appendEvent:
+          type: Coordination/Event
+          kind: {$binding: event/message/request/mark}
+      - $return: true

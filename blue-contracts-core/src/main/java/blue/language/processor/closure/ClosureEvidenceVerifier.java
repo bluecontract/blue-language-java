@@ -137,7 +137,7 @@ final class ClosureEvidenceVerifier {
                             inputGraph,
                             componentGenerations(input),
                             documentBodies(asserted),
-                            asserted.occurrences()));
+                            asserted.occurrences(), asserted.rootedWitnesses()));
         } else {
             ManagedDocumentGraph assertedGraph = graph(asserted);
             Map<DocumentId, Long> expectedGenerations =
@@ -162,12 +162,7 @@ final class ClosureEvidenceVerifier {
 
     private static ManagedDocumentGraph graph(
             AffectedClosureSnapshot snapshot) {
-        ArrayList<DocumentId> documents = new ArrayList<DocumentId>();
-        for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) {
-            documents.add(document.documentId());
-        }
-        return ManagedDocumentGraph.fromBindings(
-                documents, snapshot.occurrences());
+        return snapshot.graph();
     }
 
     private static Map<DocumentId, Long> componentGenerations(
@@ -505,6 +500,25 @@ final class ClosureEvidenceVerifier {
                 occurrencesById(input.occurrences());
         Map<String, ManagedOccurrenceBinding> afterRows =
                 occurrencesById(output.occurrences());
+        for (ManagedOccurrenceBinding before : input.occurrences()) {
+            ManagedOccurrenceBinding after = occurrenceAt(output.occurrences(),
+                    before.sourceDocumentId(), before.sourcePath());
+            if (!before.active() && before.pendingHistoricalEpoch() == null
+                    && after != null && after.pendingHistoricalEpoch() != null) {
+                boolean proven = false;
+                for (ManagedOccurrenceEvidenceResolution resolution : resolutions) {
+                    ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+                    proven |= resolution.selectsInactiveReservation(input, before)
+                            && sameLineage(before, after) && !after.active()
+                            && demand.inputClosureIdentity().equals(input.closureIdentity())
+                            && demand.inputGraphGeneration() == input.graphGeneration()
+                            && demand.suppliedValueBlueId().equals(after.expectedTargetBlueId())
+                            && resolution.pendingHistoricalEpoch() == after.pendingHistoricalEpoch().longValue();
+                }
+                if (!proven) throw new IllegalArgumentException(
+                        "Historical reservation selection lacks exact demand-bound resolution evidence");
+            }
+        }
         Map<String, GraphChange.Side> active = activeSides(input.occurrences());
 
         for (GraphChange change : changes) {

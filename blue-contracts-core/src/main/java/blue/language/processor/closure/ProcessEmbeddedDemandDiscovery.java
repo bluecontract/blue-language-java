@@ -99,13 +99,21 @@ final class ProcessEmbeddedDemandDiscovery {
                     ordinal++;
                     continue;
                 }
-                if (!binding.active()
-                        || exactTarget(supplied, binding, documents) != null
+                ManagedDocumentSnapshot target = documents.get(binding.targetDocumentId());
+                // An initialized source can be re-added at an older exact
+                // state. Keep draft mismatches at the closed rejection boundary;
+                // a draft has no retained history to acquire.
+                if (!binding.active() && (target == null || !target.initialized()
+                        || ManagedOccurrenceTargetVerifier.establishesExactTarget(supplied, target))) {
+                    ordinal++;
+                    continue;
+                }
+                if (binding.active() && (exactTarget(supplied, binding, documents) != null
                         || supplied.isReferenceOnly()
                         && context.priorFinalizedReferenceAvailability()
                                 .isAvailable(
                                         binding.targetDocumentId(),
-                                        supplied.getBlueId())) {
+                                        supplied.getBlueId()))) {
                     ordinal++;
                     continue;
                 }

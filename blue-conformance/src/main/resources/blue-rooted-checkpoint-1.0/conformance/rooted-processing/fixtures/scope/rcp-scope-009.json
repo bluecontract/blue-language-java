@@ -1,0 +1,46 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-SCOPE-009",
+  "category": "SCOPE",
+  "title": "Incoming observer and its sibling do not enter root",
+  "kind": "graph",
+  "requirements": [
+    "RCP-SCOPE-01",
+    "RCP-SCOPE-02"
+  ],
+  "input": {
+    "nodes": [
+      "R",
+      "S",
+      "X",
+      "Y"
+    ],
+    "edges": [
+      [
+        "R",
+        "S"
+      ],
+      [
+        "X",
+        "S"
+      ],
+      [
+        "X",
+        "Y"
+      ]
+    ],
+    "root": "R"
+  },
+  "expected": {
+    "reachable": [
+      "R",
+      "S"
+    ]
+  },
+  "verification": {
+    "model": "NOT_RUN",
+    "production": "NOT_RUN",
+    "scope": "ABSTRACT_MODEL",
+    "artifactBindingRequired": true
+  }
+}

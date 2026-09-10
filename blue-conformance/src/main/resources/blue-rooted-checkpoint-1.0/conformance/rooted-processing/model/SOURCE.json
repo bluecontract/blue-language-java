@@ -1,0 +1,8 @@
+{
+  "sourceArchive": "Blue_Checkpoint_Processing_Proof_Evidence.zip",
+  "sourceArchiveSha256": "271ad98271fd73489d1175d30617d59f008dcc59fbaf20fc6a1501ddb5ab5998",
+  "filesPreserved": [
+    "checkpoint_model.py"
+  ],
+  "scope": "Abstract input-selection model only; not Blue/runtime conformance."
+}

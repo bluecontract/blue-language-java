@@ -1,0 +1,96 @@
+{
+  "schema": "blue-rooted-processing-fixture/1.0-draft.1",
+  "id": "RCP-RUN-014",
+  "category": "RUN",
+  "title": "Diamond preserves canonical event and Handler-visible read order",
+  "kind": "runtime",
+  "requirements": [
+    "RCP-ORDER-05"
+  ],
+  "input": {
+    "isolation": "NEW_REALM",
+    "documents": [
+      {
+        "alias": "D",
+        "source": "examples/iteration2/source.yaml"
+      },
+      {
+        "alias": "B",
+        "source": "examples/iteration2/diamond-b.yaml"
+      },
+      {
+        "alias": "C",
+        "source": "examples/iteration2/diamond-c.yaml"
+      },
+      {
+        "alias": "R",
+        "source": "examples/iteration2/diamond-root.yaml"
+      }
+    ],
+    "steps": [
+      {
+        "op": "executeLiteralPlan",
+        "path": "plans/rcp-run-014.json"
+      }
+    ],
+    "variants": [
+      "forward-enumeration",
+      "reverse-enumeration"
+    ],
+    "qualification": "LITERAL_CRITICAL",
+    "literalPlan": "plans/rcp-run-014.json"
+  },
+  "expected": {
+    "assertions": [
+      {
+        "actual": "causeKind",
+        "op": "equals",
+        "expected": "LIVE"
+      },
+      {
+        "actual": "status",
+        "op": "equals",
+        "expected": "SUCCESS"
+      }
+    ],
+    "contract": {
+      "scope": "SUCCESSFUL_ROOT",
+      "causeKind": "LIVE",
+      "writes": [
+        "R"
+      ],
+      "afterEquals": {
+        "R.b.seen": 1,
+        "R.c.seen": 1
+      },
+      "derivedAfter": {
+        "R.log": {
+          "function": "canonicalComponentOrder",
+          "members": [
+            "B",
+            "C"
+          ],
+          "outputLabels": [
+            "B",
+            "C"
+          ],
+          "input": "captured real member DocumentIds, unsigned UTF-8 order, no driver-provided expected log"
+        }
+      },
+      "requiredEvents": 0,
+      "equalAcrossVariants": [
+        "after.R",
+        "gas.charges",
+        "gas.total",
+        "semanticReceipts"
+      ]
+    },
+    "oracleVersion": 2
+  },
+  "verification": {
+    "model": "NOT_APPLICABLE",
+    "production": "NOT_RUN",
+    "scope": "PRODUCTION_ADAPTER_REQUIRED",
+    "artifactBindingRequired": true
+  }
+}

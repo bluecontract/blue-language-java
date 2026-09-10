@@ -35,7 +35,7 @@ final class StagedRepositoryManifestTest {
     private static final String FIXTURES = "sha256:"
             + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private static final String RELEASE = "sha256:"
-            + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+            + "6998d173b83153bc3856fd4de682d6974c7d58a6ec34c8fdc5f095496d74c58e";
 
     @TempDir
     Path temporaryDirectory;
@@ -342,6 +342,17 @@ final class StagedRepositoryManifestTest {
 
         // then
         assertTrue(failure.getMessage().contains("specification bytes"));
+    }
+
+    @Test
+    void shouldRejectAChangedManifestWithItsPreviousReleaseIdentity() throws Exception {
+        Fixture fixture = fixture();
+        Files.writeString(fixture.releaseManifest, Files.readString(fixture.releaseManifest)
+                + "status: a-different-profile\n");
+        GradleException failure = assertThrows(GradleException.class,
+                () -> StagedRepositoryManifest.bindings(fixture.specification, fixture.releaseManifest,
+                        COMMIT, TREE, false, StagedRepositoryManifest.REQUIRED_BUILD_JAVA));
+        assertTrue(failure.getMessage().contains("release identity does not authenticate"));
     }
 
     @Test
