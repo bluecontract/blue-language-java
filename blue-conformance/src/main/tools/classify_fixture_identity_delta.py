@@ -1075,6 +1075,22 @@ def reviewed_rooted_source_conventions_transition(before_files, after_files):
     return review
 
 
+ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH = (Path(__file__).resolve().parent / "migration" / "classify-rooted-retired-slot-transition.json")
+ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256 = "7e3dc379751c9309ea3a7f0a3f36ed2faaabc795307939a0f494c67a4c0e21a0"
+
+
+def reviewed_rooted_retired_slot_transition(before_files, after_files):
+    """Select only the exact reviewed pair for the verified retired-slot correction."""
+    data = ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed retired-slot binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1543,6 +1559,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         reviewed_transition = reviewed_rooted_retired_witness_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_rooted_source_conventions_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_rooted_retired_slot_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1600,7 +1618,11 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (ROOTED_RETIRED_WITNESS_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-retired-slot-exact-generated-transition"
+                else ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "rooted-source-conventions-exact-generated-transition"
+                else ROOTED_RETIRED_WITNESS_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "rooted-retired-witness-exact-generated-transition"
                 else ROOTED_CANONICAL_MANAGED_PAYLOAD_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] == "rooted-canonical-managed-payload-exact-proposed-transition"

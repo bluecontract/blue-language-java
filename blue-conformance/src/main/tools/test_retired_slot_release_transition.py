@@ -1,4 +1,4 @@
-"""Exact source-conventions release binding and unchanged fail-closed behavior."""
+"""Exact retired-slot release binding and unchanged fail-closed behavior."""
 from copy import deepcopy
 import hashlib
 import json
@@ -12,17 +12,17 @@ import yaml
 import classify_fixture_identity_delta as classifier
 
 
-class SourceConventionsReleaseTransitionTest(unittest.TestCase):
+class RetiredSlotReleaseTransitionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temporary = tempfile.TemporaryDirectory(prefix="source-conventions-classifier-")
+        cls.temporary = tempfile.TemporaryDirectory(prefix="retired-slot-classifier-")
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.root = Path(cls.temporary.name)
         cls.after = cls.root / "after"
         cls.after.mkdir()
-        archive = Path(__file__).parent / "migration/classify-source-conventions-reviewed-after.tar.gz"
-        if hashlib.sha256(archive.read_bytes()).hexdigest() != "d1f0d4aa0bb843ba1bebe162c927f92f6eb0f2c903804ca475b27d5614384e4b":
-            raise AssertionError("Exact reviewed source-conventions fixture archive changed")
+        archive = Path(__file__).parent / "migration/classify-retired-slot-reviewed-after.tar.gz"
+        if hashlib.sha256(archive.read_bytes()).hexdigest() != "d74c8dca48689d5fd9d26bed22f05521889f909c578991e1ac5cd0976d2a5a2e":
+            raise AssertionError("Exact reviewed retired-slot fixture archive changed")
         with tarfile.open(archive) as saved:
             for entry in saved:
                 if not entry.isfile() or Path(entry.name).is_absolute() or '..' in Path(entry.name).parts:
@@ -32,7 +32,7 @@ class SourceConventionsReleaseTransitionTest(unittest.TestCase):
                 with target.open('xb') as output: output.write(saved.extractfile(entry).read())
         cls.before = cls.root / "before"
         shutil.copytree(cls.after, cls.before)
-        cls.review = json.loads(classifier.ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH.read_bytes())
+        cls.review = json.loads(classifier.ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH.read_bytes())
         (cls.before / "release-manifest.yaml").write_text(cls.review['beforeReleaseManifestYaml'])
 
     def test_exact_complete_pair_and_only_one_source_binding_change(self):
@@ -50,18 +50,18 @@ class SourceConventionsReleaseTransitionTest(unittest.TestCase):
         next_sources = {row['path']: row for row in successor['languageDependency']['inputImplementationBaseline']}
         self.assertEqual(741, len(prior_sources))
         self.assertEqual(set(prior_sources), set(next_sources))
-        changed_source = 'blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java'
+        changed_source = 'blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java'
         self.assertEqual([changed_source], [path for path in sorted(prior_sources) if prior_sources[path] != next_sources[path]])
         reconstructed = deepcopy(successor)
         reconstructed['releaseIdentity'] = prior['releaseIdentity']
         reconstructed['languageDependency']['inputImplementationBaseline'] = prior['languageDependency']['inputImplementationBaseline']
         self.assertEqual(prior, reconstructed, 'No unrelated release binding may change')
-        self.assertEqual(self.review, classifier.reviewed_rooted_source_conventions_transition(before, after))
+        self.assertEqual(self.review, classifier.reviewed_rooted_retired_slot_transition(before, after))
         report = classifier.classify(self.before, self.after)
         self.assertEqual(0, report['unexpectedCount'])
         self.assertEqual(1, report['changedFileCount'])
         self.assertEqual(self.review['id'], report['reviewedBaselineTransition']['id'])
-        self.assertEqual(classifier.ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_SHA256, report['reviewedBaselineTransition']['reviewInputSha256'])
+        self.assertEqual(classifier.ROOTED_RETIRED_SLOT_REVIEW_INPUT_SHA256, report['reviewedBaselineTransition']['reviewInputSha256'])
 
     def test_different_paths_or_content_cannot_match_the_reviewed_pair(self):
         before, after = classifier.package_files(self.before), classifier.package_files(self.after)
@@ -75,16 +75,16 @@ class SourceConventionsReleaseTransitionTest(unittest.TestCase):
                 elif mutation == 'renamed': files['unreviewed.yaml'] = files.pop(path)
                 else: files[path] = self.after / 'release-manifest.yaml'
                 with self.subTest(side=side, mutation=mutation):
-                    self.assertIsNone(classifier.reviewed_rooted_source_conventions_transition(b, a))
+                    self.assertIsNone(classifier.reviewed_rooted_retired_slot_transition(b, a))
 
     def test_review_record_cannot_be_rehashed_by_a_caller(self):
         changed = deepcopy(self.review)
         changed['after']['files']['release-manifest.yaml'] = '0' * 64
         path = self.root / 'forged-review.json'
         path.write_text(json.dumps(changed))
-        with patch.object(classifier, 'ROOTED_SOURCE_CONVENTIONS_REVIEW_INPUT_PATH', path):
+        with patch.object(classifier, 'ROOTED_RETIRED_SLOT_REVIEW_INPUT_PATH', path):
             with self.assertRaises(classifier.ClassificationFailure):
-                classifier.reviewed_rooted_source_conventions_transition(
+                classifier.reviewed_rooted_retired_slot_transition(
                     classifier.package_files(self.before), classifier.package_files(self.after))
 
     def test_unreviewed_inventory_still_fails_strict_classification(self):
