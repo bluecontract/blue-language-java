@@ -28774,7 +28774,7 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
       "line": 49,
@@ -28789,7 +28789,7 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
       "line": 50,
@@ -28804,10 +28804,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 262,
+      "line": 264,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/SemanticEvidenceOrchestration.java",
@@ -28819,10 +28819,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 263,
+      "line": 265,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/SemanticEvidenceOrchestration.java",
@@ -31619,10 +31619,10 @@
       "E-invalid-fieldless-list-position": 5,
       "context-only-not-empty-sentinel-decision": 1849
     },
-    "changedFileHitCount": 1215,
+    "changedFileHitCount": 1219,
     "contextOnlyHitCount": 1849,
     "decisionRelevantHitCount": 256,
     "productionHitCount": 2105,
-    "unchangedFileHitCount": 890
+    "unchangedFileHitCount": 886
   }
 }

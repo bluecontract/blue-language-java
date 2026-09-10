@@ -82,6 +82,8 @@ final class SemanticEvidenceOrchestration {
                 .file("api/blue-language-java-1.0.json");
         RegularFile semanticBaseline = project.getLayout()
                 .getProjectDirectory().file("api/semantic-baseline-1.0.json");
+        RegularFile rootedSemanticBaseline = project.getLayout()
+                .getProjectDirectory().file("api/semantic-baseline-rooted-1.0.json");
         RegularFile migrationLedger = project.getLayout()
                 .getProjectDirectory().file(
                         "api/modernization-api-migration-ledger-1.0.json");
@@ -329,7 +331,7 @@ final class SemanticEvidenceOrchestration {
                             semanticWorkspace.get().getDestinationDir();
                     task.setWorkingDir(verificationWorkspace);
                     task.args(
-                            relativeArgument(verificationWorkspace, semanticBaseline.getAsFile()),
+                            relativeArgument(verificationWorkspace, rootedSemanticBaseline.getAsFile()),
                             relativeArgument(verificationWorkspace, releaseConformance.get()
                                     .getAsFile()),
                             relativeArgument(verificationWorkspace, fragmentedReport.get()
@@ -347,7 +349,7 @@ final class SemanticEvidenceOrchestration {
                         task.args("build/reports/semantic-baseline/locality/"
                                 + fileName);
                     }
-                    task.getInputs().file(semanticBaseline);
+                    task.getInputs().file(rootedSemanticBaseline);
                     task.getInputs().file(releaseConformance);
                     task.getInputs().file(fragmentedReport.flatMap(
                             GenerateFragmentedProcessingReportTask::getReportFile));
