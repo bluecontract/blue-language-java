@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,6 +22,49 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /** Independently supplied envelope vectors; these tests do not authenticate histories. */
 class RootedIdentityTest {
     private final ObjectMapper json = new ObjectMapper();
+
+    @Test
+    void shouldPreserveDraftPointerGrammarWithoutNormalizingExactPaths() throws IOException {
+        // given
+        String[] valid = {"", "/", "/orders/0", "/a~0~1b", "//", "/a/"};
+        String[] invalid = {"orders/0", " /a", "/a~", "/a~2", "/a~00~"};
+        Map<String, Object> delivery = input("DELIVERY");
+        Map<String, Object> binding = rows(delivery.get("receivingBindings")).get(0);
+
+        // when
+        String originalPath = (String) binding.get("scopePath");
+        String originalIdentity = RootedIdentity.deliveryIdentity(delivery);
+
+        // then
+        for (String path : valid) {
+            binding.put("scopePath", path);
+            assertDoesNotThrow(() -> RootedIdentity.deliveryIdentity(delivery), path);
+        }
+        for (String path : invalid) {
+            binding.put("scopePath", path);
+            assertThrows(IllegalArgumentException.class,
+                    () -> RootedIdentity.deliveryIdentity(delivery), path);
+        }
+        binding.put("scopePath", originalPath);
+        assertEquals(originalIdentity, RootedIdentity.deliveryIdentity(delivery));
+    }
+
+    @Test
+    void shouldRetainTheInteroperableDecimalBoundary() throws IOException {
+        // given
+        Map<String, Object> owner = input("OWNER-ordered");
+        Map<String, Object> edge = rows(owner.get("internalEdges")).get(0);
+
+        // when
+        edge.put("activationGeneration", "9007199254740991");
+
+        // then
+        assertDoesNotThrow(() -> RootedIdentity.ownerIdentity(owner));
+        for (String value : new String[]{"9007199254740992", "-1", "01", "1.0"}) {
+            edge.put("activationGeneration", value);
+            assertThrows(IllegalArgumentException.class, () -> RootedIdentity.ownerIdentity(owner), value);
+        }
+    }
 
     @TestFactory
     Stream<DynamicTest> matchesEveryFrozenDraftTwoVector() throws IOException {

@@ -14,16 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 final class ExternalChannelExactEventContextTest {
     @Test
-    void strictInputIdentitySurvivesCapturedContextAndCallerMutation() {
+    void shouldPreserveStrictInputIdentityAcrossCaptureAndCallerMutation() {
+        // given
         Node event = new Node().properties("paths", new Node().items(Collections.singletonList(
                 new Node().value("/peer"))));
         FrozenNode strict = FrozenNode.fromNode(event);
         GasMeter gas = new GasMeter();
         RuntimeWorkSession session = new RuntimeWorkSession(gas, RuntimeWorkSession.Mode.ADMISSION);
         try {
+            // when
             session.carryExactInput(strict, strict.blueId());
             ExternalChannelFunctionContext context = context(session, event);
             event.properties("tamperedAfterCapture", new Node().value(true));
+
+            // then
             assertEquals(strict.blueId(), context.exactEventBlueId());
             assertEquals(strict.blueId(), context.exactEventBlueId());
             assertEquals(0L, gas.totalGas());
@@ -38,12 +42,16 @@ final class ExternalChannelExactEventContextTest {
     }
 
     @Test
-    void missingConflictingAndHeaderOnlyEvidenceKeepTheirExactFailures() {
+    void shouldKeepExactFailuresForMissingConflictingAndHeaderOnlyEvidence() {
+        // given
         Node event = new Node().properties("kind", new Node().value("source"));
         FrozenNode strict = FrozenNode.fromNode(event);
         RuntimeWorkSession session = new RuntimeWorkSession(new GasMeter(), RuntimeWorkSession.Mode.ADMISSION);
         try {
+            // when
             ExternalChannelFunctionContext context = context(session, event);
+
+            // then
             assertEquals("External Channel exact event identity was not admitted",
                     assertThrows(IllegalStateException.class, context::exactEventBlueId).getMessage());
             assertEquals("External Channel exact event identity is available only during event evaluation",
@@ -64,7 +72,8 @@ final class ExternalChannelExactEventContextTest {
     }
 
     @Test
-    void completeCyclicEvidenceAndPureMemberReferencesKeepTheirAdmittedIdentity() {
+    void shouldPreserveAdmittedCyclicIdentityAndRejectUncarriedRepresentations() {
+        // given
         Node placeholder = new Node().properties("kind", new Node().value("cycle"))
                 .properties("self", new Node().blueId("this#0"));
         String member = CircularSetIdentityCalculator.calculateCircularSetFinalization(
@@ -73,10 +82,13 @@ final class ExternalChannelExactEventContextTest {
         resolved.getProperties().get("self").blueId(member);
         ExactEventIdentityEvidence evidence = ExactEventIdentityEvidence.verify(null, resolved, member,
                 CyclicSetProof.fromDeclaredPlaceholderSet(Collections.singletonList(placeholder)));
-        assertNotEquals(member, DirectBlueIdCalculator.calculateBlueId(resolved));
         RuntimeWorkSession session = new RuntimeWorkSession(new GasMeter(), RuntimeWorkSession.Mode.ADMISSION);
         try {
+            // when
             session.carryExactInput(evidence.frozenEvent(), member);
+
+            // then
+            assertNotEquals(member, DirectBlueIdCalculator.calculateBlueId(resolved));
             assertEquals(member, context(session, resolved).exactEventBlueId());
             // A materialized member capability alone does not admit its reference
             // representation at the function-context boundary.
@@ -95,12 +107,16 @@ final class ExternalChannelExactEventContextTest {
     }
 
     @Test
-    void pureReferenceRequiresItsExactCarriedReferenceRepresentation() {
+    void shouldRequireTheExactCarriedPureReferenceRepresentation() {
+        // given
         String id = DirectBlueIdCalculator.calculateBlueId(new Node().name("reference target"));
         Node reference = new Node().blueId(id);
         RuntimeWorkSession session = new RuntimeWorkSession(new GasMeter(), RuntimeWorkSession.Mode.ADMISSION);
         try {
+            // when
             session.carryExactInput(FrozenNode.fromResolvedNode(reference), id);
+
+            // then
             assertEquals(id, context(session, reference).exactEventBlueId());
             assertTrue(session.stagedTrace().isEmpty());
         } finally {

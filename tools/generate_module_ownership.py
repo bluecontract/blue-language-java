@@ -185,6 +185,13 @@ DEPENDENCY_POLICIES = {
         "1.10.2 (from org.junit:junit-bom)",
         "Launches build-logic tests without entering published artifacts.",
     ),
+    "org.apiguardian:apiguardian-api": (
+        MODULE_BUILD_LOGIC,
+        "testRuntimeOnly",
+        "1.1.2",
+        "Loads JUnit API annotations in isolated development-verifier "
+        "functional tests; no published runtime dependency.",
+    ),
     "org.mockito:mockito-core": (
         MODULE_BUILD_LOGIC,
         "testImplementation",
@@ -519,7 +526,10 @@ SUPPORTED_PUBLIC_TYPES_BY_PACKAGE = {
     "blue.language.processor.closure": {
         "ClosureResourceDemand",
         "ExactNodeDemand",
+        "ManagedDocumentBirth",
         "ManagedOccurrenceEvidenceDemand",
+        "RootedProcessingContext",
+        "RootedPublicationProjection",
     },
     "blue.language.processor.registry": {
         "RuntimeBlueIds",
@@ -731,7 +741,13 @@ def api_classification(type_name, source, baseline_types, previous_types):
     return "new-supported-api-spi"
 
 
-def api_classification_reason(classification):
+def api_classification_reason(classification, type_name):
+    # Preserve the exact recorded birth-evidence review on regeneration.
+    if type_name == "blue.language.processor.closure.ManagedDocumentBirth":
+        return (
+            "Immutable birth evidence used by the reviewed prospective "
+            "managed-document closure API; no instance or cyclic proof bypass."
+        )
     if classification == "internal-type-removed-from-public-surface":
         return (
             "Fixture implementation or legacy adapter becomes module-internal."
@@ -804,7 +820,7 @@ def api_ledger(current_types, baseline, sources):
                 "previousTypes": previous_types,
                 "relocationHistory": relocation_history,
                 "classification": classification,
-                "reason": api_classification_reason(classification),
+                "reason": api_classification_reason(classification, type_name),
             }
         )
     counts = {}

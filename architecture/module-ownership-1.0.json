@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 808,
-    "productionResourceCount": 820,
-    "productionSourcePathIdentity": "sha256:ed9c7fbec79ac526dd9b1f3a97115e2969ab0605765c66527d1d672c2da1ad70",
-    "productionResourcePathIdentity": "sha256:1664587821c739163b7449385af9c1e362392c05c966af93a47dbef282d8f238"
+    "productionSourceCount": 816,
+    "productionResourceCount": 1123,
+    "productionSourcePathIdentity": "sha256:12fbb5a3589e27fc55ed8ef4ce525cca5525c7d98bc4fc9ffff9feda545119d8",
+    "productionResourcePathIdentity": "sha256:c5a08c87b9507897d78fdc0ffb10e2791e9572bf9795ed462fcd6a5fcb7a37fd"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -3455,6 +3455,62 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershipTracker.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershipTracker.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -9614,6 +9670,1511 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/vector-coverage.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/CHECKER_PATCH.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/CHECKER_PATCH.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/DECISIONS.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/DECISIONS.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/IMPORT.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/IMPORT.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/FIXTURE_INDEX.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/FIXTURE_INDEX.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/HARNESS.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/HARNESS.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/README.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/README.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/CheckpointRuntimeProbe.java",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/CheckpointRuntimeProbe.java"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/CursorRuntimeProbe.java",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/CursorRuntimeProbe.java"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/run_runtime_probes.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/baseline-probes/run_runtime_probes.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_fault_cuts.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_fault_cuts.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_host_timestamp.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_host_timestamp.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_incoming_fanout.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_incoming_fanout.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_reconnect.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_reconnect.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_representation.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_representation.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_resource_continuation.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_resource_continuation.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_source_discovery.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_source_discovery.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_successor_carriers.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/check_successor_carriers.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/ORIGINS.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/ORIGINS.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-order-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-order-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-order-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-order-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-payment.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/collection-payment.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/counter.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/counter.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/empty-orders.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/empty-orders.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/context-reverse-parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/context-reverse-parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/cycle-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/cycle-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/cycle-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/cycle-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-c.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-c.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-root.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/diamond-root.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/direct-checkpoint-parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/direct-checkpoint-parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/empty-schema.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/empty-schema.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/event-only-source.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/event-only-source.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-definition.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-definition.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-invalid.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-invalid.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-valid.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/foo-valid.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-definition.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-definition.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-female.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-female.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-invalid-fixed-definition.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-invalid-fixed-definition.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-male.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-male.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-no-value.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-no-value.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-other.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-other.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-wrong-kind.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/gender-wrong-kind.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-c.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-c.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-p.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-p.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-q.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-018-q.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-019-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-019-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-019-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/graph-019-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/historical-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/historical-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/historical-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/historical-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/multi-history-parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/multi-history-parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/removable-orders.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/removable-orders.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-consumer.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-consumer.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-c.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-legacy-c.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-source.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/representation-017-source.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/required-missing.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/required-missing.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/required-present.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/required-present.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-child.template.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-child.template.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-correct.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-correct.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-host.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-host.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-wrong.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/resource-wrong.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/silent-container.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/silent-container.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/silent-descendant-observer.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/silent-descendant-observer.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/source.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/source.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/timestamp-local-node.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/timestamp-local-node.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/two-channels.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/two-channels.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/two-equal-events.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/iteration2/two-equal-events.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/parent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/parent.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/cycle-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/cycle-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/cycle-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/cycle-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/frontier-host.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/frontier-host.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/frontier-source.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/frontier-source.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/order-emitter.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/order-emitter.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/orders-host.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/orders-host.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/user-inline-cycle-a.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/examples/retained/user-inline-cycle-a.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixture-index.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixture-index.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/dyn/rcp-dyn-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/hist/rcp-hist-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-012.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-012.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-013.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-013.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-014.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-014.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-015.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-015.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-016.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-016.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-017.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-017.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-018.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-018.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-019.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-019.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-020.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-020.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-021.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-021.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-022.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-022.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-023.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-023.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-024.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-024.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-025.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-025.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-026.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-026.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-027.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-027.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-028.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-028.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-029.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-029.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-030.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-030.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-031.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-031.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-032.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-032.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-033.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-033.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-034.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/run/rcp-run-034.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-012.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-012.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-013.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/scope/rcp-scope-013.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-012.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-012.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-013.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-013.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-014.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-014.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-015.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-015.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-016.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-016.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-017.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-017.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-018.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-018.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-019.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-019.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-020.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-020.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-021.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-021.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-022.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-022.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-023.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-023.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-024.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/sel/rcp-sel-024.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/fixtures/work/rcp-work-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity-constructors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity-constructors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/beginning-negative-vectors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/beginning-negative-vectors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/checkpoint-reference-vectors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/checkpoint-reference-vectors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/checkpoint_constructors.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/checkpoint_constructors.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/constructors.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/constructors.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/managed-successor-vectors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/managed-successor-vectors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/managed_successor_constructors.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/managed_successor_constructors.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/revision-successor-vectors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/revision-successor-vectors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/revision_successor_constructors.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/revision_successor_constructors.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/vectors.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/identity/vectors.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/legacy-fixture-dispositions.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/legacy-fixture-dispositions.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/SOURCE.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/SOURCE.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/checkpoint_model.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/checkpoint_model.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/operation_model.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/operation_model.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/run_fixture_models.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/model/run_fixture_models.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_fault_cuts.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_fault_cuts.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_reconnect.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_reconnect.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_representation.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_representation.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_resource_continuation.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_resource_continuation.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_source_discovery.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/mutate_source_discovery.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/manifest.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/manifest.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-001.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-001.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-002.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-002.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-003.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-003.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-007.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-007.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-012.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-012.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-013.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-013.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-014.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-014.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-015.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-015.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-016.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-016.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-017.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-017.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-018.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-018.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-019.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-019.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-020.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-020.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-021.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-021.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-022.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-022.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-023.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-023.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-024.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-024.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-025.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-025.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-026.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-026.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-027.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-027.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-028.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-028.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-029.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-029.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-030.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-030.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-031.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-031.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-032.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-032.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-033.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-033.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-034.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/plans/rcp-run-034.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-004.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-004.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-005.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-005.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-006.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-006.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-008.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-008.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-009.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-009.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-010.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-010.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-011.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-011.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-012.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-012.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-013.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-013.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-015.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-015.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-016.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-016.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-017.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-017.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-018.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-018.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-019.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-019.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-022.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-022.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-024.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-024.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-025-original-plan.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-025-original-plan.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-026.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-026.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-027.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-027.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-028.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-028.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-029.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-029.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-030.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-030.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-031.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-031.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-032.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-032.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-033.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-033.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-034.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/provenance/recipe-inputs/rcp-run-034.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/requirement-coverage.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/requirement-coverage.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/resource_admission_bindings.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/resource_admission_bindings.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/resource_followup_bindings.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/resource_followup_bindings.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/rooted_graph_checks.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/rooted_graph_checks.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/run_production_adapter.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/run_production_adapter.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/checkpoint-reference-proof.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/checkpoint-reference-proof.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/checkpoint-representation-position.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/checkpoint-representation-position.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/delivery-basis.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/delivery-basis.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/fixture.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/fixture.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/history-basis.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/history-basis.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-revision-successor.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-revision-successor.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-successor-receipt.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-successor-receipt.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-successor-work.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/managed-successor-work.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/operation-owner.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/operation-owner.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/root-context.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/root-context.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/source-lock.schema.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/schemas/source-lock.schema.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariff-weights.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariff-weights.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/bex-gas-1.0.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/bex-gas-1.0.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/contracts-gas-1.0.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/contracts-gas-1.0.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/coordination-gas-1.0.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/tariffs/coordination-gas-1.0.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/verify_packaged_application.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/conformance/rooted-processing/verify_packaged_application.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/manifests/specification-set.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/manifests/specification-set.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-bex-specification-2.0.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-bex-specification-2.0.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-contracts-and-processor-specification-1.0.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-contracts-and-processor-specification-1.0.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-coordination-specification-1.0-candidate.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-coordination-specification-1.0-candidate.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-language-specification-1.0.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/blue-language-specification-1.0.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/rooted-checkpoint-processing-1.0-draft.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/specifications/rooted-checkpoint-processing-1.0-draft.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/reconnect-identities.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/reconnect-identities.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-admission-real.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-admission-real.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-followup.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-followup.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-public-operands.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/resource-public-operands.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_checker_hardening.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_checker_hardening.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_checkpoint_identity.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_checkpoint_identity.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_harness.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_harness.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_iteration2.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_iteration2.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_reconnect_identity_bindings.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_reconnect_identity_bindings.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_resource_admission_bindings.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_resource_admission_bindings.py"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_resource_followup_bindings.py",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test_resource_followup_bindings.py"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/contract/1.0/spec.md",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/contract/1.0/spec.md"
@@ -9782,6 +11343,16 @@
       "currentPath": "blue-contracts-core/src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/resources/specifications/historical/rc24/blue-contracts-and-processor-specification-1.0.md",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/resources/specifications/historical/rc24/blue-contracts-and-processor-specification-1.0.md"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/resources/specifications/rooted-checkpoint-processing-1.0-draft.md",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/resources/specifications/rooted-checkpoint-processing-1.0-draft.md"
     },
     {
       "currentPath": "blue-language-core/src/main/resources/META-INF/services/blue.language.model.NodeIdentityProvider",

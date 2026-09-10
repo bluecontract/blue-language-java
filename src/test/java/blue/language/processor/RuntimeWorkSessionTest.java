@@ -51,6 +51,7 @@ final class RuntimeWorkSessionTest {
 
     @Test
     void shouldRetainTheStrictAdmittedCursorWhenAHostedFunctionReturnsItsSource() {
+        // given
         Node event = new Node().properties("paths", new Node().items(Collections.singletonList(
                 new Node().type(new Node().blueId(
                         blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID)).value("/peer"))))
@@ -58,15 +59,18 @@ final class RuntimeWorkSessionTest {
                         new Node().value("unavailable peer"))));
         FrozenNode strict = FrozenNode.fromNode(event);
         FrozenNode resolved = FrozenNode.fromResolvedNode(event);
-        assertFalse(strict.resolvedStructuralKey().equals(resolved.resolvedStructuralKey()),
-                "Structural interning keys include construction mode");
-        assertTrue(strict.sameResolvedStructure(resolved));
         GasMeter gas = new GasMeter();
         RuntimeWorkSession session = processing(gas);
         try {
+            // when
             session.carryExactInput(strict, strict.blueId());
             long beforeLookup = gas.totalGas();
             ExactBlueValue carried = session.carriedExactInput(event.clone());
+
+            // then
+            assertFalse(strict.resolvedStructuralKey().equals(resolved.resolvedStructuralKey()),
+                    "Structural interning keys include construction mode");
+            assertTrue(strict.sameResolvedStructure(resolved));
             assertNotNull(carried, "Exact channel payload lookup must recognize the already admitted source");
             assertEquals(strict.blueId(), carried.blueId());
             org.junit.jupiter.api.Assertions.assertSame(strict, carried.frozenValue(),
@@ -97,16 +101,20 @@ final class RuntimeWorkSessionTest {
 
     @Test
     void shouldRejectConflictingCarriedIdentitiesAcrossStrictAndResolvedRepresentations() {
+        // given
         Node event = new Node().properties("value", new Node().value("same exact source"));
         FrozenNode strict = FrozenNode.fromNode(event);
         FrozenNode resolved = FrozenNode.fromResolvedNode(event);
         String wrongId = DirectBlueIdCalculator.calculateBlueId(new Node().name("unrelated source"));
         RuntimeWorkSession session = processing(new GasMeter());
         try {
+            // when
             session.carryExactInput(strict, strict.blueId());
             // Deliberately inject a conflicting trusted-input capability through this
             // package-private seam; this is not public external-event admission.
             session.carryExactInput(resolved, wrongId);
+
+            // then
             InvalidExecutionEvidenceException failure = assertThrows(
                     InvalidExecutionEvidenceException.class,
                     () -> session.carriedExactInput(event.clone()));
@@ -119,23 +127,28 @@ final class RuntimeWorkSessionTest {
 
     @Test
     void shouldNotReuseCanonicalCapabilityForDifferentInlineProvenance() {
+        // given
         Node input = new Node().properties("payload", new Node().value("unchanged").inlineValue(false));
         Node output = input.clone();
         output.getProperties().get("payload").inlineValue(true);
         FrozenNode carriedSource = FrozenNode.fromNode(input);
         FrozenNode strictOutput = FrozenNode.fromNode(output);
         FrozenNode resolvedOutput = FrozenNode.fromResolvedNode(output);
-        assertEquals(carriedSource.blueId(), strictOutput.blueId(),
-                "Both are valid canonical values with the same semantic identity");
-        assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
-                "The preliminary observed-content filter deliberately omits inline provenance");
-        assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
-                "The complete same-mode key must preserve inline provenance");
         GasMeter gas = new GasMeter();
         RuntimeWorkSession session = processing(gas);
         try {
+            // when
             session.carryExactInput(carriedSource, carriedSource.blueId());
-            org.junit.jupiter.api.Assertions.assertNull(session.carriedExactInput(output),
+            ExactBlueValue outputCapability = session.carriedExactInput(output);
+
+            // then
+            assertEquals(carriedSource.blueId(), strictOutput.blueId(),
+                    "Both are valid canonical values with the same semantic identity");
+            assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
+                    "The preliminary observed-content filter deliberately omits inline provenance");
+            assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
+                    "The complete same-mode key must preserve inline provenance");
+            org.junit.jupiter.api.Assertions.assertNull(outputCapability,
                     "Equal identity and the preliminary filter cannot replace the complete exact-content check");
             ExactBlueValue original = session.carriedExactInput(input.clone());
             assertNotNull(original);
@@ -152,6 +165,7 @@ final class RuntimeWorkSessionTest {
 
     @Test
     void shouldNotReuseCanonicalCapabilityForDifferentSchemaKeywordProvenance() {
+        // given
         Node input = new Node().properties("payload", new Node().value("unchanged")
                 .schema(new blue.language.model.Schema().minLength(
                         new Node().value(java.math.BigInteger.ONE))));
@@ -161,17 +175,21 @@ final class RuntimeWorkSessionTest {
         FrozenNode carriedSource = FrozenNode.fromNode(input);
         FrozenNode strictOutput = FrozenNode.fromNode(output);
         FrozenNode resolvedOutput = FrozenNode.fromResolvedNode(output);
-        assertEquals(carriedSource.blueId(), strictOutput.blueId(),
-                "Implicit and explicit Integer schema sugar has the same canonical identity");
-        assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
-                "The preliminary schema wire comparison omits implicit scalar type provenance");
-        assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
-                "The complete same-mode key retains schema keyword type evidence");
         GasMeter gas = new GasMeter();
         RuntimeWorkSession session = processing(gas);
         try {
+            // when
             session.carryExactInput(carriedSource, carriedSource.blueId());
-            org.junit.jupiter.api.Assertions.assertNull(session.carriedExactInput(output),
+            ExactBlueValue outputCapability = session.carriedExactInput(output);
+
+            // then
+            assertEquals(carriedSource.blueId(), strictOutput.blueId(),
+                    "Implicit and explicit Integer schema sugar has the same canonical identity");
+            assertTrue(resolvedOutput.sameResolvedStructure(carriedSource),
+                    "The preliminary schema wire comparison omits implicit scalar type provenance");
+            assertFalse(carriedSource.resolvedStructuralKey().equals(strictOutput.resolvedStructuralKey()),
+                    "The complete same-mode key retains schema keyword type evidence");
+            org.junit.jupiter.api.Assertions.assertNull(outputCapability,
                     "Schema wire equivalence alone must not return the original source capability");
             ExactBlueValue original = session.carriedExactInput(input.clone());
             assertNotNull(original);

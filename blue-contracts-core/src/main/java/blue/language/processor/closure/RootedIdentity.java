@@ -1,5 +1,7 @@
 package blue.language.processor.closure;
 
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
@@ -29,7 +31,7 @@ final class RootedIdentity {
     private static final Pattern BLUE = Pattern.compile(
             "[1-9A-HJ-NP-Za-km-z]{32,44}(?:#(?:0|[1-9][0-9]*))?");
     private static final Pattern DECIMAL = Pattern.compile("0|[1-9][0-9]*");
-    private static final BigInteger MAX = new BigInteger("9007199254740991");
+    private static final BigInteger MAX = BlueNumbers.MAX_INTEROPERABLE_INTEGER;
 
     private RootedIdentity() { }
 
@@ -213,7 +215,7 @@ final class RootedIdentity {
 
     private static void pointer(Object value) {
         String string = text(value);
-        if (!string.isEmpty() && !string.startsWith("/")) throw invalid("POINTER");
+        if (!string.isEmpty() && string.charAt(0) != '/') throw invalid("POINTER");
         for (int index = 0; index < string.length(); index++) {
             if (string.charAt(index) == '~'
                     && (++index == string.length() || (string.charAt(index) != '0' && string.charAt(index) != '1'))) {
@@ -266,7 +268,7 @@ final class RootedIdentity {
 
     private static String digest(String domain, Map<String, Object> value) {
         try {
-            byte[] bytes = MessageDigest.getInstance("SHA-256").digest(canonical(map("domain", domain, "value", value)));
+            byte[] bytes = MessageDigest.getInstance("SHA-256").digest(canonical(map("domain", domain, BlueLanguageConstants.OBJECT_VALUE, value)));
             StringBuilder result = new StringBuilder("sha256:");
             for (byte part : bytes) {
                 int unsigned = part & 255;
