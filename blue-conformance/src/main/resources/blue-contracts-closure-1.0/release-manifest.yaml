@@ -829,7 +829,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedCheckpointReferenceGraph.java
     sha256: 8e323d4f7a4dd609bf56cbcedce456c251f3c8ed8f1144931655ae13e232d0b2
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java
-    sha256: 5bdb61d736b6b02000f71e0f7b54d63774a9213ae1813d3cc1228507a8f86087
+    sha256: 014764cff7f5d53d8e48a3b9dc32c31ecc48ef108257d7d017b14e1fd793ca77
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java
     sha256: 429957cca411f2bdbd629afbd3d7a06085e6c46c647e7a360101ce5096c7081f
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java
@@ -1540,4 +1540,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:47bc422048e1d743fa47478421ef31ba7ca53bc9d7c88facebb96634f407e18d
+releaseIdentity: sha256:7379f9a6dff5a58faa5f9c329f3d22d494efde0f6bb3f0258eeedf9dff7c5ab8
