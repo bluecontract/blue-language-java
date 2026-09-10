@@ -34,12 +34,13 @@ tasks.named('check') { dependsOn tasks.named('historicalRepresentationConformanc
 tasks.named('releaseConformanceTest') { dependsOn tasks.named('historicalRepresentationConformanceTest') }
 
 // These are checker-sensitivity tests; real rooted runtime acceptance is separate.
-def rootedCheckerTasks = ['Harness', 'Iteration2', 'CheckerHardening', 'CheckpointIdentity', 'ResourceAdmissionBindings', 'ResourceFollowupBindings'].collect { suffix ->
+def rootedCheckerTasks = ['Harness', 'Iteration2', 'CheckerHardening', 'CheckpointIdentity', 'ResourceAdmissionBindings', 'ResourceFollowupBindings', 'ReconnectIdentityBindings'].collect { suffix ->
     def scripts = [Harness: 'test_harness.py', Iteration2: 'test_iteration2.py',
                    CheckerHardening: 'test_checker_hardening.py',
                    CheckpointIdentity: 'test_checkpoint_identity.py',
                    ResourceAdmissionBindings: 'test_resource_admission_bindings.py',
-                   ResourceFollowupBindings: 'test_resource_followup_bindings.py']
+                   ResourceFollowupBindings: 'test_resource_followup_bindings.py',
+                   ReconnectIdentityBindings: 'test_reconnect_identity_bindings.py']
     tasks.register("rooted${suffix}Test", Exec) {
         group = 'verification'
         description = "Runs the reviewed rooted ${suffix} checker tests (no runtime claim)."

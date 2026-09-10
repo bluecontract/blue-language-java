@@ -1,0 +1,358 @@
+{
+  "provenance": {
+    "artifactSha256": "858920e9ca21be8254eb384dbea7b56592ca57d37ed333ded0d698b7aa8eac14",
+    "source": "RCP-RUN-019 exact retained output; selected fields only, not a runtime fixture"
+  },
+  "variants": {
+    "saved-authored": {
+      "terminal": {
+        "publicationIdentity": "sha256:22ef04ea40b7c1fa27f4f51fb35d3255a2625f1f542eed626ef50a11fe35873b",
+        "input": {
+          "invocationIdentity": "sha256:44d21b46e189215b5568197e9951f927022686c089b09ce21af3726fb473a32b",
+          "snapshot": {
+            "occurrences": [
+              {
+                "activationGeneration": 2,
+                "active": false,
+                "bindingIdentity": "sha256:dfb248343cc7f9bb0daf0c85a8a208219df55122e2d9725882e2218f3b341bd3",
+                "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+                "expectedTargetBlueId": "NmNNdtH7XFLvdDR1zrMoXYtP7k4PcqTGV6VV7Azmoc3",
+                "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab",
+                "pendingHistoricalEpoch": null,
+                "pendingRepresentationCursor": null,
+                "sourceAddress": {
+                  "activationGeneration": 2,
+                  "isRoot": false,
+                  "path": "/peers/b"
+                },
+                "sourceDocumentId": {
+                  "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                },
+                "sourcePath": "/peers/b",
+                "targetDocumentId": {
+                  "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                }
+              },
+              {
+                "activationGeneration": 1,
+                "active": true,
+                "bindingIdentity": "sha256:9ee2876c5e757530dbfba37dd91a196c6e74aee51307032a6e624a64720c7ccd",
+                "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+                "expectedTargetBlueId": "9qkySrnkXfVymQPWv6LMdN74QN3Q1ZN1LxAjFbJqcFjm",
+                "occurrenceIdentity": "sha256:b20ab2111613e5295a12f183f34866c0760c5765d0ca9061d65f261798347ff4",
+                "pendingHistoricalEpoch": null,
+                "pendingRepresentationCursor": null,
+                "sourceAddress": {
+                  "activationGeneration": 1,
+                  "isRoot": false,
+                  "path": "/peers/a"
+                },
+                "sourceDocumentId": {
+                  "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                },
+                "sourcePath": "/peers/a",
+                "targetDocumentId": {
+                  "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                }
+              }
+            ]
+          }
+        },
+        "occurrenceBindings": [
+          {
+            "activationGeneration": 2,
+            "active": false,
+            "bindingIdentity": "sha256:60c16b46c65ec27690047bc06c36c153992f4049470422f9d2e1cc6f106d9e78",
+            "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+            "expectedTargetBlueId": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3",
+            "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab",
+            "pendingHistoricalEpoch": -1,
+            "pendingRepresentationCursor": null,
+            "sourceAddress": {
+              "activationGeneration": 2,
+              "isRoot": false,
+              "path": "/peers/b"
+            },
+            "sourceDocumentId": {
+              "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+            },
+            "sourcePath": "/peers/b",
+            "targetDocumentId": {
+              "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+            }
+          },
+          {
+            "activationGeneration": 1,
+            "active": true,
+            "bindingIdentity": "sha256:9ee2876c5e757530dbfba37dd91a196c6e74aee51307032a6e624a64720c7ccd",
+            "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+            "expectedTargetBlueId": "9qkySrnkXfVymQPWv6LMdN74QN3Q1ZN1LxAjFbJqcFjm",
+            "occurrenceIdentity": "sha256:b20ab2111613e5295a12f183f34866c0760c5765d0ca9061d65f261798347ff4",
+            "pendingHistoricalEpoch": null,
+            "pendingRepresentationCursor": null,
+            "sourceAddress": {
+              "activationGeneration": 1,
+              "isRoot": false,
+              "path": "/peers/a"
+            },
+            "sourceDocumentId": {
+              "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+            },
+            "sourcePath": "/peers/a",
+            "targetDocumentId": {
+              "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+            }
+          }
+        ]
+      },
+      "call": {
+        "entries": [
+          {
+            "closures": [
+              {
+                "closureId": "sha256:22ef04ea40b7c1fa27f4f51fb35d3255a2625f1f542eed626ef50a11fe35873b",
+                "automaticRetryCount": 1,
+                "processorAttemptCount": 2,
+                "managedSurfaceEvidence": {
+                  "resolvedOccurrences": [
+                    {
+                      "authoredInitial": null,
+                      "bindingIdentity": "sha256:60c16b46c65ec27690047bc06c36c153992f4049470422f9d2e1cc6f106d9e78",
+                      "demandIdentity": "sha256:c4729630179c7241040069b6fab64a34b8bcf632fac74caec62fabbb25f00689",
+                      "kind": "EXISTING_AUTHORED_INITIAL",
+                      "occurrence": {
+                        "activationGeneration": 2,
+                        "active": false,
+                        "expectedTargetBlueId": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3",
+                        "sourceDocumentId": {
+                          "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                        },
+                        "sourcePath": "/peers/b",
+                        "targetDocumentId": {
+                          "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                        }
+                      },
+                      "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "ids": {
+        "A": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB",
+        "B": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+      },
+      "captures": {
+        "B250": {
+          "epoch": 5,
+          "blueId": "CXydWTb31aFMns1ETtY1VBaKDpivW78U2gDD1XXB1kFq#0"
+        }
+      },
+      "expectedExecutionIdentity": "sha256:abfe721e26a2369d8231f5c7f16f96d41162d2799c0a7d050be7e8feaa995593"
+    },
+    "saved-retained": {
+      "terminal": {
+        "publicationIdentity": "sha256:609cc97bfe2d857480c27bfe3af6079aae3696f99d9b478cce6472b6904c5a1d",
+        "input": {
+          "invocationIdentity": "sha256:7311710b48056b365de8b85305a2482758ffcb17a08d102259610a1b9ca9ad0b",
+          "snapshot": {
+            "occurrences": [
+              {
+                "activationGeneration": 2,
+                "active": false,
+                "bindingIdentity": "sha256:dfb248343cc7f9bb0daf0c85a8a208219df55122e2d9725882e2218f3b341bd3",
+                "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+                "expectedTargetBlueId": "NmNNdtH7XFLvdDR1zrMoXYtP7k4PcqTGV6VV7Azmoc3",
+                "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab",
+                "pendingHistoricalEpoch": null,
+                "pendingRepresentationCursor": null,
+                "sourceAddress": {
+                  "activationGeneration": 2,
+                  "isRoot": false,
+                  "path": "/peers/b"
+                },
+                "sourceDocumentId": {
+                  "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                },
+                "sourcePath": "/peers/b",
+                "targetDocumentId": {
+                  "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                }
+              },
+              {
+                "activationGeneration": 1,
+                "active": true,
+                "bindingIdentity": "sha256:9ee2876c5e757530dbfba37dd91a196c6e74aee51307032a6e624a64720c7ccd",
+                "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+                "expectedTargetBlueId": "9qkySrnkXfVymQPWv6LMdN74QN3Q1ZN1LxAjFbJqcFjm",
+                "occurrenceIdentity": "sha256:b20ab2111613e5295a12f183f34866c0760c5765d0ca9061d65f261798347ff4",
+                "pendingHistoricalEpoch": null,
+                "pendingRepresentationCursor": null,
+                "sourceAddress": {
+                  "activationGeneration": 1,
+                  "isRoot": false,
+                  "path": "/peers/a"
+                },
+                "sourceDocumentId": {
+                  "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                },
+                "sourcePath": "/peers/a",
+                "targetDocumentId": {
+                  "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                }
+              }
+            ]
+          }
+        },
+        "occurrenceBindings": [
+          {
+            "activationGeneration": 2,
+            "active": false,
+            "bindingIdentity": "sha256:bfe3dfdd3df019ad76fa21c346227d91342f789dae152be63beeaef09471f40e",
+            "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+            "expectedTargetBlueId": "CXydWTb31aFMns1ETtY1VBaKDpivW78U2gDD1XXB1kFq#0",
+            "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab",
+            "pendingHistoricalEpoch": 5,
+            "pendingRepresentationCursor": null,
+            "sourceAddress": {
+              "activationGeneration": 2,
+              "isRoot": false,
+              "path": "/peers/b"
+            },
+            "sourceDocumentId": {
+              "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+            },
+            "sourcePath": "/peers/b",
+            "targetDocumentId": {
+              "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+            }
+          },
+          {
+            "activationGeneration": 1,
+            "active": true,
+            "bindingIdentity": "sha256:9ee2876c5e757530dbfba37dd91a196c6e74aee51307032a6e624a64720c7ccd",
+            "bindingPolicyIdentity": "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35",
+            "expectedTargetBlueId": "9qkySrnkXfVymQPWv6LMdN74QN3Q1ZN1LxAjFbJqcFjm",
+            "occurrenceIdentity": "sha256:b20ab2111613e5295a12f183f34866c0760c5765d0ca9061d65f261798347ff4",
+            "pendingHistoricalEpoch": null,
+            "pendingRepresentationCursor": null,
+            "sourceAddress": {
+              "activationGeneration": 1,
+              "isRoot": false,
+              "path": "/peers/a"
+            },
+            "sourceDocumentId": {
+              "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+            },
+            "sourcePath": "/peers/a",
+            "targetDocumentId": {
+              "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+            }
+          }
+        ]
+      },
+      "call": {
+        "entries": [
+          {
+            "closures": [
+              {
+                "closureId": "sha256:609cc97bfe2d857480c27bfe3af6079aae3696f99d9b478cce6472b6904c5a1d",
+                "automaticRetryCount": 1,
+                "processorAttemptCount": 2,
+                "managedSurfaceEvidence": {
+                  "resolvedOccurrences": [
+                    {
+                      "authoredInitial": null,
+                      "bindingIdentity": "sha256:bfe3dfdd3df019ad76fa21c346227d91342f789dae152be63beeaef09471f40e",
+                      "demandIdentity": "sha256:2617c0caa87a54980e97f1b6357767d6c626e433dfc7f0d5bfadbc9ffcf82fa1",
+                      "kind": "EXISTING_RETAINED_EPOCH",
+                      "occurrence": {
+                        "activationGeneration": 2,
+                        "active": false,
+                        "expectedTargetBlueId": "CXydWTb31aFMns1ETtY1VBaKDpivW78U2gDD1XXB1kFq#0",
+                        "sourceDocumentId": {
+                          "value": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB"
+                        },
+                        "sourcePath": "/peers/b",
+                        "targetDocumentId": {
+                          "value": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+                        }
+                      },
+                      "occurrenceIdentity": "sha256:8fec9534266e6f22f156667bd9b2d5d787e5fdd598fe4cd93f23492651e2e2ab"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "ids": {
+        "A": "xTcazQkzzi8GdYC1XdmBTMNfVvJUt4B17duvByJBsAB",
+        "B": "98B562e41ZFPTa7WvigzmyGQ2xJFwNUmVbyu49QDZ5F3"
+      },
+      "captures": {
+        "B250": {
+          "epoch": 5,
+          "blueId": "CXydWTb31aFMns1ETtY1VBaKDpivW78U2gDD1XXB1kFq#0"
+        }
+      },
+      "expectedExecutionIdentity": "sha256:34f98cf49f7651d535b036a7434b3411245af50d39d3d00bea68eb1ee315106a"
+    }
+  },
+  "timelines": [
+    {
+      "value": {
+        "type": {
+          "blueId": "5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX"
+        },
+        "timelineId": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "rcp/reconnect/A"
+        }
+      },
+      "name": "rcp/reconnect/A",
+      "identity": "ATXJ2i7yHVCpk9Laf2hHfPr911RvGcQPRJWvGtiyyAyp"
+    },
+    {
+      "value": {
+        "type": {
+          "blueId": "5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX"
+        },
+        "timelineId": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "rcp/reconnect/B"
+        }
+      },
+      "name": "rcp/reconnect/B",
+      "identity": "H5JtdLkXve3wdJTVbAwW8BX4gwc7Vpx4vw3HY52TR57e"
+    }
+  ],
+  "wrappers": [
+    {
+      "entryInvocationIdentity": "sha256:6a0efc7df901db4c2310b557e7d8248e24942a1cf8167a28fc321c6a6407af36",
+      "inputInvocationIdentity": "sha256:1e53e8d0ddf08a0b0b6301797fccb18bb3649b0280058931b6c0de80fd3c4990",
+      "contextIdentity": "sha256:3664282c0501fcd1619d65cab08b24da9eebeebc846b2c5fa2114aa28e85dafb",
+      "deliveryBasisIdentity": "sha256:74b63b2bb02794bda18df75e6dddbbef2968cec18843af6d10e2dd1aa70de288",
+      "rootedInvocationIdentity": "sha256:54e6fae898790712204c88dec2eaf897e0636a1ac5644f7bff92a14add31c3fd",
+      "baseCommitCompanionIdentity": "sha256:9683c295ba78b0bedebd4174aa3949c7df197248f1b253ec207725a0974acc06",
+      "rootedCompanionIdentity": "sha256:c74b781e2b2f41aec3c2d1e83dc9666c815fe569f0ae16b84cc81067e4908c78"
+    },
+    {
+      "entryInvocationIdentity": "sha256:44d21b46e189215b5568197e9951f927022686c089b09ce21af3726fb473a32b",
+      "inputInvocationIdentity": "sha256:44d21b46e189215b5568197e9951f927022686c089b09ce21af3726fb473a32b",
+      "contextIdentity": "sha256:3664282c0501fcd1619d65cab08b24da9eebeebc846b2c5fa2114aa28e85dafb",
+      "deliveryBasisIdentity": "sha256:fc686fb2c96df2453a6fc8d87284f5bf37b7532f8d56ab9547b5538988fead49",
+      "rootedInvocationIdentity": "sha256:878cf501c136a5542745710f4079b590703c54a79cbe28b028d12a3e4413fc83",
+      "baseCommitCompanionIdentity": "sha256:22d5b74eb45bbc046cec46567228eb8918ecfdacc66cf6f0cf46583d1b69b688",
+      "rootedCompanionIdentity": "sha256:f17f2f9cea68dcd6c41b5f4aa6a25e320940573a1126ee16058e1d59507f3bea"
+    }
+  ]
+}

@@ -1,5 +1,63 @@
 """RUN019 independent public SDK reconnect evidence checks. No production status inference."""
 
+def reconnect_timeline_identity(timeline, timeline_id, require):
+    """Hash the two literal typed Timeline values, never their display names."""
+    import hashlib, json
+    require(timeline_id in ('rcp/reconnect/A', 'rcp/reconnect/B') and timeline == {
+        'type': {'blueId': '5VAQp5thYLkzp3FbvYGmVvmdLqqu6pV5vhNgD14XJwpX'},
+        'timelineId': {'type': {'blueId': 'GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC'},
+                       'value': timeline_id}}, 'RECONNECT_EXACT_TIMELINE')
+
+    def direct(value):
+        if set(value) == {'blueId'}: return value['blueId']
+        fields = {k: v if k == 'value' else {'blueId': direct(v)} for k, v in value.items()}
+        raw = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(',', ':')).encode()).digest()
+        number = int.from_bytes(raw, 'big'); result = ''
+        while number:
+            number, index = divmod(number, 58)
+            result = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[index] + result
+        return '1' * (len(raw) - len(raw.lstrip(b'\0'))) + result
+
+    return direct(timeline)
+
+
+def reconnect_retry_identity(terminal, call, ids, variant, captures, require, exact_equal, managed_identity):
+    """Verify the literal E400 reservation retry before deriving its execution identity."""
+    inp = terminal['input']
+    did = lambda value: value['value']
+    # Recreating the retired /peers/b occurrence consumes a resolution-bound
+    # PROCESS_CLOSURE retry. Its original logical input remains frozen.
+    closures = [c for e in call['entries'] for c in e['closures'] if c['closureId'] == terminal['publicationIdentity']]
+    require(len(closures) == 1 and closures[0]['automaticRetryCount'] == 1
+            and closures[0]['processorAttemptCount'] == 2, 'RECONNECT_EXACT_RETRY_ATTEMPTS')
+    resolutions = closures[0]['managedSurfaceEvidence']['resolvedOccurrences']
+    require(len(resolutions) == 1, 'RECONNECT_EXACT_RETRY_RESOLUTION')
+    resolution = resolutions[0]
+    epoch = -1 if variant == 'saved-authored' else captures['B250']['epoch']
+    selected_id = ids['B'] if variant == 'saved-authored' else captures['B250']['blueId']
+    require(resolution['kind'] == ('EXISTING_AUTHORED_INITIAL' if epoch == -1 else 'EXISTING_RETAINED_EPOCH')
+            and resolution['authoredInitial'] is None, 'RECONNECT_RETRY_SELECTION_KIND')
+    old_rows = [r for r in inp['snapshot']['occurrences'] if did(r['sourceDocumentId']) == ids['A'] and r['sourcePath'] == '/peers/b']
+    new_rows = [r for r in terminal['occurrenceBindings'] if did(r['sourceDocumentId']) == ids['A'] and r['sourcePath'] == '/peers/b']
+    require(len(old_rows) == len(new_rows) == 1, 'RECONNECT_RETRY_OCCURRENCE_INVENTORY')
+    old_row, new_row = old_rows[0], new_rows[0]
+    require(old_row['active'] is False and old_row['pendingHistoricalEpoch'] is None
+            and old_row['activationGeneration'] == 2 and did(old_row['targetDocumentId']) == ids['B']
+            and new_row['active'] is False and new_row['pendingHistoricalEpoch'] == epoch
+            and new_row['activationGeneration'] == 2 and did(new_row['targetDocumentId']) == ids['B']
+            and new_row['expectedTargetBlueId'] == selected_id, 'RECONNECT_RETRY_EXACT_CURSOR')
+    fields = ('sourceDocumentId','sourcePath','targetDocumentId','activationGeneration','active','expectedTargetBlueId')
+    require(exact_equal(resolution['occurrence'], {k:new_row[k] for k in fields})
+            and resolution['bindingIdentity'] == new_row['bindingIdentity']
+            and resolution['occurrenceIdentity'] == new_row['occurrenceIdentity'], 'RECONNECT_RETRY_BINDING')
+    resolution_id = managed_identity('blue-contracts-managed-occurrence-resolution/1.0', {
+        'demandIdentity':resolution['demandIdentity'], 'targetDocumentId':ids['B'], 'pendingHistoricalEpoch':epoch})
+    resolution_set = managed_identity('blue-contracts-managed-occurrence-resolution-set/1.0', [resolution_id])
+    execution_identity = managed_identity('blue-contracts-process-retry-invocation/1.0', {
+        'baseInvocationIdentity':inp['invocationIdentity'], 'resolutionSetIdentity':resolution_set})
+    return execution_identity
+
+
 def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_check, structured_output, identity_check):
     from pathlib import Path
     import sys
@@ -97,7 +155,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
             require(entry['blueId'] in entry_by_id
                     and exact_equal(entry,entry_by_id[entry['blueId']]['response']['actualEntry']), 'RECONNECT_PROGRESS_EXACT_ENTRY')
             key = progress['journalOrders'][entry['blueId']]['components']
-            require(len(key) == 3 and key[0] == entry['timestampMicros'] and key[1] == entry['timeline']['id'] and key[2] == entry['blueId'], 'RECONNECT_SOURCE_ORDER_KEY')
+            require(len(key) == 3 and key[0] == entry['timestampMicros'] and key[1] == reconnect_timeline_identity(entry['exact']['timeline'], entry['timeline']['id'], require) and key[2] == entry['blueId'], 'RECONNECT_SOURCE_ORDER_KEY')
         for alias in aliases:
             snapshot = progress['selectedSnapshots'][alias]; documents = snapshot_check(snapshot)
             require(ids[alias] in documents and documents[ids[alias]]['blueId'] == records[alias]['blueId']
@@ -234,7 +292,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
     source_applications = set()
     live_applications = set()
 
-    def terminal_check(terminal, retained_before):
+    def terminal_check(terminal, retained_before, call):
         publication = terminal['publicationIdentity']
         require(publication not in publications, 'GRAPH_DUPLICATE_TERMINAL'); publications.add(publication)
         require(terminal['status'] == 'SUCCESS' and terminal['rollbackToInput'] is False, 'GRAPH_TERMINAL_STATUS')
@@ -252,7 +310,10 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
                         and retained[0]['originalCauseIdentity'] == cause['originalSourceCauseIdentity']
                         and retained[0]['afterBlueId'] == cause['afterBlueId']
                         and exact_equal(retained[0]['afterDocument'],cause['afterDocument']), 'GRAPH_MANAGED_RETAINED_SOURCE')
-        require(inp['invocationIdentity'] == terminal['invocationIdentity'] == companion['invocationIdentity'], 'GRAPH_INVOCATION_BINDING')
+        execution_identity = inp['invocationIdentity']
+        if terminal['causeType'] == 'ExternalEventCause' and cause['eventBlueId'] == appends['E400']['response']['entryBlueId']:
+            execution_identity = reconnect_retry_identity(terminal, call, ids, variant, captures, require, exact_equal, managed_identity)
+        require(execution_identity == terminal['invocationIdentity'] == companion['invocationIdentity'], 'GRAPH_INVOCATION_BINDING')
         trace_check(terminal['gas'], terminal['fullGasTrace'], inp['executionPolicy']['sharedLimit'])
         before, after = inp['snapshot'], terminal['outputSnapshot']
         before_docs, after_docs = snapshot_check(before), snapshot_check(after)
@@ -298,7 +359,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
         require(projection['deliveryBasisIdentity']
                 and projection['invocationIdentity'] == I.wrapper('rootedInvocationIdentity', {
                     'rootProcessingContextIdentity':I.context(owner_descriptor)[1],
-                    'baseInvocationIdentity':inp['invocationIdentity'],
+                    'baseInvocationIdentity':terminal['entryInvocationIdentity'],
                     'deliveryBasisIdentity':projection['deliveryBasisIdentity']})
                 and projection['companionIdentity'] == I.wrapper('rootedCommitCompanionIdentity', {
                     'rootProcessingContextIdentity':I.context(owner_descriptor)[1],
@@ -311,7 +372,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
         require(len({r['transitionReceiptIdentity'] for r in transitions}) == len(transitions), 'GRAPH_DUPLICATE_TRANSITION')
         for receipt in transitions:
             owner = did(receipt['documentId'])
-            require(receipt['sourceInvocationIdentity'] == inp['invocationIdentity']
+            require(receipt['sourceInvocationIdentity'] == execution_identity
                     and receipt['originalCauseIdentity'] == (inp['cause']['originalSourceCauseIdentity']
                         if terminal['causeType'] in ('ManagedRevisionCause','ManagedRepresentationCause')
                         else inp['cause']['causeIdentity']), 'GRAPH_TRANSITION_CAUSE')
@@ -348,7 +409,7 @@ def check_reconnect(rec, contract, weights, variant, require, exact_equal, gas_c
         require([a['receipt']['applicationReceiptIdentity'] for a in call['managedAttempts']]
                 == [a['applicationReceiptIdentity'] for a in call['ownedRetainedApplications']], 'GRAPH_MANAGED_ATTEMPT_INVENTORY')
         owners = set()
-        for terminal in call['terminals']: owners |= terminal_check(terminal, before)
+        for terminal in call['terminals']: owners |= terminal_check(terminal, before, call)
         for entry in call['entries']:
             if entry['disposition'] != 'APPLIED': continue
             source_rows = [r for r in appends.values() if r['response']['entryBlueId'] == entry['entry']['blueId']]
