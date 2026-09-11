@@ -334,13 +334,24 @@ final class CanonicalIdentityInputReconstructor {
         if (inheritedTypeBlueId != null
                 && isInheritedPrimitiveContribution(
                         resolvedType, authoredType, inheritedTypeBlueId)) {
+            if (OBJECT_TYPE.equals(fieldName)
+                    && !CORE_TYPE_BLUE_IDS.contains(inheritedTypeBlueId)) {
+                setter.accept(canonical, pureTypeReference(
+                        inheritedTypeBlueId, fieldName));
+            }
             return;
         }
         String resolvedTypeBlueId = effectiveTypeBlueId(
                 resolvedType,
                 authoredType,
                 fieldName);
-        if (inheritedTypeBlueId != null) {
+        // A retained child's custom type identifies the value independently of
+        // its enclosing field, including after Source minimization. Omitting
+        // it would change identity when the child becomes an exact reference.
+        // Keep the existing omission of derivable core types and other metadata.
+        if (inheritedTypeBlueId != null
+                && (!OBJECT_TYPE.equals(fieldName)
+                || CORE_TYPE_BLUE_IDS.contains(resolvedTypeBlueId))) {
             if (resolvedTypeBlueId.equals(inheritedTypeBlueId)) {
                 return;
             }
