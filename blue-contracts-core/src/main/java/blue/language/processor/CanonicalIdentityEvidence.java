@@ -9,6 +9,7 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.Schema;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
 import blue.language.snapshot.FrozenNode;
 
@@ -202,6 +203,49 @@ final class CanonicalIdentityEvidence {
                 source, snapshotManager, purpose, exactFieldPaths, executableBodyPaths).blueId();
     }
 
+    /**
+     * Identifies an individual contract contribution as a declaration. A
+     * contribution can leave required fields for another ancestor or the
+     * selected document to supply; only the effective contract is a complete
+     * runtime value.
+     */
+    static String partialSourceBlueIdWithCanonicalExactFields(
+            Node source,
+            ProcessingSnapshotManager snapshotManager,
+            String purpose,
+            Set<String> exactFieldPaths,
+            Set<String> executableBodyPaths) {
+        validateExactFieldInputs(source, snapshotManager,
+                exactFieldPaths, executableBodyPaths);
+        if (source.isReferenceOnly()) {
+            BlueIdReferenceValidator.validate(source);
+            return source.getBlueId();
+        }
+        Node sourceProjection = NodeToBlueIdInput
+                .stripResolvedBlueIdMetadata(source.clone());
+        Set<String> preservedPaths = new LinkedHashSet<>(exactFieldPaths);
+        preservedPaths.addAll(canonicalizeExactFields(
+                sourceProjection, snapshotManager, purpose,
+                exactFieldPaths, executableBodyPaths));
+        // An item type is a declaration, so an empty List can carry a partial
+        // contribution without certifying it as an instance. Language applies
+        // semantic paths through type metadata without an /itemType prefix.
+        // Preserve fields canonicalized above to avoid applying their inherited
+        // list contributions a second time.
+        Node declarationCarrier = new Node()
+                .type(new Node().blueId(BlueLanguageConstants.LIST_TYPE_BLUE_ID))
+                .itemType(sourceProjection);
+        ResolvedSnapshot snapshot = resolveSourceSnapshot(
+                declarationCarrier, snapshotManager, purpose,
+                sourcePreservedPaths(sourceProjection, preservedPaths));
+        FrozenNode identity = snapshot.frozenCanonicalRoot().getItemType();
+        if (identity == null || !identity.isReferenceOnly()) {
+            throw new IllegalStateException(
+                    purpose + " did not establish canonical declaration identity");
+        }
+        return identity.getReferenceBlueId();
+    }
+
     /** Canonical hosted content with the same exact-field ownership as Source. */
     static Node canonicalSourceWithExactFields(
             Node source,
@@ -375,18 +419,8 @@ final class CanonicalIdentityEvidence {
             ProcessingSnapshotManager snapshotManager,
             String purpose,
             Set<String> additionalPreservedPaths) {
-        Set<String> preservedPaths = new LinkedHashSet<>(
-                ExecutableBodyPathCatalog.ordinaryReferencePaths(
-                        sourceProjection));
-        preservedPaths.addAll(
-                ExecutableBodyPathCatalog.opaqueCyclicMemberPaths(
-                        sourceProjection));
-        preservedPaths.addAll(
-                ExecutableBodyPathCatalog.processorStateReferencePaths(
-                        sourceProjection,
-                        ExecutableBodyPathCatalog.authoredNodePaths(
-                                sourceProjection)));
-        preservedPaths.addAll(additionalPreservedPaths);
+        Set<String> preservedPaths = sourcePreservedPaths(
+                sourceProjection, additionalPreservedPaths);
         ResolvedSnapshot snapshot = Objects.requireNonNull(
                 preservedPaths.isEmpty()
                         ? snapshotManager
@@ -404,6 +438,23 @@ final class CanonicalIdentityEvidence {
                             + "whole-document canonical identity");
         }
         return snapshot;
+    }
+
+    private static Set<String> sourcePreservedPaths(
+            Node sourceProjection, Set<String> additionalPreservedPaths) {
+        Set<String> preservedPaths = new LinkedHashSet<>(
+                ExecutableBodyPathCatalog.ordinaryReferencePaths(
+                        sourceProjection));
+        preservedPaths.addAll(
+                ExecutableBodyPathCatalog.opaqueCyclicMemberPaths(
+                        sourceProjection));
+        preservedPaths.addAll(
+                ExecutableBodyPathCatalog.processorStateReferencePaths(
+                        sourceProjection,
+                        ExecutableBodyPathCatalog.authoredNodePaths(
+                                sourceProjection)));
+        preservedPaths.addAll(additionalPreservedPaths);
+        return preservedPaths;
     }
 
     /**

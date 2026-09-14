@@ -8,8 +8,11 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -1115,6 +1118,9 @@ class DocumentProcessorSnapshotTransactionTest {
                 Node document) {
             canonicalIdentityResolution = true;
             try {
+                if (blue == null) {
+                    return canonicalSnapshot(document, Collections.<String>emptySet());
+                }
                 return ProcessingSnapshotManager.super
                         .fromDocumentTransientForCanonicalIdentity(document);
             } finally {
@@ -1141,9 +1147,25 @@ class DocumentProcessorSnapshotTransactionTest {
         @Override
         public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                 Node document, Collection<String> preservedPaths) {
-            if (blue == null) return fromDocumentTransientForCanonicalIdentity(document);
+            if (blue == null) return canonicalSnapshot(document, preservedPaths);
             return blue.getDocumentProcessor().snapshotManager()
                     .fromDocumentTransientPreservingPaths(document, preservedPaths);
+        }
+
+        private ResolvedSnapshot canonicalSnapshot(
+                Node document, Collection<String> preservedPaths) {
+            fromDocumentCalls++;
+            if (fromDocumentCalls == failFromDocumentOnCall) {
+                throw new IllegalStateException("snapshot rebuild failed");
+            }
+            // Keep counting identity work without fabricating declaration evidence.
+            try (BlueLanguage language = BlueLanguage.builder()
+                    .nodeProvider(ProcessorTestSupport.providerWithTestContractTypes(
+                            BlueRuntimeTypeRegistry.getDefault()
+                                    .asProcessorSnapshotProvider())).build();
+                 LanguageProcessing.Scope scope = language.processing().openScope()) {
+                return scope.resolveTransientPreservingPaths(document, preservedPaths);
+            }
         }
 
         @Override

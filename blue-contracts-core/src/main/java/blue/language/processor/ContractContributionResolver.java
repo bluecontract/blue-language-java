@@ -556,7 +556,6 @@ final class ContractContributionResolver {
         if (identityMemo == null) {
             return resolveExactIdentity(
                     node,
-                    exactSourceFields,
                     exactFieldPaths,
                     executableBodyPaths);
         }
@@ -571,7 +570,6 @@ final class ContractContributionResolver {
             // result or diagnostic it would have produced without a memo.
             return resolveExactIdentity(
                     node,
-                    exactSourceFields,
                     exactFieldPaths,
                     executableBodyPaths);
         }
@@ -581,25 +579,23 @@ final class ContractContributionResolver {
                 executableBodyPaths,
                 () -> resolveExactIdentity(
                         exactSource,
-                        exactSourceFields,
                         exactFieldPaths,
                         executableBodyPaths));
     }
 
     private String resolveExactIdentity(
             Node exactSource,
-            Set<String> exactSourceFields,
             Set<String> exactFieldPaths,
             Set<String> executableBodyPaths) {
         ProcessingSnapshotManager valueManager = snapshotManager == null
                 ? null : snapshotManager.forValueIdentity();
-        return snapshotManager == null || exactSourceFields.isEmpty()
+        return snapshotManager == null
                 ? CanonicalIdentityEvidence.sourceBlueId(
                         exactSource,
                         valueManager,
                         "Exact contract contribution")
                 : CanonicalIdentityEvidence
-                        .sourceBlueIdWithCanonicalExactFields(
+                        .partialSourceBlueIdWithCanonicalExactFields(
                                 exactSource,
                                 valueManager,
                                 "Exact contract contribution",

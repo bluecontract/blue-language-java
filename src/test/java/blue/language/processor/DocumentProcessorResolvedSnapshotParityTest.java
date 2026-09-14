@@ -5,8 +5,12 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -728,7 +732,8 @@ class DocumentProcessorResolvedSnapshotParityTest {
         @Override
         public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
                 Node document) {
-            return fromDocument(document);
+            return fromDocumentTransientPreservingPaths(
+                    document, Collections.<String>emptySet());
         }
 
         @Override
@@ -742,7 +747,17 @@ class DocumentProcessorResolvedSnapshotParityTest {
         public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
-            return preserving(document);
+            // Inline declarations need resolver-issued canonical type evidence.
+            try (BlueLanguage language = BlueLanguage.builder()
+                    .nodeProvider(new SequentialNodeProvider(
+                            blueId -> CHANNEL_TYPE_BLUE_ID.equals(blueId)
+                                    ? Collections.singletonList(CHANNEL_TYPE.clone())
+                                    : null,
+                            BlueRuntimeTypeRegistry.getDefault()
+                                    .asProcessorSnapshotProvider())).build();
+                 LanguageProcessing.Scope scope = language.processing().openScope()) {
+                return scope.resolveTransientPreservingPaths(document, preservedPaths);
+            }
         }
 
         @Override

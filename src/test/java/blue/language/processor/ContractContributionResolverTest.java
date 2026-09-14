@@ -1,13 +1,14 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.identity.CanonicalTypeIdentityEvidence;
-import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -25,31 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContractContributionResolverTest {
-
-    private static final CanonicalTypeIdentityLookup
-            COMPLETE_REFERENCE_ONLY_EVIDENCE =
-            new CanonicalTypeIdentityLookup() {
-                @Override
-                public boolean hasCompleteCoverage() {
-                    return true;
-                }
-
-                @Override
-                public Optional<CanonicalTypeIdentityEvidence>
-                findCanonicalTypeIdentityEvidence(Node completedType) {
-                    if (completedType == null) {
-                        throw new NullPointerException("completedType");
-                    }
-                    return completedType.isReferenceOnly()
-                            ? Optional.of(
-                                    CanonicalTypeIdentityEvidence
-                                            .referenceSource(
-                                                    completedType
-                                                            .getBlueId()))
-                            : Optional
-                                    .<CanonicalTypeIdentityEvidence>empty();
-                }
-            };
 
     @Test
     void shouldVerifyContextuallyInheritedTypeIsReverifiedFromItsExactBlueId() {
@@ -642,14 +617,14 @@ class ContractContributionResolverTest {
 
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
-            return snapshot(document);
+            return snapshot(document, Collections.<String>emptySet());
         }
 
         @Override
         public ResolvedSnapshot
         fromDocumentTransientForCanonicalIdentity(Node document) {
             canonicalResolutions++;
-            return snapshot(document);
+            return snapshot(document, Collections.<String>emptySet());
         }
 
         @Override
@@ -657,7 +632,7 @@ class ContractContributionResolverTest {
                 Node document,
                 Collection<String> preservedPaths) {
             canonicalResolutions++;
-            return snapshot(document);
+            return snapshot(document, preservedPaths);
         }
 
         @Override
@@ -668,12 +643,15 @@ class ContractContributionResolverTest {
                     "Patch application is outside this identity test");
         }
 
-        private ResolvedSnapshot snapshot(Node document) {
-            FrozenNode canonical = FrozenNode.fromNode(document);
-            return ResolvedSnapshot.withCanonicalTypeIdentities(
-                    canonical,
-                    FrozenNode.fromResolvedNode(document),
-                    COMPLETE_REFERENCE_ONLY_EVIDENCE);
+        private ResolvedSnapshot snapshot(
+                Node document, Collection<String> preservedPaths) {
+            // Count invocations while retaining real resolver-issued identity evidence.
+            try (BlueLanguage language = BlueLanguage.builder()
+                    .nodeProvider(BlueRuntimeTypeRegistry.getDefault()
+                            .asProcessorSnapshotProvider()).build();
+                 LanguageProcessing.Scope scope = language.processing().openScope()) {
+                return scope.resolveTransientPreservingPaths(document, preservedPaths);
+            }
         }
     }
 }
