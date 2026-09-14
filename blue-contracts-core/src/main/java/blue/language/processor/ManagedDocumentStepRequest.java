@@ -19,6 +19,7 @@ public final class ManagedDocumentStepRequest {
     private final FrozenJsonPatch processorPatch;
     private final GasChargeContext attribution;
     private final ManagedDocumentResolutionOverlay resolutionOverlay;
+    private final ExactEventIdentityEvidence processingEventIdentityEvidence;
 
     /**
      * Creates one exact Root-scoped request.
@@ -159,6 +160,47 @@ public final class ManagedDocumentStepRequest {
             FrozenJsonPatch processorPatch,
             GasChargeContext attribution,
             ManagedDocumentResolutionOverlay resolutionOverlay) {
+        this(exactDocument, initialized, terminated, workKind, channelKey,
+                exactPayload, matchingEventBlueId, occurrenceEvent,
+                processorPatch, attribution, resolutionOverlay, null);
+    }
+
+    /**
+     * Creates one isolated request carrying its invocation's external cause.
+     *
+     * <p>The immutable cause is independent of the immediate payload and work
+     * role. It is shared only inside the invocation that admitted it. Supplying
+     * it does not classify this step as an external delivery. Without this
+     * evidence, standalone external steps retain their payload as the processing
+     * event and standalone internal steps have no processing event.</p>
+     *
+     * @param exactDocument latest exact target body
+     * @param initialized asserted exact initialization state
+     * @param terminated asserted exact termination state
+     * @param workKind closed work role
+     * @param channelKey exact Root channel key, possibly empty
+     * @param exactPayload exact work payload
+     * @param matchingEventBlueId admitted semantic matching identity, or null
+     * @param occurrenceEvent originating embedded event, or null
+     * @param processorPatch containing-reference patch, or null
+     * @param attribution owning document/work gas context
+     * @param resolutionOverlay exact forward-only managed resolution evidence
+     * @param processingEventIdentityEvidence invocation-admitted original
+     *        external event, or null when no invocation cause is carried
+     */
+    public ManagedDocumentStepRequest(
+            Node exactDocument,
+            boolean initialized,
+            boolean terminated,
+            ManagedDocumentWorkKind workKind,
+            String channelKey,
+            Node exactPayload,
+            String matchingEventBlueId,
+            Node occurrenceEvent,
+            FrozenJsonPatch processorPatch,
+            GasChargeContext attribution,
+            ManagedDocumentResolutionOverlay resolutionOverlay,
+            ExactEventIdentityEvidence processingEventIdentityEvidence) {
         this.exactDocument = Objects.requireNonNull(
                 exactDocument, "exactDocument").clone();
         this.initialized = initialized;
@@ -180,7 +222,17 @@ public final class ManagedDocumentStepRequest {
                 attribution, "attribution");
         this.resolutionOverlay = Objects.requireNonNull(
                 resolutionOverlay, "resolutionOverlay");
+        this.processingEventIdentityEvidence = processingEventIdentityEvidence;
         validateManagedEvidenceShape();
+    }
+
+    /**
+     * Returns the invocation's immutable original external cause.
+     *
+     * @return admitted original event evidence, or null when none was carried
+     */
+    public ExactEventIdentityEvidence processingEventIdentityEvidence() {
+        return processingEventIdentityEvidence;
     }
 
     /**

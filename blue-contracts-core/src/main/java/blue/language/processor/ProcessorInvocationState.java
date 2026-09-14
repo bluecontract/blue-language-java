@@ -157,6 +157,21 @@ final class ProcessorInvocationState {
             ProcessingGasContext sharedGasContext,
             ManagedDocumentStepContinuation documentStepContinuationHook,
             ProcessingSnapshotManager snapshotManager) {
+        this(owner, document, processEventSource, processEventSnapshotFactory,
+                sharedGasContext, documentStepContinuationHook, snapshotManager,
+                null);
+    }
+
+    /** Retains the closure's immutable original cause independently of step routing. */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext,
+            ManagedDocumentStepContinuation documentStepContinuationHook,
+            ProcessingSnapshotManager snapshotManager,
+            ExactEventIdentityEvidence processingEventIdentityEvidence) {
         this.owner = owner;
         this.documentStepContinuationHook =
                 documentStepContinuationHook;
@@ -178,7 +193,8 @@ final class ProcessorInvocationState {
                 new ProcessingEventSnapshotBoundary(
                         processEventSource,
                         processEventSnapshotFactory,
-                        owner.observer());
+                        owner.observer(),
+                        processingEventIdentityEvidence);
         this.checkpointTransaction =
                 new ProcessingCheckpointTransaction(
                         runtime,
@@ -671,6 +687,10 @@ final class ProcessorInvocationState {
 
     FrozenNode frozenProcessEvent() {
         return processEventSnapshot.frozenEvent();
+    }
+
+    ExactEventIdentityEvidence exactProcessEventIdentityEvidence() {
+        return processEventSnapshot.identityEvidence();
     }
 
     boolean shouldStopScopeWork(String scopePath) {

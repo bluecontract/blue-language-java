@@ -221,13 +221,14 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     }
 
     /**
-     * Returns whether this execution was started by {@code PROCESS(document, event)}.
+     * Returns whether this invocation has an original external processing event.
      *
      * <p>This is a constant-time presence check and never constructs the immutable
-     * Processing Event snapshot. Explicit {@code INITIALIZE} executions return
-     * {@code false}.</p>
+     * Processing Event snapshot. Externally caused closure work retains it across
+     * isolated document steps, including lifecycle work. Explicit initialization,
+     * closure admission and separate managed-revision invocations return false.</p>
      *
-     * @return {@code true} for a PROCESS invocation
+     * @return {@code true} when the invocation has an external cause
      */
     public boolean hasProcessEvent() {
         return execution.hasProcessEvent();
@@ -236,16 +237,36 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     /**
      * Returns the immutable snapshot of the original Processing Event for this run.
      *
-     * <p>The snapshot is constructed lazily on first access and then shared by all
-     * handler contexts in the same execution. Explicit {@code INITIALIZE}
-     * executions return {@code null}. Unlike {@link #event()}, this value is never
-     * replaced by triggered, bridged, or adapted channel payloads.</p>
+     * <p>Ordinary processing freezes the snapshot lazily on first access. Closure
+     * processing shares its already-admitted immutable event across all caused
+     * steps. Unlike {@link #event()}, this value is never replaced by triggered,
+     * bridged, lifecycle, update or adapted channel payloads.</p>
      *
      * @return immutable original Processing Event, or {@code null} during
-     *         explicit initialization
+     *         explicit initialization, closure admission or managed revision
      */
     public FrozenNode frozenProcessEvent() {
         return execution.frozenProcessEvent();
+    }
+
+    /**
+     * Returns the invocation-admitted identity of the original processing event.
+     *
+     * <p>Externally caused managed closure steps share this immutable capability,
+     * including internal and lifecycle steps. Its verified BlueId identifies the
+     * original input; it need not equal the hash of its frozen representation.
+     * Hosted runtimes must carry both the cursor and the verified identity.
+     * Reading this capability never freezes, resolves or hashes an event.</p>
+     *
+     * <p>A standalone execution that did not retain original-event identity
+     * evidence may still expose {@link #frozenProcessEvent()}. Callers must not
+     * substitute the current delivery's identity for absent original evidence.</p>
+     *
+     * @return immutable original event evidence, or {@code null} for admission,
+     *         managed revision or an execution without retained identity evidence
+     */
+    public ExactEventIdentityEvidence exactProcessEventIdentityEvidence() {
+        return execution.exactProcessEventIdentityEvidence();
     }
 
     /**

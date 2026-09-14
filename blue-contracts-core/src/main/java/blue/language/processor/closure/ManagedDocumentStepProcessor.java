@@ -137,7 +137,8 @@ final class ManagedDocumentStepProcessor
                         new ManagedDocumentResolutionOverlay(
                                 exactNodes,
                                 context.targetManagedBlueIdsByPath(),
-                                context.cyclicProofsByMasterBlueId()));
+                                context.cyclicProofsByMasterBlueId()),
+                        admitted.processingEventIdentityEvidence());
         ManagedDocumentStepOutcome outcome = selectedRoute == null
                 ? runtime.execute(request)
                 : runtime.executeSelectedRoute(

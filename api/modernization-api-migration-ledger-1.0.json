@@ -1015,6 +1015,15 @@
       ]
     },
     {
+      "id": "processing-event-admitted-identity",
+      "requirement": "https://github.com/bluecontract/development/issues/22",
+      "rationale": "Expose the immutable original-event identity already verified by managed closure admission. Hosted runtimes must retain this BlueId alongside the Source cursor instead of rehashing its representation or substituting the current delivery's identity. The accessor performs no freezing, resolution or hashing and returns null when no original-event evidence was retained. Existing context and constructor descriptors remain compatible; no Blue Language identity algorithm or admission authority changes.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "method added: blue.language.processor.ProcessorExecutionContext :: exactProcessEventIdentityEvidence()Lblue/language/processor/ExactEventIdentityEvidence;"
+      ]
+    },
+    {
       "id": "rooted-checkpoint-draft2-public-evidence-types",
       "requirement": "Reviewed Iteration 2 rooted-checkpoint profile: entry owner context, local calculation versus owned publication, authenticated historical checkpoint representation; blue-rooted-checkpoint-1.0 specifications and conformance obligations.",
       "rationale": "Record only the exact two current public classes RootedProcessingContext and RootedPublicationProjection. The first derives frozen entry ownership from complete verified forward graph and established history evidence. The second exposes processor-created owned publication, dependency views, actual topology boundaries and checkpoint-reference proof; it has no public constructor that can manufacture ownership or proof. This addition records implemented rooted evidence APIs and does not authorize supplied hashes as commit authority, alter runtime/gas behavior, accept future API inventory changes, or establish release readiness. All historical baseline identities and previous exact approvals are unchanged.",

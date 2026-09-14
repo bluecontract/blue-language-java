@@ -185,7 +185,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         ? new ManagedDocumentOverlaySnapshotManager(
                                 owner.snapshotManager(),
                                 admitted.resolutionOverlay())
-                        : null);
+                        : null,
+                admitted.processingEventIdentityEvidence());
         try (GasMeter.AttributionScope ignored =
                      sharedGasContext.withAttribution(
                              admitted.attribution())) {

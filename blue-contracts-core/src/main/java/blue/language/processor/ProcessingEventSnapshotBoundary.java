@@ -5,7 +5,7 @@ import blue.language.snapshot.FrozenNode;
 import java.util.Objects;
 
 /**
- * Lazily freezes one mutable PROCESS event exactly once per invocation.
+ * Shares an admitted immutable cause or lazily freezes one mutable PROCESS event.
  *
  * <p>A successful snapshot and a construction failure are both memoized, so
  * every observer of the invocation sees the same immutable value or the same
@@ -16,6 +16,7 @@ final class ProcessingEventSnapshotBoundary {
     private final Node source;
     private final ProcessorEngine.ProcessEventSnapshotFactory factory;
     private final ProcessingObserver observer;
+    private final ExactEventIdentityEvidence admittedIdentityEvidence;
     private final Object lock = new Object();
     private volatile State state;
     private volatile FrozenNode snapshot;
@@ -25,14 +26,31 @@ final class ProcessingEventSnapshotBoundary {
             Node source,
             ProcessorEngine.ProcessEventSnapshotFactory factory,
             ProcessingObserver observer) {
-        this.source = source;
+        this(source, factory, observer, null);
+    }
+
+    ProcessingEventSnapshotBoundary(
+            Node source,
+            ProcessorEngine.ProcessEventSnapshotFactory factory,
+            ProcessingObserver observer,
+            ExactEventIdentityEvidence admittedEvent) {
+        this.source = admittedEvent == null ? source : null;
         this.factory = Objects.requireNonNull(factory, "factory");
         this.observer = observer;
-        this.state = source != null ? State.UNINITIALIZED : State.ABSENT;
+        this.admittedIdentityEvidence = admittedEvent;
+        // Closure admission already froze and proved this exact value. Carry
+        // its cursor without a per-step materialization or identity rebuild.
+        this.snapshot = admittedEvent == null ? null : admittedEvent.frozenEvent();
+        this.state = snapshot != null ? State.READY
+                : source != null ? State.UNINITIALIZED : State.ABSENT;
     }
 
     boolean isPresent() {
-        return source != null;
+        return state != State.ABSENT;
+    }
+
+    ExactEventIdentityEvidence identityEvidence() {
+        return admittedIdentityEvidence;
     }
 
     FrozenNode frozenEvent() {
