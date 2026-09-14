@@ -40,6 +40,21 @@ Both finish with the same algorithm and produce the same BlueId for the same
 canonical value. Source calculation fails closed if required provider evidence
 cannot be established. It never minimizes the node before hashing.
 
+Source identity preserves a pure value reference as an exact identity leaf when
+the surrounding context does not require its content. A list without an effective
+`itemType` or other payload-dependent element constraints therefore needs the
+BlueIds of its referenced documents, not their bodies. Canonicalization does not
+fetch those documents merely to calculate the list's identity, even when the
+provider has them available. Folding the list still processes its child IDs.
+
+At these unconstrained paths, inline/reference Source identity parity is
+guaranteed for referenced content that is already canonical identity input.
+Arbitrary raw publication can produce a different Source identity when written
+inline because its own types may change its canonical form. Direct exact
+inline/reference identity remains equal. Where an effective type, inherited
+payload, or schema requires reference content, that content is materialized and
+canonicalized in the same context as an inline value.
+
 ## Identity is not storage
 
 A BlueId says nothing about provider location, cache state, fragment size,

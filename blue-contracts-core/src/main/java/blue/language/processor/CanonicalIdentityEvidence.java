@@ -563,6 +563,15 @@ final class CanonicalIdentityEvidence {
         }
 
         @Override
+        public Optional<Node> findVerifiedReferenceContent(String blueId) {
+            Optional<Node> available =
+                    delegate.findVerifiedReferenceContent(blueId);
+            return available.isPresent()
+                    ? available
+                    : complete().findVerifiedReferenceContent(blueId);
+        }
+
+        @Override
         public Optional<String> findCanonicalTypeBlueId(
                 Node completedType) {
             Optional<String> available = delegate.findCanonicalTypeBlueId(
@@ -671,6 +680,15 @@ final class CanonicalIdentityEvidence {
         @Override
         public boolean hasCompleteCoverage() {
             return true;
+        }
+
+        @Override
+        public Optional<Node> findVerifiedReferenceContent(String blueId) {
+            Optional<Node> content =
+                    retained.findVerifiedReferenceContent(blueId);
+            return content.isPresent()
+                    ? content
+                    : complete.findVerifiedReferenceContent(blueId);
         }
 
         @Override

@@ -345,6 +345,9 @@ final class ReferenceResolver {
                                       ResolutionLimits limits,
                                       ResolutionEngine.ResolutionState state) {
         CanonicalReference canonicalReference = canonicalReference(blueId, state);
+        state.canonicalTypeIdentityIndex.recordVerifiedReferenceContent(
+                blueId, canonicalReference.canonical);
+        state.materializedReferenceTargets.add(target);
         if (canonicalReference.canonical.containsCyclicSetReference()) {
             materializeCyclicSetReference(target, blueId, limits, state, canonicalReference);
             return;
@@ -431,8 +434,16 @@ final class ReferenceResolver {
         }
 
         try {
+            int[] candidateMark = engine.candidateMark();
             Node resolved = engine.resolveCanonicalWithContribution(
                     canonical.toNode(), limits, ResolutionEngine.Contribution.INSTANCE);
+            /*
+             * Nested references deferred while this content resolved under a
+             * definition goal must complete before the content is cloned into
+             * its enclosing value or cached; the pending candidates point at
+             * these nodes, not at the copies.
+             */
+            engine.materializePendingDefinitionReferences(resolved, candidateMark);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified
                     && resolvedReferenceCache != null && limits == ResolutionLimits.NO_LIMITS) {

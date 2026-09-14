@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.Collections;
 
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -151,18 +152,26 @@ class DeferredSnapshotCacheIsolationTest {
         private final ProcessingSnapshotManager manager;
 
         private Fixture() throws ReflectiveOperationException {
-            Node body = new Node().properties(
-                    "materialized", new Node().value("yes"));
+            Node bodyType = new Node().name("Body").properties(
+                    "materialized", new Node().type(
+                            new Node().blueId(TEXT_TYPE_BLUE_ID)));
+            String bodyTypeBlueId =
+                    DirectBlueIdCalculator.calculateBlueId(bodyType);
+            Node body = new Node()
+                    .type(new Node().blueId(bodyTypeBlueId))
+                    .properties("materialized", new Node().value("yes"));
             String bodyBlueId =
                     DirectBlueIdCalculator.calculateBlueId(body);
             Node containerType = new Node().properties(
                     "body", new Node().type(
-                            new Node().blueId(bodyBlueId)));
+                            new Node().blueId(bodyTypeBlueId)));
             String containerTypeBlueId =
                     DirectBlueIdCalculator.calculateBlueId(containerType);
             this.blue = new Blue(blueId ->
                     bodyBlueId.equals(blueId)
                             ? Collections.singletonList(body.clone())
+                            : bodyTypeBlueId.equals(blueId)
+                            ? Collections.singletonList(bodyType.clone())
                             : containerTypeBlueId.equals(blueId)
                             ? Collections.singletonList(
                                     containerType.clone())

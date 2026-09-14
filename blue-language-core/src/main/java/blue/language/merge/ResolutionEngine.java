@@ -20,6 +20,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -734,6 +735,23 @@ final class ResolutionEngine implements NodeResolver {
         return completedValueValidator.currentPath(state);
     }
 
+    /** Marks the candidate lists before a nested resolution starts. */
+    int[] candidateMark() {
+        return completedValueValidator.candidateMark();
+    }
+
+    /**
+     * Materializes complete pending references observed since {@code mark}
+     * inside {@code subtreeRoot}.
+     */
+    void materializePendingDefinitionReferences(Node subtreeRoot, int[] mark) {
+        ResolutionState state = activeResolutionState();
+        if (state != null) {
+            completedValueValidator.materializePendingDefinitionReferences(
+                    state, subtreeRoot, mark);
+        }
+    }
+
     private void resolveTypeMetadata(Node source, ResolutionLimits limits) {
         typeMetadataResolver.resolve(source, limits);
     }
@@ -842,6 +860,9 @@ final class ResolutionEngine implements NodeResolver {
         Map<Node, Set<String>> appliedTypeContributions;
         final Map<Node, String> completedTypeMaterializations =
                 new IdentityHashMap<>();
+        /** Targets whose value reference this invocation already materialized. */
+        final Set<Node> materializedReferenceTargets =
+                Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
         long incompleteTraversalEpoch;
         boolean definitionGoal;
         Node rootSource;

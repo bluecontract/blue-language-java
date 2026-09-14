@@ -190,6 +190,21 @@ public interface CanonicalTypeIdentityLookup {
         return Long.MAX_VALUE;
     }
 
+    /**
+     * Returns the exact verified content of a value reference that the
+     * issuing resolver materialized, when that evidence was retained.
+     *
+     * <p>Canonical identity reconstruction uses it as the authored lane of
+     * a referenced child, so a verified reference and the same content
+     * written inline reconstruct through one path.</p>
+     *
+     * @param blueId requested reference BlueId
+     * @return detached exact content, or empty when not retained
+     */
+    default Optional<Node> findVerifiedReferenceContent(String blueId) {
+        return Optional.empty();
+    }
+
 }
 
 /** Package-private singleton keeps the fail-closed implementation out of API. */

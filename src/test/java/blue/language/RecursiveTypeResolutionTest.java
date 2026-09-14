@@ -110,13 +110,19 @@ class RecursiveTypeResolutionTest {
         Node prewarmed = prewarmedBlue.resolve(source.clone());
         Node repeated = prewarmedBlue.resolve(source.clone());
         Node canonical = prewarmedBlue.canonicalize(source.clone());
+        Node inlineCanonical = prewarmedBlue.canonicalize(
+                instanceOf(personId).properties("pet", dog.clone()));
 
         // then
         assertReference(cold.getAsNode("/pet/type/owner/type/pet/type"), dogId);
         assertEquals(JSON_MAPPER.valueToTree(cold), JSON_MAPPER.valueToTree(prewarmed));
         assertEquals(JSON_MAPPER.valueToTree(prewarmed), JSON_MAPPER.valueToTree(repeated));
         assertEquals(JSON_MAPPER.valueToTree(source),
-                JSON_MAPPER.valueToTree(canonical));
+                JSON_MAPPER.valueToTree(canonical),
+                "a faithful typed reference stays a pure reference in canonical identity input");
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(inlineCanonical),
+                DirectBlueIdCalculator.calculateBlueId(canonical),
+                "a typed reference and its inline content derive one Source identity");
     }
 
     @Test

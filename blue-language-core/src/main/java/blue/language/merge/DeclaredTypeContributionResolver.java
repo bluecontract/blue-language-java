@@ -155,10 +155,21 @@ final class DeclaredTypeContributionResolver {
         try {
             if (!recursiveBoundary) {
                 long incompleteEpoch = state().incompleteTraversalEpoch;
+                int[] candidateMark = engine.candidateMark();
                 Node resolvedType = cachedResolvedType != null
                         ? cachedType(cachedResolvedType, typeBlueId)
                         : resolveType(typeNode, typeBlueId, limits,
                                 contribution);
+                if (authoredInlineType != null && cachedResolvedType == null) {
+                    /*
+                     * The canonical identity of an authored inline type must
+                     * see value references that its context obliges the
+                     * resolver to materialize. Do it before the identity is
+                     * recorded and the resolved body is detached.
+                     */
+                    engine.materializePendingDefinitionReferences(
+                            resolvedType, candidateMark);
+                }
                 boolean completeTypeMaterialization = incompleteEpoch
                         == state().incompleteTraversalEpoch;
                 if (completeTypeMaterialization) {
@@ -170,7 +181,8 @@ final class DeclaredTypeContributionResolver {
                     source.type(detachedUnprovenTypeMetadata(
                             resolvedType, typeBlueId));
                 }
-                if (!contributionApplied) {
+                if (!contributionApplied
+                        && !isDiscardedDeclarationWrapper(source)) {
                     mergeResolvedType(
                             target,
                             typeNode,
@@ -191,6 +203,20 @@ final class DeclaredTypeContributionResolver {
                 activeTypeStack.finish(resolutionKey);
             }
         }
+    }
+
+    /**
+     * Tells whether {@code source} is the synthetic wrapper of a declaration
+     * evidence run. Only its completed {@code type} is consumed, so merging
+     * the declaration into the wrapper itself would resolve and materialize
+     * every reference a second time into content nobody reads.
+     */
+    private boolean isDiscardedDeclarationWrapper(Node source) {
+        ResolutionEngine.ResolutionState state = state();
+        return state.definitionGoal
+                && state.contribution
+                == ResolutionEngine.Contribution.TYPE_METADATA
+                && source == state.rootSource;
     }
 
     private Node resolveType(

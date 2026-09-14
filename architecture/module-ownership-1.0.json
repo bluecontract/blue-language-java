@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 816,
+    "productionSourceCount": 817,
     "productionResourceCount": 1123,
-    "productionSourcePathIdentity": "sha256:12fbb5a3589e27fc55ed8ef4ce525cca5525c7d98bc4fc9ffff9feda545119d8",
+    "productionSourcePathIdentity": "sha256:cd16814b8c276480c70d91b2285ef194a490c587de25158ff4e4de2fa2d3d00f",
     "productionResourcePathIdentity": "sha256:c5a08c87b9507897d78fdc0ffb10e2791e9572bf9795ed462fcd6a5fcb7a37fd"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -4512,6 +4512,13 @@
       "currentPackage": "blue.language.merge",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/VerifiedCanonicalLoadCoordinator.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceContents.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceContents.java",
       "targetPackage": "blue.language.merge"
     },
     {
