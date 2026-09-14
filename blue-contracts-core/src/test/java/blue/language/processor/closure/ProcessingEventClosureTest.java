@@ -52,10 +52,11 @@ class ProcessingEventClosureTest {
     private static final Node HANDLER = new Node().name("Processing event test handler");
     private static final String CHANNEL_ID = id(CHANNEL);
     private static final String HANDLER_ID = id(HANDLER);
+    private static final String SUBSCRIPTION_KEY = "test";
 
     @Test
     void shouldRetainAdmittedSourceIdentityAcrossInternalStepsForAnInlineTypedEvent() {
-        // Given a valid Source event whose frozen representation has a different identity.
+        // given
         Node original = event("go").type(new Node().name("Inline processing event type"))
                 .properties("values", new Node().items(Arrays.asList(
                         new Node().value("first"), new Node().value("second"))));
@@ -70,14 +71,14 @@ class ProcessingEventClosureTest {
         })) {
             String admittedBlueId = fixture.backingContracts.runtimeAccess()
                     .languageRuntime().calculateSourceDocumentBlueId(original.clone());
-            assertNotEquals(admittedBlueId, FrozenNode.fromResolvedNode(original).blueId());
             ClosureInvocationInput input = fixture.external(
                     snapshot(document(), true), original, ROOT, admittedBlueId);
 
-            // When the original event causes external, triggered and update deliveries.
+            // when
             ClosureProcessResult result = fixture.process(input);
 
-            // Then consumers retain the proved identity together with the unchanged Source cursor.
+            // then
+            assertNotEquals(admittedBlueId, FrozenNode.fromResolvedNode(original).blueId());
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered", "updated"), handlers(observations));
             assertAdmittedCause(observations, original, admittedBlueId);
@@ -88,7 +89,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldPreserveOriginalEventAnnotationsWithoutUsingThemAsTheAdmittedIdentity() {
-        // Given an accepted expanded event carrying non-authoritative identity annotations.
+        // given
         Node original = event("go");
         String admittedBlueId = id(original);
         String annotation = id(new Node().value("representation annotation"));
@@ -104,10 +105,10 @@ class ProcessingEventClosureTest {
             ClosureInvocationInput input = fixture.external(
                     snapshot(document(), true), original, ROOT, admittedBlueId);
 
-            // When its external and internal handlers observe the original input.
+            // when
             ClosureProcessResult result = fixture.process(input);
 
-            // Then the exact Source is preserved while the verified identity stays independent.
+            // then
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered"), handlers(observations));
             assertAdmittedCause(observations, original, admittedBlueId);
@@ -117,7 +118,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldRetainOriginalEventAcrossTriggeredAndDocumentUpdateSteps() {
-        // Given an external handler that emits an event whose handler updates the document.
+        // given
         List<Observation> observations = new ArrayList<>();
         Node event = event("go");
         try (Fixture fixture = new Fixture(context -> {
@@ -130,10 +131,10 @@ class ProcessingEventClosureTest {
         })) {
             ClosureInvocationInput input = fixture.external(snapshot(document(), true), event);
 
-            // When the complete closure runs through all three real document-step boundaries.
+            // when
             ClosureProcessResult result = fixture.process(input);
 
-            // Then routing and immediate payloads stay distinct while the cause stays original.
+            // then
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered", "updated"), handlers(observations));
             assertEquals("go", observations.get(0).payload.getNode("/kind").getValue());
@@ -145,7 +146,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldRetainExternalCauseWhenAChildIsBornAndInitializedAfterResourceRetry() {
-        // Given an external handler that creates a child with an initialization handler.
+        // given
         List<Observation> observations = new ArrayList<>();
         Node event = event("go");
         Node child = document().name("New child");
@@ -161,18 +162,18 @@ class ProcessingEventClosureTest {
         })) {
             ClosureInvocationInput input = fixture.external(snapshot(parent, true), event);
 
-            // When a resource retry reserves the child lineage and repeats the invocation.
+            // when
             ClosureAttemptResult missing = fixture.attempt(input);
-            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES, missing.kind());
-            assertEquals(1, missing.resourceDemands().size());
-            assertNull(missing.processResult());
             ManagedOccurrenceEvidenceDemand demand = (ManagedOccurrenceEvidenceDemand) missing.resourceDemands().get(0);
             ClosureInvocationInput retry = ClosureEvidenceFactory.withProspectiveBirths(input,
                     Collections.singletonList(new ManagedDocumentBirth(demand, new DocumentId("new-child"), child)));
             observations.clear();
             ClosureProcessResult result = fixture.process(retry);
 
-            // Then the child sees the cause in lifecycle/internal work but receives no new direct delivery.
+            // then
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES, missing.kind());
+            assertEquals(1, missing.resourceDemands().size());
+            assertNull(missing.processResult());
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "onInit", "triggered"), handlers(observations));
             assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
@@ -183,7 +184,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldHaveNoProcessingEventDuringSeparateAdmissionEvenAfterExternalProcessing() {
-        // Given a reused processor that has already completed an external invocation.
+        // given
         List<Observation> observations = new ArrayList<>();
         try (Fixture fixture = new Fixture(context -> {
             observations.add(new Observation(context));
@@ -194,10 +195,9 @@ class ProcessingEventClosureTest {
             }
         })) {
             ClosureProcessResult external = fixture.process(fixture.external(snapshot(document(), true), event("go")));
-            assertTrue(external.commits(), diagnostic(external));
             observations.clear();
 
-            // When a separate admission has only a historical triggering-event identity.
+            // when
             ClosureInvocationInput admission = ClosureEvidenceFactory.admitClosure(snapshot(document(), false),
                     ClosureEvidenceFactory.admissionCause(AdmissionKind.TOP_LEVEL_ADMISSION,
                             "processing-event-admission", id(event("go")), null, "processing-event-admission-policy"),
@@ -207,7 +207,8 @@ class ProcessingEventClosureTest {
                 result = contracts.admitClosureWithLifecycleQueue(admission).processResult();
             }
 
-            // Then no prior event leaks into lifecycle or its caused internal work.
+            // then
+            assertTrue(external.commits(), diagnostic(external));
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("onInit", "triggered", "updated"), handlers(observations));
             for (Observation observation : observations) {
@@ -220,7 +221,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldKeepTheCauseImmutableAcrossMultipleInternalHops() {
-        // Given a caller-owned event and a second triggered hop caused by a document update.
+        // given
         List<Observation> observations = new ArrayList<>();
         Node original = event("go");
         Node callerEvent = original.clone();
@@ -241,10 +242,10 @@ class ProcessingEventClosureTest {
             ClosureInvocationInput input = fixture.external(snapshot(document, true), callerEvent);
             callerEvent.properties("kind", new Node().value("mutated caller input"));
 
-            // When the closure completes four successive handler steps.
+            // when
             ClosureProcessResult result = fixture.process(input);
 
-            // Then detached mutable copies cannot change the original cause or matching payloads.
+            // then
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered", "updated", "onPong"), handlers(observations));
             assertEquals("pong", observations.get(3).payload.getNode("/kind").getValue());
@@ -254,7 +255,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldKeepAnAdaptedExternalPayloadSeparateFromTheOriginalCause() {
-        // Given an External Channel whose PAYLOAD function transforms its input.
+        // given
         List<Observation> observations = new ArrayList<>();
         Node original = event("go");
         try (Fixture fixture = new Fixture(context -> {
@@ -263,10 +264,10 @@ class ProcessingEventClosureTest {
                 context.emitEvent(event("ping"));
             }
         }, ignored -> event("adapted"))) {
-            // When the external delivery and its triggered continuation execute.
+            // when
             ClosureProcessResult result = fixture.process(fixture.external(snapshot(document(), true), original));
 
-            // Then each handler gets its proper payload and both get the unadapted cause.
+            // then
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered"), handlers(observations));
             assertEquals("adapted", observations.get(0).payload.getNode("/kind").getValue());
@@ -277,7 +278,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldRetainOriginalCauseDuringTerminationLifecycle() {
-        // Given an external handler that terminates its Root.
+        // given
         List<Observation> observations = new ArrayList<>();
         Node original = event("finish");
         Node document = document();
@@ -289,10 +290,10 @@ class ProcessingEventClosureTest {
                 context.terminateGracefully("finished");
             }
         })) {
-            // When the caused termination lifecycle runs.
+            // when
             ClosureProcessResult result = fixture.process(fixture.external(snapshot(document, true), original));
 
-            // Then termination remains a committing lifecycle effect with the original cause.
+            // then
             assertTrue(result.commits(), diagnostic(result));
             assertTrue(result.resultingDocuments().get(0).terminated());
             assertEquals(Arrays.asList("external", "onTerminate"), handlers(observations));
@@ -303,8 +304,8 @@ class ProcessingEventClosureTest {
     }
 
     @Test
-    void shouldRollBackAllEffectsWhenACausedHandlerFails() {
-        // Given earlier document writes and emissions in the same external invocation.
+    void shouldReplayARejectedClosureWithTheSameCauseDiagnosticGasAndRollback() {
+        // given
         List<Observation> observations = new ArrayList<>();
         Node original = event("go");
         try (Fixture fixture = new Fixture(context -> {
@@ -318,28 +319,41 @@ class ProcessingEventClosureTest {
         })) {
             ClosureInvocationInput input = fixture.external(snapshot(document(), true), original);
 
-            // When a later handler fails after accessing the original event.
-            ClosureProcessResult result = fixture.process(input);
+            // when
+            ClosureProcessResult first = fixture.process(input);
+            List<Observation> firstObservations = new ArrayList<>(observations);
+            observations.clear();
+            ClosureProcessResult replay = fixture.process(input);
 
-            // Then the entire closure rolls back while admitted gas remains visible.
-            assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-            assertTrue(result.diagnostic().message().contains("processing-event-regression-failure"));
+            // then
+            assertEquals(ProcessorStatus.RUNTIME_FATAL, first.status());
+            assertEquals(first.status(), replay.status());
+            assertTrue(first.diagnostic().message().contains("processing-event-regression-failure"));
+            assertEquals(first.diagnostic().category(), replay.diagnostic().category());
+            assertEquals(first.diagnostic().message(), replay.diagnostic().message());
+            assertEquals(first.diagnostic().details(), replay.diagnostic().details());
             assertTrue(handlers(observations).contains("triggered"));
+            assertEquals(handlers(firstObservations), handlers(observations));
+            assertCause(firstObservations, original);
             assertCause(observations, original);
-            assertRollback(input, result);
-            assertTrue(result.totalGas() > 0L);
+            assertRollback(input, first);
+            assertRollback(input, replay);
+            assertTrue(first.totalGas() > 0L);
+            assertEquals(first.totalGas(), replay.totalGas());
+            assertEquals(first.gasTraceIdentity(), replay.gasTraceIdentity());
         }
     }
 
     @Test
     void shouldKeepGasAndReplayIdenticalWhenTheOriginalEventIsReadRepeatedly() {
-        // Given identical invocations, first without observing the cause and then with repeated reads.
+        // given
         AtomicBoolean readCause = new AtomicBoolean();
+        List<Observation> observations = new ArrayList<>();
+        Node original = event("go");
         try (Fixture fixture = new Fixture(context -> {
             if (readCause.get()) {
                 for (int read = 0; read < 5; read++) {
-                    assertTrue(context.hasProcessEvent());
-                    assertEquals("go", context.frozenProcessEvent().property("kind").toNode().getValue());
+                    observations.add(new Observation(context));
                 }
             }
             if ("external".equals(context.contractKey())) {
@@ -348,27 +362,76 @@ class ProcessingEventClosureTest {
                 context.applyPatch(JsonPatch.replace("/count", new Node().value(1L)));
             }
         })) {
-            ClosureInvocationInput input = fixture.external(snapshot(document(), true), event("go"));
-            ClosureProcessResult cold = fixture.process(input);
+            ClosureInvocationInput input = fixture.external(snapshot(document(), true), original);
 
-            // When the same input is replayed on the warmed processor and the cause is observed.
+            // when
+            ClosureProcessResult cold = fixture.process(input);
             readCause.set(true);
             ClosureProcessResult warm = fixture.process(input);
+            List<Observation> warmObservations = new ArrayList<>(observations);
+            observations.clear();
+            ClosureProcessResult replay = fixture.process(input);
 
-            // Then carrying/reading the immutable cursor adds no semantic gas or result changes.
+            // then
             assertTrue(cold.commits(), diagnostic(cold));
             assertTrue(warm.commits(), diagnostic(warm));
+            assertTrue(replay.commits(), diagnostic(replay));
+            assertEquals(15, warmObservations.size());
+            assertEquals(handlers(warmObservations), handlers(observations));
+            assertCause(warmObservations, original);
+            assertCause(observations, original);
             assertEquals(cold.totalGas(), warm.totalGas());
+            assertEquals(cold.totalGas(), replay.totalGas());
             assertEquals(cold.gasTraceIdentity(), warm.gasTraceIdentity());
+            assertEquals(cold.gasTraceIdentity(), replay.gasTraceIdentity());
             assertEquals(cold.resultingDocuments().get(0).afterBlueId(), warm.resultingDocuments().get(0).afterBlueId());
+            assertEquals(cold.resultingDocuments().get(0).afterBlueId(), replay.resultingDocuments().get(0).afterBlueId());
             assertEquals(cold.managedTransitionReceipts().get(0).transitionReceiptIdentity(),
                     warm.managedTransitionReceipts().get(0).transitionReceiptIdentity());
+            assertEquals(cold.managedTransitionReceipts().get(0).transitionReceiptIdentity(),
+                    replay.managedTransitionReceipts().get(0).transitionReceiptIdentity());
+        }
+    }
+
+    @Test
+    void shouldUseEachOriginalEventInSequentialInvocationsOnTheSameProcessor() {
+        // given
+        List<Observation> observations = new ArrayList<>();
+        Node firstEvent = event("go").properties("caller", new Node().value("first"));
+        Node secondEvent = event("go").properties("caller", new Node().value("second"));
+        try (Fixture fixture = new Fixture(context -> {
+            observations.add(new Observation(context));
+            if ("external".equals(context.contractKey())) {
+                context.emitEvent(event("ping"));
+            } else if ("triggered".equals(context.contractKey())) {
+                context.applyPatch(JsonPatch.replace("/count", new Node().value(1L)));
+            }
+        })) {
+            AffectedClosureSnapshot before = snapshot(document(), true);
+            ClosureInvocationInput first = fixture.external(before, firstEvent);
+            ClosureInvocationInput second = fixture.external(before, secondEvent);
+
+            // when
+            ClosureProcessResult firstResult = fixture.process(first);
+            List<Observation> firstObservations = new ArrayList<>(observations);
+            observations.clear();
+            ClosureProcessResult secondResult = fixture.process(second);
+
+            // then
+            assertTrue(firstResult.commits(), diagnostic(firstResult));
+            assertTrue(secondResult.commits(), diagnostic(secondResult));
+            assertNotEquals(id(firstEvent), id(secondEvent));
+            assertEquals(Arrays.asList("external", "triggered", "updated"), handlers(firstObservations));
+            assertEquals(handlers(firstObservations), handlers(observations));
+            assertCause(firstObservations, firstEvent);
+            assertCause(observations, secondEvent);
+            assertNotSame(firstObservations.get(0).identityEvidence, observations.get(0).identityEvidence);
         }
     }
 
     @Test
     void shouldIsolateOriginalEventsInConcurrentInvocationsUsingTheSameProcessor() throws Exception {
-        // Given two external invocations that overlap inside the same configured processor.
+        // given
         CyclicBarrier overlap = new CyclicBarrier(2);
         ConcurrentLinkedQueue<String> observed = new ConcurrentLinkedQueue<>();
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -382,26 +445,27 @@ class ProcessingEventClosureTest {
                 context.emitEvent(event("ping"));
             }
             String expected = context.documentAt("/expected").getValue().toString();
-            assertEquals(expected, context.frozenProcessEvent().property("kind").toNode().getValue());
-            observed.add(expected + ":" + context.contractKey());
+            String actual = context.frozenProcessEvent().property("kind").toNode().getValue().toString();
+            observed.add(expected + ":" + actual + ":" + context.contractKey());
         })) {
             ClosureInvocationInput first = fixture.external(snapshot(document()
                     .properties("expected", new Node().value("first")), true), event("first"));
             ClosureInvocationInput second = fixture.external(snapshot(document()
                     .properties("expected", new Node().value("second")), true), event("second"));
 
-            // When both closures cross from external delivery into triggered work.
+            // when
             Future<ClosureProcessResult> one = executor.submit(() -> fixture.process(first));
             Future<ClosureProcessResult> two = executor.submit(() -> fixture.process(second));
             ClosureProcessResult firstResult = one.get(30, TimeUnit.SECONDS);
             ClosureProcessResult secondResult = two.get(30, TimeUnit.SECONDS);
 
-            // Then neither invocation can observe the other's cause.
+            // then
             assertTrue(firstResult.commits(), diagnostic(firstResult));
             assertTrue(secondResult.commits(), diagnostic(secondResult));
             List<String> sorted = new ArrayList<>(observed);
             Collections.sort(sorted);
-            assertEquals(Arrays.asList("first:external", "first:triggered", "second:external", "second:triggered"), sorted);
+            assertEquals(Arrays.asList("first:first:external", "first:first:triggered",
+                    "second:second:external", "second:second:triggered"), sorted);
         } finally {
             executor.shutdownNow();
         }
@@ -409,19 +473,21 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldRetainCanonicalIdentityForAListBearingCauseAcrossInternalSteps() {
-        // Given a Source event whose canonical identity differs from hashing a resolved cursor.
+        // given
         Node original = event("go").properties("values", new Node().items(Arrays.asList(
                 new Node().value("first"), new Node().value("second"))));
-        assertNotEquals(id(original), FrozenNode.fromResolvedNode(original).blueId());
         List<Observation> observations = new ArrayList<>();
         try (Fixture fixture = new Fixture(context -> {
             observations.add(new Observation(context));
-            if ("external".equals(context.contractKey())) context.emitEvent(event("ping"));
+            if ("external".equals(context.contractKey())) {
+                context.emitEvent(event("ping"));
+            }
         })) {
-            // When the admitted event crosses the isolated triggered step boundary.
+            // when
             ClosureProcessResult result = fixture.process(fixture.external(snapshot(document(), true), original));
 
-            // Then the canonical cursor and its proved BlueId survive without reconstruction.
+            // then
+            assertNotEquals(id(original), FrozenNode.fromResolvedNode(original).blueId());
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("external", "triggered"), handlers(observations));
             assertTrue(observations.get(1).cause.isStrictCanonical());
@@ -431,7 +497,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldRetainTheCauseAcrossEmbeddedDeliveryAndItsDocumentUpdate() {
-        // Given a managed child that emits a Ping and a parent that reacts through an Embedded Channel.
+        // given
         DocumentId childId = new DocumentId("child");
         Node child = initialized(document().name("Child"));
         Node parent = document().properties("child", new Node().blueId(id(child)))
@@ -442,14 +508,16 @@ class ProcessingEventClosureTest {
                 .properties("onChild", handler("fromChild").properties("event", event("ping")));
         initialized(parent);
         List<Observation> observations = new ArrayList<>();
+        List<Boolean> childSeesParent = new ArrayList<>();
+        List<Object> occurrenceKinds = new ArrayList<>();
         Node original = event("go");
         try (Fixture fixture = new Fixture(context -> {
             observations.add(new Observation(context));
             if ("external".equals(context.contractKey())) {
-                assertFalse(context.documentContains("/parentOnly"), "The child Root must remain isolated");
+                childSeesParent.add(context.documentContains("/parentOnly"));
                 context.emitEvent(event("ping"));
             } else if ("onChild".equals(context.contractKey())) {
-                assertEquals("ping", context.occurrenceEvent().getNode("/kind").getValue());
+                occurrenceKinds.add(context.occurrenceEvent().getNode("/kind").getValue());
                 context.applyPatch(JsonPatch.replace("/count", new Node().value(1L)));
             }
         })) {
@@ -462,11 +530,13 @@ class ProcessingEventClosureTest {
             AffectedClosureSnapshot snapshot = snapshot(bodies, Collections.singletonList(binding), ROOT,
                     Collections.emptyMap());
 
-            // When only the child receives the external delivery.
+            // when
             ClosureProcessResult result = fixture.process(fixture.external(snapshot, original, childId));
 
-            // Then embedded and update handlers keep their local payloads and the child's original cause.
+            // then
             assertTrue(result.commits(), diagnostic(result));
+            assertEquals(Collections.singletonList(false), childSeesParent, "The child Root must remain isolated");
+            assertEquals(Collections.singletonList("ping"), occurrenceKinds);
             assertEquals(Arrays.asList("external", "triggered", "onChild", "updated"), handlers(observations));
             assertEquals("/child", observations.get(2).payload.getNode("/sourcePath").getValue());
             assertEquals("/count", observations.get(3).payload.getNode("/path").getValue());
@@ -476,7 +546,7 @@ class ProcessingEventClosureTest {
 
     @Test
     void shouldNotReintroduceTheHistoricalExternalEventDuringManagedRevision() {
-        // Given a real source receipt produced by an earlier external invocation on this processor.
+        // given
         List<Observation> observations = new ArrayList<>();
         try (Fixture fixture = new Fixture(context -> {
             observations.add(new Observation(context));
@@ -487,7 +557,6 @@ class ProcessingEventClosureTest {
             AffectedClosureSnapshot sourceBefore = snapshot(document(), true);
             ClosureInvocationInput sourceInput = fixture.external(sourceBefore, event("go"));
             ClosureProcessResult sourceResult = fixture.process(sourceInput);
-            assertTrue(sourceResult.commits(), diagnostic(sourceResult));
             ResultingDocument sourceAfter = sourceResult.resultingDocuments().get(0);
             fixture.exact.put(sourceBefore.managedDocument(ROOT).blueId(), sourceBefore.managedDocument(ROOT).document());
             fixture.exact.put(sourceAfter.afterBlueId(), sourceAfter.document());
@@ -514,10 +583,11 @@ class ProcessingEventClosureTest {
                     Collections.emptyList(), policy(), fixture.environment);
             observations.clear();
 
-            // When a separate managed revision replays the retained event to its consumer.
+            // when
             ClosureProcessResult result = fixture.process(input);
 
-            // Then the historical cause identity is audit evidence, not a live processing event.
+            // then
+            assertTrue(sourceResult.commits(), diagnostic(sourceResult));
             assertTrue(result.commits(), diagnostic(result));
             assertEquals(Arrays.asList("onChild", "triggered"), handlers(observations));
             assertEquals(sourceInput.cause().causeIdentity(), revision.originalSourceCauseIdentity());
@@ -623,7 +693,9 @@ class ProcessingEventClosureTest {
     }
 
     private static AffectedClosureSnapshot snapshot(Node document, boolean initialized) {
-        if (initialized) initialized(document);
+        if (initialized) {
+            initialized(document);
+        }
         return snapshot(Collections.singletonMap(ROOT, document), Collections.emptyList(), ROOT, Collections.emptyMap());
     }
 
@@ -668,7 +740,7 @@ class ProcessingEventClosureTest {
 
     private static Node event(String kind) {
         return new Node().properties("kind", new Node().value(kind))
-                .properties("subscriptionKey", new Node().value("test"));
+                .properties("subscriptionKey", new Node().value(SUBSCRIPTION_KEY));
     }
     private static Node handler(String channel) {
         return typed(HANDLER_ID).properties("channel", new Node().value(channel));
@@ -736,7 +808,7 @@ class ProcessingEventClosureTest {
         public Class<TestChannel> contractType() { return TestChannel.class; }
         public ExternalChannelSubscriptionFunctions<TestChannel> externalSubscriptionFunctions() {
             return new ExternalChannelSubscriptionFunctions<TestChannel>() {
-                public List<String> channelKeys(TestChannel channel) { return Collections.singletonList("test"); }
+                public List<String> channelKeys(TestChannel channel) { return Collections.singletonList(SUBSCRIPTION_KEY); }
                 public Node payload(TestChannel channel, Node event) { return payload.apply(event); }
                 public String checkpointDomainDiscriminator(TestChannel channel) { return "processing-event-v1"; }
             };

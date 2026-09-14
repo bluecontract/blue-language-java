@@ -106,7 +106,7 @@ final class ProcessorProcessEventContextTest {
         ProcessorExecutionContext second = execution.createContext("/", ContractBundle.empty(), new Node(), false);
         boolean firstHasProcessEvent = first.hasProcessEvent();
         boolean secondHasProcessEvent = second.hasProcessEvent();
-        assertNull(first.exactProcessEventIdentityEvidence());
+        ExactEventIdentityEvidence retainedIdentity = first.exactProcessEventIdentityEvidence();
         int callsBeforeSnapshot = freezerCalls.get();
         long attemptsBeforeSnapshot =
                 metrics.processEventSnapshotAttempts;
@@ -129,6 +129,7 @@ final class ProcessorProcessEventContextTest {
         // then
         assertTrue(firstHasProcessEvent);
         assertTrue(secondHasProcessEvent);
+        assertNull(retainedIdentity);
         assertEquals(0, callsBeforeSnapshot);
         assertEquals(0L, attemptsBeforeSnapshot);
         assertSame(snapshot, secondSnapshot,

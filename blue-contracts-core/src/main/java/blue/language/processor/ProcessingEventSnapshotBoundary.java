@@ -33,14 +33,16 @@ final class ProcessingEventSnapshotBoundary {
             Node source,
             ProcessorEngine.ProcessEventSnapshotFactory factory,
             ProcessingObserver observer,
-            ExactEventIdentityEvidence admittedEvent) {
-        this.source = admittedEvent == null ? source : null;
+            ExactEventIdentityEvidence admittedIdentityEvidence) {
+        // The source/factory pair is the legacy fallback. A closure's proved
+        // original cause takes precedence over an adapted delivery payload.
+        this.source = admittedIdentityEvidence == null ? source : null;
         this.factory = Objects.requireNonNull(factory, "factory");
         this.observer = observer;
-        this.admittedIdentityEvidence = admittedEvent;
+        this.admittedIdentityEvidence = admittedIdentityEvidence;
         // Closure admission already froze and proved this exact value. Carry
         // its cursor without a per-step materialization or identity rebuild.
-        this.snapshot = admittedEvent == null ? null : admittedEvent.frozenEvent();
+        this.snapshot = admittedIdentityEvidence == null ? null : admittedIdentityEvidence.frozenEvent();
         this.state = snapshot != null ? State.READY
                 : source != null ? State.UNINITIALIZED : State.ABSENT;
     }
