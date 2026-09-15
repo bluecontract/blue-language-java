@@ -80,6 +80,22 @@ def main():
              "PACKAGE_IDENTITY", read(closure + "fixtures/manifest.yaml")["packageIdentity"])
     constant("blue-conformance/src/test/java/blue/language/conformance/contracts/closure/ClosureConformanceHarnessTest.java",
              "C_CLO_34_FIXTURE_SHA256", sha(closure + "fixtures/closure/c-clo-34-separate-document-steps.yaml"))
+    replace("blue-conformance/src/test/java/blue/language/conformance/contracts/closure/ClosureConformanceHarnessTest.java",
+            r'(assertEquals\()\d+(L, separateDocuments\.bytes\(\)\);)',
+            str((root / (closure + "fixtures/closure/c-clo-34-separate-document-steps.yaml")).stat().st_size))
+    release_test = "src/test/java/blue/language/conformance/contracts/BlueContractsConformanceReportTest.java"
+    constant(release_test, "expectedLanguageFixtures", fixture_identity)
+    constant(release_test, "expectedContractsFixtures", read(closure + "fixtures/manifest.yaml")["packageIdentity"])
+    constant(release_test, "expectedContractsRelease", read(closure + "release-manifest.yaml")["releaseIdentity"])
+    for accessor, value in {
+        "getReleasePackageIdentity": aggregate["packageIdentity"],
+        "getFixturePackageIdentity": read(closure + "fixtures/manifest.yaml")["packageIdentity"],
+    }.items():
+        replace(release_test,
+                rf'(assertEquals\(\s*")[^"\n]+(",\s*report\.{accessor}\(\)\);)', value)
+    replace(release_test,
+            r'(assertEquals\(\s*")[^"\n]+(",\s*nested\(report\.toMachineReadableMap\(\),\s*"language", "specificationSha256"\)\);)',
+            sha(language_spec))
     changed = [path for path, value in pending.items() if (root / path).read_text() != value]
     if args.write:
         for path in changed:

@@ -50,13 +50,20 @@ final class RawReferenceSourceIdentityTest {
                     "currency:\n  blueId: " + currencyValueId + "\n");
 
             // When deriving Source identity for each representation.
-            String expected = language.identity().sourceDocumentBlueId(inlineText);
+            Node expectedCanonical = new Node().type(new Node().blueId(holderTypeId))
+                    .properties("currency", new Node()
+                            .type(new Node().blueId(currencyTypeId)).value("PLN"));
+            String expected = language.identity().directBlueId(expectedCanonical);
 
             // Then every accepted representation of the same value agrees.
-            for (Node document : new Node[] {bare, inlineCurrency, referencedText, referencedCurrency}) {
+            for (Node document : new Node[] {inlineText, bare, inlineCurrency, referencedText, referencedCurrency}) {
                 assertEquals(expected, language.identity().sourceDocumentBlueId(document), () ->
                         "Canonical: " + NodeWireForm.get(
                                 language.identity().canonicalIdentityInput(document)));
+                Node resolvedCurrency = language.resolution().resolve(document)
+                        .getProperties().get("currency");
+                assertEquals(currencyTypeId, resolvedCurrency.getType().getBlueId());
+                assertEquals("PLN", resolvedCurrency.getValue());
             }
             assertEquals(
                     language.identity().directBlueId(language.preprocessing().preprocess(inlineText)),

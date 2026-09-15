@@ -13,8 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
 final class LifecycleCyclicBindingOracle {
     private static final String OLD_FINALIZER = "sha256:0ea9ccf1f8da23be8f70368565c3322c1d25aa88ba711fa06456aed2a842942c";
     private static final String OLD_VERIFIER = "sha256:581619ff2a6909590c8740887d80d0d24659673e5af2de713a181c6664709c84";
-    private static final String REVIEWED_FINALIZER = "sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b";
-    private static final String REVIEWED_VERIFIER = "sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834";
+    private static final String REVIEWED_FINALIZER = "sha256:71b7c01ac5edddbb6b0df2d624fa69d63054881c19c2b61fe10c783a53e5aeec";
+    private static final String REVIEWED_VERIFIER = "sha256:b011ba281a9bcce5d0ff6f72b7bd19b8bc49a67ce760ca71bed745d25f6c4256";
+    private static final String OLD_REGISTRY = "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4";
+    private static final String REVIEWED_REGISTRY = "sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6";
     private LifecycleCyclicBindingOracle() { }
 
     static String duplicate(String frozen, ClosureInvocationInput input) {
@@ -83,6 +85,7 @@ final class LifecycleCyclicBindingOracle {
         ClosureEnvironment e=input.environment();
         assertEquals(REVIEWED_FINALIZER,e.cyclicFinalizerIdentity(),"Future cyclic changes require their own reviewed binding");
         assertEquals(REVIEWED_VERIFIER,e.cyclicProofVerifierIdentity(),"Future cyclic changes require their own reviewed binding");
+        assertEquals(REVIEWED_REGISTRY,e.runtimeRegistryIdentity(),"Only the reviewed CheckpointEntry domain correction changes the registry");
         List<Object> documents=new ArrayList<>();
         for (ManagedDocumentSnapshot d : input.snapshot().managedDocuments()) documents.add(object(
                 "documentId",d.documentId().value(),"blueId",d.blueId(),"initialized",d.initialized(),
@@ -99,6 +102,9 @@ final class LifecycleCyclicBindingOracle {
                 "gasManifestIdentity",e.gasManifestIdentity(),"portableLimitPolicyIdentity",e.portableLimitPolicyIdentity());
         String current=identity("blue-contracts-invocation/1.0",value);assertEquals(input.invocationIdentity(),current);
         value.put("cyclicFinalizerIdentity",OLD_FINALIZER);value.put("cyclicProofVerifierIdentity",OLD_VERIFIER);
+        // Reverse only reviewed environment dependencies; all historical operands,
+        // complete gas charges, quantities, owners and ordering remain frozen.
+        value.put("runtimeRegistryIdentity",OLD_REGISTRY);
         assertEquals(oldInvocation,identity("blue-contracts-invocation/1.0",value),"No other fixture input or environment binding may drift");
         return current;
     }

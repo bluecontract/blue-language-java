@@ -1,5 +1,8 @@
 # Source BlueId — ponowny przegląd po optymalizacji
 
+> Raport historyczny. Aktualny kontrakt, poprawki i pomiary PR #36 opisuje
+> [raport naprawy kontekstowych referencji](pr36-contextual-reference-repair.pl.md).
+
 Nowsza weryfikacja po naprawach: [przegląd R3](source-identity-large-documents-r3-2026-09-14.md).
 Poniższy raport opisuje wcześniejszą wersję zmian.
 
@@ -190,7 +193,7 @@ Zielone testy istniejącego zestawu nie obejmują nowych reprodukcji.
 
 **Materiały do odtworzenia.**
 
-Katalog: [/private/tmp/blue-large-identity-review-20260914-r2](/private/tmp/blue-large-identity-review-20260914-r2).
+Katalog: /private/tmp/blue-large-identity-review-20260914-r2 (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914-r2`).
 
 - `ContextAttachedReferenceProbeV2.java` oraz logi z sufiksami `head`, `previous`,
   `current` — obie regresje zagnieżdżonej materializacji, kontrolny słownik.

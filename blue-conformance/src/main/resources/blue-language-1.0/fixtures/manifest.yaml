@@ -3,7 +3,7 @@ specificationVersion: '1.0'
 schemaVersion: blue-language-fixture/1.0
 registryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
 vectorCount: 150
-behaviorFixtureCount: 185
+behaviorFixtureCount: 195
 gasFixtureCount: 0
 files:
 - path: HARNESS.md
@@ -510,6 +510,46 @@ files:
   role: behavior-fixture
   sha256: 040a8777d4f800f83759dac5984970852518ea0c30e27290f0b72fbf28a4cab4
   bytes: 481
+- path: resolver/R_contextual_currency_reference_custom.yaml
+  role: behavior-fixture
+  sha256: a1e3636a92c580a591e8594d1df039f238b28cbb00a431dfbec3cfa41c104e04
+  bytes: 5030
+- path: resolver/R_contextual_currency_reference_text.yaml
+  role: behavior-fixture
+  sha256: d2d72c6a3b199b45a4f99db60f3cf231dfa7d437e0da9bb564a6fa6f76477f36
+  bytes: 5232
+- path: resolver/R_contextual_dictionary_invalid_inline.yaml
+  role: behavior-fixture
+  sha256: b9598ca23b0efa8fb2ecb4da2dd4f55f7878e7c5347dd7e07e3c2ea1272b30cd
+  bytes: 4967
+- path: resolver/R_contextual_dictionary_invalid_reference.yaml
+  role: behavior-fixture
+  sha256: 12ee1de85f388010f70989d69f783ce9a5bb1d3e07d929ba734ed424a1e06206
+  bytes: 4946
+- path: resolver/R_contextual_dictionary_valid_reference.yaml
+  role: behavior-fixture
+  sha256: ca1f65eaf051ad956d312717c5d27352c41f459b76ed6d1fe2534ce02b428d53
+  bytes: 5164
+- path: resolver/R_contextual_empty_object_reference.yaml
+  role: behavior-fixture
+  sha256: 0f2e366cd3eb87feb5724cd94e3d551af01d6d8887d73c8de4b4121a446233af
+  bytes: 5018
+- path: resolver/R_contextual_list_invalid_inline.yaml
+  role: behavior-fixture
+  sha256: 3e3493894629f80d84692d566aaa4a401ba4b07b74c1cdc675bb03e345d7f2cb
+  bytes: 4954
+- path: resolver/R_contextual_list_invalid_reference.yaml
+  role: behavior-fixture
+  sha256: d0e9195a2d66b64f712f2b2f417830a8131c5a8203981eb6636ba4e276ef6b03
+  bytes: 4933
+- path: resolver/R_contextual_schema_reference.yaml
+  role: behavior-fixture
+  sha256: b58215d9153f704bf051d31d39090f9766c2890bee32de8d781fe9fdf888f6c3
+  bytes: 5001
+- path: resolver/R_contextual_terms_reference_coffee.yaml
+  role: behavior-fixture
+  sha256: eeba2781241750c2ad6383b0d947efa54fa2b99e7b2e40b623c9b136e70171fa
+  bytes: 5330
 - path: resolver/R_contracts_canonicalization_deterministic.yaml
   role: behavior-fixture
   sha256: 81b4c948280f1e1ca2d918133e0730bffba18f6dc30fd283f384611bbd09ca89
@@ -780,10 +820,10 @@ files:
   bytes: 1574
 - path: vector-coverage.yaml
   role: support
-  sha256: 0bf6016400f6e28296b8cfc4b3cc1d2445ebcc14bf9a0bb63391fdfc4c3d1f38
-  bytes: 13220
+  sha256: d9ad97d0f0fae51792751a051390d9eebe7dc1bcaf9364560331330fb364eef5
+  bytes: 13628
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695
+packageIdentity: sha256:5a49eef38d6f8ffbdd2e8c1d0e7f423ded5fd0e744395280d49493219fb52406

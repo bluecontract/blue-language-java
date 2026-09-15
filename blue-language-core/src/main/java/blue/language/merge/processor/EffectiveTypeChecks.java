@@ -5,6 +5,7 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
+import blue.language.model.NodeWireForm;
 import blue.language.model.Schema;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.Types;
@@ -12,15 +13,33 @@ import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
 
 /** Resolver-aware mutable type checks shared by merge processors. */
 final class EffectiveTypeChecks {
 
     private EffectiveTypeChecks() {
+    }
+
+    static Node withExactScalarType(Node value) {
+        if (value.getType() != null || value.getValue() == null) {
+            return value;
+        }
+        // Host Nodes may omit the primitive type that is already part of
+        // their exact wire/hash projection. Use that projection's rule, without
+        // interpreting the referenced content as a fresh Source expression.
+        Map<?, ?> scalar = (Map<?, ?>) NodeWireForm.get(new Node().value(value.getValue()));
+        Object type = scalar.get(OBJECT_TYPE);
+        if (!(type instanceof Map)) {
+            return value;
+        }
+        return value.clone().type(new Node().blueId((String) ((Map<?, ?>) type).get(OBJECT_BLUE_ID)));
     }
 
     static boolean isSubtype(

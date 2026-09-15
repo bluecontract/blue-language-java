@@ -84,9 +84,9 @@
   ],
   "inventory": {
     "productionSourceCount": 817,
-    "productionResourceCount": 1123,
+    "productionResourceCount": 1133,
     "productionSourcePathIdentity": "sha256:cd16814b8c276480c70d91b2285ef194a490c587de25158ff4e4de2fa2d3d00f",
-    "productionResourcePathIdentity": "sha256:c5a08c87b9507897d78fdc0ffb10e2791e9572bf9795ed462fcd6a5fcb7a37fd"
+    "productionResourcePathIdentity": "sha256:8d96c8ab3d908fea1c349944142974aae746d291b6abdfd17709125a51413a9a"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -9335,6 +9335,56 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_content_blueid_is_canonical_node_blueid.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_content_blueid_is_canonical_node_blueid.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_currency_reference_custom.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_currency_reference_custom.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_currency_reference_text.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_currency_reference_text.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_invalid_inline.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_invalid_inline.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_invalid_reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_invalid_reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_valid_reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_dictionary_valid_reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_empty_object_reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_empty_object_reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_list_invalid_inline.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_list_invalid_inline.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_list_invalid_reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_list_invalid_reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_schema_reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_schema_reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_terms_reference_coffee.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contextual_terms_reference_coffee.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_contracts_canonicalization_deterministic.yaml",

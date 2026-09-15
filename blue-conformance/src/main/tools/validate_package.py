@@ -959,6 +959,7 @@ def direct_processor_markers(
     initialized_type = registry_blue_id("ProcessingInitializedMarker")
     terminated_type = registry_blue_id("ProcessingTerminatedMarker")
     checkpoint_type = registry_blue_id("ChannelEventCheckpoint")
+    checkpoint_entry_type = registry_blue_id("CheckpointEntry")
     result: dict[str, dict[str, Any]] = {}
     for document_id, record in documents.items():
         document = record["document"]
@@ -1024,7 +1025,11 @@ def direct_processor_markers(
                 require(
                     isinstance(raw_key, str)
                     and isinstance(entry, dict)
-                    and set(entry) == {"domain", "subject"}
+                    and set(entry) in (
+                        {"domain", "subject"}, {"type", "domain", "subject"}
+                    )
+                    and ("type" not in entry
+                         or pure_blue_reference(entry["type"]) == checkpoint_entry_type)
                     and (domain_reference is not None or inline_domain_valid)
                     and pure_blue_reference(entry["subject"]) is not None,
                     f"invalid checkpoint entry in {path.name}: "

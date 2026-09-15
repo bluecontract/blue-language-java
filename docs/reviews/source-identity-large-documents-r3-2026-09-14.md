@@ -1,5 +1,8 @@
 # Source BlueId — weryfikacja czterech poprawek
 
+> Raport historyczny. Aktualny kontrakt, poprawki i pomiary PR #36 opisuje
+> [raport naprawy kontekstowych referencji](pr36-contextual-reference-repair.pl.md).
+
 Nowsza weryfikacja: [przegląd R4](source-identity-large-documents-r4-2026-09-14.md).
 Poniższy raport opisuje wcześniejszą wersję zmian.
 
@@ -17,7 +20,7 @@ z typu, a waga pomija memoizowaną mutowalną kopię treści.
 
 **P1 — nowo dołączone elementy listy nadal nie trafiają do zbioru poddrzewa.**
 
-Miejsce: [CompletedValueValidator.java:549](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:549).
+Miejsce: CompletedValueValidator.java:549 (archiwalna ścieżka: `blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:549`).
 
 Po materializacji helper dostaje korzeń już obecny w `subtree`, więc
 `!nodes.add(current)` kończy przejście, zanim odwiedzi nowe dzieci. Fallback
@@ -46,12 +49,12 @@ prawidłową wartość i identyfikator. Nie naprawia następnego punktu.
 
 Reguła: §13.4 wymaga zachowania wszystkich wkładów instancji, których nie da
 się wyprowadzić z łańcucha typów
-([specyfikacja:2498](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2498)).
+(specyfikacja:2498 (archiwalna ścieżka: `blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2498`)).
 Lista ma efektywny `itemType`; ten przypadek podlega wymaganemu parytetowi.
 
 **P1 — odziedziczona wartość blokuje dopełnienie oczekującej referencji.**
 
-Miejsce: [CompletedValueValidator.java:494](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:494).
+Miejsce: CompletedValueValidator.java:494 (archiwalna ścieżka: `blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:494`).
 
 Fallback odrzuca żywy węzeł z istniejącym `value`, `items` albo `properties`.
 Taka zawartość może pochodzić z typu, mimo że wkład referencji nadal oczekuje
@@ -90,13 +93,13 @@ Nie naprawia pierwszego P1. Obie zmiany kontrolne razem naprawiają oba przypadk
 To potwierdzenie przyczyn, nie gotowa, zweryfikowana poprawka produkcyjna.
 
 Reguła: §13.4 wymienia instancyjne `name` wśród zachowywanych wkładów
-([specyfikacja:2500](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2500)).
+(specyfikacja:2500 (archiwalna ścieżka: `blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2500`)).
 
 ## Standards
 
 **P2 — waga nadal pomija memoizowaną mutowalną kopię treści.**
 
-Miejsce: [VerifiedReferenceContents.java:72](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceContents.java:72),
+Miejsce: VerifiedReferenceContents.java:72 (archiwalna ścieżka: `blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceContents.java:72`),
 estymator w tym pliku od linii 153.
 
 `find` poprawnie zwraca świeży klon, ale najpierw zatrzymuje osobny graf
@@ -127,9 +130,9 @@ leniwej kopii. Możliwe kierunki to materializacja bez zatrzymywania tej kopii
 albo zarezerwowanie jej kosztu przed przyjęciem wpisu do cache.
 
 Naruszony kontrakt: metoda wagi obejmuje zatrzymany graf evidence
-([CanonicalTypeIdentityLookup.java:179](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityLookup.java:179)),
+(CanonicalTypeIdentityLookup.java:179 (archiwalna ścieżka: `blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityLookup.java:179`)),
 a runtime ma ograniczone cache
-([immutability-and-runtime-state.md:12](/Users/przemekkowalewski/Sites/blue-language-java/docs/architecture/immutability-and-runtime-state.md:12)).
+(immutability-and-runtime-state.md:12 (archiwalna ścieżka: `docs/architecture/immutability-and-runtime-state.md:12`)).
 
 **Potwierdzone naprawy.** Wcześniejszy przypadek pominiętego kandydata z
 `Amount.currency.schema.required` ma teraz parytet. Powtórny lookup zwraca
@@ -176,7 +179,7 @@ sprawdzono tożsamość. Te próby nie wykonują workflow Commerce.
 
 **Materiały do odtworzenia.**
 
-Katalog: [/private/tmp/blue-large-identity-review-20260914-r3](/private/tmp/blue-large-identity-review-20260914-r3).
+Katalog: /private/tmp/blue-large-identity-review-20260914-r3 (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914-r3`).
 
 - `ContextAttachedReferenceProbeV2.java`, `ContextAttachedReferenceProbeV2-current.log`:
   oryginalny P1 listy, naprawiony przypadek `required`, kontrolny słownik.

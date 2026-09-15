@@ -256,6 +256,7 @@ final class CheckpointManager {
                 ? active.checkpointDomainBlueId
                 : subjectBlueId;
         Node entryNode = new Node()
+                .type(new Node().blueId(RuntimeBlueIds.CHECKPOINT_ENTRY))
                 .properties(
                         ProcessorContractConstants.KEY_DOMAIN,
                         new Node().blueId(domainBlueId))

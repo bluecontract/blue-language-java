@@ -310,7 +310,7 @@ abstract class BlueConformanceFixturePrimitives {
             FIXTURE_ROOT + "preprocessing/registry/";
     static final String PREPROCESSING_REGISTRY_MANIFEST_RESOURCE =
             PREPROCESSING_REGISTRY_ROOT + "manifest.yaml";
-    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 185;
+    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 195;
 
     static final Set<String> OPERATIONS = immutableSet(
             FixtureOperation.ASSERT_VIEW_PATH,

@@ -29,7 +29,7 @@ public final class TransformationExecutor {
             Node source,
             PreprocessingPlan plan,
             PreprocessingContext context) {
-        Node working = source.clone();
+        Node working = source.cloneWithoutResolutionEvidence();
         working.blue(null);
         for (TransformationSnapshot transformation
                 : plan.transformations()) {

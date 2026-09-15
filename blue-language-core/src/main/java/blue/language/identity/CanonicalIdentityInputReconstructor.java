@@ -63,21 +63,21 @@ final class CanonicalIdentityInputReconstructor {
             Node source,
             boolean ownTypeBaseline,
             boolean sourceComplete) {
-        if (isSourceReference(source) && isMaterializedReference(resolved)) {
+        if (isSourceReference(source) && isMaterializedReference(resolved, source)) {
             Node content = typeIdentities.findVerifiedReferenceContent(
-                    source.getBlueId()).orElse(null);
-            if (content != null) {
-                /*
-                 * The resolver materialized this reference, so its exact
-                 * verified content is the authored lane of the child. It
-                 * reconstructs through the same path as inline content and
-                 * only then decides whether the pure reference form stays.
-                 */
-                reconstructNode(canonical, resolved, inherited, content,
-                        ownTypeBaseline, true);
-                preserveFaithfulReference(canonical, resolved, source, content);
-                return;
-            }
+                    source.getBlueId()).orElseThrow(() -> new IllegalStateException(
+                            "Missing verified content for materialized reference: "
+                                    + source.getBlueId()));
+            /*
+             * The resolver materialized this reference, so its exact
+             * verified content is the authored lane of the child. It
+             * reconstructs through the same path as inline content and
+             * only then decides whether the pure reference form stays.
+             */
+            reconstructNode(canonical, resolved, inherited, content,
+                    ownTypeBaseline, true);
+            preserveFaithfulReference(canonical, resolved, source, content);
+            return;
         }
         if (resolved.getBlueId() != null
                 && inherited != null
@@ -174,7 +174,7 @@ final class CanonicalIdentityInputReconstructor {
     private void preserveFaithfulReference(
             Node canonical, Node resolved, Node source, Node content) {
         String blueId = source.getBlueId();
-        if (!isMaterializedReference(resolved)) {
+        if (!isMaterializedReference(resolved, source)) {
             canonical.replaceWith(new Node().blueId(blueId));
             return;
         }
@@ -193,22 +193,10 @@ final class CanonicalIdentityInputReconstructor {
         }
     }
 
-    /**
-     * Tells whether the resolver materialized a value reference into the
-     * completed node.
-     *
-     * <p>The resolver fetches reference content exactly when the target
-     * carries an effective type, concrete payload or a payload-dependent
-     * schema. Every materialization that can change identity leaves a type
-     * or a payload on the completed node, so their presence is the signal.
-     * A materialized node without any of them is metadata-only exact
-     * content, which the retained pure reference already identifies.</p>
-     */
-    private boolean isMaterializedReference(Node resolved) {
-        return resolved.getType() != null
-                || resolved.getValue() != null
-                || resolved.getItems() != null
-                || Nodes.hasObjectPayload(resolved);
+    /** Resolver-established evidence for this occurrence, never a shape/cache guess. */
+    private boolean isMaterializedReference(Node resolved, Node source) {
+        return source != null && source.getBlueId() != null
+                && source.getBlueId().equals(resolved.getMaterializedReferenceBlueId());
     }
 
     private void reconstructContracts(
@@ -347,8 +335,11 @@ final class CanonicalIdentityInputReconstructor {
                     : null;
             if (sameNodeBlueId(resolvedProperty, inheritedProperty)
                     && resolvedProperty.getItems() == null
+                    && !(Nodes.hasObjectPayload(resolvedProperty)
+                    && !Nodes.hasObjectPayload(inheritedProperty)
+                    && inheritedProperty.getBlueId() == null)
                     && (!isSourceReference(sourceProperty)
-                    || isMaterializedReference(resolvedProperty))) {
+                    || isMaterializedReference(resolvedProperty, sourceProperty))) {
                 // Fully derivable from the ancestor form. A materialized
                 // reference that contributed nothing beyond it is omitted
                 // exactly like the same content written inline.

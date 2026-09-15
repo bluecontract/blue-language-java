@@ -14,7 +14,7 @@ import refine_closure_fixtures
 class PatchResultIdentityTest(unittest.TestCase):
 
     def test_explicit_empty_member_keeps_its_identity_contribution(self) -> None:
-        marker = {"type": {"blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"}, "entries": {}}
+        marker = {"type": {"blueId": "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr"}, "entries": {}}
         patch = {"op": "add", "path": "/checkpoint", "val": marker}
         document, expected, total = reference_scenarios.derive_direct_patch_result_identity_trace({}, [patch])
         actual = GasReferenceTrace()

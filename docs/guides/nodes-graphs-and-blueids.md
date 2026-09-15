@@ -55,6 +55,23 @@ inline/reference identity remains equal. Where an effective type, inherited
 payload, or schema requires reference content, that content is materialized and
 canonicalized in the same context as an inline value.
 
+The normative boundary is Language §13.2.1. A Dictionary with an effective
+`valueType` interprets and validates its entries; it is not an opaque-reference
+case. An inherited fixed value or applicable schema may also require content
+when a List has no `itemType`.
+
+A present, nonredundant canonical child retains its effective custom type. For
+example, `Holder.currency: Currency` with payload `PLN` prepares a child with
+`type: Currency` and `value: PLN` (type positions contain exact BlueIds). An
+entire field supplied by an inherited fixed value can still be omitted, and
+canonical Lists retain their complete payload according to §13.6. Absent
+optional fields are not created.
+
+An exact expand/collapse or canonical store/load preserves the established
+identity. Feeding expanded bytes through Source preparation starts a new
+interpretation, including authoring List overlays. Use the canonical/exact
+loading boundary to persist and reload already prepared canonical Lists.
+
 ## Identity is not storage
 
 A BlueId says nothing about provider location, cache state, fragment size,

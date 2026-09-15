@@ -30,6 +30,7 @@ public final class FrozenNodeBuilder {
     Map<String, FrozenNode> properties;
     FrozenNode contracts;
     String referenceBlueId;
+    String materializedReferenceBlueId;
     Schema schema;
     String mergePolicy;
     String previousBlueId;
@@ -61,6 +62,7 @@ public final class FrozenNodeBuilder {
                 .properties(node.properties)
                 .contracts(node.contracts)
                 .referenceBlueId(node.referenceBlueId)
+                .materializedReferenceBlueId(node.materializedReferenceBlueId)
                 .schema(node.schema)
                 .mergePolicy(node.mergePolicy)
                 .previousBlueId(node.previousBlueId)
@@ -115,7 +117,8 @@ public final class FrozenNodeBuilder {
             FrozenNode child,
             boolean deferBlueId) {
         if (OBJECT_CONTRACTS.equals(key)) {
-            FrozenNodeBuilder next = from(node).contracts(child);
+            FrozenNodeBuilder next = from(node).materializedReferenceBlueId(null)
+                    .contracts(child);
             return finish(next, deferBlueId);
         }
         Map<String, FrozenNode> next = node.properties != null
@@ -127,7 +130,7 @@ public final class FrozenNodeBuilder {
             next.put(key, child);
         }
         return finish(
-                from(node).properties(next.isEmpty()
+                from(node).materializedReferenceBlueId(null).properties(next.isEmpty()
                         && node.properties == null ? null : next),
                 deferBlueId);
     }
@@ -136,13 +139,15 @@ public final class FrozenNodeBuilder {
             FrozenNode node,
             List<FrozenNode> nextItems,
             boolean deferBlueId) {
-        return finish(from(node).items(nextItems), deferBlueId);
+        return finish(from(node).materializedReferenceBlueId(null)
+                .items(nextItems), deferBlueId);
     }
 
     static FrozenNode withValueForPatch(
             FrozenNode node,
             Object nextValue) {
         return from(node)
+                .materializedReferenceBlueId(null)
                 .frozenValue(nextValue)
                 .deferBlueId()
                 .build();
@@ -155,7 +160,7 @@ public final class FrozenNodeBuilder {
         if (!isMergeableObject(node) || !isMergeableObject(overlay)) {
             return overlay;
         }
-        FrozenNodeBuilder merged = from(node);
+        FrozenNodeBuilder merged = from(node).materializedReferenceBlueId(null);
         if (overlay.properties != null) {
             Map<String, FrozenNode> nextProperties = node.properties != null
                     ? new LinkedHashMap<>(node.properties)
@@ -181,7 +186,18 @@ public final class FrozenNodeBuilder {
             merged.previousBlueId(overlay.previousBlueId);
         }
         if (overlay.position != null) merged.position(overlay.position);
-        return finish(merged, deferBlueId);
+        FrozenNode result = finish(merged, deferBlueId);
+        if (!result.strictCanonical && changesChildContext(overlay)) {
+            return FrozenNode.fromResolvedNode(
+                    result.toNode().cloneWithoutResolutionEvidence());
+        }
+        return result;
+    }
+
+    static boolean changesChildContext(FrozenNode overlay) {
+        return overlay.type != null || overlay.itemType != null
+                || overlay.keyType != null || overlay.valueType != null
+                || overlay.schema != null;
     }
 
     static FrozenNode withoutPosition(FrozenNode node) {
@@ -310,6 +326,11 @@ public final class FrozenNodeBuilder {
 
     FrozenNodeBuilder referenceBlueId(String value) {
         this.referenceBlueId = value;
+        return this;
+    }
+
+    FrozenNodeBuilder materializedReferenceBlueId(String value) {
+        this.materializedReferenceBlueId = value;
         return this;
     }
 
@@ -463,7 +484,11 @@ public final class FrozenNodeBuilder {
                         targetStrictBlueIdValidation,
                         false))
                 .referenceBlueId(source.referenceBlueId)
-                .schema(source.schema)
+                .materializedReferenceBlueId(targetStrictCanonical
+                        ? null : source.materializedReferenceBlueId)
+                .schema(targetStrictCanonical && source.schema != null
+                        ? source.schema.cloneWithoutResolutionEvidence()
+                        : source.schema)
                 .mergePolicy(source.mergePolicy)
                 .previousBlueId(source.previousBlueId)
                 .position(source.position)

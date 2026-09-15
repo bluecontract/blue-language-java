@@ -330,6 +330,15 @@ final class ReferenceResolver {
                 || hasConcretePayload(target);
     }
 
+    void validateListItemContribution(Node contribution, Node itemType) {
+        Node exact = contribution.isReferenceOnly()
+                ? canonicalReference(contribution.getBlueId(),
+                        engine.activeResolutionState()).canonical.toNode()
+                : contribution;
+        mergingProcessor.validateListItem(exact, itemType, nodeProvider,
+                engine, engine.canonicalTypeIdentities());
+    }
+
     private boolean hasConcretePayload(Node node) {
         if (node == null) {
             return false;
@@ -360,7 +369,7 @@ final class ReferenceResolver {
         }
         engine.mergeCanonicalObjectWithContribution(target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
         engine.copyMaterializedReferenceLabels(target, materialized);
-        target.blueId(blueId);
+        target.blueId(blueId).materializedReferenceBlueId(blueId);
     }
 
     private void materializeCyclicSetReference(Node target,
@@ -385,7 +394,7 @@ final class ReferenceResolver {
             engine.mergeCanonicalObjectWithContribution(
                     target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
             engine.copyMaterializedReferenceLabels(target, materialized);
-            target.blueId(blueId);
+            target.blueId(blueId).materializedReferenceBlueId(blueId);
         } finally {
             materializingReferences.remove(blueId);
         }

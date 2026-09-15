@@ -1263,6 +1263,7 @@ def _generic_external_complete_trace(
         domain_value = g.checkpoint_domain_value(source_contract)
         domain_blue_id = direct_blue_id(domain_value)
         entry = {
+            "type": g.ref(g.CHECKPOINT_ENTRY),
             "domain": g.ref(domain_blue_id),
             "subject": g.ref(work_item["eventBlueId"]),
         }
@@ -5786,6 +5787,7 @@ def _add_checkpoint_entry(
     if marker.get("type") != g.ref(g.CHECKPOINT_MARKER):
         raise AssertionError("contracts/checkpoint is not the exact checkpoint marker")
     marker.setdefault("entries", {})[channel_key] = {
+        "type": g.ref(g.CHECKPOINT_ENTRY),
         "domain": g.ref(domain_blue_id),
         "subject": g.ref(event_blue_id),
     }
@@ -7432,7 +7434,13 @@ def bind_exact_fixture_identities() -> None:
             ) -> tuple[str | None, dict[str, Any] | None, str | None]:
                 if entry is None:
                     return None, None, None
-                if not isinstance(entry, dict) or set(entry) != {"domain", "subject"}:
+                if (
+                    not isinstance(entry, dict)
+                    or set(entry) not in (
+                        {"domain", "subject"}, {"type", "domain", "subject"}
+                    )
+                    or ("type" in entry and entry["type"] != g.ref(g.CHECKPOINT_ENTRY))
+                ):
                     raise AssertionError("checkpoint entry is not the exact closed shape")
                 channel = (
                     document.get("contracts", {}).get(raw_key)

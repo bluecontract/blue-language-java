@@ -427,9 +427,11 @@ stages:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: 9x8ixi3pJRp3Y2ADfTqTPMWLZg2W9DZWu3CKCLdaNKfn
             subject:
@@ -475,7 +477,7 @@ stages:
         document:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#0
   preliminaryBlueIds:
-    '0': 9TnWfEJowqZ95vXdjHQxkrMhEmL9vbJZBmG82uN4nWUM
+    '0': DdCg41x65LpabJjnRfaS3okuv1N5r5F8yu8CAMV9VxSX
     '1': 4gD9Wq47mvXrMSKKgcnSEMoz3byaHrhrArjHmgvdatXi
   sortedSourceIndices:
   - 1
@@ -496,17 +498,17 @@ stages:
     b:
       blueId: this#0
     contracts:
-      blueId: 5CfbcN5MQwkXHT1Wt2HUNrDwxUjFmjzuSSaVtE1mJorD
+      blueId: 8uRksihxoKkL9EyMVyB4eMZCnkt6xDFTqRj4PDyXC2Dv
   canonicalMasterInputUtf8Bytes: 485
-  masterBlueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i
+  masterBlueId: FEhLJngxLJPrwziUNAqWfWhKC7KXpLD74QzzmiYVmwfQ
   memberBlueIdsInSourceOrder:
-  - FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#1
-  - FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#0
+  - FEhLJngxLJPrwziUNAqWfWhKC7KXpLD74QzzmiYVmwfQ#1
+  - FEhLJngxLJPrwziUNAqWfWhKC7KXpLD74QzzmiYVmwfQ#0
   materializedDocuments:
   - documentId: loop-a
     memberIdentity: loop-a
     b:
-      blueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#0
+      blueId: FEhLJngxLJPrwziUNAqWfWhKC7KXpLD74QzzmiYVmwfQ#0
     contracts:
       embedded:
         type:
@@ -545,9 +547,11 @@ stages:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: 9x8ixi3pJRp3Y2ADfTqTPMWLZg2W9DZWu3CKCLdaNKfn
             subject:
@@ -555,7 +559,7 @@ stages:
   - documentId: loop-b
     memberIdentity: loop-b
     a:
-      blueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#1
+      blueId: FEhLJngxLJPrwziUNAqWfWhKC7KXpLD74QzzmiYVmwfQ#1
     contracts:
       embedded:
         type:

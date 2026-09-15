@@ -47,6 +47,9 @@ public final class FrozenNodeStructuralKey {
         exact.add(node.strictCanonical);
         exact.add(node.strictBlueIdValidation);
         exact.add(node.previousAnchorContext);
+        // Equal bytes with different occurrence evidence cannot share a
+        // resolved transport object. This field is absent from direct hashing.
+        exact.add(node.materializedReferenceBlueId);
         this.fields = Collections.unmodifiableList(exact);
         this.hashCode = fields.hashCode();
     }

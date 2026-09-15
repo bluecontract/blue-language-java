@@ -1,0 +1,1627 @@
+{
+  "schema": "blue-contextual-reference-dependency-review/1.0",
+  "beforeRevision": "9eb47786cee058af3868ed581bd9fb4b7e15850c",
+  "beforeFileCount": 383,
+  "afterFileCount": 383,
+  "changedFileCount": 108,
+  "scope": "Every changed file of the Contracts closure package; independent semantic review of the complete structured delta, not acceptance by path prefix.",
+  "unexplainedNonIdentityChanges": 0,
+  "reviewEvidence": {
+    "method": "Independent Spec review checked complete payloads, exact continuation inputs, cyclic member ordering, gas traces, registry changes, and manifest bytes. Standards review checked the matching runtime/reference constructors.",
+    "checkpointTypes": {
+      "fixtureResultDeclarations": 35,
+      "fixturesWithContentChanges": 29,
+      "oracleDeclarations": 44,
+      "oraclesWithContentChanges": 16,
+      "continuationInputDeclarations": 6
+    },
+    "continuationInputs": "C-CLO-23-01 through C-CLO-23-05 and C-CLO-35-01 preserve the full exact content and identity of the preceding newly generated step.",
+    "gasChanges": [
+      {
+        "path": "fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-05-direct-both-members.yaml",
+        "before": 727,
+        "after": 733,
+        "delta": 6
+      },
+      {
+        "path": "fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml",
+        "before": 785,
+        "after": 789,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-09-merge-two-cycles.yaml",
+        "before": 841,
+        "after": 845,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-10-split-to-singletons.yaml",
+        "before": 731,
+        "after": 739,
+        "delta": 8
+      },
+      {
+        "path": "fixtures/closure/c-clo-11-split-into-two-cycles.yaml",
+        "before": 1162,
+        "after": 1170,
+        "delta": 8
+      },
+      {
+        "path": "fixtures/closure/c-clo-12-frozen-edge-removal.yaml",
+        "before": 777,
+        "after": 781,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-13-frozen-edge-addition.yaml",
+        "before": 791,
+        "after": 799,
+        "delta": 8
+      },
+      {
+        "path": "fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml",
+        "before": 730,
+        "after": 738,
+        "delta": 8
+      },
+      {
+        "path": "fixtures/closure/c-clo-19-public-event-boundary.yaml",
+        "before": 1100,
+        "after": 1104,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-19-single-public-root.yaml",
+        "before": 411,
+        "after": 415,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-23-00-attach-a5-retry.yaml",
+        "before": 492,
+        "after": 496,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-24-occurrence-continuity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml",
+        "before": 633,
+        "after": 637,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml",
+        "before": 625,
+        "after": 629,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-28-mixed-result-shape.yaml",
+        "before": 1162,
+        "after": 1170,
+        "delta": 8
+      },
+      {
+        "path": "fixtures/closure/c-clo-30-language-cyclic-oracles.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml",
+        "before": 1458,
+        "after": 1440,
+        "delta": -18
+      },
+      {
+        "path": "fixtures/closure/c-clo-34-separate-document-steps.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml",
+        "before": 777,
+        "after": 781,
+        "delta": 4
+      },
+      {
+        "path": "fixtures/closure/c-clo-35-01-readd-committed-successor.yaml",
+        "before": 646,
+        "after": 650,
+        "delta": 4
+      }
+    ],
+    "gasExplanation": "Except C33, only objectMemberRebuilt and directIdentityHashBlock quantities increase for the new canonical entry or its finalization. C33 combines +4 for the typed entry with -22 for reuse of two unchanged B canonical limit forms (two sets of nodeIdentity=1, objectMembers=5, hashBlocks=5).",
+    "memberPermutations": [
+      "C-CLO-23-05 stages 0/1: [0,1] to [1,0]",
+      "C-CLO-33 stages 1/2: [1,0] to [0,1]"
+    ],
+    "canonicalBytesChanges": 0,
+    "manifestExplanation": "29 fixture lengths and 16 oracle lengths equal actual bytes. The release implementation inventory shifts by one VerifiedReferenceContents.java row; matching rows by path leaves only hashes changed and no removals.",
+    "preserved": "Business payloads, accept/reject outcomes, historical exact content, and the direct BlueId algorithm.",
+    "rawDeltaSha256": "c7fc664041e096b04dbfee2724645557130780a2f07c46ba06d7d67c80393634",
+    "rawDeltaGenerator": "blue-conformance/src/main/tools/classify_fixture_identity_delta.py; its older transition labels require this explicit bounded review.",
+    "legacyClassifierDiagnostic": "The extra C-EVO release integrity row is an aggregate validation diagnostic, not a 109th file. Its old fixture/registry/release pins rotate through the individually reviewed files. The regenerated package passes its authoritative validator."
+  },
+  "files": [
+    {
+      "path": "fixtures/chk/c-chk-04.yaml",
+      "beforeSha256": "d16c2bf488ac7f41affc879f55ae73e16af0ce8af9cfadaac550fd5134bfacab",
+      "afterSha256": "2a79923ba3babede99739acdd8814f3f5cc465c6973c9b2b7dc8cb6d04a830cf",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1
+      }
+    },
+    {
+      "path": "fixtures/chk/c-chk-07.yaml",
+      "beforeSha256": "a152c722edceb12eb3f53f75c039936ce2cf9eaf1a39b01bc2c290d86a016722",
+      "afterSha256": "e06aca3818b0b731f1f5f6a6286e119e1f933bf197f21416471c41f0d2b955e9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml",
+      "beforeSha256": "3ba14efa2802836a16b5f62b86ed4c34e17104063262716131356bfa07b9151f",
+      "afterSha256": "f40243d07c8966c8219153285d22da31ec8b94d078c0dc0c9679a6ace1fd43ad",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 44
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml",
+      "beforeSha256": "57f7a23677395586a65b3049381fa3c055fc0da1160ca706d9ac9ae8d192df49",
+      "afterSha256": "9c34b6d7393735fa1b80406f57f1a70bba55eee4fa5f6ba91a2a069376c1b8e7",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 44
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-01-static-cycle-admission.yaml",
+      "beforeSha256": "f8a78fc53ae22307f2e91fe097667812a083498133054310f0295911b581df53",
+      "afterSha256": "7d3fab5d4a5c8b50b68dc1f87748a0462804162a1dfe3cab51e50484d46973e0",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 44
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml",
+      "beforeSha256": "9ee9f2814e392afd518b3f931e0156c5b6e4f877df45e59ccc13d5e1f907d60f",
+      "afterSha256": "38cb926f781a4fd49142eedafd3981ef657ce2570a0bee39de7b12a45bfcaafe",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml",
+      "beforeSha256": "ca2f574f38a8bd179a938ad474801bdeba578d221ce80353b948f38507001d1b",
+      "afterSha256": "395d6c7007dd9f805c67efecc5fe7f7b1ec49a4f2126f408e447650b8a175519",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml",
+      "beforeSha256": "c14f9b5df238d85791da803676476a9137bd6b38d03235727d3afa945ea5c287",
+      "afterSha256": "9276c6267c94dbea45dca718f539dae5a7057dcd672f09becf278d7f6688f6c9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml",
+      "beforeSha256": "c50c7b6935cdf7b928707e75118b9f345f69de28c53bd18d64e892e514fed8cf",
+      "afterSha256": "0b282b634b98835af1030906c41c40d5bd8bfe2d1c0eac6e336a81b21005ed52",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-04-default-policy-loop.yaml",
+      "beforeSha256": "bf078d2fa0f7a5f4dc744b8591e8ddd6c709256e9f896510b10557f5cb7a4ed0",
+      "afterSha256": "391eb79c860966430edae8d444b8f6342194d2aa9fc7dd3f369314e8bbbff7d4",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 1477
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-04-same-event-gas-loop.yaml",
+      "beforeSha256": "ab967283546662bfe4be37938a69220638fa07a0def52e215676f39fe01735c0",
+      "afterSha256": "16c5c18512aa8d1fd9b902ea4900c3cd40c0ed805e169adb4ab450be048ff41e",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 89
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-05-direct-both-members.yaml",
+      "beforeSha256": "b8d24029e65afe899fe5f906fedcda33137b2a974b44b3d0a7125ebf0064ee46",
+      "afterSha256": "992e49844d43c33467c077b51207cb040795ab6b5bf47f945026e030702dba37",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 70,
+        "invocation-identity-rebind": 18,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 36
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-05-direct-both-members.yaml",
+        "before": 727,
+        "after": 733,
+        "delta": 6
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml",
+      "beforeSha256": "5cb10acce31d33a3080bd4e52bda1da62a92a02ac7c9e63b65c4bc1d9ae0e7b5",
+      "afterSha256": "4a59e8f26c5a69f643ed549a1742c11c69a5e08467b7a2cb094d6d5cc2be7648",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 61
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml",
+        "before": 785,
+        "after": 789,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-07-self-cycle.yaml",
+      "beforeSha256": "f33b831c35161788274ab2e1b3539c8aa7eef34329eebe59667862f018eadbca",
+      "afterSha256": "a81d83eb25f6932eece673af84da96eeede953fcb7bcf206cf533fee3da58ba2",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 4,
+        "spec-identity-rebind": 6
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-08-cycle-during-initialization.yaml",
+      "beforeSha256": "bdf670761b764b00565f81e7cb1041e69fc77ca4a19ea2287c94d231e12cf7d9",
+      "afterSha256": "ec45c877470436aa066f4cec70d869a21aa823c7fccfdabf21936b14a0c4fd0d",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 96
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-09-merge-two-cycles.yaml",
+      "beforeSha256": "6107e6b713ebfa4a0dbb2b8705196979db3fd040a29f6792e86340c319334eb8",
+      "afterSha256": "1f2638eaa7e38cff8d91366a2edfb2940b9d80c1adb9ef28ef323c9929e11b43",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 89,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 76
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-09-merge-two-cycles.yaml",
+        "before": 841,
+        "after": 845,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-10-split-to-singletons.yaml",
+      "beforeSha256": "3e0a925dce3ecd72d452879c7ab6f46f8e1c45e90e0964d0a2a06e8e984cae91",
+      "afterSha256": "fb031cf961355b2ef19cec2db815eda4c2aa4e9f8df056e0bce5e4b691242b02",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 51,
+        "invocation-identity-rebind": 16,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 57
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-10-split-to-singletons.yaml",
+        "before": 731,
+        "after": 739,
+        "delta": 8
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-11-split-into-two-cycles.yaml",
+      "beforeSha256": "e48c700f9eff200068f37bc1dafff8cae99a4de72540f10da973071ba38bb890",
+      "afterSha256": "ea2542a7b9c0626475d9ce7514f9b2c60a4c4c571bb65f3fb2d1252f9504552f",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 103,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 117
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-11-split-into-two-cycles.yaml",
+        "before": 1162,
+        "after": 1170,
+        "delta": 8
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-12-frozen-edge-removal.yaml",
+      "beforeSha256": "3763a4f08fe65c7bbca2b054c232caacacd6cc0a432a6049bdf9454556aa4fb1",
+      "afterSha256": "400dd9d529528f6afdccade9b83f64d619d8d410713eda3c50daf5258451c67f",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 51,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 73
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-12-frozen-edge-removal.yaml",
+        "before": 777,
+        "after": 781,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-13-frozen-edge-addition.yaml",
+      "beforeSha256": "55a395147c22333bba6fc2c8225392cbd9668b2c7844b90dec984b45500f0a10",
+      "afterSha256": "cb831661850ef5107de3fae04b388e1f8e8d40c0e30eb47b4ff03ce47dc62c63",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 56,
+        "invocation-identity-rebind": 19,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 52
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-13-frozen-edge-addition.yaml",
+        "before": 791,
+        "after": 799,
+        "delta": 8
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml",
+      "beforeSha256": "6ca1ae07a2a80caf648b0352afefb2dd498a00dc4c5831d7a46ead00bf37c917",
+      "afterSha256": "8908aca33ecf88bfaeb37a8afbad65915fd32502b288d3a73f858abb7c843886",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-15-ambiguous-preliminary-members.yaml",
+      "beforeSha256": "bea46c99490948a756b65fd84278a3e96502af892e6c63420e1d0fc3e3313145",
+      "afterSha256": "03acc5fdb621074ec3427eec9091e1258e792b3e39dfce1506b433636e07e9c6",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-16-limit-at-bound.yaml",
+      "beforeSha256": "0c88a5f101c4ba0a8235c8ebac0169598dcc01770ec4e973f159e2e697d1bf96",
+      "afterSha256": "270cb8aa835091a8071bc0249926e57a3e6dad781ef535d891141dabacf508fe",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 4,
+        "spec-identity-rebind": 6
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-17-limit-above-bound.yaml",
+      "beforeSha256": "b09dbbdd21e8a8e0431488d8babbe6617eebc801af0e4adc57b4ad65a5a6d6e6",
+      "afterSha256": "41b5933d2144a2465bff53f0eabe39edcb48dc1604359d68408aa5a1d536de85",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-18-locality-1000-unrelated.yaml",
+      "beforeSha256": "a25ac33d99ee2ae131692270131b42e2e64c65341fce0df54f7f476c041f3f87",
+      "afterSha256": "b636b08ca457a93c02ed289b042c59bfafba4ab13aa1443d1124639331c284c4",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 44
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml",
+      "beforeSha256": "a6abf27da505f6ec32bc8e1e8100a88bbcd4f78dc56bb4211a9e875b2cb30714",
+      "afterSha256": "26b50e07fb12ef01eaf31eec93f8f9d8641dd1667a0d4cc5efa74606b74d6fea",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 47,
+        "invocation-identity-rebind": 18,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 42
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml",
+        "before": 730,
+        "after": 738,
+        "delta": 8
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-19-public-event-boundary.yaml",
+      "beforeSha256": "7c99c183f791cdecd23288854fb240aba78c5e327f4a9b3f47e4f71ee5780c48",
+      "afterSha256": "61cdb6f1cb663d3da8302b9a438beb6a47dd016871479a941d05e7f17d3352f5",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 83,
+        "invocation-identity-rebind": 24,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 108
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-19-public-event-boundary.yaml",
+        "before": 1100,
+        "after": 1104,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-19-single-public-root.yaml",
+      "beforeSha256": "12746580c98db0263f1d18c3c53e4d40c920819d57dd52f8878b8768bc24971a",
+      "afterSha256": "859cb5ccccb9b550f99626f05e8b70e47c324d12eacd895b2da3d9170f3498b8",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 25,
+        "invocation-identity-rebind": 15,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 19
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-19-single-public-root.yaml",
+        "before": 411,
+        "after": 415,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-20-late-outer-failure.yaml",
+      "beforeSha256": "5e6baf54575a93cdaf3cb8674bae7a38d4110ca755787294e1653995ecb14ace",
+      "afterSha256": "5478c07c1ef2815c067190227a088d607ad3c7fc20eaef2fd987c984c84a8acc",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 100
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-21-admission-zero-direct.yaml",
+      "beforeSha256": "85b6006f5a69c1c9ec8f6dd506a6d7598980e12485b0143709ccc01727a22ebb",
+      "afterSha256": "6fb0a06ce690e77bc090be68e1e94373a2719c6682f6b4b657e0f7aee967603b",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 44
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml",
+      "beforeSha256": "5da0191517386bb277c4760ee2dda91387a03e87b477d70f99d5e550088242b8",
+      "afterSha256": "84783bb9f7920d7b5824d5c1ae074fe51c1e54ee3b6210b125ebb0ec92419ae0",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-00-attach-a5-retry.yaml",
+      "beforeSha256": "96e9716cac42cab8fd9f04bae29eed8f4af3823f8e7a645b82388029ab486cfc",
+      "afterSha256": "8f05fe37d62444a6e626d001e2d1217c8a1daadc21a3b3255eda61b613313011",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 38,
+        "invocation-identity-rebind": 18,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 30
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-23-00-attach-a5-retry.yaml",
+        "before": 492,
+        "after": 496,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-01-a5-to-a6.yaml",
+      "beforeSha256": "0a14807b4df851601c33a76f9837d80d000fbbb11dc7862af8b715168d531ce5",
+      "afterSha256": "1c48c7ddd5550dbff50b2ba82119029d810abbfc5c0f1c21aa6d02e04ea5d06c",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 56,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 26
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-02-a6-to-a7.yaml",
+      "beforeSha256": "1c72275dffe02b87d890ccd9dae6d1aa8d7a83fdcda08c64f42bbacbe5356923",
+      "afterSha256": "562bded4fe8ef64fda53ce5fd6ffb858076df0141c2c20524b2dda6941d66f69",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 56,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 26
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-03-a7-to-a8.yaml",
+      "beforeSha256": "0547088724293736b6b5722de6b6690a8e5a9c5fb087ae3bd55a6f5e61593cda",
+      "afterSha256": "09e1c7f3c3b978338dd6a9098b281deec1a7ec2bda5106295d58747f59ac2df0",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 56,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 26
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-04-a8-to-a9.yaml",
+      "beforeSha256": "52a73f1b9b62c15dd68c08a6858dfb3c5f3a7936c57200317584829f431a3c8e",
+      "afterSha256": "839af8006eea4a9f6024142378bb20d9d29583ca2245dc69bcb063cef9d5a46d",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 56,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 26
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-23-05-a9-to-a10.yaml",
+      "beforeSha256": "c89d32f0c495d4f6a74b9a6e6ab56f4c594bf11050a7e77ac70ab3b113a954ad",
+      "afterSha256": "5de59aaf2fc0a91b166e6d9c211fd5394f3f84dcbf5e0120914885ba7a00ddb0",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 93,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 52
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-24-occurrence-continuity.yaml",
+      "beforeSha256": "aba19d4bc16f7847e1bc244111246d83a6bcbd994d9020dfa1f1674081c21f7a",
+      "afterSha256": "ba9a30d9d77ff7c1edc415ee1bdb0afdf435a5b0b852e9305deb507fc2b39a1c",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-24-occurrence-continuity.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-25-policy-identity-binding.yaml",
+      "beforeSha256": "04c804395a50c8174a39cd44b7e4818ca5b8c674913e8ede5890ec1f5ea0491c",
+      "afterSha256": "bf89fb09a62720f0a25e08c26e3a6bac71088818f9c4af31ec57e86cd0a2532b",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 89
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-26-embedded-local-cap.yaml",
+      "beforeSha256": "226519207c21c53fa85fd6ddf58a1d4264a55752c4792083178f9cfc162a80e7",
+      "afterSha256": "5a570f9f2b363b8ea0215f9c9a941cfea722a84c6c6149ca064a1877d25e3b40",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 37
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml",
+      "beforeSha256": "28260506705a69c1743451c5927d244ee89225ec97489daae7ca49bde8f73c8c",
+      "afterSha256": "0bf63caeea4bb7955d4cb15480381cb24d826c05840bbc22abb9dd94a04fa288",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 95,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 22
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml",
+        "before": 633,
+        "after": 637,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml",
+      "beforeSha256": "7499f940ccefa0b4eda36cf5b6fcb4b99557358d8692606a40ea535a485bd0b9",
+      "afterSha256": "1944e0badbb6d95b767e396b0f4221b6efed58092fbf7b7a0a6adf678dda4288",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 75,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 45
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml",
+        "before": 625,
+        "after": 629,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-28-mixed-result-shape.yaml",
+      "beforeSha256": "282fcd6f500b5115ce159acd767538060e614e16e97df8497cd4543858c4ad9a",
+      "afterSha256": "3e429eb7cc6181545ee10744af76d65c5500c1ef001874bf663dd8f3a19a4fcb",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 103,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 117
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-28-mixed-result-shape.yaml",
+        "before": 1162,
+        "after": 1170,
+        "delta": 8
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-29-active-edge-path-validation.yaml",
+      "beforeSha256": "0a15bf162b5826c4ec9401931400b2c3926716fb95a0534e8b066ebc69409fe7",
+      "afterSha256": "032611a8899ba267ab820733fc8316f305bbd765602f3bdbd0092dbab2caa3a7",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-30-language-cyclic-oracles.yaml",
+      "beforeSha256": "d9be787c9c28bf84b495af96631fa9405ab876bf10896c854de78b948a6ff24e",
+      "afterSha256": "8b3ffbd2b63105f189efe2bf263dbd9eab1e31649e83d50146ace31f96078ffa",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-30-language-cyclic-oracles.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-31-invocation-owned-gas-rejection.yaml",
+      "beforeSha256": "953643a6e6d16966d174543fd8dde4e317b3eb15f482d2d638b8b4d8f50e6f57",
+      "afterSha256": "8586abc65578e0b109f73303c75177dd1e090f405b363417bc5d13d899e0ff44",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-32-finalization-owned-gas-rejection.yaml",
+      "beforeSha256": "b8bcc855e9aa66a96735166e8eca3f82ef80782676cdbedab92ac89342f563c2",
+      "afterSha256": "9cb5b52e94d029b1bf9ffb1812c1521386e910a732e8bfddf0033e144e0fd8f4",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 11
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml",
+      "beforeSha256": "509a6e2b9330d825695602835dd2253f0375d2d8314a2338411348d14a1cda2e",
+      "afterSha256": "6cf92dbda0ba560119d11df25240ce74f4a062ca2f5787c4842aa0975ecfc784",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 715,
+        "invocation-identity-rebind": 25,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 189
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml",
+        "before": 1458,
+        "after": 1440,
+        "delta": -18
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-34-separate-document-steps.yaml",
+      "beforeSha256": "5bdf1321a1dd564aa788a880a52b314ffc1030a6493d2dc866c0ac8ab47a9470",
+      "afterSha256": "393eac6a92086edbb6bb4059373babe7db9327ce1f99ba7e22f800c0d84677a0",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 63,
+        "invocation-identity-rebind": 22,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 184
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-34-separate-document-steps.yaml",
+        "before": 1423,
+        "after": 1427,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml",
+      "beforeSha256": "fbdd2b200a20642f9372cdfa0817210a2e7c89a65d33c141d5e1370ae2366665",
+      "afterSha256": "701244894a868f4f777632ab6a007fff2561b1bdbb376ad26ca786f56d0c0e62",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 51,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 73
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml",
+        "before": 777,
+        "after": 781,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-clo-35-01-readd-committed-successor.yaml",
+      "beforeSha256": "e01ffaa60d4b93d08cfa8d94486c3c8fdd11cedb241bb8fa42df7044861dda64",
+      "afterSha256": "77b61c993a1039c246d3d581aa35469100dcb0ff445258067f451f01c0d0f209",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 110,
+        "invocation-identity-rebind": 21,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 53
+      },
+      "totalGasChange": {
+        "path": "fixtures/closure/c-clo-35-01-readd-committed-successor.yaml",
+        "before": 646,
+        "after": 650,
+        "delta": 4
+      }
+    },
+    {
+      "path": "fixtures/closure/c-emb-empty-05-prospective-activation.yaml",
+      "beforeSha256": "26c88451da28f565e34d18c8ee5cc7177c5bfa36d44e2e595cfba0ba454dc0de",
+      "afterSha256": "d0c7c23cb05bcee100389dbbf8f2c979cec15826c7eb4d7e3243f73b45722e4b",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 8,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 106
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-18-missing-exact-node.yaml",
+      "beforeSha256": "92cd2be5739ec6b3fdc92d90de88dd0a7bd3c70623c3a5e06ab8195791b62554",
+      "afterSha256": "df92fa8e5f03b52640382e28aaa8e31ceab45023fd2ae5036a031eb6bd53598d",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml",
+      "beforeSha256": "66f5af6acf437ff78f18e889456fd8e77c24566db94ed0b46c5a39ecde0cf999",
+      "afterSha256": "6e9d56538ab545cfb721187e6260efca5f5086e9850eb9efbb396760154aad5a",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-20-canonical-demand-order.yaml",
+      "beforeSha256": "1a2263c3eadf92d25cbd0859a8e683beb144c2d01b4bcc8fcb506b1f9d71102f",
+      "afterSha256": "ab5ada1ffbc7c57945583b8a0f68ca1a84fb68403299a26687e419414194d387",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml",
+      "beforeSha256": "f003f724d42cb23d4b7763506a2ec231766abc1964416bbd3ded92277b6a01cf",
+      "afterSha256": "61725512c8ff7f99e8874d3d283c984935087375e12fcdab8b79db76a91bbae5",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml",
+      "beforeSha256": "f3feb3b778d3bdca3670b6da07ac7de77f17c7ee1c8cdd0ab8b575a7ae79c04d",
+      "afterSha256": "f5f59c7f801a804adac9ebde34b9a9e10e6181736cf0d257aeca84aad76c682e",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml",
+      "beforeSha256": "a244fda4930cfb589e34ccdcfb889452933b3128fa61347406acc5661b88670d",
+      "afterSha256": "15aebc5c335ef9d7d538302c3633a858411beb243b1dcb94bfe53ccfee5b3fb9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 13,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 63
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml",
+      "beforeSha256": "db877aa398fb49678142280c98c8f7a02c21829ca74c434c9d0f82f314ba33b9",
+      "afterSha256": "7255f3e6bcfc1835d8c53ac583137f9a4ca25d82e8df682d7096264828b08599",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 13,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 63
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml",
+      "beforeSha256": "412bf54a29c100d45985de893cff93dc22edf287c02b5efcc5324e37ed10a46c",
+      "afterSha256": "d67b689738856cbbdffe3997413ec731984abcc57631e4e4d9e81450568d8274",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
+      "beforeSha256": "eb5a5a36312bc059e0087d6b48f57326723d31160491b71e8d2d191e40f8f425",
+      "afterSha256": "597485da88ed0544e5216f6a878a0009dc17c2c89a2f8333f0edc272457b4b4b",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 2574
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml",
+      "beforeSha256": "d6853e57daca22418fcc3db371331b997427067eafb56d4d988651bc9c45ea15",
+      "afterSha256": "02de107c72bed8c6d6d451b9356e4eb7585c3d1a94db75c9670a389cedcb3350",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 2574
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
+      "beforeSha256": "d3999dce00cdd9ff589e4386ead6173e29133375addc47a2afdf52153f7f81bc",
+      "afterSha256": "0ec3f9e1a3012359ceffe2dc5ba745cb2c477aa9589ebda828b853737873cb75",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
+      "beforeSha256": "9e23fc92a7e72b3d504db4a3e4b98457dc62f0727ad0967f7e45b2e4bf5f39e2",
+      "afterSha256": "2e7ee33bf418cbb2fa6aabb545acccd8d03aaa5651e1a1ff59fa46764666d76a",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 13,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 97
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
+      "beforeSha256": "cada0f38de4dca229cacca09cdde6d0ce877b76b23637c54d45b3518727d0e5f",
+      "afterSha256": "436ab074eca9bfd4238322a18fcc0ccb3c99b5efac11cbf64de0e4031eda44e9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 13,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 97
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml",
+      "beforeSha256": "0501739ae7121532bcdf119928233360d4ce930de01d18b478197f24cd49a16f",
+      "afterSha256": "8aed31561baba09f882f1b1bb4aa113caffa67b37abbd797c5179312d6f31f9b",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 600
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml",
+      "beforeSha256": "baf311c6f7f7bc02572345fc85fc340df6d00a8206c6091717ac19af03991fba",
+      "afterSha256": "75ae6a2bedf8e5ba37a87e49512abff97c020fef0a05578c72ed0d78e63cf8de",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 600
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml",
+      "beforeSha256": "996ccd04900423fa28e61c6c1291a573b193cd3411a93eee4ed2c955a50270de",
+      "afterSha256": "61f2e0ce6106766b0152a47eaec9b7ec9c0f8a8c0a34f82f5a5435f94ff87c5a",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 600
+      }
+    },
+    {
+      "path": "fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml",
+      "beforeSha256": "d358eed6b2f81d4ebff11ee1e56219dc2eb8cef0c944300f04c176b915164a39",
+      "afterSha256": "714dd6e7dacde9b30623f67412f0aee5ea7d6944ec03aae387db46fae13311db",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 600
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-01-root-patch-event.yaml",
+      "beforeSha256": "aec602aa7d373a87a2d3b430abc6871e7762fd08d650b368208ac31c2cc43156",
+      "afterSha256": "fbcec4174995493f71c431cde0f01b8e87a9e7965d705b29141ec9046c55d7a9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 11,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 69
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-02-duplicate-equal-events.yaml",
+      "beforeSha256": "6c33718df1a05003abd64b156995a286031e319877e84a82267b78ad62850f5f",
+      "afterSha256": "0b7c1b530c2d17cfdf599cca82eedec44c09ee7ca23aaa8c541ca66288fb8cba",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 11,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 58
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-03-non-public-containing-route.yaml",
+      "beforeSha256": "af9a1e81c7b6f80efc71f2e57580cb378ac04fd6662a43cd46c39412307d2308",
+      "afterSha256": "811ade6ae6707f88cf2cf4aaa9c876acec1e4c972d7b69ddb122cc626dea8a23",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 65
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-04-document-update-continuation.yaml",
+      "beforeSha256": "d98c17666383f6e5e56e8b384e7be0e6cde5e50a324602083a7a2c23e2b73667",
+      "afterSha256": "e03a8e5fe870aa2582a69667eb16f517717f6c12b60d961e151215faedbceb19",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 8,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 64
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-05-graceful-termination.yaml",
+      "beforeSha256": "9b09230e81d41353e75a8fa3831258aefa042499bdcb84038d1bdcb70d33cc88",
+      "afterSha256": "80f973d74cf89da4eaa02079a328bbafdc81b2281ba89de3081a62b3800d735a",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 8,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 77
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-06-order-representation-inline.yaml",
+      "beforeSha256": "5fddb553f3613206bc295a7ce959364cd6f19a7522761863a78ea77160877666",
+      "afterSha256": "54a2077efc9888b482e1eed23647a3448dfa2d54e5b9de500f91a08b35e00ea3",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 69
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-06-order-representation-reference.yaml",
+      "beforeSha256": "b2aad37fa42b97b8ffa4439c2be51f7679bbd85383f31d68e110d6bb9c07f6d9",
+      "afterSha256": "2f584a78f58b990b9df1043f4214c8191fda5a3e2312b60f3517ffee003083af",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 69
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-06-order-representation-reversed.yaml",
+      "beforeSha256": "7ddeb654d34632d47a7c709cd8ae3b7b1d4f0744566217b54a7c37c7b22b0b71",
+      "afterSha256": "c48fa5c00e2675dbfb8cfc80e6730706b058a919cb17712872f20d67fa1bd32d",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 10,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 69
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-07-finite-cyclic-route.yaml",
+      "beforeSha256": "f18c27553d5002bacc849650a51eac6f3f34ccd277ec5f6f6c24f865a0ea7366",
+      "afterSha256": "8da1585d547478979cf20d986e7ab78051f359ae0f067f705270a618fb14145c",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2,
+        "invocation-identity-rebind": 14,
+        "spec-identity-rebind": 6,
+        "work-event-trace-identity-rebind": 129
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml",
+      "beforeSha256": "0b707b531cfa2452eaf0f34d195f67ed60ef6f19167ae9492e4ee5f03397fb77",
+      "afterSha256": "367c75850e7fc6c40094a1ba0c269d8f3ee6dbfeba083799cd50591b4e3b5664",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 2230
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
+      "beforeSha256": "032cb700fa72473a8f825310b922a3df21ad3ce785ef111aadc89058baa58945",
+      "afterSha256": "ad675548646a69159e882560bccac1e1de7ce0b88340cb06a7fc090a18e52ed7",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 3,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 2230
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-09-late-member-rollback.yaml",
+      "beforeSha256": "eb5103e5ff5e79a468a3629c866a1e72a749540e120c0d7253c47f10463686c7",
+      "afterSha256": "c2921ff4f25f74da6ab321da949314dc18902445826933d619a91964ee75bbd9",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 2,
+        "spec-identity-rebind": 3,
+        "work-event-trace-identity-rebind": 57
+      }
+    },
+    {
+      "path": "fixtures/closure/fl-adm-10-unknown-occurrence.yaml",
+      "beforeSha256": "bfe05a55e61af090feaa534c0643bbc3d5b893ada29de1ff1e07f3603e3a549a",
+      "afterSha256": "5d99f268251351fcd6dc1081c04b7a25ac48f9d6a17d4d9a5ef57b59d21c2878",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1,
+        "invocation-identity-rebind": 1,
+        "spec-identity-rebind": 3
+      }
+    },
+    {
+      "path": "fixtures/closure/traces/c-clo-04-default-policy-loop-gas.yaml",
+      "beforeSha256": "a7673624d33a5689f30004a282437a60fa3872c2fe9f3660032bbf1e34f960f8",
+      "afterSha256": "e23091406142caa5f2621873d4a159446efc624f44fb414b47bf500c4d9afb19",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "work-event-trace-identity-rebind": 11422
+      }
+    },
+    {
+      "path": "fixtures/emb/c-emb-11.yaml",
+      "beforeSha256": "799e848f11e5bd691f386ef3581749b5e88890b447d84dee57ca563c5e92caad",
+      "afterSha256": "298f99883a5c91ec5882c2c3b84bfae36a64b985f1783238d1effd4565c33205",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 2
+      }
+    },
+    {
+      "path": "fixtures/evo/c-evo-07-checkpoint.yaml",
+      "beforeSha256": "b4ac254077bc8bfed50f79f5387effbcf6aacf93442bdd4ca3b640465d1ececc",
+      "afterSha256": "b075df53b65b7765ce7d2195f1d84b499df34194fd95da027adbf53ba0289439",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1
+      }
+    },
+    {
+      "path": "fixtures/feed/c-feed-17.yaml",
+      "beforeSha256": "0499339f266b6edef1f93d131f231d541a764ac6578b82894cf25e8c53258324",
+      "afterSha256": "4a70ff27fcbe6c10429a8e52d1a9f45d94f59787977bb9efdfed61338f430e98",
+      "classification": "required-dependency-consequence",
+      "reason": "Propagate the corrected registry and canonical checkpoint through exact inputs/results, invocation/receipt identities, and independently reviewed hash-work gas.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 1
+      }
+    },
+    {
+      "path": "fixtures/manifest.yaml",
+      "beforeSha256": "7d71a9f8f0d2216506ae457a4966f41f8c8a8db9d12b604baaf93dd87898acc7",
+      "afterSha256": "7feb17fc438a673d4ef80427f3eaeb1e2cb3fdb7754858818c7105eb8356a60d",
+      "classification": "required-dependency-consequence",
+      "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 115,
+        "spec-identity-rebind": 2
+      }
+    },
+    {
+      "path": "oracles/c-clo-02-dynamic-finite-cycle.yaml",
+      "beforeSha256": "ef9a68c9c5307d2115d9578c543e878231e06070f0f0983f4bd85332565fe3a4",
+      "afterSha256": "fefc0aa48e6797fd0db391f27258fc8329bcfb4c29b23ca97a8a4fd8ae1f5eac",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-03-exact-tentative-identity-visibility.yaml",
+      "beforeSha256": "57a95c0343a952170b789bb489c333045498ddab1ad16707a96f1ff9a9ce3a11",
+      "afterSha256": "54da9ab929863de2daebc7df3656eec919f778674c43cd810c0b15226e6a5bb5",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-05-direct-both-members.yaml",
+      "beforeSha256": "7888f08cb397c9b68a2f808a2621af0f69fa025384d871e9f69c3b5caef0319f",
+      "afterSha256": "9b75a7e76faf0ebd4ce300f6d63f75593a0e1e78941073eea7a5dc3378514dab",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 17
+      }
+    },
+    {
+      "path": "oracles/c-clo-06-duplicate-event-occurrences.yaml",
+      "beforeSha256": "262e7b587ae8ed1328a0e13bdd664ffd7ad532fbe7ae14ca8bc49428b7033c41",
+      "afterSha256": "5cd2c6f80f44698eca84bfc59c1250bcb3c37b67a26d2ede834fed37e487ed0b",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-09-merge-two-cycles.yaml",
+      "beforeSha256": "1f9ec7f0e9db11118e371e63e9ea86053feb89a54f13afd9c1ff8e94da90336b",
+      "afterSha256": "95d97fbcf1aa22ceb18494e83eff976cacace42b34d234b8d3e5a85155c6ca74",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 17
+      }
+    },
+    {
+      "path": "oracles/c-clo-11-split-into-two-cycles.yaml",
+      "beforeSha256": "033910ecc2c485b12d4b988506460d6ea92aad3460acf80b05e68746bebcfb4d",
+      "afterSha256": "e5eb539f857fbfca49618759b9f33bd4df41fe5ad17ec77ed3b2192aa08d66d8",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 22
+      }
+    },
+    {
+      "path": "oracles/c-clo-19-public-event-boundary.yaml",
+      "beforeSha256": "406588b326ad8d3817324996ef962168ec5513dc37d89018c858fd25c88ad20e",
+      "afterSha256": "5b00287a704478e63552fe556bfa7b91cf0003f537a39de45bfd46d3fedf7f78",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-23-05-a9-to-a10.yaml",
+      "beforeSha256": "b1ce1993f7046fa7c39947e42ab3af4f024228a6a32f6065017ff0e26dfc1604",
+      "afterSha256": "26e85abeed405853dd7cfc2af8ba20786b91880897685baa681ba784b1a71a0d",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 52
+      }
+    },
+    {
+      "path": "oracles/c-clo-24-occurrence-continuity.yaml",
+      "beforeSha256": "1be701af6fb78f477e3ee8222e2fb56e5ee8cc673b84aaba994ec908e4bba901",
+      "afterSha256": "c14afea7b34e7a741a0521820c5bec3de3bdcf8bb94e39923ddc186c072dfe4b",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-27-multiple-scc-one-closure.yaml",
+      "beforeSha256": "0d510250fd55440e554449316cb06dcbc7740304871b8c9ed40715d16668b4dd",
+      "afterSha256": "ed5e08ba7bfe12c931f38f4ecd63b2b7375e2543bb4128a552b844225807d6dd",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 20
+      }
+    },
+    {
+      "path": "oracles/c-clo-28-mixed-result-shape.yaml",
+      "beforeSha256": "0eaa98ec32251a91b9538291e890111ff05609471daebd8495d9a99ba33a0d0d",
+      "afterSha256": "d2f7f540069cdbebaba3b137099e626c9c42df2db48d010ca04ed8c708c47b74",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 22
+      }
+    },
+    {
+      "path": "oracles/c-clo-30-language-cyclic-oracles.yaml",
+      "beforeSha256": "9b1a09fcd11a39099b8dd4d648f9afb6291c42ced4aeff163647ff803e66e4ca",
+      "afterSha256": "8dd40c86ecc74f90fae087138eddc42236b3f56c82f567257c4ab4ddf86b1d1c",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-33-checkpoint-domain-retirement.yaml",
+      "beforeSha256": "075df946a9bd5d9d41ea8bfb6345543a366fe32eb8f8a4fb7171a020ded7e387",
+      "afterSha256": "cb1922fdc93fb45f0893b3d692804c42442023b863da2c053582bb066cf76e7b",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 90
+      }
+    },
+    {
+      "path": "oracles/c-clo-34-separate-document-steps.yaml",
+      "beforeSha256": "c3742b0f35568a5e35717857ff0a4b4ec65d6e71d2757824be15157d7e5edbc9",
+      "afterSha256": "9339c6f3ac0e0a257ff63b1be57803d45bc36f3bee8a9c8d5a98e4011f24cca0",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "oracles/c-clo-35-01-readd-committed-successor.yaml",
+      "beforeSha256": "ee1354d85c7c2fa225914c441b62b2d75fd7d1f63d06809cd3699e473dbcb7f8",
+      "afterSha256": "bf173c3fe4854fe81ff7e98545729541b69b2059e2c68679ec48e76d9e934de8",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 33
+      }
+    },
+    {
+      "path": "oracles/manifest.yaml",
+      "beforeSha256": "c4654a8706a91a99a87cb58b367a4a7d02dbff6b7a7dbdf7bed763d4871c6a76",
+      "afterSha256": "f99a4c2d565ff9257c7a692cf2ec68691a0500a561ed4963d44dc6883d433287",
+      "classification": "required-dependency-consequence",
+      "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 32,
+        "spec-identity-rebind": 1
+      }
+    },
+    {
+      "path": "oracles/remove-readd-a-b.yaml",
+      "beforeSha256": "0ff18ab4700e5a74171f0b1f0a9ca384748e4377b21018fd6d96cc6b47f54c86",
+      "afterSha256": "1fd6017d9b8a3054f5b472d2407d9b6d9582e82b739581f148c4800ca52513af",
+      "classification": "required-dependency-consequence",
+      "reason": "Independent cyclic-set oracle for canonical typed checkpoints and transitive exact references; reviewed member permutations preserve all business fields.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 11
+      }
+    },
+    {
+      "path": "registry/ChannelEventCheckpoint.blue",
+      "beforeSha256": "002cc9c8b9307387acb0bf335eda91dddbe7d6029efd36db0ef1dae5cd5d361b",
+      "afterSha256": "7bbfb319d973eaac1d710edd33704d1d8e96773c3cb80c343512d066903ce7c4",
+      "classification": "required-dependency-consequence",
+      "reason": "Rebind the dependent CheckpointEntry valueType and registry hashes; no other definition semantics change.",
+      "changedFieldCounts": {}
+    },
+    {
+      "path": "registry/CheckpointEntry.blue",
+      "beforeSha256": "aace592e4597ac5d1a33109d456e9a876c7667fefceda72d8ba04b154b170c85",
+      "afterSha256": "e7a697a2e6b6f1b0ad54711f6b444eda424370dc8bad9ff9df8c17c9f1d1d663",
+      "classification": "required-dependency-consequence",
+      "reason": "Correct domain from Text to the exact-node contract required by Contracts 10.2/A.10.",
+      "changedFieldCounts": {}
+    },
+    {
+      "path": "registry/manifest.yaml",
+      "beforeSha256": "f2c39ef65435c48c13497f410a45b5ff07f8501b228692becd9582826c6626ee",
+      "afterSha256": "5727099940c738d4650f380ce0657106f65d8ce96c3334493cebe9badea5acb6",
+      "classification": "required-dependency-consequence",
+      "reason": "Rebind the dependent CheckpointEntry valueType and registry hashes; no other definition semantics change.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 4,
+        "spec-identity-rebind": 2
+      }
+    },
+    {
+      "path": "release-manifest.yaml",
+      "beforeSha256": "71f8306ab8f5cce5788a14ea7435dd3f16d15ac7cd42cb4cb1eacadcfcac5ca6",
+      "afterSha256": "85f762cb387454d9cc149c6230bbad1c52cfbd713059223e774f53f7fb04c7cb",
+      "classification": "required-dependency-consequence",
+      "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java.",
+      "changedFieldCounts": {
+        "actual-semantic-state-result-change": 187,
+        "spec-identity-rebind": 204
+      }
+    }
+  ]
+}

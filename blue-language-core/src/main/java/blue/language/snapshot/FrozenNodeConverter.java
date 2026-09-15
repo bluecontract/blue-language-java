@@ -64,7 +64,7 @@ public final class FrozenNodeConverter {
      */
     public FrozenNode fromNode(Node node) {
         return freeze(
-                node, true, null, true, false, JsonPointer.ROOT);
+                node, true, null, true, false, JsonPointer.ROOT, false);
     }
 
     /**
@@ -83,7 +83,7 @@ public final class FrozenNodeConverter {
      */
     public FrozenNode fromSourceNode(Node node) {
         return freeze(
-                node, false, null, false, false, JsonPointer.ROOT);
+                node, false, null, false, false, JsonPointer.ROOT, false);
     }
 
     /**
@@ -97,7 +97,7 @@ public final class FrozenNodeConverter {
      */
     public FrozenNode fromResolvedNode(Node node) {
         return freeze(
-                node, false, null, false, false, JsonPointer.ROOT);
+                node, false, null, false, false, JsonPointer.ROOT, true);
     }
 
     /**
@@ -114,7 +114,7 @@ public final class FrozenNodeConverter {
             Node node,
             FrozenNode.ResolvedStructuralInterner interner) {
         return freeze(
-                node, false, interner, false, false, JsonPointer.ROOT);
+                node, false, interner, false, false, JsonPointer.ROOT, true);
     }
 
     /**
@@ -128,7 +128,7 @@ public final class FrozenNodeConverter {
      */
     public FrozenNode fromUncheckedCanonicalNode(Node node) {
         return freeze(
-                node, true, null, false, false, JsonPointer.ROOT);
+                node, true, null, false, false, JsonPointer.ROOT, false);
     }
 
     /**
@@ -153,7 +153,7 @@ public final class FrozenNodeConverter {
                 throw nullListMember(path);
             }
             frozen.add(freeze(
-                    node, true, null, true, false, path));
+                    node, true, null, true, false, path, false));
         }
         return Collections.unmodifiableList(frozen);
     }
@@ -220,6 +220,7 @@ public final class FrozenNodeConverter {
                 .description(source.description)
                 .value(mutableValueCopy(source.value))
                 .blueId(source.referenceBlueId)
+                .materializedReferenceBlueId(source.materializedReferenceBlueId)
                 .schema(source.schema != null ? source.schema.clone() : null)
                 .mergePolicy(source.mergePolicy)
                 .previousBlueId(source.previousBlueId)
@@ -303,7 +304,8 @@ public final class FrozenNodeConverter {
             FrozenNode.ResolvedStructuralInterner interner,
             boolean strictBlueIdValidation,
             boolean previousAnchorContext,
-            String rootPath) {
+            String rootPath,
+            boolean retainResolutionEvidence) {
         if (node == null) {
             throw new NullPointerException("node");
         }
@@ -331,7 +333,8 @@ public final class FrozenNodeConverter {
                         strictBlueIdValidation,
                         visit.anchor,
                         ordinary,
-                        anchors);
+                        anchors,
+                        retainResolutionEvidence);
                 completed.put(visit.node, frozen);
                 active.remove(visit.node);
                 continue;
@@ -354,7 +357,8 @@ public final class FrozenNodeConverter {
             boolean strictBlueIdValidation,
             boolean previousAnchorContext,
             IdentityHashMap<Node, FrozenNode> ordinary,
-            IdentityHashMap<Node, FrozenNode> anchors) {
+            IdentityHashMap<Node, FrozenNode> anchors,
+            boolean retainResolutionEvidence) {
         FrozenNode frozen = FrozenNodeBuilder.builder()
                 .name(node.getName())
                 .description(node.getDescription())
@@ -368,7 +372,11 @@ public final class FrozenNodeConverter {
                         node.getProperties(), ordinary, strictCanonical))
                 .contracts(ordinary.get(node.getContracts()))
                 .referenceBlueId(node.getBlueId())
-                .schema(node.getSchema())
+                .materializedReferenceBlueId(retainResolutionEvidence
+                        ? node.getMaterializedReferenceBlueId() : null)
+                .schema(!retainResolutionEvidence && node.getSchema() != null
+                        ? node.getSchema().cloneWithoutResolutionEvidence()
+                        : node.getSchema())
                 .mergePolicy(node.getMergePolicy())
                 .previousBlueId(node.getPreviousBlueId())
                 .position(node.getPosition())

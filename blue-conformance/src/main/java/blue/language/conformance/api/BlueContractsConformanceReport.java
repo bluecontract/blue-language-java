@@ -60,13 +60,13 @@ public final class BlueContractsConformanceReport {
             "blue-language-contracts-embedded-modules-collection-paths";
     /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce8281260689109162a68aea";
+            "sha256:e40f10a477607bc1ae736bd07e112d30e2eb8362da5caf5d708c6fab79613986";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
     /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695";
+            "sha256:5a49eef38d6f8ffbdd2e8c1d0e7f423ded5fd0e744395280d49493219fb52406";
     /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
             RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
@@ -75,7 +75,7 @@ public final class BlueContractsConformanceReport {
             "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3";
+            "sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
@@ -85,7 +85,7 @@ public final class BlueContractsConformanceReport {
             "e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144";
+            "0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24";
 
 
     private final String specVersion;

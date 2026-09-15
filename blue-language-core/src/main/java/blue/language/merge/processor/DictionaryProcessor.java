@@ -88,6 +88,38 @@ public class DictionaryProcessor implements MergingProcessor {
         }
     }
 
+    @Override
+    public void postProcess(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (target.getValueType() == null || target.getProperties() == null) {
+            return;
+        }
+        for (Map.Entry<String, Node> entry : target.getProperties().entrySet()) {
+            Node value = entry.getValue();
+            Node contribution = source.getProperties() != null
+                    ? source.getProperties().get(entry.getKey()) : null;
+            String materialized = value.getMaterializedReferenceBlueId();
+            if (materialized != null && contribution != null
+                    && contribution.isReferenceOnly()
+                    && materialized.equals(contribution.getBlueId())) {
+                // Validate the same explicit type as the inline contribution;
+                // contextual merging must not promote an incompatible exact
+                // Text value into a custom subtype merely to make it pass.
+                Node exact = typeIdentities.findVerifiedReferenceContent(materialized)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Missing verified Dictionary entry: " + materialized));
+                validateValueType(EffectiveTypeChecks.withExactScalarType(exact), target.getValueType(),
+                        nodeProvider, nodeResolver, typeIdentities);
+            }
+            validateValueType(value, target.getValueType(),
+                    nodeProvider, nodeResolver, typeIdentities);
+        }
+    }
+
     private void processKeyType(
             Node target,
             Node source,

@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-core
-# entryCount: 1148
+# entryCount: 1161
 field blue.language.api.BlueLanguageErrorCategory#CanonicalizationError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#CircularSetError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#DuplicateKey descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -65,7 +65,7 @@ field blue.language.provider.ProviderMode#BOUND_SOURCE_CONTENT descriptor=Lblue/
 field blue.language.provider.ProviderMode#DIRECT_NODE descriptor=Lblue/language/provider/ProviderMode; access=public,static,final signature=- constant=-
 field blue.language.provider.ProviderMode#SOURCE_DOCUMENT descriptor=Lblue/language/provider/ProviderMode; access=public,static,final,enum signature=- constant=-
 field blue.language.provider.SourceProviderEnvironment#EXPLICIT_VERIFIER_DOMAIN_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:explicit-provider-evidence-verifier"
-field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-source-preprocessing-environment-1.0@sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e"
+field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-source-preprocessing-environment-1.0@sha256:4e6eaf033ddf952ed213390fcc6a897b4ff186c6b7d6dc44409fc4b33723b1e2"
 field blue.language.provider.SourceProviderEnvironment#LANGUAGE_CONTENT_STRATEGY_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:source-content-canonicalization"
 field blue.language.registry.BlueCoreTypeRegistry#INSTANCE descriptor=Lblue/language/registry/BlueCoreTypeRegistry; access=public,static,final signature=- constant=-
 field blue.language.registry.BlueCoreTypeRegistry#RESOURCE_ROOT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-language-1.0"
@@ -293,6 +293,7 @@ method blue.language.identity.CanonicalTypeIdentityLookup#approximateRetainedWei
 method blue.language.identity.CanonicalTypeIdentityLookup#findCanonicalTypeBlueId descriptor=(Lblue/language/model/Node;)Ljava/util/Optional; access=public signature=(Lblue/language/model/Node;)Ljava/util/Optional<Ljava/lang/String;>; throws=-
 method blue.language.identity.CanonicalTypeIdentityLookup#findCanonicalTypeIdentityEvidence descriptor=(Lblue/language/model/Node;)Ljava/util/Optional; access=public,abstract signature=(Lblue/language/model/Node;)Ljava/util/Optional<Lblue/language/identity/CanonicalTypeIdentityEvidence;>; throws=-
 method blue.language.identity.CanonicalTypeIdentityLookup#findCanonicalTypeIdentityEvidence descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Ljava/util/Optional; access=public signature=(Lblue/language/model/Node;Lblue/language/model/Node;)Ljava/util/Optional<Lblue/language/identity/CanonicalTypeIdentityEvidence;>; throws=-
+method blue.language.identity.CanonicalTypeIdentityLookup#findVerifiedReferenceContent descriptor=(Ljava/lang/String;)Ljava/util/Optional; access=public signature=(Ljava/lang/String;)Ljava/util/Optional<Lblue/language/model/Node;>; throws=-
 method blue.language.identity.CanonicalTypeIdentityLookup#hasCompleteCoverage descriptor=()Z access=public,abstract signature=- throws=-
 method blue.language.identity.CanonicalTypeIdentityLookup#incomplete descriptor=()Lblue/language/identity/CanonicalTypeIdentityLookup; access=public,static signature=- throws=-
 method blue.language.identity.CanonicalTypeIdentityLookup#requireCanonicalTypeBlueId descriptor=(Lblue/language/model/Node;)Ljava/lang/String; access=public signature=- throws=-
@@ -397,6 +398,7 @@ method blue.language.matching.NodeTypeMatcher#matchesResolvedType descriptor=(Lb
 method blue.language.matching.NodeTypeMatcher#matchesResolvedType descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;)Z access=public signature=- throws=-
 method blue.language.matching.NodeTypeMatcher#matchesType descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Z access=public signature=- throws=-
 method blue.language.matching.NodeTypeMatcher#matchesType descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Z access=public signature=- throws=-
+method blue.language.matching.NodeTypeMatcher#matchesTypeOrThrow descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Z access=public signature=- throws=-
 method blue.language.merge.BlueSnapshots#cache descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.merge.BlueSnapshots#cached descriptor=(Ljava/lang/String;)Ljava/util/Optional; access=public,abstract signature=(Ljava/lang/String;)Ljava/util/Optional<Lblue/language/merge/ResolvedSnapshot;>; throws=-
 method blue.language.merge.BlueSnapshots#clear descriptor=()V access=public,abstract signature=- throws=-
@@ -436,6 +438,8 @@ method blue.language.merge.MergingProcessor#postProcess descriptor=(Lblue/langua
 method blue.language.merge.MergingProcessor#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public,abstract signature=- throws=-
 method blue.language.merge.MergingProcessor#requiresReferenceMaterialization descriptor=(Lblue/language/model/Node;)Z access=public signature=- throws=-
 method blue.language.merge.MergingProcessor#validateCompleted descriptor=(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
+method blue.language.merge.MergingProcessor#validateDefinition descriptor=(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
+method blue.language.merge.MergingProcessor#validateListItem descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.NodeResolver#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.merge.NodeResolver#resolve descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
 method blue.language.merge.NodeResolver#resolveTypeEvidence descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution; access=public,abstract signature=- throws=-
@@ -523,6 +527,7 @@ method blue.language.merge.processor.BasicTypesVerifier#<init> descriptor=()V ac
 method blue.language.merge.processor.BasicTypesVerifier#postProcess descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.BasicTypesVerifier#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.DictionaryProcessor#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.merge.processor.DictionaryProcessor#postProcess descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.DictionaryProcessor#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.ExclusiveItemsOrValueChecker#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.merge.processor.ExclusiveItemsOrValueChecker#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
@@ -530,6 +535,7 @@ method blue.language.merge.processor.ListItemsTypeChecker#<init> descriptor=(Lbl
 method blue.language.merge.processor.ListItemsTypeChecker#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.ListProcessor#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.merge.processor.ListProcessor#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
+method blue.language.merge.processor.ListProcessor#validateListItem descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.SchemaPropagator#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.merge.processor.SchemaPropagator#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.SchemaVerifier#<init> descriptor=()V access=public signature=- throws=-
@@ -546,6 +552,8 @@ method blue.language.merge.processor.SequentialMergingProcessor#process descript
 method blue.language.merge.processor.SequentialMergingProcessor#requiresReferenceMaterialization descriptor=(Lblue/language/model/Node;)Z access=public signature=- throws=-
 method blue.language.merge.processor.SequentialMergingProcessor#supportsIncrementalValueResolution descriptor=()Z access=public signature=- throws=-
 method blue.language.merge.processor.SequentialMergingProcessor#validateCompleted descriptor=(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
+method blue.language.merge.processor.SequentialMergingProcessor#validateDefinition descriptor=(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
+method blue.language.merge.processor.SequentialMergingProcessor#validateListItem descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.TypeAssigner#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.merge.processor.TypeAssigner#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/provider/NodeProvider;Lblue/language/merge/NodeResolver;Lblue/language/identity/CanonicalTypeIdentityLookup;)V access=public signature=- throws=-
 method blue.language.merge.processor.ValuePropagator#<init> descriptor=()V access=public signature=- throws=-
@@ -754,6 +762,7 @@ method blue.language.registry.NodeProviderWrapper#wrap descriptor=(Lblue/languag
 method blue.language.resolve.BlueResolution#isSubtype descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Z access=public,abstract signature=- throws=-
 method blue.language.resolve.BlueResolution#minimize descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
 method blue.language.resolve.BlueResolution#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
+method blue.language.resolve.BlueResolution#resolveDefinition descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.resolve.BlueResolution#resolveLimited descriptor=(Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult; access=public,abstract signature=(Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult<Lblue/language/model/Node;>; throws=-
 method blue.language.resolve.BlueResolution#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/model/Node; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/model/Node; throws=-
 method blue.language.resolve.MinimizedOverlayBuilder#<init> descriptor=()V access=public signature=- throws=-
@@ -801,6 +810,7 @@ method blue.language.runtime.BlueLanguageRuntime#calculateSourceDocumentBlueId d
 method blue.language.runtime.BlueLanguageRuntime#canonicalRegistryIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#canonicalize descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#canonicalizeSourceContent descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.runtime.BlueLanguageRuntime#canonicalizeWithEvidence descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#close descriptor=()V access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#codec descriptor=()Lblue/language/codec/BlueCodec; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#create descriptor=(Lblue/language/provider/NodeProvider;Lblue/language/api/BlueCachePolicy;Ljava/util/Map;)Lblue/language/runtime/BlueLanguageRuntime; access=public,static signature=(Lblue/language/provider/NodeProvider;Lblue/language/api/BlueCachePolicy;Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>;)Lblue/language/runtime/BlueLanguageRuntime; throws=-
@@ -824,6 +834,7 @@ method blue.language.runtime.BlueLanguageRuntime#preprocessing descriptor=()Lblu
 method blue.language.runtime.BlueLanguageRuntime#preprocessingAliases descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolution descriptor=()Lblue/language/resolve/BlueResolution; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolve descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.runtime.BlueLanguageRuntime#resolveCanonicalSnapshotPreservingPaths descriptor=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeDeclarationIdentity descriptor=(Lblue/language/model/Node;)Lblue/language/identity/CanonicalTypeIdentityEvidence; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeDeclarationIdentity descriptor=(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/identity/CanonicalTypeIdentityEvidence; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeEvidence descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution; access=public signature=- throws=-
@@ -854,6 +865,7 @@ method blue.language.runtime.LanguageProcessing$Scope#materializeVerifiedExactRe
 method blue.language.runtime.LanguageProcessing$Scope#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#publish descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing$Scope#resolveCanonicalTransient descriptor=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransientForCanonicalIdentity descriptor=(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
@@ -869,6 +881,7 @@ method blue.language.runtime.LanguageProcessing$Scope#transientSequence descript
 method blue.language.runtime.LanguageRuntimeAccess#cachePolicy descriptor=()Lblue/language/api/BlueCachePolicy; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageRuntimeAccess#calculateSourceDocumentBlueId descriptor=(Lblue/language/model/Node;)Ljava/lang/String; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageRuntimeAccess#canonicalize descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageRuntimeAccess#canonicalizeWithEvidence descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
 method blue.language.runtime.LanguageRuntimeAccess#getNodeProvider descriptor=()Lblue/language/provider/NodeProvider; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageRuntimeServices#preprocessingEnvironmentIdentity descriptor=(Ljava/util/Map;)Ljava/lang/String; access=public,static signature=(Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>;)Ljava/lang/String; throws=-
 method blue.language.runtime.WeightedLruCache#<init> descriptor=(IJJLblue/language/runtime/WeightedLruCache$Weigher;)V access=public signature=(IJJLblue/language/runtime/WeightedLruCache$Weigher<TV;>;)V throws=-

@@ -33,6 +33,16 @@ final class NodeGraphCopier {
     }
 
     static void copyInto(Node source, Node root) {
+        copyInto(source, root, true);
+    }
+
+    static Node copyWithoutResolutionEvidence(Node source) {
+        Node root = source.shallowCopyForGraph();
+        copyInto(source, root, false);
+        return root;
+    }
+
+    private static void copyInto(Node source, Node root, boolean retainEvidence) {
         IdentityHashMap<Node, Node> activeCopies = new IdentityHashMap<>();
         Deque<NodeCopy> pending = new ArrayDeque<>();
         pending.addLast(NodeCopy.enter(source, root));
@@ -100,6 +110,9 @@ final class NodeGraphCopier {
                     contracts,
                     schema,
                     blue);
+            if (!retainEvidence) {
+                to.materializedReferenceBlueId = null;
+            }
         }
     }
 

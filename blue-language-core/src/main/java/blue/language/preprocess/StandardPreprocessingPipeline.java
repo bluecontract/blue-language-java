@@ -54,7 +54,7 @@ public final class StandardPreprocessingPipeline {
     public Node apply(
             Node source,
             Map<String, String> effectiveImports) {
-        Node wrapped = source.clone();
+        Node wrapped = source.cloneWithoutResolutionEvidence();
         Node placeholders = new NormalizeListPlaceholders().process(wrapped);
         Node aliases = new ReplaceInlineValuesForTypeAttributesWithImports(
                 effectiveImports).process(placeholders);

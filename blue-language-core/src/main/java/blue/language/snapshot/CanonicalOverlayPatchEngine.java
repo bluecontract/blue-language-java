@@ -67,7 +67,7 @@ public final class CanonicalOverlayPatchEngine {
         ParsedJsonPointer path = ParsedJsonPointer.parse(patch.path());
         FrozenNode value = patch.operation() == BluePatchOperation.REMOVE
                 ? null : freezePatchValue(patch.value());
-        return apply(patch.operation(), path, value);
+        return applyPrepared(patch.operation(), path, value);
     }
 
     /**
@@ -83,6 +83,15 @@ public final class CanonicalOverlayPatchEngine {
     public CanonicalPatchResult apply(BluePatchOperation op,
                                       ParsedJsonPointer parsedPath,
                                       FrozenNode value) {
+        FrozenNode authored = value != null && !value.isStrictCanonical()
+                ? FrozenNode.fromResolvedNode(value.toNode().cloneWithoutResolutionEvidence())
+                : value;
+        return applyPrepared(op, parsedPath, authored);
+    }
+
+    private CanonicalPatchResult applyPrepared(BluePatchOperation op,
+                                               ParsedJsonPointer parsedPath,
+                                               FrozenNode value) {
         Objects.requireNonNull(op, "op");
         Objects.requireNonNull(parsedPath, "parsedPath");
         String path = parsedPath.pointer();
@@ -122,7 +131,7 @@ public final class CanonicalOverlayPatchEngine {
                     ? FrozenNode.fromNode(value)
                     : FrozenNode.fromUncheckedCanonicalNode(value);
         }
-        return FrozenNode.fromResolvedNode(value);
+        return FrozenNode.fromResolvedNode(value.cloneWithoutResolutionEvidence());
     }
 
     private FrozenNode emptyNodeForRootMode() {
@@ -280,7 +289,7 @@ public final class CanonicalOverlayPatchEngine {
             return existing.overlayObjectForPatch(replacement);
         }
 
-        Node merged = existing.toNode();
+        Node merged = existing.toNode().materializedReferenceBlueId(null);
         Node overlay = replacement.toNode();
         if (overlay.getProperties() != null) {
             overlay.getProperties().forEach((key, value) -> merged.properties(key, value.clone()));
@@ -297,6 +306,12 @@ public final class CanonicalOverlayPatchEngine {
         if (overlay.getMergePolicy() != null) merged.mergePolicy(overlay.getMergePolicy());
         if (overlay.getPreviousBlueId() != null) merged.previousBlueId(overlay.getPreviousBlueId());
         if (overlay.getPosition() != null) merged.position(overlay.getPosition());
+        if (!root.isStrictCanonical()) {
+            if (FrozenNodeBuilder.changesChildContext(replacement)) {
+                return FrozenNode.fromResolvedNode(merged.cloneWithoutResolutionEvidence());
+            }
+            return FrozenNode.fromResolvedNode(merged);
+        }
         return freezePatchValue(merged);
     }
 

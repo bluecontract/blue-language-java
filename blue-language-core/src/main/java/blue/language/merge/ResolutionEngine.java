@@ -294,6 +294,7 @@ final class ResolutionEngine implements NodeResolver {
         LabelProvenanceTracker.LabelProvenanceScope outermostLabelScope = null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
+            source = source.cloneWithoutResolutionEvidence();
             InlineTypeCycleValidator.validate(target);
             InlineTypeCycleValidator.validate(source);
             state = new ResolutionState(
@@ -433,6 +434,9 @@ final class ResolutionEngine implements NodeResolver {
 
             if (source.getBlueId() != null) {
                 target.blueId(source.getBlueId());
+                if (source.getBlueId().equals(source.getMaterializedReferenceBlueId())) {
+                    target.materializedReferenceBlueId(source.getBlueId());
+                }
             }
 
             mergingProcessor.postProcess(
@@ -489,6 +493,10 @@ final class ResolutionEngine implements NodeResolver {
         return listOverlayMerger.applyItemType(child, itemType);
     }
 
+    void validateListItemContribution(Node child, Node itemType) {
+        referenceResolver.validateListItemContribution(child, itemType);
+    }
+
     private Node itemTypeReference(Node itemType) {
         return listOverlayMerger.itemTypeReference(itemType);
     }
@@ -516,6 +524,36 @@ final class ResolutionEngine implements NodeResolver {
             return;
         }
         Node targetValue = target.getProperties().get(sourceKey);
+        if (target.getValueType() != null) {
+            // valueType is an interpreting context. Materialize an exact entry
+            // at this path before applying it, using canonical List payloads.
+            Node contribution = sourceValue;
+            boolean exactReference = sourceValue.isReferenceOnly();
+            if (exactReference) {
+                contribution = new Node();
+                referenceResolver.materializeReferenceAtCurrentPath(
+                        contribution, sourceValue.getBlueId(), limits,
+                        activeResolutionState());
+            }
+            if (contribution.getType() == null) {
+                contribution = contribution.clone().type(target.getValueType().clone());
+            }
+            Node memberSource = contribution;
+            Node member = exactReference
+                    ? resolveCanonical(memberSource, limits)
+                    : resolve(memberSource, limits);
+            if (targetValue == null) {
+                target.getProperties().put(sourceKey, member);
+            } else if (exactReference) {
+                withCanonicalListPayloads(() -> {
+                    mergeInstanceObject(targetValue, member, limits);
+                    return null;
+                });
+            } else {
+                mergeInstanceObject(targetValue, member, limits);
+            }
+            return;
+        }
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
             target.getProperties().put(sourceKey, node);
@@ -774,6 +812,7 @@ final class ResolutionEngine implements NodeResolver {
         boolean outermost = state == null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
+            node = node.cloneWithoutResolutionEvidence();
             InlineTypeCycleValidator.validate(node);
             BlueIdReferenceValidator.validate(node);
             state = new ResolutionState(

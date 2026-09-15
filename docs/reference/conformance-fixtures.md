@@ -6,29 +6,29 @@ Schema: `blue-language-java-generated-documentation/1.0`.
 
 Release package: `blue-language-contracts-embedded-modules-collection-paths`
 
-Package identity: `sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce8281260689109162a68aea`
+Package identity: `sha256:e40f10a477607bc1ae736bd07e112d30e2eb8362da5caf5d708c6fab79613986`
 
 | Suite | Fixture count |
 | --- | ---: |
 | `contracts` | 295 |
-| `language` | 185 |
+| `language` | 195 |
 
 ## Package identities
 
 | Input | Identity |
 | --- | --- |
 | `languageRegistry` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` |
-| `languageFixtures` | `sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695` |
-| `contractsRegistry` | `sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4` |
+| `languageFixtures` | `sha256:5a49eef38d6f8ffbdd2e8c1d0e7f423ded5fd0e744395280d49493219fb52406` |
+| `contractsRegistry` | `sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
-| `contractsFixtures` | `sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3` |
-| `contractsRelease` | `sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced` |
+| `contractsFixtures` | `sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509` |
+| `contractsRelease` | `sha256:8dd59ecc05d11e8d619ff2d2f3d1c1bb5943edec3ced08d9727ff35450f7cc26` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
-| `languageSha256` | `77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144` |
+| `languageSha256` | `0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24` |
 | `contractsSha256` | `e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f` |
 
 ## Category coverage
@@ -62,7 +62,7 @@ Package identity: `sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce828126068910
 | `contracts:snd` | 10 |
 | `contracts:upd` | 6 |
 | `language:BlueId` | 36 |
-| `language:Canonicalization` | 25 |
+| `language:Canonicalization` | 35 |
 | `language:Circular` | 5 |
 | `language:CircularReferences` | 1 |
 | `language:DocumentationLint` | 1 |

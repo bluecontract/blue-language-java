@@ -164,16 +164,16 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:d1ca7e4ab852f2cf5d0b0abf83bd9d06ff18cd06c45608a5777730fa7ff49f70
   closureIdentity: sha256:6f4cfbc36c34a6ddb62e1704e2a4e9d9b5643d3855bd3cf1c1fcbfe3782b5b1e
-  invocationIdentity: sha256:5b09e9afc8710d6307b9ffe2b5103841b4c75fdaf37b0ed82c1acead444e4f35
+  invocationIdentity: sha256:e1d2469b24f6c2cf05ee3a0dcada1d92d41aad77dfcc243b854e32cb1de0c7e6
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
     localLimits: {}
     label: release-default
   environment:
-    blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
+    blueLanguageSpecificationIdentity: sha256:0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24
     contractsSpecificationIdentity: sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f
-    runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+    runtimeRegistryIdentity: sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
@@ -257,8 +257,8 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b
-    cyclicProofVerifierIdentity: sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834
+    cyclicFinalizerIdentity: sha256:71b7c01ac5edddbb6b0df2d624fa69d63054881c19c2b61fe10c783a53e5aeec
+    cyclicProofVerifierIdentity: sha256:b011ba281a9bcce5d0ff6f72b7bd19b8bc49a67ce760ca71bed745d25f6c4256
 runtime:
   initializationHandlers:
     fl-adm-07-a/emitPing:
@@ -282,7 +282,7 @@ runtime:
 expected:
   attemptOutcome: Complete
   status: success
-  invocationIdentity: sha256:5b09e9afc8710d6307b9ffe2b5103841b4c75fdaf37b0ed82c1acead444e4f35
+  invocationIdentity: sha256:e1d2469b24f6c2cf05ee3a0dcada1d92d41aad77dfcc243b854e32cb1de0c7e6
   inputClosureIdentity: sha256:6f4cfbc36c34a6ddb62e1704e2a4e9d9b5643d3855bd3cf1c1fcbfe3782b5b1e
   outputClosureIdentity: sha256:d2e04d6fd7eb76697727576e194037218ea0b2014adb50bf5e1978ddfd04402b
   atomic: true
@@ -293,14 +293,14 @@ expected:
     channelKey: initialization
     targetManagedScopeIdentity: sha256:67a203bad79c2d4c24dcc45b8ec3ca0363eef03499130195e94be7f8af38ad17
     sourceOccurrenceIdentity: sha256:2727ebb5a36732d4eff50a9ea030449cf31caa2fde1a49a3fd08112650aa9acb
-    workIdentity: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workIdentity: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
   - ordinal: 1
     kind: LIFECYCLE
     targetDocumentId: fl-adm-07-a
     channelKey: lifecycle
     targetManagedScopeIdentity: sha256:67a203bad79c2d4c24dcc45b8ec3ca0363eef03499130195e94be7f8af38ad17
     sourceOccurrenceIdentity: sha256:2727ebb5a36732d4eff50a9ea030449cf31caa2fde1a49a3fd08112650aa9acb
-    workIdentity: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workIdentity: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
   - ordinal: 2
     kind: EMBEDDED_EVENT
     targetDocumentId: fl-adm-07-b
@@ -308,15 +308,15 @@ expected:
     eventBlueId: 48zoVEYqTBy74u3TQjUUXPu5Pj3mMDxyd8JfpUVT4bHm
     occurrenceOrdinal: 0
     targetManagedScopeIdentity: sha256:bf2ec5c9cbf5bcd9a1fc9722faae7ee147139fcb5b55f6bf6ca330e02ed58f9a
-    sourceOccurrenceIdentity: sha256:c8c08da8625057616da2bdf0df1d465cde3bfe262b88800a0df0830ce967ad89
-    workIdentity: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    sourceOccurrenceIdentity: sha256:ce7c87f9a3724ff817f241916dcd1b3112a5e75bd4c1b4da318a16e1c9d6d5fd
+    workIdentity: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
   - ordinal: 3
     kind: INITIALIZATION
     targetDocumentId: fl-adm-07-b
     channelKey: lifecycle
     targetManagedScopeIdentity: sha256:bf2ec5c9cbf5bcd9a1fc9722faae7ee147139fcb5b55f6bf6ca330e02ed58f9a
     sourceOccurrenceIdentity: sha256:2727ebb5a36732d4eff50a9ea030449cf31caa2fde1a49a3fd08112650aa9acb
-    workIdentity: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workIdentity: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
   - ordinal: 4
     kind: EMBEDDED_EVENT
     targetDocumentId: fl-adm-07-a
@@ -324,8 +324,8 @@ expected:
     eventBlueId: 2cXe4jv3KXUzbvwzzcXRRjywgZwbq1qBYiw44nso95ph
     occurrenceOrdinal: 1
     targetManagedScopeIdentity: sha256:67a203bad79c2d4c24dcc45b8ec3ca0363eef03499130195e94be7f8af38ad17
-    sourceOccurrenceIdentity: sha256:7b2a1476dd699d4cce197f1a27ebf97be48b93c50a3961e4b14dd7432c6a7391
-    workIdentity: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    sourceOccurrenceIdentity: sha256:67ed7962fe4e49d4dfe31a8143d80fe8d5b07cb31e4e0dc2d93373da4320ba3b
+    workIdentity: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
   documentStepTrace:
   - stepOrdinal: 0
     workOrdinal: 0
@@ -700,19 +700,19 @@ expected:
   - publicEventOrdinal: 0
     eventOccurrenceOrdinal: 0
     publicRootDocumentId: fl-adm-07-a
-    eventOccurrenceIdentity: sha256:c8c08da8625057616da2bdf0df1d465cde3bfe262b88800a0df0830ce967ad89
+    eventOccurrenceIdentity: sha256:ce7c87f9a3724ff817f241916dcd1b3112a5e75bd4c1b4da318a16e1c9d6d5fd
     eventBlueId: 48zoVEYqTBy74u3TQjUUXPu5Pj3mMDxyd8JfpUVT4bHm
     event:
       type:
         blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
       subscriptionKey: full-lifecycle
       id: FL-ADM-07-PING
-  publicEventsIdentity: sha256:11407adc57d91f8c9388d1746dce9cba43bee58a244892c126751582d8bd63d7
+  publicEventsIdentity: sha256:765dfd7cb8c4494a062972657eb5271856ed83cd69e7f005b2ecf90cefdcd3cd
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:753b244c74295477c364fedd3cd931ff2554286c17ea2914e7cab5fdd89e1358
-    sourceInvocationIdentity: sha256:5b09e9afc8710d6307b9ffe2b5103841b4c75fdaf37b0ed82c1acead444e4f35
+  - transitionReceiptIdentity: sha256:d787840788bacc0e299cfe9f42f3c7a5e5682b3b8555ae8c1cfa927f4205d186
+    sourceInvocationIdentity: sha256:e1d2469b24f6c2cf05ee3a0dcada1d92d41aad77dfcc243b854e32cb1de0c7e6
     transitionOrdinal: 0
-    transitionOccurrenceIdentity: sha256:6ef29fefe5e5ec78a255dd07d7d938611ade4eb43e8d0e1c49ec1bd4ffa8d101
+    transitionOccurrenceIdentity: sha256:2f7d450726c00abff2dfa412da049ee6a936704ad10e10dff63052ae0a1c0d51
     documentId: fl-adm-07-a
     originalCauseIdentity: sha256:2727ebb5a36732d4eff50a9ea030449cf31caa2fde1a49a3fd08112650aa9acb
     beforeBlueId: 741ThL7mEJczBvaRHBAA77wdXAWHByqZ43NE7WYoSt7D#0
@@ -721,7 +721,7 @@ expected:
     - ordinal: 0
       occurrenceOrdinal: 0
       sourceDocumentId: fl-adm-07-a
-      occurrenceIdentity: sha256:c8c08da8625057616da2bdf0df1d465cde3bfe262b88800a0df0830ce967ad89
+      occurrenceIdentity: sha256:ce7c87f9a3724ff817f241916dcd1b3112a5e75bd4c1b4da318a16e1c9d6d5fd
       eventBlueId: 48zoVEYqTBy74u3TQjUUXPu5Pj3mMDxyd8JfpUVT4bHm
       exactEvent:
         type:
@@ -729,12 +729,12 @@ expected:
         subscriptionKey: full-lifecycle
         id: FL-ADM-07-PING
       publicAtSource: true
-    emittedRootEventsIdentity: sha256:68ecbd747c8d7a1218fe36ef664f8d10f4a0ade780f314603a3375b16206a9b4
+    emittedRootEventsIdentity: sha256:ac2c6533bab889f6babbc7895fa4235a60e205e7c9b69e1e94fc1f41cf72310a
     admittedGas: 1787
-  - transitionReceiptIdentity: sha256:773dbcab7787b60f35e958c255ce6718a15f1583a89e1a2bc304f261c5ddd99a
-    sourceInvocationIdentity: sha256:5b09e9afc8710d6307b9ffe2b5103841b4c75fdaf37b0ed82c1acead444e4f35
+  - transitionReceiptIdentity: sha256:f99c226ea8b5ca7477c3a96f5bd511f462e8a009c3e1ab5c5ca89117d78e6391
+    sourceInvocationIdentity: sha256:e1d2469b24f6c2cf05ee3a0dcada1d92d41aad77dfcc243b854e32cb1de0c7e6
     transitionOrdinal: 1
-    transitionOccurrenceIdentity: sha256:78f98c1c824438f8223254c808e1ea43ca1e7e9d03cb0a18342f17ad905be54d
+    transitionOccurrenceIdentity: sha256:e2203fc30cc8cd6553c632db64db461e27920d61e4026f8fe5d6787d210b0ebc
     documentId: fl-adm-07-b
     originalCauseIdentity: sha256:2727ebb5a36732d4eff50a9ea030449cf31caa2fde1a49a3fd08112650aa9acb
     beforeBlueId: 741ThL7mEJczBvaRHBAA77wdXAWHByqZ43NE7WYoSt7D#1
@@ -743,7 +743,7 @@ expected:
     - ordinal: 0
       occurrenceOrdinal: 1
       sourceDocumentId: fl-adm-07-b
-      occurrenceIdentity: sha256:7b2a1476dd699d4cce197f1a27ebf97be48b93c50a3961e4b14dd7432c6a7391
+      occurrenceIdentity: sha256:67ed7962fe4e49d4dfe31a8143d80fe8d5b07cb31e4e0dc2d93373da4320ba3b
       eventBlueId: 2cXe4jv3KXUzbvwzzcXRRjywgZwbq1qBYiw44nso95ph
       exactEvent:
         type:
@@ -751,9 +751,9 @@ expected:
         subscriptionKey: full-lifecycle
         id: FL-ADM-07-PONG
       publicAtSource: false
-    emittedRootEventsIdentity: sha256:1699b4b783ddc56bdf798e55f30d9adb6e09bca339f5a445f9db73529986040c
+    emittedRootEventsIdentity: sha256:175f597c27c42ebda9b8a48bdad1a9d6d22b75abd2437dcaef09832926128367
     admittedGas: 1294
-  managedTransitionReceiptsIdentity: sha256:237e1e75c578fdfff7da7aab6c17c64e6333e18d0c65b7c57aa3c6110e633780
+  managedTransitionReceiptsIdentity: sha256:e756a4245ec24dac6580a80b5fca97612b3962372d9c4b90f42ac6d0aadf0b79
   rollbackToInput: false
   totalGas: 3081
   gasTrace:
@@ -863,7 +863,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: work/0
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.initialization-enqueue
   - sequence: 13
     namespace: processor
@@ -877,7 +877,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: work/0
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.dequeue
   - sequence: 14
     namespace: processor
@@ -890,7 +890,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: initialization
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-scope
   - sequence: 15
     namespace: processor
@@ -903,7 +903,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-contract-header
   - sequence: 16
     namespace: processor
@@ -916,7 +916,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-contract-header
   - sequence: 17
     namespace: processor
@@ -929,7 +929,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-contract-header
   - sequence: 18
     namespace: processor
@@ -942,7 +942,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPing
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-contract-header
   - sequence: 19
     namespace: processor
@@ -955,7 +955,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: finish
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: participating-contract-header
   - sequence: 20
     namespace: processor
@@ -969,7 +969,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: /b
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: route
   - sequence: 21
     namespace: processor
@@ -983,7 +983,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: /b
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: route
   - sequence: 22
     namespace: processor
@@ -997,7 +997,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: route
   - sequence: 23
     namespace: processor
@@ -1011,7 +1011,7 @@ expected:
     componentGeneration: 1
     contractKey: initialization
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: route
   - sequence: 24
     namespace: semantic
@@ -1025,7 +1025,7 @@ expected:
     componentGeneration: 1
     contractKey: embedded
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: route
   - sequence: 25
     namespace: processor
@@ -1038,7 +1038,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: initialization
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: scope-initialization
   - sequence: 26
     namespace: processor
@@ -1047,7 +1047,7 @@ expected:
     weight: 20
     subtotal: 20
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.finalization-boundary
   - sequence: 27
     namespace: semantic
@@ -1057,7 +1057,7 @@ expected:
     subtotal: 1
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.0.node-established
   - sequence: 28
     namespace: semantic
@@ -1067,7 +1067,7 @@ expected:
     subtotal: 6
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.0.object-members
   - sequence: 29
     namespace: semantic
@@ -1077,7 +1077,7 @@ expected:
     subtotal: 7
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.0.direct-hash
   - sequence: 30
     namespace: semantic
@@ -1087,7 +1087,7 @@ expected:
     subtotal: 1
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.1.node-established
   - sequence: 31
     namespace: semantic
@@ -1097,7 +1097,7 @@ expected:
     subtotal: 4
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.1.object-members
   - sequence: 32
     namespace: semantic
@@ -1107,7 +1107,7 @@ expected:
     subtotal: 4
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary.1.direct-hash
   - sequence: 33
     namespace: semantic
@@ -1116,7 +1116,7 @@ expected:
     weight: 1
     subtotal: 1
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary-sort.0
   - sequence: 34
     namespace: semantic
@@ -1125,7 +1125,7 @@ expected:
     weight: 1
     subtotal: 1
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary-compare.0
   - sequence: 35
     namespace: semantic
@@ -1134,7 +1134,7 @@ expected:
     weight: 1
     subtotal: 2
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.preliminary-text.0
   - sequence: 36
     namespace: semantic
@@ -1144,7 +1144,7 @@ expected:
     subtotal: 1
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.0.node-established
   - sequence: 37
     namespace: semantic
@@ -1154,7 +1154,7 @@ expected:
     subtotal: 6
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.0.object-members
   - sequence: 38
     namespace: semantic
@@ -1164,7 +1164,7 @@ expected:
     subtotal: 6
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.0.direct-hash
   - sequence: 39
     namespace: semantic
@@ -1174,7 +1174,7 @@ expected:
     subtotal: 1
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.1.node-established
   - sequence: 40
     namespace: semantic
@@ -1184,7 +1184,7 @@ expected:
     subtotal: 4
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.1.object-members
   - sequence: 41
     namespace: semantic
@@ -1194,7 +1194,7 @@ expected:
     subtotal: 4
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.canonical-member.1.direct-hash
   - sequence: 42
     namespace: semantic
@@ -1203,7 +1203,7 @@ expected:
     weight: 1
     subtotal: 1
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.master.node-established
   - sequence: 43
     namespace: semantic
@@ -1212,7 +1212,7 @@ expected:
     weight: 1
     subtotal: 2
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.master.list-fold
   - sequence: 44
     namespace: processor
@@ -1222,7 +1222,7 @@ expected:
     subtotal: 10
     documentId: fl-adm-07-a
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.member-finalized.0
   - sequence: 45
     namespace: processor
@@ -1232,7 +1232,7 @@ expected:
     subtotal: 10
     documentId: fl-adm-07-b
     componentGeneration: 1
-    workOccurrenceId: sha256:a49d1c59879f3334226283d087653c5601565907dd50e07a2958decf65f6bc60
+    workOccurrenceId: sha256:58ca54fd5274b3d62e69c9f3d3ebdd5c0aeabe81c62ab5266f7c375ab0ec4c40
     reason: work.0.finalization.member-finalized.1
   - sequence: 46
     namespace: processor
@@ -1246,7 +1246,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/1
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: work.1.lifecycle-enqueue
   - sequence: 47
     namespace: processor
@@ -1260,7 +1260,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/1
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: work.1.dequeue
   - sequence: 48
     namespace: processor
@@ -1273,7 +1273,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-scope
   - sequence: 49
     namespace: processor
@@ -1286,7 +1286,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-contract-header
   - sequence: 50
     namespace: processor
@@ -1299,7 +1299,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-contract-header
   - sequence: 51
     namespace: processor
@@ -1312,7 +1312,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-contract-header
   - sequence: 52
     namespace: processor
@@ -1325,7 +1325,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPing
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-contract-header
   - sequence: 53
     namespace: processor
@@ -1338,7 +1338,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: finish
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: participating-contract-header
   - sequence: 54
     namespace: processor
@@ -1352,7 +1352,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /b
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: route
   - sequence: 55
     namespace: processor
@@ -1366,7 +1366,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /b
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: route
   - sequence: 56
     namespace: processor
@@ -1380,7 +1380,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: route
   - sequence: 57
     namespace: processor
@@ -1394,7 +1394,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: route
   - sequence: 58
     namespace: processor
@@ -1407,7 +1407,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: lifecycle
   - sequence: 59
     namespace: processor
@@ -1420,7 +1420,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPing
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: matching
   - sequence: 60
     namespace: processor
@@ -1433,7 +1433,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPing
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: handler-call
   - sequence: 61
     namespace: runtime
@@ -1446,7 +1446,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: unspecified
   - sequence: 62
     namespace: processor
@@ -1460,7 +1460,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/1
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: event.0.public-record
   - sequence: 63
     namespace: processor
@@ -1474,7 +1474,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/1
-    workOccurrenceId: sha256:98fd020d3e10d19a53b0489cf4594f71cf2f9bd5a9cedc4a0b03b5ef4374f79a
+    workOccurrenceId: sha256:2469107345b5612ce45779b8813573e2e885960f9bf10d8f44854d59d4d60c1e
     reason: event.0.enqueue
   - sequence: 64
     namespace: processor
@@ -1507,7 +1507,7 @@ expected:
     componentGeneration: 1
     contractKey: fromA
     logicalPath: work/2
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: event.0.delivery.0.enqueue
   - sequence: 67
     namespace: processor
@@ -1521,7 +1521,7 @@ expected:
     componentGeneration: 1
     contractKey: fromA
     logicalPath: work/2
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: work.2.dequeue
   - sequence: 68
     namespace: processor
@@ -1534,7 +1534,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromA
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: participating-scope
   - sequence: 69
     namespace: processor
@@ -1547,7 +1547,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: participating-contract-header
   - sequence: 70
     namespace: processor
@@ -1560,7 +1560,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromA
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: participating-contract-header
   - sequence: 71
     namespace: processor
@@ -1573,7 +1573,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPong
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: participating-contract-header
   - sequence: 72
     namespace: processor
@@ -1587,7 +1587,7 @@ expected:
     componentGeneration: 1
     contractKey: fromA
     logicalPath: /a
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: route
   - sequence: 73
     namespace: processor
@@ -1601,7 +1601,7 @@ expected:
     componentGeneration: 1
     contractKey: fromA
     logicalPath: /a
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: route
   - sequence: 74
     namespace: processor
@@ -1614,7 +1614,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromA
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: embedded-event
   - sequence: 75
     namespace: processor
@@ -1627,7 +1627,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPong
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: matching
   - sequence: 76
     namespace: processor
@@ -1640,7 +1640,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPong
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: handler-call
   - sequence: 77
     namespace: runtime
@@ -1653,7 +1653,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromA
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: unspecified
   - sequence: 78
     namespace: processor
@@ -1667,7 +1667,7 @@ expected:
     componentGeneration: 1
     contractKey: fromA
     logicalPath: work/2
-    workOccurrenceId: sha256:b5e98cbf7d88db4c2e6f7b2b626b0e07b377133cf4d917f4014bcc7929064ebb
+    workOccurrenceId: sha256:8944598d5e6691ea4fe00f7ac2f64a9ff5fe419762d3dbfed2bcec531c2a05d1
     reason: event.1.enqueue
   - sequence: 79
     namespace: processor
@@ -1681,7 +1681,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/3
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: work.3.initialization-enqueue
   - sequence: 80
     namespace: processor
@@ -1695,7 +1695,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: work/3
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: work.3.dequeue
   - sequence: 81
     namespace: processor
@@ -1708,7 +1708,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: participating-scope
   - sequence: 82
     namespace: processor
@@ -1721,7 +1721,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: participating-contract-header
   - sequence: 83
     namespace: processor
@@ -1734,7 +1734,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromA
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: participating-contract-header
   - sequence: 84
     namespace: processor
@@ -1747,7 +1747,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPong
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: participating-contract-header
   - sequence: 85
     namespace: processor
@@ -1761,7 +1761,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /a
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: route
   - sequence: 86
     namespace: processor
@@ -1775,7 +1775,7 @@ expected:
     componentGeneration: 1
     contractKey: lifecycle
     logicalPath: /a
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: route
   - sequence: 87
     namespace: processor
@@ -1788,7 +1788,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:ac9172d37413a197057089ba026d5b86ef7cebc7657db52a888f576de00c1da4
+    workOccurrenceId: sha256:62b2d00e9e2f440f344c738a0ed29b0fbdf75cd81f1298976f17137c832a73b0
     reason: scope-initialization
   - sequence: 88
     namespace: processor
@@ -1821,7 +1821,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: work/4
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: event.1.delivery.0.enqueue
   - sequence: 91
     namespace: processor
@@ -1835,7 +1835,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: work/4
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.dequeue
   - sequence: 92
     namespace: processor
@@ -1848,7 +1848,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-scope
   - sequence: 93
     namespace: processor
@@ -1861,7 +1861,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: embedded
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-contract-header
   - sequence: 94
     namespace: processor
@@ -1874,7 +1874,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: lifecycle
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-contract-header
   - sequence: 95
     namespace: processor
@@ -1887,7 +1887,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-contract-header
   - sequence: 96
     namespace: processor
@@ -1900,7 +1900,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: emitPing
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-contract-header
   - sequence: 97
     namespace: processor
@@ -1913,7 +1913,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: finish
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: participating-contract-header
   - sequence: 98
     namespace: processor
@@ -1927,7 +1927,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /b
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: route
   - sequence: 99
     namespace: processor
@@ -1941,7 +1941,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /b
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: route
   - sequence: 100
     namespace: processor
@@ -1955,7 +1955,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: route
   - sequence: 101
     namespace: processor
@@ -1969,7 +1969,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /emptyPeers
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: route
   - sequence: 102
     namespace: processor
@@ -1982,7 +1982,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: embedded-event
   - sequence: 103
     namespace: processor
@@ -1995,7 +1995,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: finish
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: matching
   - sequence: 104
     namespace: processor
@@ -2008,7 +2008,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: finish
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: handler-call
   - sequence: 105
     namespace: runtime
@@ -2021,7 +2021,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: unspecified
   - sequence: 106
     namespace: processor
@@ -2034,7 +2034,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: patch-boundary
   - sequence: 107
     namespace: processor
@@ -2047,7 +2047,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: application-patch
   - sequence: 108
     namespace: semantic
@@ -2061,7 +2061,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 109
     namespace: semantic
@@ -2075,7 +2075,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 110
     namespace: semantic
@@ -2089,7 +2089,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 111
     namespace: semantic
@@ -2103,7 +2103,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 112
     namespace: semantic
@@ -2117,7 +2117,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 113
     namespace: semantic
@@ -2131,7 +2131,7 @@ expected:
     componentGeneration: 1
     contractKey: fromB
     logicalPath: /finished
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: identity-rebuild
   - sequence: 114
     namespace: processor
@@ -2144,7 +2144,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.finalization-boundary
   - sequence: 115
     namespace: semantic
@@ -2157,7 +2157,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.child.4.node-established
   - sequence: 116
     namespace: semantic
@@ -2170,7 +2170,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.child.4.object-members
   - sequence: 117
     namespace: semantic
@@ -2183,7 +2183,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.child.4.direct-hash
   - sequence: 118
     namespace: semantic
@@ -2196,7 +2196,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.node-established
   - sequence: 119
     namespace: semantic
@@ -2209,7 +2209,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.object-members
   - sequence: 120
     namespace: semantic
@@ -2222,7 +2222,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary.0.direct-hash
   - sequence: 121
     namespace: semantic
@@ -2235,7 +2235,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary-sort.0
   - sequence: 122
     namespace: semantic
@@ -2248,7 +2248,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary-compare.0
   - sequence: 123
     namespace: semantic
@@ -2261,7 +2261,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.preliminary-text.0
   - sequence: 124
     namespace: semantic
@@ -2274,7 +2274,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.canonical-member.0.node-established
   - sequence: 125
     namespace: semantic
@@ -2287,7 +2287,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.canonical-member.0.object-members
   - sequence: 126
     namespace: semantic
@@ -2300,7 +2300,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.canonical-member.0.direct-hash
   - sequence: 127
     namespace: semantic
@@ -2313,7 +2313,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.master.node-established
   - sequence: 128
     namespace: semantic
@@ -2326,7 +2326,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.master.list-fold
   - sequence: 129
     namespace: processor
@@ -2339,7 +2339,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.member-finalized.0
   - sequence: 130
     namespace: processor
@@ -2352,7 +2352,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     contractKey: fromB
-    workOccurrenceId: sha256:81eb9a75b9c2bb5121caf7f9c068300732bb36fa8824d4a88efccf8a9bec08a0
+    workOccurrenceId: sha256:ce369ab742affcad860fc6104d14d16da1b04fba019b7d47ed31c5a29787a1ec
     reason: work.4.finalization.member-finalized.1
   - sequence: 131
     namespace: processor
@@ -2814,10 +2814,10 @@ expected:
     documentId: fl-adm-07-a
     componentGeneration: 1
     reason: initialization-batch.member-finalized.1
-  gasTraceIdentity: sha256:cbfe39b33a937ab33797d0ea66657d475f736a75a6d7e24d7154e973099141be
+  gasTraceIdentity: sha256:5cf832bc5978ec55fe40024335e99d2bedfe463d98788f47b6539d0957028d47
   platformCommitCompanion:
-    companionIdentity: sha256:179952178af3ee5cd7017044e0ed7a0fcdcf811fa3bb40edebebe1a50ee0788d
-    invocationIdentity: sha256:5b09e9afc8710d6307b9ffe2b5103841b4c75fdaf37b0ed82c1acead444e4f35
+    companionIdentity: sha256:d2b4983ff894d24c81216206fef16418566ddbb47c987539aa1c819ca3cac4a4
+    invocationIdentity: sha256:e1d2469b24f6c2cf05ee3a0dcada1d92d41aad77dfcc243b854e32cb1de0c7e6
     inputClosureIdentity: sha256:6f4cfbc36c34a6ddb62e1704e2a4e9d9b5643d3855bd3cf1c1fcbfe3782b5b1e
     outputClosureIdentity: sha256:d2e04d6fd7eb76697727576e194037218ea0b2014adb50bf5e1978ddfd04402b
     expectedInputGraphGeneration: 1
@@ -2848,20 +2848,20 @@ expected:
     graphChangesIdentity: sha256:be501dc250ed8b7a7e7e0a9591fd01da11586e1d53fc8883d03616efeeb268be
     checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
     subscriptionDeltasIdentity: sha256:9e16c5217f11832e81b908bbe8ed6d020eaf648e9d8b6645de29b439db2600ac
-    publicEventsIdentity: sha256:11407adc57d91f8c9388d1746dce9cba43bee58a244892c126751582d8bd63d7
-    gasTraceIdentity: sha256:cbfe39b33a937ab33797d0ea66657d475f736a75a6d7e24d7154e973099141be
-    managedTransitionReceiptsIdentity: sha256:237e1e75c578fdfff7da7aab6c17c64e6333e18d0c65b7c57aa3c6110e633780
-    blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
+    publicEventsIdentity: sha256:765dfd7cb8c4494a062972657eb5271856ed83cd69e7f005b2ecf90cefdcd3cd
+    gasTraceIdentity: sha256:5cf832bc5978ec55fe40024335e99d2bedfe463d98788f47b6539d0957028d47
+    managedTransitionReceiptsIdentity: sha256:e756a4245ec24dac6580a80b5fca97612b3962372d9c4b90f42ac6d0aadf0b79
+    blueLanguageSpecificationIdentity: sha256:0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24
     contractsSpecificationIdentity: sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
     managedBindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
     exactNodeProviderDomainIdentity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
     externalOrderPolicyIdentity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
-    runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+    runtimeRegistryIdentity: sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     portableLimitPolicyIdentity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
-    cyclicFinalizerIdentity: sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b
-    cyclicProofVerifierIdentity: sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834
+    cyclicFinalizerIdentity: sha256:71b7c01ac5edddbb6b0df2d624fa69d63054881c19c2b61fe10c783a53e5aeec
+    cyclicProofVerifierIdentity: sha256:b011ba281a9bcce5d0ff6f72b7bd19b8bc49a67ce760ca71bed745d25f6c4256
 sharedLimitSource:
   kind: RELEASE_DEFAULT
 provider:

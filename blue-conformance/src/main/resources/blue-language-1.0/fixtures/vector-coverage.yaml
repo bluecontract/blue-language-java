@@ -250,6 +250,11 @@
   - B_null_value_type_blueid_rejected
 - id: R21
   fixtures:
+  - R_contextual_currency_reference_text
+  - R_contextual_currency_reference_custom
+  - R_contextual_terms_reference_coffee
+  - R_contextual_schema_reference
+  - R_contextual_empty_object_reference
   - R_provider_reference_canonicalizes_back
   - R_inline_type_reference_identity_parity
   - R_inline_item_type_reference_identity_parity
@@ -306,6 +311,11 @@
   - R_schema_wrong_kind_keywords_rejected
 - id: R35
   fixtures:
+  - R_contextual_dictionary_invalid_inline
+  - R_contextual_dictionary_invalid_reference
+  - R_contextual_dictionary_valid_reference
+  - R_contextual_list_invalid_inline
+  - R_contextual_list_invalid_reference
   - R_inherited_item_type
   - R_inherited_keyType_valueType
 - id: R36

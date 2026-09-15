@@ -3,6 +3,7 @@ package blue.language.snapshot;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.wire.ParsedJsonPointer;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -17,6 +18,47 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CanonicalOverlayPatchEngineTest {
+
+    @Test
+    void shouldInvalidateOccurrenceEvidenceWhenPatchChangesContextOrInsertsAuthoredContent() {
+        // given
+        // verified occurrence evidence retained in an immutable resolved tree.
+        Node exact = new Node().value("Coffee");
+        String exactId = DirectBlueIdCalculator.calculateBlueId(exact);
+        Node materialized = exact.clone().blueId(exactId).materializedReferenceBlueId(exactId);
+        FrozenNode root = FrozenNode.fromResolvedNode(new Node().properties("field",
+                new Node().properties("leaf", materialized)));
+        Node overlay = new Node().type(new Node().blueId(exactId));
+        CanonicalOverlayPatchEngine engine = new CanonicalOverlayPatchEngine(root);
+
+        // when
+        // the mutable, prepared fast, and prepared fallback paths change the context.
+        FrozenNode[] results = {
+                engine.apply(JsonPatch.replace("/field", overlay)).root(),
+                engine.apply(BluePatchOperation.REPLACE, ParsedJsonPointer.parse("/field"),
+                        FrozenNode.fromResolvedNode(overlay)).root(),
+                engine.apply(BluePatchOperation.REPLACE, ParsedJsonPointer.parse("/field"),
+                        FrozenNode.fromNode(overlay)).root()
+        };
+        FrozenNode inserted = engine.apply(BluePatchOperation.ADD, ParsedJsonPointer.parse("/copy"),
+                root.property("field")).root();
+        FrozenNode unrelatedEdit = engine.apply(JsonPatch.replace("/field",
+                new Node().properties("other", new Node().value("Tea")))).root();
+
+        // then
+        // prior proof cannot certify the new context or a newly authored occurrence.
+        for (FrozenNode result : results) {
+            assertEquals("Coffee", result.property("field").property("leaf").getValue());
+            assertNull(result.property("field").property("leaf").toNode()
+                    .getMaterializedReferenceBlueId());
+        }
+        assertNull(inserted.property("copy").property("leaf").toNode()
+                .getMaterializedReferenceBlueId());
+        assertEquals(exactId, unrelatedEdit.property("field").property("leaf").toNode()
+                .getMaterializedReferenceBlueId());
+        assertEquals(exactId, root.property("field").property("leaf").toNode()
+                .getMaterializedReferenceBlueId());
+    }
 
     @Test
     void shouldCopyOnlyChangedObjectPathAndRecomputeRootBlueIdOnReplace() {

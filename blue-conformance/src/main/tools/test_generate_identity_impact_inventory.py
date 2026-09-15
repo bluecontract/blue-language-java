@@ -298,7 +298,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             cyclic_master["oldExactIdentity"],
         )
         self.assertEqual(
-            "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5",
+            "8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm",
             cyclic_master["newExactIdentity"],
         )
         self.assertEqual([], cyclic_master["fixtureConstantsRequiringUpdate"])

@@ -1,5 +1,8 @@
 # C03: tożsamość Source dla dziecka inline vs. referencja — analiza (2026-09-13)
 
+> Raport historyczny. Aktualny kontrakt, poprawki i pomiary PR #36 opisuje
+> [raport naprawy kontekstowych referencji](pr36-contextual-reference-repair.pl.md).
+
 Dotyczy: PR bluecontract/blue-language-java#33 oraz issue bluecontract/development#24.
 Wszystkie wyniki poniżej zmierzono lokalnie na tym repozytorium (branch `fix/nested-value-source-identity`
 oraz `origin/next`), testem `TmpC03ReproTest` (kopia w scratchpadzie sesji, nie w repo).

@@ -555,6 +555,7 @@ blue-language-core/src/main/java/blue/language/merge/SnapshotResolution.java
 blue-language-core/src/main/java/blue/language/merge/TypeEvidenceResolution.java
 blue-language-core/src/main/java/blue/language/merge/TypeMetadataResolver.java
 blue-language-core/src/main/java/blue/language/merge/VerifiedCanonicalLoadCoordinator.java
+blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceContents.java
 blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceEntry.java
 blue-language-core/src/main/java/blue/language/merge/VerifiedReferenceResolution.java
 blue-language-core/src/main/java/blue/language/merge/package-info.java

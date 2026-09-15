@@ -11,7 +11,7 @@ public final class RuntimeBlueIds {
 
     /** SHA-256 identity of the complete runtime-registry package. */
     public static final String REGISTRY_PACKAGE_IDENTITY =
-            "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4";
+            "sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6";
 
     /**
      * Legacy BlueId meta-type identity retained for binary/source
@@ -30,10 +30,10 @@ public final class RuntimeBlueIds {
             "CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR";
     /** Published BlueId of the Channel Event Checkpoint runtime type. */
     public static final String CHANNEL_EVENT_CHECKPOINT =
-            "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS";
+            "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr";
     /** Published BlueId of the Checkpoint Entry runtime type. */
     public static final String CHECKPOINT_ENTRY =
-            "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY";
+            "55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne";
     /** Published BlueId of the Contract runtime type. */
     public static final String CONTRACT =
             "4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4";

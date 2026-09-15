@@ -23,7 +23,7 @@ final class ClosureEvidenceFactoryTest {
     private static final String SHA_B =
             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private static final String REGISTRY =
-            "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4";
+            "sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6";
     private static final String BLUE_A =
             "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ";
     private static final String BLUE_B =

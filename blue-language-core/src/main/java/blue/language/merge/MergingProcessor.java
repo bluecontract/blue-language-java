@@ -47,6 +47,23 @@ public interface MergingProcessor {
     }
 
     /**
+     * Checks an explicit List member type before contextual value merging can
+     * refine it. The resolver invokes this only at an admitted element path;
+     * reference content has already been verified at that occurrence.
+     *
+     * @param item exact contributed member
+     * @param itemType effective member constraint
+     * @param nodeProvider exact type provider
+     * @param nodeResolver invocation-bound type resolver
+     * @param typeIdentities invocation-local type evidence
+     */
+    default void validateListItem(Node item, Node itemType,
+                                  NodeProvider nodeProvider, NodeResolver nodeResolver,
+                                  CanonicalTypeIdentityLookup typeIdentities) {
+        // Processors without List semantics have no member-type obligation.
+    }
+
+    /**
      * Returns whether this processor has completed-instance validation for the supplied node.
      * Implementations must remain stateless; validation state belongs to the active merger.
      *

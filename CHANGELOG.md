@@ -73,6 +73,15 @@
 
 ### Fix
 
+- finish contextual inline/reference Source canonicalization with explicit
+  occurrence materialization evidence, schema-only preservation, and identical
+  typed Dictionary/List validation; exact-content hashing remains unchanged
+- specify retained effective custom child types, faithful reference reuse,
+  and opaque exact-reference boundaries; publish independent identity oracles
+  and a commit-pinned change inventory because corrected Source IDs can change
+- align `CheckpointEntry.domain` with the Contracts exact-node requirement and
+  write checkpoint entries with their canonical type; dependent registry and
+  fixture identities rotate while historical exact content stays unchanged
 - canonicalize inline effective types through their own Canonical Identity
   Input so inline and verified-reference forms produce one nonempty parent type
   reference and one Source-derived BlueId

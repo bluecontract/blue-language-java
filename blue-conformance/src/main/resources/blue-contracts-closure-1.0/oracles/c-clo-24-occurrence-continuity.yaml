@@ -1051,9 +1051,11 @@ stages:
           blueId: BRCo7A1UUoijfgaiiymSdGngsfbux4gnAYM7NDvrVgM6
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: ZuBZcL91HsnHvftRjirviKdby2RHiDMsW52SGkt2VWo
             subject:
@@ -1089,7 +1091,7 @@ stages:
         document:
           blueId: 4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ
   preliminaryBlueIds:
-    '0': CNAjJP1jMSQCuoAFYGq5qhHW6eQg7VLHA6JYFuoXnYbL
+    '0': 56mfhPcxogVHvxkGcAuLiRVH6FTLsCEM5GL9FjxUSYzN
     '1': GVtfGYQ7T5qSa6Cau7gMAsffZoPnfhzNhZPAzzbsGY2L
   sortedSourceIndices:
   - 0
@@ -1104,7 +1106,7 @@ stages:
     result:
       blueId: odfSAAcrNtFUFpd1BN5Yor3bsFhgY2iGAnr87Ls4axt
     contracts:
-      blueId: 8b1XctjePgcCYWGjC5qvwTJN9JpfNJmzveemyp6eE7MA
+      blueId: 37dW4m2WPqdVCEafLazSigwqVNZDhSNsFhoLLzK4Yg8S
     b:
       blueId: this#1
   - documentId:
@@ -1118,10 +1120,10 @@ stages:
     contracts:
       blueId: 7ZZ5cd3VVPJcWA24oJj2rZw1msy6D6E2TZJWUS41ZStK
   canonicalMasterInputUtf8Bytes: 691
-  masterBlueId: 5BbTBAXcMMsHi4u5GCjZYDWJqfBTc8u3DCc6deK6htsM
+  masterBlueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv
   memberBlueIdsInSourceOrder:
-  - 5BbTBAXcMMsHi4u5GCjZYDWJqfBTc8u3DCc6deK6htsM#0
-  - 5BbTBAXcMMsHi4u5GCjZYDWJqfBTc8u3DCc6deK6htsM#1
+  - 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#0
+  - 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#1
   materializedDocuments:
   - documentId: a
     memberIdentity: a
@@ -1176,20 +1178,22 @@ stages:
           blueId: BRCo7A1UUoijfgaiiymSdGngsfbux4gnAYM7NDvrVgM6
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: ZuBZcL91HsnHvftRjirviKdby2RHiDMsW52SGkt2VWo
             subject:
               blueId: 4za3n8bAtn5YGRqAEeW6iRswtRnLgGkyZg9EN64gwLy2
     b:
-      blueId: 5BbTBAXcMMsHi4u5GCjZYDWJqfBTc8u3DCc6deK6htsM#1
+      blueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#1
   - documentId: b
     memberIdentity: b
     xHandled: 1
     a:
-      blueId: 5BbTBAXcMMsHi4u5GCjZYDWJqfBTc8u3DCc6deK6htsM#0
+      blueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#0
     contracts:
       embedded:
         type:

@@ -1,5 +1,8 @@
 # Source BlueId — weryfikacja R4
 
+> Raport historyczny. Aktualny kontrakt, poprawki i pomiary PR #36 opisuje
+> [raport naprawy kontekstowych referencji](pr36-contextual-reference-repair.pl.md).
+
 14 września 2026. Niezacommitowane zmiany względem HEAD
 `806536457fd2ff284159fe65439973aa0f02ca4f`, porównane także z zamrożoną wersją
 [R3](source-identity-large-documents-r3-2026-09-14.md).
@@ -11,7 +14,7 @@ z odziedziczoną stałą wartością i P2 z memoizowanym grafem są zamknięte.
 
 **P1 — po materializacji listy helper nadal pomija jej nowe elementy.**
 
-Miejsce: [CompletedValueValidator.java:547](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:547).
+Miejsce: CompletedValueValidator.java:547 (archiwalna ścieżka: `blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java:547`).
 
 `addSubtreeNodes(subtree, candidate.node)` dostaje korzeń, który już należy
 do `subtree`. Warunek `!nodes.add(current)` natychmiast kończy przejście,
@@ -45,7 +48,7 @@ a wymaganie Currency pochodzi dopiero z `Holder.entries.itemType`.
 To wymaga dopełnienia nowych elementów po dołączeniu listy do kontekstu.
 
 Samodzielna reprodukcja z asercją:
-[TypedListCurrencyReferenceRepro.java](/private/tmp/blue-large-identity-review-20260914-r4/TypedListCurrencyReferenceRepro.java).
+TypedListCurrencyReferenceRepro.java (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914-r4/TypedListCurrencyReferenceRepro.java`).
 Na aktualnym kodzie kończy się kodem 1 i trzema rozbieżnościami tożsamości.
 Wariant diagnostyczny zmieniający wyłącznie przejście w `addSubtreeNodes`
 przechodzi wszystkie trzy przypadki, z kodem 0. Nowy znacznik materializacji
@@ -58,7 +61,7 @@ ale zachowuje odwołanie do pełnej listy; nie gubi wartości w pokazany sposób
 Utrata wartości pojawiła się w optymalizacji patcha i pozostaje niezamknięta.
 
 Reguła: §13.4 wymaga zachowania wkładów instancji niewynikających z typu
-([specyfikacja:2498](/Users/przemekkowalewski/Sites/blue-language-java/blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2498)).
+(specyfikacja:2498 (archiwalna ścieżka: `blue-language-core/src/main/resources/specifications/blue-language-specification-1.0.md:2498`)).
 Efektywny `itemType` sprawia, że ten przypadek podlega parytetowi typowanej
 wartości. Kontrola używa jawnego List, więc wynik nie zależy od interpretacji
 skróconego zapisu listy.
@@ -117,7 +120,7 @@ zachowują Source BlueId po późniejszym `resolveDefinition`. Nie wykonywano
 workflow Commerce. Wyniki są w `protocol-results.jsonl` i `protocol-summary.json`.
 
 **Materiały.** Katalog
-[/private/tmp/blue-large-identity-review-20260914-r4](/private/tmp/blue-large-identity-review-20260914-r4)
+/private/tmp/blue-large-identity-review-20260914-r4 (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914-r4`)
 zawiera reprodukcje i logi, wariant `causal-refresh`, mediany w
 `confirmation-summary.json`, surowe pomiary, wyniki testów, zamrożone źródła
 i manifest SHA-256 obejmujący także nieśledzone pliki produkcyjne i testowe.

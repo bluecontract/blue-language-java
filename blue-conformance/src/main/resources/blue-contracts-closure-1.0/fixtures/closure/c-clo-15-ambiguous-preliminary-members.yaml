@@ -67,11 +67,11 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   closureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
-  invocationIdentity: sha256:6d7f3c32646524afcbfec618b2b38cc0eaba12ce2a2aeecc4440c1f19794bc70
+  invocationIdentity: sha256:9bb8cb106f92bda5bc1ab4142e4ffcaf5d8af49044ee63a8ed6c1fe41705fb47
   environment:
-    blueLanguageSpecificationIdentity: sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
+    blueLanguageSpecificationIdentity: sha256:0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24
     contractsSpecificationIdentity: sha256:e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f
-    runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+    runtimeRegistryIdentity: sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
@@ -155,12 +155,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b
-    cyclicProofVerifierIdentity: sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834
+    cyclicFinalizerIdentity: sha256:71b7c01ac5edddbb6b0df2d624fa69d63054881c19c2b61fe10c783a53e5aeec
+    cyclicProofVerifierIdentity: sha256:b011ba281a9bcce5d0ff6f72b7bd19b8bc49a67ce760ca71bed745d25f6c4256
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:6d7f3c32646524afcbfec618b2b38cc0eaba12ce2a2aeecc4440c1f19794bc70
+  invocationIdentity: sha256:9bb8cb106f92bda5bc1ab4142e4ffcaf5d8af49044ee63a8ed6c1fe41705fb47
   inputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   outputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   atomic: true

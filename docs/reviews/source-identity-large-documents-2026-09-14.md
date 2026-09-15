@@ -1,5 +1,8 @@
 # Source BlueId — duże dokumenty i różne struktury
 
+> Raport historyczny. Aktualny kontrakt, poprawki i pomiary PR #36 opisuje
+> [raport naprawy kontekstowych referencji](pr36-contextual-reference-repair.pl.md).
+
 Aktualizacja: [ponowny przegląd po optymalizacji](source-identity-large-documents-rereview-2026-09-14.md).
 Poniższe pomiary opisują wcześniejszą wersję patcha.
 
@@ -194,10 +197,10 @@ W jej próbach wyłączono dodatkowy warmup, sprawdzanie inline i powtórzenia,
 w porównaniu wydajności.
 
 Wyniki, źródła harnessów, fixtures, classpathy i manifesty są w
-[/private/tmp/blue-large-identity-review-20260914](/private/tmp/blue-large-identity-review-20260914).
+/private/tmp/blue-large-identity-review-20260914 (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914`).
 Najważniejsze pliki:
 
-- [summary.json](/private/tmp/blue-large-identity-review-20260914/summary.json) —
+- summary.json (archiwalna ścieżka: `/private/tmp/blue-large-identity-review-20260914/summary.json`) —
   mediany, błędy, liczniki i sumy SHA-256 plików wynikowych.
 - `smoke-results.jsonl`, `scaling-results.jsonl`, `confirmation-results.jsonl` —
   surowe zimne i ciepłe pomiary syntetyczne.
