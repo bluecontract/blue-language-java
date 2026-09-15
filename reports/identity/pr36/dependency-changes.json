@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "1066477d938ec26e5bc11717d80f37962a12862a",
+  "sourceRevision": "4f686c768dcfa3ad3326f3d1c07cba3f6d24944e",
   "beforeRevision": "9eb47786cee058af3868ed581bd9fb4b7e15850c",
   "unexplainedChanges": 0,
   "reviewedClosurePackage": {
@@ -176,7 +176,22 @@
       "preserved": "Business payloads, accept/reject outcomes, historical exact content, and the direct BlueId algorithm.",
       "rawDeltaSha256": "c7fc664041e096b04dbfee2724645557130780a2f07c46ba06d7d67c80393634",
       "rawDeltaGenerator": "blue-conformance/src/main/tools/classify_fixture_identity_delta.py; its older transition labels require this explicit bounded review.",
-      "legacyClassifierDiagnostic": "The extra C-EVO release integrity row is an aggregate validation diagnostic, not a 109th file. Its old fixture/registry/release pins rotate through the individually reviewed files. The regenerated package passes its authoritative validator."
+      "legacyClassifierDiagnostic": "The extra C-EVO release integrity row is an aggregate validation diagnostic, not a 109th file. Its old fixture/registry/release pins rotate through the individually reviewed files. The regenerated package passes its authoritative validator.",
+      "currentNextIntegration": {
+        "baseRevision": "952b90ba5748f6b3605482700608bd0429839a83",
+        "repairBeforeIntegrationRevision": "1066477d938ec26e5bc11717d80f37962a12862a",
+        "method": "Independent Spec review verified PR #37 exact-event evidence transport. Complete post-integration regeneration changed only eight implementation source hashes and their release-manifest identity; fixtures, cyclic oracles, payloads and gas remained byte-identical.",
+        "changedImplementationPaths": [
+          "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+          "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java"
+        ]
+      }
     },
     "files": [
       {
@@ -1619,9 +1634,9 @@
       {
         "path": "release-manifest.yaml",
         "beforeSha256": "71f8306ab8f5cce5788a14ea7435dd3f16d15ac7cd42cb4cb1eacadcfcac5ca6",
-        "afterSha256": "85f762cb387454d9cc149c6230bbad1c52cfbd713059223e774f53f7fb04c7cb",
+        "afterSha256": "60b95d6521cdfca67dbf633a43b7c100d1288d87e43af79cdfdc1197ef7f8a8e",
         "classification": "required-dependency-consequence",
-        "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java.",
+        "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java. Includes the eight Contracts implementation source hashes from current next / PR #37, with no additional fixture or oracle changes.",
         "changedFieldCounts": {
           "actual-semantic-state-result-change": 187,
           "spec-identity-rebind": 204
@@ -3353,6 +3368,328 @@
         "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java.",
         "repositoryModule": "blue-contracts-core",
         "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 364,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 186558,
+            "path": "dynamic-contract-evolution-fixture-delta.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "e69021ba9f25f149bdbb0dae990db2095cbeba7f47be3bb8e1904125c8be69b0",
+        "oldExactIdentity": "94a9856f1b62184746eba45fe369aed144c7788cee6d912e64df3de3ccdf0536",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "3668b3b7e7704e45b4e8bfc4ec41d6a33da2bead6dbd00965d46cf81be1e45f9",
+        "oldExactIdentity": "f4fd1b419859164432c2a4346bde7f631177316786e492d9e3744373a0b0fcdc",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 466,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 187008,
+            "path": "dynamic-contract-evolution-fixture-delta.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "5d7c270c86bfa2ec1860abaf623a1e4587c1d6a0ca1af311cad1f2f17150e16e",
+        "oldExactIdentity": "1adbd02bf26981731135723af1557165a84214e338e22d2706066395c58985b2",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 530,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "ecce7e1c5e5904ecb11c52d55e5cf01b8ff08dcbc81d3b6493591be045c17c27",
+        "oldExactIdentity": "3cdbbd753b097da54fffc685ede235c47686a3a04a6fb8044cdaf903a0a8ddef",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": [
+          "package:contracts-release"
+        ]
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "2dac57639ddaa2d0958e4612199f0b43fb6b3f31586de44d58879de313e8c978",
+        "oldExactIdentity": "ff978fe2f91131ad551daeab03e5a262af90b7578cced33e31e5083169e6dbd9",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "8de8604879da068f5b32301e5d68ed2821e3dbc72c0b276a6df99e4abd6d2dad",
+        "oldExactIdentity": "9b8f5ad9c974c75c18eeff05dd9105cdfce8032d95313d2a301e50fb2610e271",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 754,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 188304,
+            "path": "dynamic-contract-evolution-fixture-delta.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "15658ce08b348faf42d67d28fe175cdcf6b799886f49870818af62db71ea6d5f",
+        "oldExactIdentity": "84ef31348f1906f784bba1fd9e44cddc33dda59f805d6991ae4de969ce3894ff",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 786,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 188439,
+            "path": "dynamic-contract-evolution-fixture-delta.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "d02d783253bcf262ea97304d0cbf6384834fd6317258c4bc6d7d2a0e33a89eea",
+        "oldExactIdentity": "a2ee787e8fe877bf57d833abf6c6d13d2af4368288305edf713ab6cda98b5aa4",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
         "storedReferencesRequiringUpdate": [],
         "transitiveDependents": []
       },
@@ -5275,7 +5612,7 @@
         ],
         "manifestReceiptEntriesRequiringUpdate": [],
         "mirroredPaths": [],
-        "newExactIdentity": "sha256:8dd59ecc05d11e8d619ff2d2f3d1c1bb5943edec3ced08d9727ff35450f7cc26",
+        "newExactIdentity": "sha256:a065003c277c5d71f636fe4b771feeac19cdbe41908642d0eabb589cc5e2731d",
         "oldExactIdentity": "sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced",
         "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml",
         "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: document:contracts-specification.",
@@ -5470,13 +5807,13 @@
     },
     "summary": {
       "activeStoredReferenceCount": 0,
-      "artifactCount": 94,
+      "artifactCount": 102,
       "classifications": {
         "directly-changed": 2,
         "newly-introduced": 1,
         "obsolete-pre-stable-rc": 0,
         "stale-binding-regenerated": 1,
-        "transitively-changed": 52,
+        "transitively-changed": 60,
         "unchanged-direct": 38,
         "unresolved": 0
       },
@@ -5484,7 +5821,7 @@
       "emptyObjectIdentityUnchanged": true,
       "excludedInvalidVectorCount": 1,
       "fixtureConstantReferenceCount": 0,
-      "historicalReferenceCount": 220,
+      "historicalReferenceCount": 252,
       "identityFreeJavaOracleCount": 0,
       "manifestReceiptReferenceCount": 0,
       "mirrorMismatchCount": 0,

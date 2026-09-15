@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "1066477d938ec26e5bc11717d80f37962a12862a",
+  "sourceRevision": "4f686c768dcfa3ad3326f3d1c07cba3f6d24944e",
   "corpusSha256": "229700d9c3ae8ba2d9754b84b3c46b272a0f518e357fe0b3629808776bbdf5dc",
   "harnessSha256": "2c72771adb58bc06b91357cdbf074242d1671f560c0a77ec5221fb14eef9c766",
   "oracle": "hand-constructed canonical nodes + blue_identity.direct_blue_id",

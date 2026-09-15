@@ -2,16 +2,16 @@
 
 Wygenerowano z jednego corpus z niezależnym direct oracle.
 
-Implementacja końcowa: `1066477d938ec26e5bc11717d80f37962a12862a`.
+Implementacja końcowa: `4f686c768dcfa3ad3326f3d1c07cba3f6d24944e`.
 
 - Liczba wierszy na wykonanie: 132.
 - Zmiany direct ID: **0**. Niewyjaśnione zmiany: **0**.
 - Końcowe rozbieżności z oracle: **0**.
 - Mini/MyOS: bramka odłożona przez użytkownika, niewykonana.
 
-## RC.25 / next
+## Aktualny next
 
-Commit: `806536457fd2ff284159fe65439973aa0f02ca4f`.
+Commit: `952b90ba5748f6b3605482700608bd0429839a83`.
 
 Rozbieżności z oracle przed naprawą: **60**.
 
