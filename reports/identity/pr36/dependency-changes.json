@@ -1,5 +1,5 @@
 {
-  "sourceRevision": "4f686c768dcfa3ad3326f3d1c07cba3f6d24944e",
+  "sourceRevision": "89dbaa114c8f11a571ac4fa111aa8776e27ce24d",
   "beforeRevision": "9eb47786cee058af3868ed581bd9fb4b7e15850c",
   "unexplainedChanges": 0,
   "reviewedClosurePackage": {
@@ -191,6 +191,19 @@
           "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
           "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java"
         ]
+      },
+      "checkpointDomainAccessorFollowup": {
+        "baselineRevision": "91395481ca95a7f74951f8a6df90c5a8d1a91190",
+        "method": "Regenerated the complete package after using the existing direct calculator in CheckpointEntry.domainBlueId(); inspected the complete diff against the previously reviewed package.",
+        "changedPackageFiles": [
+          "release-manifest.yaml"
+        ],
+        "changedFields": [
+          "languageDependency implementation source hash for CheckpointEntry.java",
+          "releaseIdentity"
+        ],
+        "fixtureAndOracleBytesUnchanged": true,
+        "replayRegression": "CheckpointManagerTest and ChannelRunnerTest fail for an inline domain before the accessor correction and pass for both representations afterward."
       }
     },
     "files": [
@@ -1634,7 +1647,7 @@
       {
         "path": "release-manifest.yaml",
         "beforeSha256": "71f8306ab8f5cce5788a14ea7435dd3f16d15ac7cd42cb4cb1eacadcfcac5ca6",
-        "afterSha256": "60b95d6521cdfca67dbf633a43b7c100d1288d87e43af79cdfdc1197ef7f8a8e",
+        "afterSha256": "db265e4e91ddc097860aac5c77dc379cb9999b7cbf19dd683bb3a6c1b93a693b",
         "classification": "required-dependency-consequence",
         "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java. Includes the eight Contracts implementation source hashes from current next / PR #37, with no additional fixture or oracle changes.",
         "changedFieldCounts": {
@@ -3698,6 +3711,51 @@
         "classification": "transitively-changed",
         "closureRotationEvidence": null,
         "componentBindingChanges": [],
+        "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/model/CheckpointEntry.java",
+        "fixtureConstantsRequiringUpdate": [],
+        "historicalReferencesRetained": [
+          {
+            "disposition": "retained-immutable-history",
+            "line": 850,
+            "path": "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/rc24/release-manifest.yaml"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-slot-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-retired-witness-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 784,
+            "path": "blue-conformance/src/main/tools/migration/classify-rooted-source-conventions-transition.json"
+          },
+          {
+            "disposition": "retained-immutable-history",
+            "line": 188682,
+            "path": "dynamic-contract-evolution-fixture-delta.json"
+          }
+        ],
+        "manifestReceiptEntriesRequiringUpdate": [],
+        "mirroredPaths": [],
+        "newExactIdentity": "d2c0d8844ad997ff253ebbe9627591192d8f7ec8fdac8e67b363f56012e8fe90",
+        "oldExactIdentity": "d148e17b92259ff522c3c40812ea6a0bd706b6f3cfab0d3232f88fda3c63f6b4",
+        "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml#/languageDependency/inputImplementationBaseline/blue-contracts-core/src/main/java/blue/language/processor/model/CheckpointEntry.java",
+        "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/model/CheckpointEntry.java.",
+        "repositoryModule": "blue-contracts-core",
+        "stableKey": "implementation:blue-contracts-core/src/main/java/blue/language/processor/model/CheckpointEntry.java",
+        "storedReferencesRequiringUpdate": [],
+        "transitiveDependents": []
+      },
+      {
+        "artifactKind": "source-sha256",
+        "classification": "transitively-changed",
+        "closureRotationEvidence": null,
+        "componentBindingChanges": [],
         "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/registry/RuntimeBlueIds.java",
         "fixtureConstantsRequiringUpdate": [],
         "historicalReferencesRetained": [
@@ -5612,7 +5670,7 @@
         ],
         "manifestReceiptEntriesRequiringUpdate": [],
         "mirroredPaths": [],
-        "newExactIdentity": "sha256:a065003c277c5d71f636fe4b771feeac19cdbe41908642d0eabb589cc5e2731d",
+        "newExactIdentity": "sha256:99da5368d7f65a37b1a1a1eeb12792272da10b0daf00b367a5cbfa9a006eb107",
         "oldExactIdentity": "sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced",
         "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml",
         "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: document:contracts-specification.",
@@ -5807,13 +5865,13 @@
     },
     "summary": {
       "activeStoredReferenceCount": 0,
-      "artifactCount": 102,
+      "artifactCount": 103,
       "classifications": {
         "directly-changed": 2,
         "newly-introduced": 1,
         "obsolete-pre-stable-rc": 0,
         "stale-binding-regenerated": 1,
-        "transitively-changed": 60,
+        "transitively-changed": 61,
         "unchanged-direct": 38,
         "unresolved": 0
       },
@@ -5821,7 +5879,7 @@
       "emptyObjectIdentityUnchanged": true,
       "excludedInvalidVectorCount": 1,
       "fixtureConstantReferenceCount": 0,
-      "historicalReferenceCount": 252,
+      "historicalReferenceCount": 257,
       "identityFreeJavaOracleCount": 0,
       "manifestReceiptReferenceCount": 0,
       "mirrorMismatchCount": 0,
