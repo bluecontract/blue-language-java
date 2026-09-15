@@ -863,7 +863,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/model/ChannelEventCheckpoint.java
     sha256: e198195de2dbf3f8ce956d1722acea2510df27537c384c90268cf4d59d79e763
   - path: blue-contracts-core/src/main/java/blue/language/processor/model/CheckpointEntry.java
-    sha256: d148e17b92259ff522c3c40812ea6a0bd706b6f3cfab0d3232f88fda3c63f6b4
+    sha256: d2c0d8844ad997ff253ebbe9627591192d8f7ec8fdac8e67b363f56012e8fe90
   - path: blue-contracts-core/src/main/java/blue/language/processor/model/Contract.java
     sha256: 737ea80e08c099ae12be60bde5896c51f736d8bbc27b401a317bd42e3e51c0f1
   - path: blue-contracts-core/src/main/java/blue/language/processor/model/DocumentUpdate.java
@@ -1542,4 +1542,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:a065003c277c5d71f636fe4b771feeac19cdbe41908642d0eabb589cc5e2731d
+releaseIdentity: sha256:99da5368d7f65a37b1a1a1eeb12792272da10b0daf00b367a5cbfa9a006eb107
