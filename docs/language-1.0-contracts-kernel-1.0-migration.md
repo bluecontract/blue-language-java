@@ -132,6 +132,74 @@ back, while the admitted child-ledger gas and its exact ordered trace remain in
 `totalGas`. This is the Contracts 1.0 §12.3 rule that deterministic failures
 report all gas admitted before the failure.
 
+### Original processing event across closure steps
+
+Externally caused `PROCESS_CLOSURE` invocations now retain their original
+processing event across Triggered Event, Document Update, Embedded and
+Lifecycle steps, including initialization of a child created during that
+invocation. This implements the Contracts-side correction for
+[development#22](https://github.com/bluecontract/development/issues/22).
+`ProcessorExecutionContext.event()` remains the current delivery payload;
+`hasProcessEvent()` and `frozenProcessEvent()` expose the original cause;
+`exactProcessEventIdentityEvidence()` exposes its separately verified identity.
+Work kind and channel still select which handlers execute.
+
+For an External Channel whose `PAYLOAD` function adapts the input, the external
+handler now receives the adapted value in `event()` and the original admitted
+value in `frozenProcessEvent()`. Previously both exposed the adapted payload.
+This choice follows Contracts §§2.3, 3.3 and 4.11 and development#22's requirement
+to retain the original event and identity in every phase. The bundled BEX §5.3
+also states external `$event == $processingEvent` without an adaptation
+qualification. That wording conflicts with this case and still needs a
+specification clarification; the adaptation regression establishes the chosen
+Contracts behavior, not full BEX conformance. The
+[specification audit](processing-event-specification-audit.md) records the
+source analysis and this limitation.
+
+The additional `ExactEventIdentityEvidence` parameter on `DocumentStepInput`
+and `ManagedDocumentStepRequest` carries the closure session's already-verified
+immutable event together with its admitted BlueId, without materializing or
+rehashing it at each step. A retained Source cursor can have a representation
+hash different from this identity, for example with inline nominal types or
+expanded annotations. Hosted runtimes must use the evidence's `eventBlueId()`
+for the original exact value, rather than reconstructing it from
+`frozenProcessEvent().blueId()` or from the current delivery. Coordination's
+BEX adapter therefore needs to carry this explicit identity into its
+`$processingEvent` binding as well.
+
+Reading `exactProcessEventIdentityEvidence()` is constant-time and does not
+freeze, resolve or hash an event. It returns `null` when no original-event
+identity evidence was retained, even if a legacy standalone execution has a
+processing-event snapshot. Existing constructor descriptors remain available;
+standalone callers that omit the parameter retain their previous behavior.
+
+Both `DocumentStepInput.processingEventIdentityEvidence()` and
+`ManagedDocumentStepRequest.processingEventIdentityEvidence()` expose the
+same optional evidence supplied to their new constructor overloads. Together
+with the context accessor these are five additive JVM descriptors, all pinned
+in the Contracts module's `api/public-api.txt`. In the modernization ledger,
+the two step classes are whole-class additions relative to the legacy 1.0
+snapshot under `phase-9-contracts-1.0-affected-closure`. Their constructors and
+getters are therefore classified within those additions; only the context
+accessor is a separate method addition. The
+`processing-event-admitted-identity` rationale lists all five descriptors and
+their mappings explicitly. The context's architecture budget increases from
+33 to 34 methods for this single evidence accessor.
+
+Managed steps reuse the snapshot constructed at closure admission, so they no
+longer report a per-step `PROCESS_EVENT_SNAPSHOT_*` construction attempt or
+build. These observer counters describe actual snapshot work; they are not
+semantic gas. Legacy standalone snapshot construction still records them.
+
+Separate closure admission and managed-revision invocations have no original
+processing event, including when their evidence records a historical cause
+identity. The binding lasts for one invocation and creates no additional
+external deliveries. Regression coverage is in
+[`ProcessingEventClosureTest`](../blue-contracts-core/src/test/java/blue/language/processor/closure/ProcessingEventClosureTest.java),
+including inline Source identity, annotations, resource retries, concurrent
+invocations, sequential distinct causes, successful and rejected replay,
+rollback diagnostics and gas parity.
+
 ### Additive indexed platform invocation
 
 Hosts that have already evaluated an exact indexed-delivery surface can now use

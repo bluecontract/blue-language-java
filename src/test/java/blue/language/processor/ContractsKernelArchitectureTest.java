@@ -39,11 +39,12 @@ final class ContractsKernelArchitectureTest {
     private static final int MAX_MANAGED_ROOT_SETTLEMENT_LINES = 1153;
     private static final int MAX_COMPOSITION_ROOT_LINES = 250;
     /*
-     * The exact-event and occurrence-event evidence accessors are the
-     * reviewed Contracts/BEX bridges. Keep the bound explicit so any further
-     * public surface still fails this gate.
+     * The exact-event, occurrence-event and original-processing-event
+     * evidence accessors are the reviewed Contracts/BEX bridges. The last
+     * implements development#22 (ledger: processing-event-admitted-identity).
+     * Keep the bound explicit so any further public surface still fails this gate.
      */
-    private static final int MAX_PUBLIC_SERVICE_METHODS = 33;
+    private static final int MAX_PUBLIC_SERVICE_METHODS = 34;
 
     @Test
     void shouldKeepContractsImplementationClassesWithinBudget()
