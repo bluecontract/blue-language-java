@@ -172,7 +172,22 @@
     "preserved": "Business payloads, accept/reject outcomes, historical exact content, and the direct BlueId algorithm.",
     "rawDeltaSha256": "c7fc664041e096b04dbfee2724645557130780a2f07c46ba06d7d67c80393634",
     "rawDeltaGenerator": "blue-conformance/src/main/tools/classify_fixture_identity_delta.py; its older transition labels require this explicit bounded review.",
-    "legacyClassifierDiagnostic": "The extra C-EVO release integrity row is an aggregate validation diagnostic, not a 109th file. Its old fixture/registry/release pins rotate through the individually reviewed files. The regenerated package passes its authoritative validator."
+    "legacyClassifierDiagnostic": "The extra C-EVO release integrity row is an aggregate validation diagnostic, not a 109th file. Its old fixture/registry/release pins rotate through the individually reviewed files. The regenerated package passes its authoritative validator.",
+    "currentNextIntegration": {
+      "baseRevision": "952b90ba5748f6b3605482700608bd0429839a83",
+      "repairBeforeIntegrationRevision": "1066477d938ec26e5bc11717d80f37962a12862a",
+      "method": "Independent Spec review verified PR #37 exact-event evidence transport. Complete post-integration regeneration changed only eight implementation source hashes and their release-manifest identity; fixtures, cyclic oracles, payloads and gas remained byte-identical.",
+      "changedImplementationPaths": [
+        "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+        "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java"
+      ]
+    }
   },
   "files": [
     {
@@ -1615,9 +1630,9 @@
     {
       "path": "release-manifest.yaml",
       "beforeSha256": "71f8306ab8f5cce5788a14ea7435dd3f16d15ac7cd42cb4cb1eacadcfcac5ca6",
-      "afterSha256": "85f762cb387454d9cc149c6230bbad1c52cfbd713059223e774f53f7fb04c7cb",
+      "afterSha256": "60b95d6521cdfca67dbf633a43b7c100d1288d87e43af79cdfdc1197ef7f8a8e",
       "classification": "required-dependency-consequence",
-      "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java.",
+      "reason": "Recompute exact content hashes and byte counts; release input implementation inventory additionally includes VerifiedReferenceContents.java. Includes the eight Contracts implementation source hashes from current next / PR #37, with no additional fixture or oracle changes.",
       "changedFieldCounts": {
         "actual-semantic-state-result-change": 187,
         "spec-identity-rebind": 204

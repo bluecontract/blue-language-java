@@ -82,6 +82,9 @@
 - align `CheckpointEntry.domain` with the Contracts exact-node requirement and
   write checkpoint entries with their canonical type; dependent registry and
   fixture identities rotate while historical exact content stays unchanged
+- retain the original external processing event and its admitted exact BlueId
+  across managed closure steps; expose the identity evidence to hosted
+  runtimes without rehashing the retained Source representation
 - canonicalize inline effective types through their own Canonical Identity
   Input so inline and verified-reference forms produce one nonempty parent type
   reference and one Source-derived BlueId

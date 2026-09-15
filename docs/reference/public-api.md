@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 27 | 183 | 68 | 278 |
-| `blue-contracts-core` | 307 | 2063 | 677 | 3047 |
+| `blue-contracts-core` | 307 | 2068 | 677 | 3052 |
 | `blue-language-core` | 164 | 900 | 97 | 1161 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 107 | 1 | 133 |
 | `blue-language-model` | 23 | 220 | 80 | 323 |
-| **Distribution** | **552** | **3521** | **923** | **4996** |
+| **Distribution** | **552** | **3526** | **923** | **5001** |
 
 ## blue-conformance
 
@@ -1669,6 +1669,7 @@ method blue.language.processor.ManagedDocumentStepRequest#<init> descriptor=(Lbl
 method blue.language.processor.ManagedDocumentStepRequest#<init> descriptor=(Lblue/language/model/Node;ZZLblue/language/processor/ManagedDocumentWorkKind;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/GasChargeContext;)V access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#<init> descriptor=(Lblue/language/model/Node;ZZLblue/language/processor/ManagedDocumentWorkKind;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/FrozenJsonPatch;Lblue/language/processor/GasChargeContext;)V access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#<init> descriptor=(Lblue/language/model/Node;ZZLblue/language/processor/ManagedDocumentWorkKind;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/FrozenJsonPatch;Lblue/language/processor/GasChargeContext;Lblue/language/processor/ManagedDocumentResolutionOverlay;)V access=public signature=- throws=-
+method blue.language.processor.ManagedDocumentStepRequest#<init> descriptor=(Lblue/language/model/Node;ZZLblue/language/processor/ManagedDocumentWorkKind;Ljava/lang/String;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/FrozenJsonPatch;Lblue/language/processor/GasChargeContext;Lblue/language/processor/ManagedDocumentResolutionOverlay;Lblue/language/processor/ExactEventIdentityEvidence;)V access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#attribution descriptor=()Lblue/language/processor/GasChargeContext; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#channelKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#exactDocument descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
@@ -1676,6 +1677,7 @@ method blue.language.processor.ManagedDocumentStepRequest#exactPayload descripto
 method blue.language.processor.ManagedDocumentStepRequest#initialized descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#matchingEventBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#occurrenceEvent descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.processor.ManagedDocumentStepRequest#processingEventIdentityEvidence descriptor=()Lblue/language/processor/ExactEventIdentityEvidence; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#processorPatch descriptor=()Lblue/language/processor/FrozenJsonPatch; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#resolutionOverlay descriptor=()Lblue/language/processor/ManagedDocumentResolutionOverlay; access=public signature=- throws=-
 method blue.language.processor.ManagedDocumentStepRequest#terminated descriptor=()Z access=public signature=- throws=-
@@ -1907,6 +1909,7 @@ method blue.language.processor.ProcessorExecutionContext#emitEvent descriptor=(L
 method blue.language.processor.ProcessorExecutionContext#event descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.ProcessorExecutionContext#exactEventIdentityEvidence descriptor=()Lblue/language/processor/ExactEventIdentityEvidence; access=public signature=- throws=-
 method blue.language.processor.ProcessorExecutionContext#exactOccurrenceEventIdentityEvidence descriptor=()Lblue/language/processor/ExactEventIdentityEvidence; access=public signature=- throws=-
+method blue.language.processor.ProcessorExecutionContext#exactProcessEventIdentityEvidence descriptor=()Lblue/language/processor/ExactEventIdentityEvidence; access=public signature=- throws=-
 method blue.language.processor.ProcessorExecutionContext#frozenContractNode descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.ProcessorExecutionContext#frozenEvent descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.ProcessorExecutionContext#frozenProcessEvent descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
@@ -2474,12 +2477,14 @@ method blue.language.processor.closure.DocumentStepEvidence#stepOrdinal descript
 method blue.language.processor.closure.DocumentStepEvidence#targetDocumentId descriptor=()Lblue/language/processor/closure/DocumentId; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepEvidence#workOrdinal descriptor=()J access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#<init> descriptor=(JLblue/language/processor/closure/ClosureWorkOccurrence;Lblue/language/processor/closure/ManagedDocumentSnapshot;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/FrozenJsonPatch;Lblue/language/processor/closure/TentativeResolutionContext;)V access=public signature=- throws=-
+method blue.language.processor.closure.DocumentStepInput#<init> descriptor=(JLblue/language/processor/closure/ClosureWorkOccurrence;Lblue/language/processor/closure/ManagedDocumentSnapshot;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/FrozenJsonPatch;Lblue/language/processor/closure/TentativeResolutionContext;Lblue/language/processor/ExactEventIdentityEvidence;)V access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#<init> descriptor=(JLblue/language/processor/closure/ClosureWorkOccurrence;Lblue/language/processor/closure/ManagedDocumentSnapshot;Lblue/language/model/Node;Ljava/lang/String;Lblue/language/processor/closure/TentativeResolutionContext;)V access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#ambientContainingDocumentIds descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/closure/DocumentId;>; throws=-
 method blue.language.processor.closure.DocumentStepInput#exactPayload descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#executionScope descriptor=()Lblue/language/processor/closure/ScopeAddress; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#matchingEventBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#occurrenceEvent descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.processor.closure.DocumentStepInput#processingEventIdentityEvidence descriptor=()Lblue/language/processor/ExactEventIdentityEvidence; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#processorPatch descriptor=()Lblue/language/processor/FrozenJsonPatch; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#resolutionContext descriptor=()Lblue/language/processor/closure/TentativeResolutionContext; access=public signature=- throws=-
 method blue.language.processor.closure.DocumentStepInput#stepOrdinal descriptor=()J access=public signature=- throws=-

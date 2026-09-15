@@ -3,7 +3,8 @@
 Dotyczy [PR #36](https://github.com/bluecontract/blue-language-java/pull/36)
 i [C03 / development#24](https://github.com/bluecontract/development/issues/24).
 Punkt wyjścia implementacji: `9eb47786cee058af3868ed581bd9fb4b7e15850c`;
-porównanie wydania: `806536457fd2ff284159fe65439973aa0f02ca4f` (`next`, RC.25).
+aktualna baza integracji i porównania: `952b90ba5748f6b3605482700608bd0429839a83`
+(`next`, po scaleniu PR #37).
 
 ## Kontrakt
 
@@ -155,13 +156,24 @@ kosztu w zależnym pakiecie. Definicja `CheckpointEntry` i nowy kanoniczny zapis
 są jawną, ograniczoną poprawką towarzyszącą w Contracts. Stare profile i
 utrwalone dowody historyczne pozostają niezmienione.
 
+Integracja z aktualnym `next` zachowuje transport oryginalnego
+`ExactEventIdentityEvidence` wprowadzony przez PR #37. Ponowna regeneracja
+pakietu zmieniła tylko osiem hashy źródeł Contracts w implementation baseline
+i wynikającą z nich tożsamość manifestu. Fixture, oracle, payloady i gas
+pozostały takie same jak przed tą integracją.
+
 ## Weryfikacja Language i Contracts
 
 Przed przypięciem raportu przeszły `moduleCheck`, `moduleApiVerify`,
 `verifyModuleStructure`, `candidatePreflight` i `releaseConformanceTest`:
 
-- 3764 wykonania testów Java: 2810 w głównym zestawie, 206 w rdzeniu Language,
-  556 w Contracts, 182 w conformance, 7 w fasadzie i 3 w modelu; zero błędów i pominięć.
+- 3779 wykonań testów Java: 2810 w głównym zestawie, 206 w rdzeniu Language,
+  571 w Contracts, 182 w conformance, 7 w fasadzie i 3 w modelu; zero pominięć.
+  Jedyny błąd pierwszego przebiegu dotyczył lokalnego `.DS_Store` w zasobach.
+  Po zachowaniu metadanych Findera poza zasobami wszystkie sześć testów
+  zestawu architektury przeszło ponownie; kod testu i spis zasobów pozostały bez zmian.
+- Dodatkowo przeszło 20 testów przykładów, 114 testów build-logic, 49 testów
+  generatorów raportu/inwentarza oraz 7 testów narzędzi wydawniczych.
 - Raport wydania: 490/490 fixture PASS, w tym 195 Language; zero pominięć.
 - Macierz końcowa: 132/132 wiersze, zero rozbieżności z niezależnym oracle.
 - Inwentarz zależności: zero nierozwiązanych tożsamości, rozbieżnych kopii

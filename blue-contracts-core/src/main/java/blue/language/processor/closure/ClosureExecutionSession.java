@@ -929,7 +929,8 @@ final class ClosureExecutionSession
                 pending.occurrenceEvent,
                 pending.processorPatch,
                 TentativeResolutionContext.from(
-                        input, currentSnapshot, work.targetDocumentId()));
+                        input, currentSnapshot, work.targetDocumentId()),
+                externalEventIdentityEvidence);
         recorder.step(step);
         ActiveFrame frame = new ActiveFrame(
                 work,

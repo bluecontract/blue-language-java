@@ -133,7 +133,7 @@ class BlueContractsConformanceReportTest {
         String expectedContractsFixtures =
                 "sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509";
         String expectedContractsRelease =
-                "sha256:8dd59ecc05d11e8d619ff2d2f3d1c1bb5943edec3ced08d9727ff35450f7cc26";
+                "sha256:a065003c277c5d71f636fe4b771feeac19cdbe41908642d0eabb589cc5e2731d";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();

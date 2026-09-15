@@ -22,7 +22,7 @@ Package identity: `sha256:e40f10a477607bc1ae736bd07e112d30e2eb8362da5caf5d708c6f
 | `contractsRegistry` | `sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
 | `contractsFixtures` | `sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509` |
-| `contractsRelease` | `sha256:8dd59ecc05d11e8d619ff2d2f3d1c1bb5943edec3ced08d9727ff35450f7cc26` |
+| `contractsRelease` | `sha256:a065003c277c5d71f636fe4b771feeac19cdbe41908642d0eabb589cc5e2731d` |
 
 ## Specification hashes
 

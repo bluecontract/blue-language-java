@@ -1,6 +1,7 @@
 package blue.language.processor.closure;
 
 import blue.language.model.Node;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 
 import java.util.Collections;
@@ -18,6 +19,7 @@ public final class DocumentStepInput {
     private final Node occurrenceEvent;
     private final FrozenJsonPatch processorPatch;
     private final TentativeResolutionContext resolutionContext;
+    private final ExactEventIdentityEvidence processingEventIdentityEvidence;
 
     /**
      * Creates a Root-scoped step for exactly one managed document.
@@ -66,6 +68,39 @@ public final class DocumentStepInput {
             Node occurrenceEvent,
             FrozenJsonPatch processorPatch,
             TentativeResolutionContext resolutionContext) {
+        this(stepOrdinal, work, targetDocument, exactPayload,
+                matchingEventBlueId, occurrenceEvent, processorPatch,
+                resolutionContext, null);
+    }
+
+    /**
+     * Creates an isolated step retaining its closure's original external cause.
+     *
+     * <p>The session supplies the same immutable evidence to every caused step,
+     * independently of the work role, matching identity and immediate payload.
+     * Admission and managed-revision invocations supply {@code null}.</p>
+     *
+     * @param stepOrdinal contiguous invocation-local step ordinal
+     * @param work exact accepted work occurrence
+     * @param targetDocument latest exact target state
+     * @param exactPayload exact work payload or adapter wrapper
+     * @param matchingEventBlueId admitted semantic matching identity, or null
+     * @param occurrenceEvent originating embedded event, or null
+     * @param processorPatch containing-reference patch, or null
+     * @param resolutionContext freshly reconstructed private resolver view
+     * @param processingEventIdentityEvidence invocation-admitted original
+     *        external event, or null when the invocation has no external cause
+     */
+    public DocumentStepInput(
+            long stepOrdinal,
+            ClosureWorkOccurrence work,
+            ManagedDocumentSnapshot targetDocument,
+            Node exactPayload,
+            String matchingEventBlueId,
+            Node occurrenceEvent,
+            FrozenJsonPatch processorPatch,
+            TentativeResolutionContext resolutionContext,
+            ExactEventIdentityEvidence processingEventIdentityEvidence) {
         this.stepOrdinal = ClosureValueSupport.requireSafeInteger(
                 stepOrdinal, "stepOrdinal");
         this.work = Objects.requireNonNull(work, "work");
@@ -84,6 +119,7 @@ public final class DocumentStepInput {
         this.processorPatch = processorPatch;
         this.resolutionContext = Objects.requireNonNull(
                 resolutionContext, "resolutionContext");
+        this.processingEventIdentityEvidence = processingEventIdentityEvidence;
         validateManagedEvidenceShape();
         if (!this.work.targetDocumentId().equals(
                     this.targetDocument.documentId())
@@ -151,6 +187,15 @@ public final class DocumentStepInput {
      * @return resolution context */
     public TentativeResolutionContext resolutionContext() {
         return resolutionContext;
+    }
+
+    /**
+     * Returns the immutable original external cause shared by this invocation.
+     *
+     * @return admitted original event evidence, or null for no external cause
+     */
+    public ExactEventIdentityEvidence processingEventIdentityEvidence() {
+        return processingEventIdentityEvidence;
     }
 
     /** Returns the only execution scope.

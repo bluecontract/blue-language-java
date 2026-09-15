@@ -187,7 +187,7 @@ def main():
              "- Zmiany direct ID: **0**. Niewyjaśnione zmiany: **0**.",
              "- Końcowe rozbieżności z oracle: **0**.",
              "- Mini/MyOS: bramka odłożona przez użytkownika, niewykonana.", ""]
-    for name, result in zip(("RC.25 / next", "Oryginalny PR #36"), comparisons):
+    for name, result in zip(("Aktualny next", "Oryginalny PR #36"), comparisons):
         lines += ["## " + name, "", "Commit: `" + result["beforeRevision"] + "`.", "",
                   "Rozbieżności z oracle przed naprawą: **" + str(result["beforeOracleMismatches"]) + "**.", ""]
         grouped = {}
