@@ -1138,6 +1138,244 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void importedNumberedEventWithoutSuccessorPreservesFinalizerOnlySourceEpoch() {
+        assertImportedSuccessorSourceEpoch(false, false);
+    }
+
+    @Test
+    void importedNumberedEventWithSuccessorPreservesFinalizerOnlySourceEpoch() {
+        assertImportedSuccessorSourceEpoch(true, false);
+    }
+
+    @Test
+    void importedNumberedEventStillAdvancesGenuineSourceLocalMutation() {
+        assertImportedSuccessorSourceEpoch(false, true);
+        assertImportedSuccessorSourceEpoch(true, true);
+    }
+
+    @Test
+    void olderImportedNumberedEventWithoutSuccessorStillAdvancesSourceEpoch() {
+        ProbeProcessor probe = new ProbeProcessor();
+        Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        exactNodes.put(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE.clone());
+        NodeProvider retained = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone()) : Collections.<Node>emptyList();
+        ContractProcessorRegistry registry = ContractProcessorRegistryBuilder.create()
+                .register(HANDLER_BLUE_ID, HANDLER_TYPE, probe)
+                .register(RETAINED_SOURCE_CHANNEL_BLUE_ID, RETAINED_SOURCE_CHANNEL_TYPE,
+                        new RetainedSourceChannelProcessor()).build();
+        try (DocumentProcessor owner = DocumentProcessor.builder().runtimeRegistry(registry)
+                .nodeProvider(new TestNodeProvider(retained)).build()) {
+            ImportedSuccessorScenario scenario = importedSuccessorScenario(owner, exactNodes, false, true);
+            Node event = new Node().name("Advance authoritative B")
+                    .properties("subscriptionKey", new Node().value("retained-source"));
+            exactNodes.put(blueId(event), event.clone());
+            ExternalEventCause advance = ClosureEvidenceFactory.externalCause(event, blueId(event),
+                    ExternalOrderKey.of(Arrays.<Object>asList(Long.valueOf(3L), "advance-b")),
+                    scenario.environment.externalOrderPolicyIdentity());
+            ClosureInvocationInput advanceInput = ClosureEvidenceFactory.processClosure(scenario.snapshot, advance,
+                    Collections.singletonList(new DirectLogicalDelivery(ManagedScopeKey.root(B),
+                            "ownerChannel", "ownerChannel", 0L)),
+                    ClosureEvidenceFactory.executionPolicy(GENEROUS_GAS, Collections.<DocumentId, Long>emptyMap(),
+                            "advance-successor-source-v1"), scenario.environment);
+            ClosureProcessResult advanced;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                ClosureAttemptResult attempt = contracts.processClosure(advanceInput);
+                assertTrue(attempt.isComplete());
+                advanced = attempt.processResult();
+            }
+            assertSuccess(advanced);
+            assertEquals(3L, document(advanced, B).epoch());
+            assertEquals(BigInteger.valueOf(3L), document(advanced, B).document().get("/revision"));
+            assertEquals(Boolean.FALSE, document(advanced, A).document().get("/observed"));
+            AffectedClosureSnapshot snapshot = importedSuccessorSnapshot(advanced, exactNodes);
+            ClosureInvocationInput input = importedSuccessorInput(snapshot, scenario.numbered,
+                    scenario.environment, GENEROUS_GAS);
+            assertEquals(2L, scenario.numbered.toEpoch());
+            assertFalse(scenario.numbered.successorRepresentationCause().isPresent());
+            probe.observedEventKinds.clear();
+            Capture capture = new Capture();
+            ClosureProcessResult result;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                ClosureAttemptResult attempt = contracts.processClosure(input);
+                assertTrue(attempt.isComplete());
+                result = attempt.processResult();
+            }
+            assertSuccess(result);
+            assertEquals(Collections.singletonList("child"), probe.observedEventKinds);
+            ManagedRootEventOccurrence imported = scenario.numbered.sourceTransitionReceipt().get()
+                    .emittedRootEvents().get(0);
+            assertEquals(1L, capture.evidence.workTrace().stream().filter(work ->
+                    work.kind() == WorkKind.EMBEDDED_EVENT && work.targetDocumentId().equals(A)
+                            && imported.eventOccurrenceIdentity().equals(work.sourceOccurrenceIdentity())
+                            && imported.eventBlueId().equals(work.eventBlueId())).count());
+            assertTrue(capture.evidence.workTrace().stream().noneMatch(work -> work.targetDocumentId().equals(B)));
+            assertEquals(Boolean.TRUE, document(result, A).document().get("/observed"));
+            assertEquals(snapshot.managedDocument(A).epoch() + 1L, document(result, A).epoch());
+            Node explained = snapshot.managedDocument(B).document();
+            NodePathEditor.put(explained, "/parent", document(result, B).document().getAsNode("/parent"));
+            assertNodeEquals(explained, document(result, B).document());
+            ManagedOccurrenceBinding pending = result.occurrenceBindings().stream()
+                    .filter(row -> row.sourceDocumentId().equals(A)).findFirst().get();
+            assertFalse(pending.active());
+            assertEquals(Long.valueOf(2L), pending.pendingHistoricalEpoch());
+            assertNull(pending.pendingRepresentationCursor());
+            assertEquals(4L, document(result, B).epoch(),
+                    "An ordinary older receipt is not the deferred-activation carrier exception; "
+                            + "receipt reconciliation alone must not suppress this source revision");
+        }
+    }
+
+    @Test
+    void importedNumberedSuccessorLateGasExhaustionRollsBackReceiptAndEventWork() {
+        ProbeProcessor probe = new ProbeProcessor();
+        Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        NodeProvider retained = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone()) : Collections.<Node>emptyList();
+        try (DocumentProcessor owner = owner(probe, retained)) {
+            ImportedSuccessorScenario scenario = importedSuccessorScenario(owner, exactNodes, false);
+            ManagedRevisionCause carrier = scenario.numbered.withSuccessorRepresentationCause(scenario.successor);
+            ClosureInvocationInput full = importedSuccessorInput(scenario.snapshot, carrier,
+                    scenario.environment, GENEROUS_GAS);
+            ClosureProcessResult committed;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                ClosureAttemptResult attempt = contracts.processClosure(full);
+                assertTrue(attempt.isComplete());
+                committed = attempt.processResult();
+            }
+            assertSuccess(committed);
+            assertTrue(committed.totalGas() > 1L);
+            ClosureInvocationInput limited = importedSuccessorInput(scenario.snapshot, carrier,
+                    scenario.environment, committed.totalGas() - 1L);
+            probe.observedEventKinds.clear();
+            Capture capture = new Capture();
+            ClosureProcessResult rejected;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                ClosureAttemptResult attempt = contracts.processClosure(limited);
+                assertTrue(attempt.isComplete());
+                rejected = attempt.processResult();
+            }
+            assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, rejected.status());
+            assertLiteralRollback(limited, rejected);
+            assertEquals(Collections.singletonList("child"), probe.observedEventKinds,
+                    "G−1 must fail after actual imported receipt-event handler work, not just admission");
+            assertEquals(1L, countKind(capture.evidence, WorkKind.CONTAINING_REFERENCE_UPDATE));
+            assertEquals(1L, countKind(capture.evidence, WorkKind.EMBEDDED_EVENT));
+            ManagedOccurrenceBinding original = limited.snapshot().occurrences().stream()
+                    .filter(row -> row.sourceDocumentId().equals(A)).findFirst().get();
+            ManagedOccurrenceBinding restored = rejected.occurrenceBindings().stream()
+                    .filter(row -> row.sourceDocumentId().equals(A)).findFirst().get();
+            assertEquals(original.bindingIdentity(), restored.bindingIdentity());
+            assertEquals(Long.valueOf(1L), restored.pendingHistoricalEpoch());
+            assertNull(restored.pendingRepresentationCursor());
+            assertFalse(restored.active());
+            ClosureProcessResult retry;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                retry = contracts.processClosure(limited).processResult();
+            }
+            assertLiteralRollback(limited, retry);
+            assertEquals(rejected.totalGas(), retry.totalGas());
+            assertEquals(rejected.gasTraceIdentity(), retry.gasTraceIdentity());
+            assertEquals(rejectedChargeProjection(rejected.rejectedCharge()),
+                    rejectedChargeProjection(retry.rejectedCharge()));
+        }
+    }
+
+    private static void assertImportedSuccessorSourceEpoch(
+            boolean carriesSuccessor, boolean sourceLocalMutation) {
+        ProbeProcessor probe = new ProbeProcessor();
+        Map<String, Node> exactNodes = new LinkedHashMap<String, Node>();
+        NodeProvider retained = id -> exactNodes.containsKey(id)
+                ? Collections.singletonList(exactNodes.get(id).clone())
+                : Collections.<Node>emptyList();
+        try (DocumentProcessor owner = owner(probe, retained)) {
+            ImportedSuccessorScenario scenario = importedSuccessorScenario(
+                    owner, exactNodes, sourceLocalMutation);
+            ManagedRevisionCause numbered = scenario.numbered;
+            ManagedRepresentationCause successor = scenario.successor;
+            assertThrows(IllegalArgumentException.class,
+                    () -> numbered.withSuccessorRepresentationCause(
+                            new ManagedRepresentationCause(hash('f'), successor.transition(),
+                                    successor.targetPositionIdentity(), null, null)));
+            assertThrows(IllegalArgumentException.class,
+                    () -> numbered.withSuccessorRepresentationCause(
+                            new ManagedRepresentationCause(numbered.targetOccurrenceIdentity(),
+                                    successor.transition(), successor.targetPositionIdentity(), hash('f'), null)));
+            ManagedRevisionCause selected = carriesSuccessor
+                    ? numbered.withSuccessorRepresentationCause(successor) : numbered;
+            ClosureInvocationInput input = importedSuccessorInput(
+                    scenario.snapshot, selected, scenario.environment, GENEROUS_GAS);
+            assertEquals(2L, input.snapshot().managedDocument(B).epoch());
+            assertEquals(1L, selected.fromEpoch());
+            assertEquals(2L, selected.toEpoch());
+            assertEquals(numbered.sourceRevisionReceiptIdentity(), selected.sourceRevisionReceiptIdentity());
+            assertEquals(1, selected.sourceTransitionReceipt().get().emittedRootEvents().size());
+            if (carriesSuccessor) {
+                ClosureInvocationInput exhausted = importedSuccessorInput(
+                        scenario.snapshot, selected, scenario.environment, 1L);
+                try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+                    ClosureAttemptResult attempt = contracts.processClosure(exhausted);
+                    assertTrue(attempt.isComplete());
+                    assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, attempt.processResult().status());
+                    assertEquals(scenario.snapshot.closureIdentity(), attempt.processResult().outputClosureIdentity());
+                }
+            }
+            probe.observedEventKinds.clear();
+            probe.successorSourceMutationCount = 0;
+            Capture capture = new Capture();
+            ClosureProcessResult result;
+            try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
+                ClosureAttemptResult attempt = contracts.processClosure(input);
+                assertTrue(attempt.isComplete());
+                result = attempt.processResult();
+            }
+            assertSuccess(result);
+            assertNotNull(capture.evidence);
+            assertEquals(input.invocationIdentity(), capture.evidence.invocationIdentity());
+            ManagedRootEventOccurrence imported = selected.sourceTransitionReceipt().get().emittedRootEvents().get(0);
+            assertEquals(1L, capture.evidence.workTrace().stream().filter(work ->
+                    work.kind() == WorkKind.EMBEDDED_EVENT && work.targetDocumentId().equals(A)
+                            && imported.eventOccurrenceIdentity().equals(work.sourceOccurrenceIdentity())
+                            && imported.eventBlueId().equals(work.eventBlueId())
+                            && Long.valueOf(imported.occurrenceOrdinal()).equals(work.occurrenceOrdinal())).count());
+            assertEquals(Collections.singletonList("child"), probe.observedEventKinds);
+            assertEquals(Boolean.TRUE, document(result, A).document().get("/observed"));
+            assertEquals(input.snapshot().managedDocument(A).epoch() + 1L, document(result, A).epoch());
+            assertNotEquals(input.snapshot().managedDocument(B).blueId(), document(result, B).afterBlueId(),
+                    "The imported event must actually re-encode B's active parent reference");
+            assertEquals(sourceLocalMutation ? 1 : 0, probe.successorSourceMutationCount);
+            assertEquals(BigInteger.valueOf(sourceLocalMutation ? 3L : 2L),
+                    document(result, B).document().get("/revision"));
+            if (!sourceLocalMutation) {
+                assertTrue(capture.evidence.workTrace().stream()
+                        .noneMatch(work -> work.targetDocumentId().equals(B)),
+                        "No source-local work may explain the proposed extra numbered revision");
+                Node explained = input.snapshot().managedDocument(B).document();
+                NodePathEditor.put(explained, "/parent", document(result, B).document().getAsNode("/parent"));
+                assertNodeEquals(explained, document(result, B).document());
+            }
+            ManagedOccurrenceBinding occurrence = result.occurrenceBindings().stream()
+                    .filter(row -> row.sourceDocumentId().equals(A)).findFirst().get();
+            assertEquals(!carriesSuccessor, occurrence.active());
+            if (carriesSuccessor) {
+                assertEquals(Long.valueOf(2L), occurrence.pendingHistoricalEpoch());
+                assertEquals(new ManagedRepresentationCursor(numbered.sourceRevisionReceiptIdentity(),
+                                numbered.sourceRevisionReceiptIdentity(), successor.targetPositionIdentity(), null),
+                        occurrence.pendingRepresentationCursor());
+                assertTrue(capture.evidence.workTrace().stream().noneMatch(work ->
+                                successor.causeIdentity().equals(work.sourceOccurrenceIdentity())),
+                        "The carrier authenticates future work; it does not execute that representation step");
+            } else {
+                assertNull(occurrence.pendingHistoricalEpoch());
+                assertNull(occurrence.pendingRepresentationCursor());
+            }
+            assertEquals(sourceLocalMutation ? 3L : 2L, document(result, B).epoch(),
+                    "Deferring activation must not turn an exact imported-event reference re-encoding "
+                            + "into a numbered source revision; actual source-local mutation still advances");
+        }
+    }
+
+    @Test
     void managedRevisionActivationPreservesFinalizedCyclicSideReferences() {
         ProbeProcessor probe = new ProbeProcessor();
         final Map<String, Node> exactNodes =
@@ -3294,6 +3532,125 @@ final class FullLifecycleAdmissionTest {
                 source.publicRootDocumentIds());
     }
 
+    private static ImportedSuccessorScenario importedSuccessorScenario(
+            DocumentProcessor owner, Map<String, Node> exactNodes, boolean sourceLocalMutation) {
+        return importedSuccessorScenario(owner, exactNodes, sourceLocalMutation, false);
+    }
+
+    private static ImportedSuccessorScenario importedSuccessorScenario(
+            DocumentProcessor owner, Map<String, Node> exactNodes, boolean sourceLocalMutation,
+            boolean externalSourceAdvance) {
+        ClosureEnvironment environment = ClosureEvidenceFactory.environment(owner,
+                hash('a'), RootedProcessingContext.CONTRACTS_SPECIFICATION_IDENTITY,
+                "full-lifecycle-document-lineage-v1", "full-lifecycle-binding-lineage-v1",
+                "full-lifecycle-provider-domain-v1", "full-lifecycle-external-order-v1",
+                "full-lifecycle-portable-limits-v1", GasSchedule.contracts10().portableLimits());
+        Node authoredSource = new Node().name("Imported successor source")
+                .properties("revision", new Node().value(BigInteger.ZERO))
+                .contracts(new Node().properties("embedded", processEmbedded("/parent")));
+        if (sourceLocalMutation) {
+            authoredSource.getContracts().properties("fromParent", embeddedChannel("/parent"))
+                    .properties("successorSourceMutation", handler("fromParent"));
+        }
+        if (externalSourceAdvance) {
+            authoredSource.getContracts().properties("ownerChannel", typed(RETAINED_SOURCE_CHANNEL_BLUE_ID))
+                    .properties("advanceSuccessorSource", handler("ownerChannel"));
+        }
+        Node source0 = authoredSource.clone();
+        installInitializedMarker(source0, blueId(authoredSource));
+        Node authoredParent = new Node().name("Imported successor consumer")
+                .properties("child", new Node().blueId(blueId(source0)))
+                .properties("observed", new Node().value(Boolean.FALSE))
+                .contracts(new Node().properties("embedded", processEmbedded("/child"))
+                        .properties("fromChild", embeddedChannel("/child"))
+                        .properties("catchUpReact", handler("fromChild")));
+        Node parent = authoredParent.clone();
+        installInitializedMarker(parent, blueId(authoredParent));
+        Node source1 = source0.clone();
+        NodePathEditor.put(source1, "/revision", new Node().value(BigInteger.ONE));
+        Node source2 = source0.clone();
+        NodePathEditor.put(source2, "/revision", new Node().value(BigInteger.valueOf(2L)));
+        NodePathEditor.put(source2, "/parent", new Node().blueId(blueId(parent)));
+        ManagedOccurrenceBinding historical = ManagedOccurrenceBinding.derived(
+                environment.managedBindingPolicyIdentity(), A, ScopeAddress.embedded("/child", 1L),
+                B, blueId(source0), false, Long.valueOf(0L));
+        ManagedOccurrenceBinding reverse = ManagedOccurrenceBinding.derived(
+                environment.managedBindingPolicyIdentity(), B, ScopeAddress.embedded("/parent", 1L),
+                A, blueId(parent), true, null);
+        AffectedClosureSnapshot original = initializedSnapshot(finalizedSnapshot(
+                bodies(A, parent, B, source2), Arrays.asList(historical, reverse),
+                Collections.singletonList(A)), 4L, 2L);
+        assertEquals(blueId(source2), original.managedDocument(B).blueId(),
+                "The actual representation proof must begin at the exact numbered B2 anchor");
+        ManagedDocumentTransitionReceipt receipt1 = ManagedDocumentTransitionReceipt.identified(
+                hash('2'), 0L, B, hash('3'), blueId(source0), blueId(source1),
+                Collections.<ManagedRootEventOccurrence>emptyList(), 5L);
+        String eventBlueId = blueId(EVENT_CHILD);
+        ManagedRootEventOccurrence sourceEvent = new ManagedRootEventOccurrence(0L, 0L, B,
+                ClosureIdentityService.INSTANCE.eventOccurrenceIdentity(hash('4'), 0L, eventBlueId),
+                exactEvent(EVENT_CHILD, eventBlueId), false);
+        ManagedDocumentTransitionReceipt receipt2 = ManagedDocumentTransitionReceipt.identified(
+                hash('4'), 0L, B, hash('5'), blueId(source1), blueId(source2),
+                Collections.singletonList(sourceEvent), 5L);
+        for (Node value : Arrays.asList(authoredSource, authoredParent, source0, source1, source2,
+                parent, EVENT_CHILD, EVENT_PUBLIC)) exactNodes.put(blueId(value), value.clone());
+        for (ManagedDocumentSnapshot value : original.managedDocuments()) {
+            exactNodes.put(value.blueId(), value.document());
+        }
+
+        // This is a real earlier PROCESS, not an invented representation or a changed epoch label.
+        ManagedRevisionCause earlier = ClosureEvidenceFactory.managedRevisionCause(
+                historical.occurrenceIdentity(), 0L, 1L, source1, receipt1);
+        ClosureInvocationInput earlierInput = importedSuccessorInput(original, earlier, environment, GENEROUS_GAS);
+        ClosureProcessResult earlierResult;
+        try (BlueClosureContracts contracts = new BlueClosureContracts(owner)) {
+            ClosureAttemptResult attempt = contracts.processClosure(earlierInput);
+            assertTrue(attempt.isComplete());
+            earlierResult = attempt.processResult();
+        }
+        assertSuccess(earlierResult);
+        assertEquals(2L, document(earlierResult, B).epoch());
+        assertEquals(Boolean.FALSE, document(earlierResult, A).document().get("/observed"));
+        ManagedDocumentTransitionReceipt representationReceipt = earlierResult.managedTransitionReceipts().stream()
+                .filter(receipt -> receipt.documentId().equals(B)).findFirst().get();
+        assertTrue(representationReceipt.emittedRootEvents().isEmpty());
+        assertEquals(receipt2.afterBlueId(), representationReceipt.beforeBlueId());
+        assertNotEquals(representationReceipt.beforeBlueId(), representationReceipt.afterBlueId());
+        ManagedRepresentationTransition position = new ManagedRepresentationTransition(B, 2L,
+                receipt2.transitionReceiptIdentity(), receipt2.transitionReceiptIdentity(),
+                earlierInput, earlierResult, representationReceipt.transitionReceiptIdentity());
+        AffectedClosureSnapshot next = importedSuccessorSnapshot(earlierResult, exactNodes);
+        ManagedOccurrenceBinding pending = next.occurrences().stream()
+                .filter(row -> row.sourceDocumentId().equals(A)).findFirst().get();
+        assertFalse(pending.active());
+        assertEquals(Long.valueOf(1L), pending.pendingHistoricalEpoch());
+        assertNull(pending.pendingRepresentationCursor());
+        ManagedRevisionCause numbered = ClosureEvidenceFactory.managedRevisionCause(
+                pending.occurrenceIdentity(), 1L, 2L, source2, receipt2);
+        ManagedRepresentationCause successor = new ManagedRepresentationCause(pending.occurrenceIdentity(),
+                position, position.positionIdentity(), null, null);
+        return new ImportedSuccessorScenario(next, numbered, successor, environment);
+    }
+
+    private static AffectedClosureSnapshot importedSuccessorSnapshot(
+            ClosureProcessResult result, Map<String, Node> exactNodes) {
+        List<ManagedDocumentSnapshot> documents = new ArrayList<ManagedDocumentSnapshot>();
+        for (ResultingDocument value : result.resultingDocuments()) {
+            exactNodes.put(value.afterBlueId(), value.document());
+            documents.add(new ManagedDocumentSnapshot(value.documentId(), value.afterBlueId(), value.document(),
+                    value.initialized(), value.terminated(), value.publicRoot(), value.epoch(), value.componentGeneration()));
+        }
+        return ClosureEvidenceFactory.affectedClosure(result.graphGeneration(), documents,
+                result.occurrenceBindings(), result.resultingComponents(), Collections.singletonList(A));
+    }
+
+    private static ClosureInvocationInput importedSuccessorInput(AffectedClosureSnapshot snapshot,
+            ManagedRevisionCause cause, ClosureEnvironment environment, long gas) {
+        return ClosureEvidenceFactory.processClosure(snapshot, cause, Collections.<DirectLogicalDelivery>emptyList(),
+                ClosureEvidenceFactory.executionPolicy(gas, Collections.<DocumentId, Long>emptyMap(),
+                        "imported-successor-source-epoch-v1"), environment);
+    }
+
     private static ManagedComponentRebindScenario
     managedComponentRebindScenario(
             DocumentProcessor owner,
@@ -4351,6 +4708,7 @@ final class FullLifecycleAdmissionTest {
         private int reactivationInitializationCount;
         private int dormantTargetInitializationCount;
         private int executionCount;
+        private int successorSourceMutationCount;
         private blue.language.snapshot.FrozenNode observedExactPayload;
         private blue.language.snapshot.FrozenNode observedProcessPayload;
         private String observedExactPayloadIdentity;
@@ -4414,6 +4772,14 @@ final class FullLifecycleAdmissionTest {
                         "/observed",
                         new Node().value(Boolean.TRUE)));
                 context.emitEvent(EVENT_PUBLIC.clone());
+            } else if ("successorSourceMutation".equals(key)) {
+                successorSourceMutationCount++;
+                assertEquals(blueId(EVENT_PUBLIC), blueId(context.occurrenceEvent()));
+                BigInteger revision = (BigInteger) context.documentAt("/revision").getValue();
+                context.applyPatch(JsonPatch.replace("/revision", new Node().value(revision.add(BigInteger.ONE))));
+            } else if ("advanceSuccessorSource".equals(key)) {
+                BigInteger revision = (BigInteger) context.documentAt("/revision").getValue();
+                context.applyPatch(JsonPatch.replace("/revision", new Node().value(revision.add(BigInteger.ONE))));
             } else if ("catchUpEmitOnly".equals(key)) {
                 observedEventKinds.add(occurrenceKind(context));
                 context.emitEvent(EVENT_PUBLIC.clone());
@@ -4609,6 +4975,21 @@ final class FullLifecycleAdmissionTest {
 
         private CyclicFixture(AffectedClosureSnapshot snapshot) {
             this.snapshot = snapshot;
+        }
+    }
+
+    private static final class ImportedSuccessorScenario {
+        private final AffectedClosureSnapshot snapshot;
+        private final ManagedRevisionCause numbered;
+        private final ManagedRepresentationCause successor;
+        private final ClosureEnvironment environment;
+
+        private ImportedSuccessorScenario(AffectedClosureSnapshot snapshot, ManagedRevisionCause numbered,
+                ManagedRepresentationCause successor, ClosureEnvironment environment) {
+            this.snapshot = snapshot;
+            this.numbered = numbered;
+            this.successor = successor;
+            this.environment = environment;
         }
     }
 

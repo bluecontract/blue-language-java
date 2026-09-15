@@ -42,7 +42,7 @@ final class RootedWitnessFrame {
         for (ManagedDocumentSnapshot document : snapshot.managedDocuments()) ids.add(document.documentId());
         State roles = frame.at(snapshot.occurrences(), ids);
         if (roles.sources().isEmpty()) return snapshot;
-        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(ids, snapshot.occurrences(), roles.sources());
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(ids, snapshot.occurrences(), roles);
         List<ComponentSnapshot> components = new ArrayList<>();
         for (List<DocumentId> members : new SccPartitioner().partition(graph)) {
             ComponentSnapshot match = null;
@@ -125,6 +125,26 @@ final class RootedWitnessFrame {
         }
 
         Set<DocumentId> sources() { return originals.keySet(); }
+
+        State withSelectedProofs(Map<DocumentId, AffectedClosureSnapshot> selected) {
+            if (!originals.keySet().containsAll(selected.keySet())) {
+                throw new IllegalArgumentException("Witness selection cannot create immutable roles");
+            }
+            Map<DocumentId, AffectedClosureSnapshot> proofs = new LinkedHashMap<>(originals);
+            proofs.putAll(selected);
+            return new State(proofs);
+        }
+
+        boolean calculating(ManagedOccurrenceBinding binding) {
+            if (!originals.containsKey(binding.sourceDocumentId())) return true;
+            AffectedClosureSnapshot targetProof = originals.get(binding.targetDocumentId());
+            // Immutable sources keep their own authenticated exact references.
+            // A different primary for the same lineage is another witness context,
+            // not a target to which this source may be rewritten. Exact same-context
+            // edges remain calculating, including complete cyclic components.
+            return targetProof != null && binding.expectedTargetBlueId().equals(
+                    targetProof.managedDocument(binding.targetDocumentId()).blueId());
+        }
 
         void requireUnchanged(Map<DocumentId, Node> bodies, Collection<ManagedOccurrenceBinding> bindings) {
             for (Map.Entry<DocumentId, AffectedClosureSnapshot> entry : originals.entrySet()) {

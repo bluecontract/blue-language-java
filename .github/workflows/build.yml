@@ -49,6 +49,14 @@ jobs:
       - name: Test release tooling
         run: node --test .github/scripts/*.test.js
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install classifier verification dependencies
+        run: python -m pip install PyYAML==6.0.3
+
       - name: Execute Gradle build
         run: ./gradlew clean build
 

@@ -76,8 +76,7 @@ public final class AffectedClosureSnapshot {
     RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
 
     ManagedDocumentGraph graph() {
-        return ManagedDocumentGraph.fromBindings(documentsById.keySet(), occurrences,
-                rootedWitnesses == null ? Collections.<DocumentId>emptySet() : rootedWitnesses.sources());
+        return ManagedDocumentGraph.fromBindings(documentsById.keySet(), occurrences, rootedWitnesses);
     }
 
     /**

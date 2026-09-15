@@ -4,15 +4,15 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f
+  sha256: 5cc29e91cd8d4aa4d3dca98214da5ceb49b2daa82554ac561260bd98ce5063b8
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
   specificationSha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   cyclicSetSemanticAlgorithm: Blue Language 1.0 section 15
   cyclicMemberIdentityFormat: MASTER#index
-  cyclicSetFinalizerBaselineIdentity: sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b
-  cyclicSetProofVerifierBaselineIdentity: sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834
+  cyclicSetFinalizerBaselineIdentity: sha256:d4f8934f82e2330a165a612e4d9d72e0ceff1c7c0df37b0d08772e66629344c7
+  cyclicSetProofVerifierBaselineIdentity: sha256:bd14a60f67cbc9a19fadc4b0d5a4adc8ed7578151f0c14c2591835dd8b9f73a0
   inputImplementationBaseline:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ActivationIntervalValidator.java
     sha256: 574c9670f8caefa1f6c834cef5b82819b647048b1c5af04de25fc1e5bfbee955
@@ -61,7 +61,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/CheckpointManager.java
     sha256: ab676cf65c47ee8e1261ab25a0a19afb727cadda9b9058617d99eb9e7efe32c7
   - path: blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java
-    sha256: b0c0f253d58332976bb4b4b3319a664bb5b5d6653a86488e11ab01711fac837c
+    sha256: f9d2bbc2af345a8ad6f0b73eb09ee84a759833dc8b99764323446b42c32e0cb7
   - path: blue-contracts-core/src/main/java/blue/language/processor/CompositeProcessingObserver.java
     sha256: 3600fe3c2b8c4732e687557addc93e46c8b452094da6786899d87d1d6a3d5ee9
   - path: blue-contracts-core/src/main/java/blue/language/processor/ConformanceChangedPath.java
@@ -361,13 +361,13 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepOutcome.java
     sha256: a627599624357422288dab3c7a61e3449e06617022f1818c9be382f13ab007cf
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java
-    sha256: 94a9856f1b62184746eba45fe369aed144c7788cee6d912e64df3de3ccdf0536
+    sha256: e69021ba9f25f149bdbb0dae990db2095cbeba7f47be3bb8e1904125c8be69b0
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java
     sha256: 1807304f835f88c3d1a2099be886709e3c5a686aa9b0e77740bbd6be7f64a8ee
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRouteClassifier.java
     sha256: 3b1e91537c42d7168a419ec907b4370f2896937640e09367d9ba4bd6e5d3aa4b
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java
-    sha256: f4fd1b419859164432c2a4346bde7f631177316786e492d9e3744373a0b0fcdc
+    sha256: 3668b3b7e7704e45b4e8bfc4ec41d6a33da2bead6dbd00965d46cf81be1e45f9
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentWorkKind.java
     sha256: b61e13dc5fb326266b32688888221880de30bf37a3a83063fc32f5d99c9020fc
   - path: blue-contracts-core/src/main/java/blue/language/processor/ManagedExternalDeliveryClassification.java
@@ -463,7 +463,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventQueue.java
     sha256: 4493b628ba71ce406eb34d77cfbfd5290483e8feab0e93a69b865391d17b2269
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingEventSnapshotBoundary.java
-    sha256: 1adbd02bf26981731135723af1557165a84214e338e22d2706066395c58985b2
+    sha256: 5d7c270c86bfa2ec1860abaf623a1e4587c1d6a0ca1af311cad1f2f17150e16e
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingEvidenceVerification.java
     sha256: e1ade7ba28db61ecb5e2f358b0b84a194c6ebae49acd0326022a9eee41e80e9d
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingGasContext.java
@@ -527,7 +527,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorErrorCategory.java
     sha256: 58ce9330b06bcab59382b51653713b2e8396678aeca3d31b620cfe3a53691982
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java
-    sha256: 3cdbbd753b097da54fffc685ede235c47686a3a04a6fb8044cdaf903a0a8ddef
+    sha256: ecce7e1c5e5904ecb11c52d55e5cf01b8ff08dcbc81d3b6493591be045c17c27
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorFailureException.java
     sha256: 0f6cc4a562ff67d93d27699eb67273d96ce863c0b7101a81a093a8b28ce1bfc1
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorFatalException.java
@@ -541,7 +541,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationServices.java
     sha256: 7703677f9ee0319f589f10e3676a3535109d6988f5fe710263e99a7982b933fe
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java
-    sha256: ff978fe2f91131ad551daeab03e5a262af90b7578cced33e31e5083169e6dbd9
+    sha256: 2dac57639ddaa2d0958e4612199f0b43fb6b3f31586de44d58879de313e8c978
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorManagedChannelTypes.java
     sha256: 5121e7a604c017432dbcfc3518ced86b6b91555589c483f5e829b9dc54b79ab7
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorMarkerFactory.java
@@ -563,7 +563,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/RecordingProcessingObserver.java
     sha256: ff38ccdd069c9c55b33855355636d73d88921de86ec30d8a6044fecbe6ebd843
   - path: blue-contracts-core/src/main/java/blue/language/processor/ReferenceTransparentPathAccess.java
-    sha256: fbcc142b12d10486b5a7092903e995b8b872c28cea80b6048adeee093f57fbcf
+    sha256: 61b666f190a8add79a402ff2b29438c8079655355a03e3be38e493498d5e5150
   - path: blue-contracts-core/src/main/java/blue/language/processor/RegisteredContractScopeIdentitySnapshotManager.java
     sha256: 07f2dab53b2d3e9635e1d1a38dfbfcbfef1d29244f3ab51f36798e206c6729d3
   - path: blue-contracts-core/src/main/java/blue/language/processor/ResolvedScopeView.java
@@ -643,7 +643,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/VerifiedExecutionEvidence.java
     sha256: ee793339c2433ae26ff8c28abcb3989ab3b4c042bd521fba53644b19f16fbbe5
   - path: blue-contracts-core/src/main/java/blue/language/processor/WorkingDocument.java
-    sha256: 82f932e492b46edd747c4a39d78a94da63c42cd4707149c0e3120292adfc7916
+    sha256: 128eb9a4c7b6ea8827c6bd898b1102a63873fb7adf623189624d177db06f09b2
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java
     sha256: 4d46d233260d89d88f0e987dd8dc46b58f3e6ab2b7574253e29847dd353478e0
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidateGasVerifier.java
@@ -653,7 +653,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionKind.java
     sha256: 87a1fe0961ca11ea19b7056ae68efbaf38aa27059d4f0b21cdb8fdf883f8da69
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshot.java
-    sha256: 2e6dfc52b678ebd3a432f8094d16fe177e1d8c218571fecfb32eec1faf249a40
+    sha256: 5f59be795141deddc2c7f9af1f646932fae0a8e6525cdfbe23046d0530aad5ec
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java
     sha256: df1894a8e5ec3546605c7f68e98c1eb03f4ca78ced651957e14a1bc27e27cae2
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ChannelOccurrence.java
@@ -681,15 +681,15 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java
     sha256: 971f0589e00ef9cdeb474500f65d9171ee656ab409f49528b3b34cf03de337d4
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceFactory.java
-    sha256: c34271d05069562191e836574e445b065ac9e625d1bfb8e64144fa765dca6492
+    sha256: 909ca148958bea993fdc0a57d0f7823db0fafdc33ba3e805d7b672b5cffb412c
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceVerifier.java
-    sha256: 8ee79c3ad2929ec1870e871c97f67f37eb428f4458f83a37fdf69eaa6067542d
+    sha256: f2b37f404d645f2618a90dbb62977db113fba8c62a674db141f642e6d4a704be
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java
     sha256: 6ff4021e7867fb9142954f3ca1caf155ebf607bbaa52bfecc1b0ea1174a94a8b
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionRecorder.java
     sha256: 4f4150d65a00379822563b875323a22300506c3180fa0ecfa4f47cec32aa461b
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java
-    sha256: 9b8f5ad9c974c75c18eeff05dd9105cdfce8032d95313d2a301e50fb2610e271
+    sha256: 2185c667e9726004dc15d146a336288476e63f965104a580a6c5b72b2a7ac666
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionState.java
     sha256: abc3ef2f9957d93259c6282e245703a26f12c8b221a4d965998033a220086ecf
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureFinalizationGasCharger.java
@@ -703,7 +703,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java
     sha256: 8ca4269912294c754d982b82007b35e03646d41de4b5150e4d201d2e783e9824
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationVerifier.java
-    sha256: d030139ada3c414a4368dc9891bac2d8123815b797a98776b345ed4f12348cf2
+    sha256: 5261f129a85489afeef38b0f0c087f4d85293a11f4df00e000fed45b4b5358ec
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResult.java
     sha256: bbf1b5fb4207cb31e10205d5e439a5bcce95a81f5f9d6f46ea4107fcc5204222
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessRetryInput.java
@@ -727,9 +727,9 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkQueue.java
     sha256: 7004532c3747024a79cc80b1fc3f3cdb4c42dd4df7246a8dc3e7c6831ddb3bee
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationInput.java
-    sha256: f8800d7e93ae2dd6dfc3429132e348c4c4b4cb44c41ca4db3052db872999d3a5
+    sha256: 518a10d5e7c6bc8e10ca81a5fbf53a091b394681554877bc67e885286aa0be69
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationKernel.java
-    sha256: ebdadd1c4d18df3f4374916192206d933d24d18616c10cad4765d8583cb5ae8c
+    sha256: fa38b75d6f8ebdb03f5a3839e30f8c61eafcb76c5d566085af9713b6e8b80b51
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationResult.java
     sha256: befb4d6ced906095b11d3b97a1460a44159479b709770ceea5361cb00f6c0055
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentGenerationTransition.java
@@ -751,7 +751,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepEvidence.java
     sha256: 024392933c7eea6a3080923da00e7c52706fd48faa272b463733959b1da9667b
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java
-    sha256: 84ef31348f1906f784bba1fd9e44cddc33dda59f805d6991ae4de969ce3894ff
+    sha256: 15658ce08b348faf42d67d28fe175cdcf6b799886f49870818af62db71ea6d5f
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepProcessor.java
     sha256: 05a4ac6ca3683d7a32749bdefaf0277443e8c7af534524b976c918e35df6d907
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java
@@ -777,13 +777,13 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentBirth.java
     sha256: e1ff44a584662dec903b3eda2017922435deee6a7dc0f4b7e4e1dd61e3b52aff
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java
-    sha256: 60263f2726341be7624bf149721602e797454f1914b5ef16105db072b546121f
+    sha256: 24f52f39ac213a736c8b283874bb8f3613b7ede71fa1b0bcd21d85a8e7539f51
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentInitializationEligibility.java
     sha256: 5252bb95b067fdee2f3a7e89a122bd642d3c392f73f9dc9a36cc6be8b9988f73
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java
     sha256: edba96753a2c3237890ea1562146e9fd9eaaa736dd4baaef38358bc61c2c6c3d
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java
-    sha256: a2ee787e8fe877bf57d833abf6c6d13d2af4368288305edf713ab6cda98b5aa4
+    sha256: d02d783253bcf262ea97304d0cbf6384834fd6317258c4bc6d7d2a0e33a89eea
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentTransitionReceipt.java
     sha256: db925201c01bdfaa71c4a1c69fd64ff96b37b6d9ebc660e7053d1f3a5ad00b98
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedHistoryStep.java
@@ -793,7 +793,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceDemand.java
     sha256: b70daa6750643502c2cbc630fed9a8c245042ab237da8abd7f48557861869350
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceResolution.java
-    sha256: d10063a5defa80c69bfb9755c1aa6f8bc50d30e1ed69f1006e07a545f2e5b1f3
+    sha256: 2cae751458e7a5781d99063fab75f8832e3c3b382c4ff405be47dce7483072ee
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java
     sha256: e685b0f0af7b0b21f0eab2ad287d3a5e89b3224c6fa472eabd678dfbea1ccb62
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCause.java
@@ -819,7 +819,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java
     sha256: 06b793d1244df2af02e6e77f18529f08bb8cdd74afc493f7a1500057e0695cab
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBirthRetry.java
-    sha256: 3b3298896d741a4389d4d39eb7918411e5d765e8bfb76a3cb55edaf1777c26b1
+    sha256: 6d9722f95fc41f57c82993aa87aac88485f958a78555a92af77fdccff2444338
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java
     sha256: 13095318c2c659245a5a2ba53437b56857fe67d04c42dc15dd9ad975159a782e
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java
@@ -831,17 +831,19 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedIdentity.java
     sha256: 014764cff7f5d53d8e48a3b9dc32c31ecc48ef108257d7d017b14e1fd793ca77
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInputExpansion.java
-    sha256: 429957cca411f2bdbd629afbd3d7a06085e6c46c647e7a360101ce5096c7081f
+    sha256: 6b28ff0463ae315a5106016814dfbb805d5de7436303a7074cac4e89fd38c6e4
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedInvocationBinding.java
     sha256: bf2a185996fa7234f13b3b66eea694f9dc42ccbb598b7c136bbdb9df203ef6f3
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershipTracker.java
     sha256: b3c78aec39a02125d278f0aa2b11ba79a822d6e222340f618dff3823fef4aad1
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java
-    sha256: d5ef9f3b4b12d256d4312b95ea37898ddff627e0989fae23436c980b42e71f48
+    sha256: 856c2c55739c9bc3251b4aa7fc039733518327dbfd22bb046e7faff5722ee455
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java
     sha256: d048608cc0e3746bbad13e45fbafa2b0f331c36e19cd4c0ad17b2b8abcbbbd95
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java
-    sha256: d907367bd0470d2b502f9a30a57ba21240e53a52d3ba0290d38baec8915e9781
+    sha256: 020bff87c89c681e1fc6aeaf1a53b6c77ebe47a7fbb9856cf9322cf12bab7f83
+  - path: blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessSelection.java
+    sha256: 6ea1aad246bf2b0be151de3690a46a05366dcf28fc627df730f08211e2eaa7ba
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java
     sha256: d4bfecbabe4d3665478592fc720becd7112bd106c9017d00bdf29511442d1221
   - path: blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java
@@ -995,7 +997,7 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputBuilder.java
     sha256: 85ba8531e888fa79651107a0987d0b8a2a616025b79844310a7a47c8e15b8af7
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java
-    sha256: c17972ee12ab23d934afb07131a227820cf3b0386f83803d31343d5646826d8d
+    sha256: a97d7e6f02628d0a88eb48eee9d6d267b574dd528c14b8239158789333589843
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalJsonHasher.java
     sha256: 91df7f443750dfac524066524bd54386a0fd4f142ef2b8bd978f6efdcae095ca
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalJsonValueWriter.java
@@ -1295,9 +1297,9 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/resolve/ExcludedPathLimits.java
     sha256: 2c1870b94d828c281f389c115c2a2bf008bc798316ca904ded7725242806cda4
   - path: blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayBuilder.java
-    sha256: 16cc34b3dba8063d02e82083ec297ccbe1afda1fbcd9c82a7150b4dce6b7825c
+    sha256: 9d855f22be25218e1ad92259e39fd98cae2afb1bae4ed11265bcbede0c02057e
   - path: blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayReconstructor.java
-    sha256: d6dae5f1ebdb62bd6b24a93356b04a1d22a7f988338f48894ed2cce35513b91e
+    sha256: f6047c51fe98a20c7afc24734fbf948d28558c5631398643676be4d9c42e9a06
   - path: blue-language-core/src/main/java/blue/language/resolve/NoLimits.java
     sha256: cf2b0092577c1a38117d2d102a30bee6ddb20283c806a8d47d36aca1c7cdaf5c
   - path: blue-language-core/src/main/java/blue/language/resolve/NodeToPathLimitsConverter.java
@@ -1315,7 +1317,7 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/runtime/BlueLanguage.java
     sha256: a6e9f6cbc5f5edbb2446b7b8b465363c50e58fa6b64f59a06b82d49623e50353
   - path: blue-language-core/src/main/java/blue/language/runtime/BlueLanguageRuntime.java
-    sha256: ac3c010fa232f81a91ad6b15fece85ffe5521c02899ca275549dadac71c8851e
+    sha256: 099b351e9ed21f576d96f9a2f0e87192b84253e7aacddd3f595bc905ff925b40
   - path: blue-language-core/src/main/java/blue/language/runtime/LanguageMatchingService.java
     sha256: 8ec00f64124905581fc2f14fc4e250e0d082b0f7244f579f3100b8f95cf551c8
   - path: blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java
@@ -1507,11 +1509,11 @@ gasManifest:
   numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
 identityConstructors:
   path: identity-constructors.yaml
-  sha256: 85be0453f4d5ffc217cce15cc9144fc0681d741191dd7c9cadc39975614da7dd
+  sha256: f72a55770c90f4a33c3fb9f35ead777e24827b392125872357ee04f8a03dd9e8
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3
+  packageIdentity: sha256:7bd3a699d1649bd20c715ef001d61a39547942fa7db3ab65c434a480e025db47
   vectorCount: 182
   fixtureCount: 295
 oraclePackage:
@@ -1540,4 +1542,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced
+releaseIdentity: sha256:06ca8273a28f9fb0298ec6aae672c2558b613582b3e61d4c651e86399fe67631

@@ -14,10 +14,13 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Invocation-local semantic access through verified pure-reference ancestors.
@@ -41,6 +44,7 @@ final class ReferenceTransparentPathAccess {
             new LinkedHashMap<String, ExactView>();
     private final Map<String, ExactView> managedExactViewsByBlueId =
             new LinkedHashMap<String, ExactView>();
+    private final Map<String, FrozenNode> sourceValuesByBlueId = new LinkedHashMap<>();
 
     ReferenceTransparentPathAccess(
             ProcessingSnapshotManager manager,
@@ -64,6 +68,186 @@ final class ReferenceTransparentPathAccess {
                 CanonicalTypeIdentityLookup.incomplete(),
                 absolutePointer);
         return view != null ? view.resolved() : null;
+    }
+
+    /** Exact provenance only: no resolution or merged Source reconstruction. */
+    List<FrozenNode> sourceContributionsAt(FrozenNode root, String pointer) {
+        List<FrozenNode> contributions = Collections.singletonList(root);
+        FrozenNode retainedSlotType = null;
+        String sourcePath = JsonPointer.ROOT;
+        List<String> segments = JsonPointer.split(pointer);
+        for (int depth = 0; depth < segments.size(); depth++) {
+            String segment = segments.get(depth);
+            List<FrozenNode> ancestors = new ArrayList<>();
+            if (retainedSlotType != null) {
+                collectSourceTypes(retainedSlotType, sourcePath, true,
+                        new LinkedHashSet<String>(), ancestors);
+            }
+            for (FrozenNode source : contributions) {
+                collectSourceTypes(source, sourcePath, false,
+                        new LinkedHashSet<String>(), ancestors);
+            }
+            boolean list = ancestors.stream().anyMatch(FrozenNode::hasItems);
+            List<FrozenNode> children = new ArrayList<>();
+            Integer itemIndex = list ? listIndex(segment) : null;
+            FrozenNode nextRetainedSlotType = null;
+            if (itemIndex != null) {
+                ListSlotContributions slot = listItemContributions(
+                        ancestors, itemIndex, sourcePath, depth + 1 < segments.size());
+                children = slot.selected;
+                nextRetainedSlotType = slot.retainedType;
+            } else {
+                for (FrozenNode source : ancestors) {
+                    FrozenNode child = semanticChild(source, segment,
+                            JsonPointer.toPointer(Collections.singletonList(segment)));
+                    if (child != null) children.add(child);
+                }
+                if (retainedSlotType != null && BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
+                    children.add(retainedSlotType);
+                }
+            }
+            // List resolution applies itemType to each element. Dictionary
+            // valueType only validates compatibility; it supplies no content.
+            // An item's type defaults contribute deeper paths, not the final
+            // occurrence (the same rule as its explicitly selected type).
+            if (itemIndex != null && !children.isEmpty() && depth + 1 < segments.size()) {
+                List<FrozenNode> typedChildren = new ArrayList<>();
+                for (FrozenNode source : ancestors) {
+                    FrozenNode constraint = source.getItemType();
+                    if (constraint != null) typedChildren.add(constraint);
+                }
+                typedChildren.addAll(children);
+                children = typedChildren;
+            }
+            contributions = children;
+            retainedSlotType = nextRetainedSlotType;
+            sourcePath = JsonPointer.append(sourcePath, segment);
+        }
+        List<FrozenNode> result = new ArrayList<>();
+        for (FrozenNode source : contributions) {
+            result.add(source.isReferenceOnly()
+                    ? exactSourceValue(source, sourcePath, false) : source);
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    private void collectSourceTypes(FrozenNode source, String sourcePath,
+            boolean typeAncestor, Set<String> activeReferences, List<FrozenNode> result) {
+        if (source == null) return;
+        String activeKey = source.isReferenceOnly() ? source.getReferenceBlueId() : null;
+        if (activeKey != null && !activeReferences.add(activeKey)) {
+            throw new IllegalArgumentException("Cyclic Source type ancestry at " + sourcePath);
+        }
+        try {
+            if (source.isReferenceOnly()) source = exactSourceValue(source, sourcePath, typeAncestor);
+            collectSourceTypes(source.getType(), sourcePath, true, activeReferences, result);
+            result.add(source);
+        } finally {
+            if (activeKey != null) activeReferences.remove(activeKey);
+        }
+    }
+
+    private Integer listIndex(String segment) {
+        try {
+            int index = Integer.parseInt(segment);
+            return index >= 0 ? index : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    /** Tracks one effective list slot, not the raw Source overlay's item offset. */
+    private ListSlotContributions listItemContributions(
+            List<FrozenNode> ancestors, int selectedIndex, String sourcePath, boolean descendantsRequired) {
+        List<FrozenNode> selected = new ArrayList<>();
+        FrozenNode retainedType = null;
+        String slotPath = JsonPointer.append(sourcePath, String.valueOf(selectedIndex));
+        int length = 0;
+        for (FrozenNode source : ancestors) {
+            if (!source.hasItems()) continue;
+            List<FrozenNode> items = source.getItems();
+            // A canonical list carries its final payload, not append instructions.
+            if (source.isStrictCanonical()
+                    && (items.isEmpty() || items.get(0).getPreviousBlueId() == null)) {
+                selected.clear();
+                retainedType = null;
+                if (selectedIndex < items.size()) selected.add(items.get(selectedIndex));
+                length = items.size();
+                continue;
+            }
+            for (FrozenNode item : items) {
+                if (item.getPreviousBlueId() != null) {
+                    if (length == 0) {
+                        FrozenNode prefix = exactSourceValue(FrozenNode.fromNode(
+                                new Node().blueId(item.getPreviousBlueId())), sourcePath, true);
+                        if (!prefix.hasItems()) {
+                            throw new InvalidExecutionEvidenceException("List prefix is not a list at " + sourcePath);
+                        }
+                        length = prefix.getItems().size();
+                        if (selectedIndex < length) selected.add(prefix.item(selectedIndex));
+                    }
+                } else if (item.getPosition() != null) {
+                    if (item.getPosition() == selectedIndex) {
+                        FrozenNode replacement = item.property(BlueLanguageConstants.LIST_CONTROL_REPLACE);
+                        if (replacement != null || item.getValue() != null) {
+                            // Replacement discards ordinary inherited fields, not
+                            // the slot's type constraint. Keep only that context;
+                            // never reconstruct a synthetic combined Source node.
+                            if (descendantsRequired) {
+                                retainedType = selectedSlotType(selected, slotPath, retainedType);
+                            }
+                            selected.clear();
+                            selected.add(replacement != null ? replacement : item);
+                        } else {
+                            selected.add(item);
+                        }
+                    }
+                } else {
+                    if (length == selectedIndex) selected.add(item);
+                    length++;
+                }
+            }
+        }
+        // An explicit replacement/overlay type supplies its own ancestry. Do
+        // not count the same inherited type twice or expose it as the slot body.
+        if (retainedType != null && selectedSlotType(selected, slotPath, null) != null) {
+            retainedType = null;
+        }
+        return new ListSlotContributions(selected, retainedType);
+    }
+
+    private FrozenNode selectedSlotType(List<FrozenNode> selected, String slotPath, FrozenNode fallback) {
+        for (int index = selected.size() - 1; index >= 0; index--) {
+            FrozenNode source = selected.get(index);
+            if (source.isReferenceOnly()) source = exactSourceValue(source, slotPath, false);
+            if (source.getType() != null) return source.getType();
+        }
+        return fallback;
+    }
+
+    private static final class ListSlotContributions {
+        private final List<FrozenNode> selected;
+        private final FrozenNode retainedType;
+
+        private ListSlotContributions(List<FrozenNode> selected, FrozenNode retainedType) {
+            this.selected = selected;
+            this.retainedType = retainedType;
+        }
+    }
+
+    private FrozenNode exactSourceValue(FrozenNode reference, String sourcePath, boolean typeAncestor) {
+        if (!typeAncestor && isOpaqueManagedPath(sourcePath)) {
+            return ((ManagedDocumentOverlaySnapshotManager) manager)
+                    .materializeVerifiedManagedRead(sourcePath, reference);
+        }
+        String blueId = reference.getReferenceBlueId();
+        FrozenNode retained = sourceValuesByBlueId.get(blueId);
+        if (retained == null) {
+            retained = ExecutableBodyPathCatalog.materializeVerifiedExact(
+                    manager, reference, "Working occurrence Source contribution");
+            sourceValuesByBlueId.put(blueId, retained);
+        }
+        return retained;
     }
 
     /**

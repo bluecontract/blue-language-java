@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-core
-# entryCount: 1148
+# entryCount: 1149
 field blue.language.api.BlueLanguageErrorCategory#CanonicalizationError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#CircularSetError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#DuplicateKey descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -758,6 +758,7 @@ method blue.language.resolve.BlueResolution#resolveLimited descriptor=(Lblue/lan
 method blue.language.resolve.BlueResolution#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/model/Node; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/model/Node; throws=-
 method blue.language.resolve.MinimizedOverlayBuilder#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.resolve.MinimizedOverlayBuilder#build descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/identity/CanonicalTypeIdentityLookup;)Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.resolve.MinimizedOverlayBuilder#build descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/model/Node;Lblue/language/identity/CanonicalTypeIdentityLookup;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.resolve.ReferenceCacheAdmissionPolicy#mayCacheCanonical descriptor=(Ljava/lang/String;)Z access=public,abstract signature=- throws=-
 method blue.language.resolve.ResolutionLimits#allOf descriptor=([Lblue/language/resolve/ResolutionLimits;)Lblue/language/resolve/ResolutionLimits; access=public,static,varargs signature=- throws=-
 method blue.language.resolve.ResolutionLimits#builder descriptor=()Lblue/language/resolve/ResolutionLimits$Builder; access=public,static signature=- throws=-

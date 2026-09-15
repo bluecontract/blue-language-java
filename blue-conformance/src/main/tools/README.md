@@ -119,3 +119,50 @@ file change from being archived under that manifest.
 resource package, writes JSON and Markdown reports outside both packages, and
 exits with status 2 under `--fail-on-unexpected` if an existing
 `PROCESS_CLOSURE` fixture changes beyond the named identity surfaces.
+
+## Frozen transition inputs and witness-context metadata
+
+Historical transition tests must not use a later active package as an approved
+old after-image. `classify-legal-detached-retarget-reviewed-after.tar.gz` retains
+the exact 383-file package from clean commit
+`3491c515362bda55b72c8cc0e3558ad760ea9f86`; its SHA-256 is
+`3042d886644118f82e4014fe73ff245c62de3ca0140e5ac36328fe4d84758342`.
+Every file matches the unchanged legal-detached-retarget review's after
+inventory. The test checks the archive digest before extracting regular,
+relative, non-duplicate paths into an isolated temporary directory. No old
+review record, prose approval, fixture oracle or baseline is rewritten.
+
+The separate `classify-rooted-witness-context-transition.json` approves only
+the complete clean `3491`-to-`430ee` package pair. It retains the authentic generated
+after-manifest bytes from the supported full generator on `64f368`, not a recipe
+for replacing arbitrary source hashes. Exactly eight implementation hashes
+and the derived release identity change; the other 382 files, including all 295
+executable fixtures and their gas/order/effect evidence, are byte-identical.
+Both complete inventories and the review-record digest must match before the
+classifier recognizes that transition. Missing, added, renamed, changed or
+rehashed unreviewed inputs still fail closed.
+
+The maintained `:blue-conformance:legalDetachedRetargetReleaseTransitionTest`
+owns the historical pair; `:blue-conformance:witnessContextReleaseTransitionTest`
+owns the new metadata pair and its mutation negatives. Both are required by
+`check` and `releaseConformanceTest`. Python checker execution is distinct from
+runtime conformance, full generation, final clean/quality gates and downstream
+acceptance. The qualification status and original RED attribution are recorded
+in `docs/rooted-witness-release-qualification.md` at the repository root.
+
+The separate `classify-rooted-witness-selection-transition.json` recognizes
+only clean `60043c38`'s package and the actual full staged output generated from
+`90874a03`. Exactly two existing implementation digests, one new private runtime
+path (741 to 742 paths), and the derived release identity change. The other 382
+files and all 295 executable fixtures are byte-identical. Its source coordinates
+identify the generation input, not the later release-binding commit.
+
+`witnessSelectionReleaseTransitionTest` reconstructs its before-image from the
+already digest-pinned historical archive and the witness-context review's actual
+generated after-manifest. It preserves both earlier transition tests and records.
+The new actual-pair check runs the complete classifier once; six negative methods
+check reversed pairs, package inventory corruption, forged review records,
+rehashed source changes, outcome/gas/order changes and changed runtime inventory
+against the complete frozen hashes. They never regenerate fixtures or execute
+Gradle. Both complete inventories and the review digest must match; there is no
+generic source-hash, inventory-growth or semantic acceptance rule.

@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 816,
+    "productionSourceCount": 817,
     "productionResourceCount": 1123,
-    "productionSourcePathIdentity": "sha256:12fbb5a3589e27fc55ed8ef4ce525cca5525c7d98bc4fc9ffff9feda545119d8",
+    "productionSourcePathIdentity": "sha256:655f399a2646e6eac8a6810d0a90451e7ced0b0280a646d6b86cd5229c484c6b",
     "productionResourcePathIdentity": "sha256:c5a08c87b9507897d78fdc0ffb10e2791e9572bf9795ed462fcd6a5fcb7a37fd"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -3511,6 +3511,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessSelection.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessSelection.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {

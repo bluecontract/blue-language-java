@@ -45,6 +45,9 @@ class SelectedScopeContentBlueIdFailFirstTest {
         // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(false);
+        Node initialChildType = source.getAsNode("/child").getType();
+        FrozenNode initialCanonicalChild = fixture.identityBlue()
+                .resolveToSnapshot(source.clone()).canonicalAt("/child");
         ExpectedIdentities expected = fixture.expectedBeforeLifecycle(source);
         LifecycleRecorder recorder = new LifecycleRecorder();
 
@@ -52,8 +55,13 @@ class SelectedScopeContentBlueIdFailFirstTest {
         DocumentProcessingResult result = fixture.executionBlue(recorder).initializeDocument(source);
 
         // then
+        assertNull(initialChildType,
+                "Only the enclosing field supplies this child's type constraint");
+        assertNull(initialCanonicalChild,
+                "The initial child is wholly derivable in its parent's canonical identity input");
         assertSuccessful(result);
         assertScopeIdentity(result.document(), recorder, "/child", expected.child);
+        assertScopeIdentity(result.document(), recorder, "/", expected.rootAfterChildPhase1);
         assertNotEquals(emptyNodeBlueId(), expected.child,
                 "an existing selected scope must never use the empty-node fallback");
     }
@@ -192,7 +200,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
         Blue snapshotBlue = fixture.executionBlue(snapshotRecorder);
         ResolvedSnapshot inputSnapshot = snapshotBlue.resolveToSnapshot(source.clone());
         ExpectedIdentities snapshotExpected =
-                fixture.expectedBeforeLifecycle(inputSnapshot.canonicalRoot());
+                fixture.expectedBeforeLifecycle(inputSnapshot);
 
         // when
         DocumentProcessingResult nodeResult =
@@ -513,14 +521,31 @@ class SelectedScopeContentBlueIdFailFirstTest {
         private ExpectedIdentities expectedBeforeLifecycle(Node exactRoot) {
             ResolvedSnapshot snapshot =
                     identityBlue().resolveToSnapshot(exactRoot.clone());
+            return expectedBeforeLifecycle(snapshot, exactRoot);
+        }
+
+        private ExpectedIdentities expectedBeforeLifecycle(ResolvedSnapshot snapshot) {
+            return expectedBeforeLifecycle(snapshot, snapshot.canonicalRoot());
+        }
+
+        private ExpectedIdentities expectedBeforeLifecycle(
+                ResolvedSnapshot snapshot, Node exactRoot) {
             FrozenNode canonicalChild = snapshot.canonicalAt("/child");
             String childId = canonicalChild != null
                     ? canonicalChild.blueId()
                     : DirectBlueIdCalculator.calculateBlueId(
                     exactChildBeforeLifecycle(exactRoot));
 
-            Node rootAfterChildPhase1 = exactRoot.clone();
-            Node child = rootAfterChildPhase1.getAsNode("/child");
+            // Initialization patches exact canonical content. Reinterpreting
+            // the captured child as Source would reintroduce inherited content.
+            Node rootAfterChildPhase1 = snapshot.canonicalRoot();
+            Node child = canonicalChild != null
+                    ? canonicalChild.toNode()
+                    : new Node().type(exactChildBeforeLifecycle(exactRoot).getType());
+            // A fully derivable child had no canonical overlay before these
+            // effects. Preserve a type only if the exact Source authored it;
+            // do not turn an enclosing constraint into a new child contribution.
+            rootAfterChildPhase1.properties("child", child);
             child.properties("lifecycleMutation", text(CHILD_MUTATION));
             if (child.getContracts() == null) {
                 child.contracts(new Node());
@@ -532,9 +557,12 @@ class SelectedScopeContentBlueIdFailFirstTest {
                                     ? canonicalChild.toNode()
                                     : exactChildBeforeLifecycle(
                                     exactRoot)));
-            String rootId = identityBlue()
-                    .resolveToSnapshot(rootAfterChildPhase1)
-                    .blueId();
+            String rootId = DirectBlueIdCalculator.calculateBlueId(rootAfterChildPhase1);
+            Node referencedCapture = rootAfterChildPhase1.clone();
+            referencedCapture.getAsNode("/child/contracts/initialized")
+                    .properties("document", reference(childId));
+            assertEquals(rootId, DirectBlueIdCalculator.calculateBlueId(referencedCapture),
+                    "Exact captured content must hash identically inline and by reference");
             return new ExpectedIdentities(childId, rootId);
         }
 

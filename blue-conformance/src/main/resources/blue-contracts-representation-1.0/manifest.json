@@ -2,7 +2,7 @@
   "schema": "blue-contracts-representation-conformance-package/1",
   "status": "PROPOSED_NOT_RELEASED",
   "specificationResource": "/specifications/blue-contracts-and-processor-specification-1.0.md",
-  "specificationSha256": "e91381c970859a6bafecdd99e46f5115ba033bf0534be84bbd5582531e9e347f",
+  "specificationSha256": "5cc29e91cd8d4aa4d3dca98214da5ceb49b2daa82554ac561260bd98ce5063b8",
   "executableFixtureCount": 2,
   "files": [
     {
@@ -16,5 +16,5 @@
       "bytes": 646
     }
   ],
-  "packageIdentity": "sha256:14bebea9b179ff07c043cc9f250ca1377f13fff3e7459d956499ae4da2915dd1"
+  "packageIdentity": "sha256:43d98bda6a5777009e2dbcec5ecb1ca6144eda5ed371701f0022f9b76b8f7637"
 }

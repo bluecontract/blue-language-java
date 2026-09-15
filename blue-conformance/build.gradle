@@ -59,6 +59,67 @@ tasks.register('rootedCheckerTest') {
 tasks.named('check') { dependsOn tasks.named('rootedCheckerTest') }
 tasks.named('releaseConformanceTest') { dependsOn tasks.named('rootedCheckerTest') }
 
+tasks.register('inactiveRetargetReleaseTransitionTest', Exec) {
+    group = 'verification'
+    description = 'Verifies the exact inactive-retarget release binding and corruption negatives.'
+    def tools = layout.projectDirectory.dir('src/main/tools')
+    workingDir tools
+    commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+            '-B', tools.file('test_inactive_retarget_release_transition.py').asFile.absolutePath
+    inputs.dir(tools)
+}
+tasks.named('check') { dependsOn tasks.named('inactiveRetargetReleaseTransitionTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('inactiveRetargetReleaseTransitionTest') }
+
+tasks.register('legalDetachedRetargetReleaseTransitionTest', Exec) {
+    group = 'verification'
+    description = 'Verifies the exact legal detached-retarget generated pair and corruption negatives.'
+    def tools = layout.projectDirectory.dir('src/main/tools')
+    workingDir tools
+    commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+            '-B', tools.file('test_legal_detached_retarget_release_transition.py').asFile.absolutePath
+    inputs.dir(tools)
+    inputs.dir(layout.projectDirectory.dir('src/main/resources/blue-contracts-closure-1.0'))
+}
+tasks.named('check') { dependsOn tasks.named('legalDetachedRetargetReleaseTransitionTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('legalDetachedRetargetReleaseTransitionTest') }
+
+tasks.register('witnessContextReleaseTransitionTest', Exec) {
+    group = 'verification'
+    description = 'Verifies the exact witness-context metadata pair and corruption negatives.'
+    def tools = layout.projectDirectory.dir('src/main/tools')
+    workingDir tools
+    commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+            '-B', tools.file('test_witness_context_release_transition.py').asFile.absolutePath
+    inputs.dir(tools)
+}
+tasks.named('check') { dependsOn tasks.named('witnessContextReleaseTransitionTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('witnessContextReleaseTransitionTest') }
+
+tasks.register('witnessSelectionReleaseTransitionTest', Exec) {
+    group = 'verification'
+    description = 'Verifies the exact fresh witness-selection generated pair and corruption negatives.'
+    def tools = layout.projectDirectory.dir('src/main/tools')
+    workingDir tools
+    commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+            '-B', tools.file('test_witness_selection_release_transition.py').asFile.absolutePath
+    inputs.dir(tools)
+}
+tasks.named('check') { dependsOn tasks.named('witnessSelectionReleaseTransitionTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('witnessSelectionReleaseTransitionTest') }
+
+tasks.register('baselineReconciliationReleaseTransitionTest', Exec) {
+    group = 'verification'
+    description = 'Verifies the exact merged-base reconciliation pairs and corruption negatives.'
+    def tools = layout.projectDirectory.dir('src/main/tools')
+    workingDir tools
+    commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+            '-B', tools.file('test_baseline_reconciliation_release_transition.py').asFile.absolutePath
+    inputs.dir(tools)
+}
+tasks.named('check') { dependsOn tasks.named('baselineReconciliationReleaseTransitionTest') }
+tasks.named('releaseConformanceTest') { dependsOn tasks.named('baselineReconciliationReleaseTransitionTest') }
+
 tasks.register('exportFullLifecycleFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath

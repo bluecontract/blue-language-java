@@ -1,11 +1,11 @@
 # schema: blue-java-public-api/1.0
 # module: blue-contracts-core
-# entryCount: 2963
+# entryCount: 2964
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b"
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:d4f8934f82e2330a165a612e4d9d72e0ceff1c7c0df37b0d08772e66629344c7"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:bd14a60f67cbc9a19fadc4b0d5a4adc8ed7578151f0c14c2591835dd8b9f73a0"
 field blue.language.processor.DirectSubscriptionSurfaceValidator#INSTANCE descriptor=Lblue/language/processor/DirectSubscriptionSurfaceValidator; access=public,static,final signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#APPLICATION_EVENT_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#PATCH_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-
@@ -1821,6 +1821,7 @@ method blue.language.processor.WorkingDocument#previewAndApplyPatches descriptor
 method blue.language.processor.WorkingDocument#resolvedAt descriptor=(Ljava/lang/String;)Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.WorkingDocument#resolvedRoot descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.WorkingDocument#snapshot descriptor=()Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
+method blue.language.processor.WorkingDocument#sourceContributionsAt descriptor=(Ljava/lang/String;)Ljava/util/List; access=public signature=(Ljava/lang/String;)Ljava/util/List<Lblue/language/snapshot/FrozenNode;>; throws=-
 method blue.language.processor.WorkingDocument#usedMaterializedFallback descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.WorkingDocument$Preview#close descriptor=()V access=public signature=- throws=-
 method blue.language.processor.closure.AdmissionCandidate#ambiguousPreliminaryMembers descriptor=(Ljava/util/List;)Lblue/language/processor/closure/AdmissionCandidate; access=public,static signature=(Ljava/util/List<Lblue/language/processor/closure/AdmissionCandidate$CandidateCyclicMember;>;)Lblue/language/processor/closure/AdmissionCandidate; throws=-
