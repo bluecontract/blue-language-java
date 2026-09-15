@@ -1515,7 +1515,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     /** Creates the focused matcher for the current runtime generation. */
     private LanguageMatchingService matchingService() {
         return new LanguageMatchingService(
-                this, globalLimits, this::resolveLimited);
+                this, globalLimits);
     }
 
     /**

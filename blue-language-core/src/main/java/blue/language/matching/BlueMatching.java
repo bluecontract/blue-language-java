@@ -39,7 +39,11 @@ public interface BlueMatching {
             ResolvedSnapshot snapshot, String pointer, FrozenNode type);
 
     /**
-     * Performs a demand-limited match with an exhaustive outcome.
+     * Performs a demand-limited match with an exhaustive outcome. Candidate
+     * preparation and demanded target evidence share one reference-expansion
+     * budget. Unavailable or missing evidence remains incomplete; invalid
+     * evidence remains invalid. An established {@code false} is a semantic
+     * mismatch, independent of provider availability or cache warmth.
      *
      * @param candidate authored candidate value
      * @param type authored type definition

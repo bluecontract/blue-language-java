@@ -1,6 +1,8 @@
 package blue.language.matching;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationResult;
 import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -14,6 +16,24 @@ import blue.language.resolve.ResolutionLimits;
  * provider verification and for applying their configured global limits.</p>
  */
 public interface MatchingRuntime {
+
+    /**
+     * Matches both operands within one operation-owned evidence and limit scope.
+     * Implementations must account for candidate and target reference demands
+     * before consulting retained evidence and preserve provider failures in the
+     * returned outcome. A runtime without this scope cannot establish a limited
+     * match through its ordinary Boolean matching operations.
+     *
+     * @param candidate authored candidate value
+     * @param type authored type or shape pattern
+     * @param limits semantic-demand and reference-expansion limits
+     * @return established match or explicit absent, incomplete, or invalid outcome
+     */
+    default BlueOperationResult<Boolean> matchesLimitedForMatching(
+            Node candidate, Node type, BlueOperationLimits limits) {
+        return BlueOperationResult.incomplete(null, null, null,
+                "This matching runtime does not support operation-owned limited matching.");
+    }
 
     /**
      * Returns the bounds used by matcher-owned derived caches.
