@@ -6,7 +6,7 @@ Schema: `blue-language-java-generated-documentation/1.0`.
 
 Release package: `blue-language-contracts-embedded-modules-collection-paths`
 
-Package identity: `sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce8281260689109162a68aea`
+Package identity: `sha256:c8f95abf0b25bdeb285d0474e9b2f54e953e270260f9551c8d257630baf9a482`
 
 | Suite | Fixture count |
 | --- | ---: |
@@ -19,10 +19,10 @@ Package identity: `sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce828126068910
 | --- | --- |
 | `languageRegistry` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` |
 | `languageFixtures` | `sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695` |
-| `contractsRegistry` | `sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4` |
+| `contractsRegistry` | `sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
-| `contractsFixtures` | `sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3` |
-| `contractsRelease` | `sha256:156b58c6a19ab94cd3d1759dbbd115963c6d345c69511113798824cb5c749ced` |
+| `contractsFixtures` | `sha256:19e7a5e85afcaa2a69c45034207f788f0743045e18ae63fcc44ff5d3d39523b7` |
+| `contractsRelease` | `sha256:8c71f588568a2abda22e4a70c2ce91d5fb73e3fd98b0e7c6f511d87df499f0fc` |
 
 ## Specification hashes
 

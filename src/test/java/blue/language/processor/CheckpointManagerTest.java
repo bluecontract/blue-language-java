@@ -8,9 +8,14 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -23,6 +28,49 @@ final class CheckpointManagerTest {
     private static final long EXPECTED_IDENTITY_NODES = 10L;
     private static final long EXPECTED_REBUILT_MEMBERS = 13L;
     private static final long EXPECTED_DIRECT_HASH_BLOCKS = 22L;
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldRecognizeReplayAfterRestoringInlineOrReferencedDomain(boolean referenced) {
+        // given
+        Node channel = new Node().name("Replay Channel");
+        String channelId = DirectBlueIdCalculator.calculateBlueId(channel);
+        Node domain = CheckpointDomain.value(channelId,
+                Collections.singletonList(channelId),
+                ExternalChannelDependencySnapshot.none(), null);
+        String domainId = DirectBlueIdCalculator.calculateBlueId(domain);
+        Node subject = new Node().value("same event");
+        String subjectId = DirectBlueIdCalculator.calculateBlueId(subject);
+        Node storedDomain = referenced ? new Node().blueId(domainId) : domain;
+        Node selectedCheckpoint = new Node().properties("entries",
+                new Node().properties("source", new Node()
+                        .properties("domain", storedDomain)
+                        .properties("subject", new Node().blueId(subjectId))));
+        ChannelEventCheckpoint checkpoint = new ChannelEventCheckpoint();
+        ContractRefreshService.restoreExactCheckpointEntries(checkpoint, selectedCheckpoint);
+        ContractBundle bundle = ContractBundle.builder()
+                .addMarker("checkpoint", checkpoint).build();
+        CheckpointManager manager = new CheckpointManager(
+                new DocumentProcessingRuntime(Nodes.emptyObject()));
+
+        // when
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(
+                bundle, "source", domainId);
+        CheckpointManager.CheckpointRecord changedDomain = manager.findCheckpoint(
+                bundle, "source", DirectBlueIdCalculator.calculateBlueId(
+                        domain.clone().properties("runtimeDiscriminator", new Node().value("changed"))));
+
+        // then
+
+        assertEquals(domainId, checkpoint.entry("source").domainBlueId());
+        assertTrue(record.domainMatches);
+        assertTrue(manager.isDuplicate(record, subjectId),
+                "replaying the stored subject must be recognized in either domain representation");
+        assertFalse(manager.isDuplicate(record,
+                DirectBlueIdCalculator.calculateBlueId(new Node().value("new event"))));
+        assertFalse(changedDomain.domainMatches);
+        assertFalse(manager.isDuplicate(changedDomain, subjectId));
+    }
 
     @Test
     void shouldCreateCheckpointMarkerWhenAbsent() {

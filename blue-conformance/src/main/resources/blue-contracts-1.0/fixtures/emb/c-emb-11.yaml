@@ -21,11 +21,11 @@ input:
             checkpointDomain: old-domain
           checkpoint:
             type:
-              blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+              blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
             entries:
               in:
                 type:
-                  blueId: 2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY
+                  blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
                 domain: old-domain
                 subject: old-subject
     contracts:

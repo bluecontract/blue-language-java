@@ -60,7 +60,7 @@ public final class BlueContractsConformanceReport {
             "blue-language-contracts-embedded-modules-collection-paths";
     /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:28b08b722e924c4d0da5b5352f37ad17fad5c425ce8281260689109162a68aea";
+            "sha256:c8f95abf0b25bdeb285d0474e9b2f54e953e270260f9551c8d257630baf9a482";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
@@ -75,7 +75,7 @@ public final class BlueContractsConformanceReport {
             "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:ff6ed64b9e41e9dd6436fd81893fbccf3a4895051d26ad5e1a9c2820c4e444b3";
+            "sha256:19e7a5e85afcaa2a69c45034207f788f0743045e18ae63fcc44ff5d3d39523b7";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =

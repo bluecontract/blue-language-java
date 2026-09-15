@@ -18,6 +18,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -153,8 +155,9 @@ final class ChannelRunnerTest {
                 "/contracts/checkpoint"));
     }
 
-    @Test
-    void shouldSkipDuplicateEventsAndProcessNewEventsUsingCheckpoint() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldSkipDuplicateEventsAndProcessNewEventsUsingCheckpoint(boolean inlineDomain) {
         // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -198,6 +201,20 @@ final class ChannelRunnerTest {
         Object checkpointAfterFirstEvent =
                 bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
 
+        // Restore the persisted checkpoint with either allowed domain representation.
+        Node channel = document.getContracts().getProperties().get("testChannel");
+        Node domain = CheckpointDomain.value(channel.getType().getBlueId(),
+                Collections.singletonList(DirectBlueIdCalculator.calculateBlueId(channel)),
+                ExternalChannelDependencySnapshot.none(), null);
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) checkpointAfterFirstEvent;
+        String persistedDomainId = checkpoint.entry("testChannel").domainBlueId();
+        Node restored = ProcessorEngine.nodeAt(execution.runtime().document(),
+                "/contracts/checkpoint").clone();
+        restored.getProperties().get("entries").getProperties().get("testChannel")
+                .properties("domain", inlineDomain ? domain
+                        : new Node().blueId(DirectBlueIdCalculator.calculateBlueId(domain)));
+        ContractRefreshService.restoreExactCheckpointEntries(checkpoint, restored);
+
         runner.runExternalChannel("/", bundle, channelBinding, event);
         runner.persistPendingCheckpoints("/");
         bundle = refreshBundle(execution);
@@ -209,6 +226,7 @@ final class ChannelRunnerTest {
         BigInteger afterNewEvent = (BigInteger) execution.runtime().document().getProperties().get("counter").getValue();
 
         // then
+        assertEquals(persistedDomainId, DirectBlueIdCalculator.calculateBlueId(domain));
         assertNotNull(afterFirstEvent);
         assertEquals(BigInteger.ONE, afterFirstEvent);
         assertNotNull(checkpointAfterFirstEvent);

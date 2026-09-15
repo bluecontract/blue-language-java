@@ -427,7 +427,7 @@ stages:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
             domain:
@@ -475,7 +475,7 @@ stages:
         document:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#0
   preliminaryBlueIds:
-    '0': 9TnWfEJowqZ95vXdjHQxkrMhEmL9vbJZBmG82uN4nWUM
+    '0': CCcn6eP88dkhU3cFqeTmQuivDZvGQsPb6mCMqQBWtR4M
     '1': 4gD9Wq47mvXrMSKKgcnSEMoz3byaHrhrArjHmgvdatXi
   sortedSourceIndices:
   - 1
@@ -496,17 +496,17 @@ stages:
     b:
       blueId: this#0
     contracts:
-      blueId: 5CfbcN5MQwkXHT1Wt2HUNrDwxUjFmjzuSSaVtE1mJorD
+      blueId: DC5vLPLyNrafSPjexg28A7cYRMViX9r6KUKMMxGWg8Hi
   canonicalMasterInputUtf8Bytes: 485
-  masterBlueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i
+  masterBlueId: H5gtjg7o5JnNns6GhnuitH6rREKLpMc2BKYCFMzA9FxJ
   memberBlueIdsInSourceOrder:
-  - FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#1
-  - FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#0
+  - H5gtjg7o5JnNns6GhnuitH6rREKLpMc2BKYCFMzA9FxJ#1
+  - H5gtjg7o5JnNns6GhnuitH6rREKLpMc2BKYCFMzA9FxJ#0
   materializedDocuments:
   - documentId: loop-a
     memberIdentity: loop-a
     b:
-      blueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#0
+      blueId: H5gtjg7o5JnNns6GhnuitH6rREKLpMc2BKYCFMzA9FxJ#0
     contracts:
       embedded:
         type:
@@ -545,7 +545,7 @@ stages:
           blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
       checkpoint:
         type:
-          blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
+          blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
             domain:
@@ -555,7 +555,7 @@ stages:
   - documentId: loop-b
     memberIdentity: loop-b
     a:
-      blueId: FLKiXVXSuigAfJPhWvJw9UUj72D67kjgKJ3rqcmKJc5i#1
+      blueId: H5gtjg7o5JnNns6GhnuitH6rREKLpMc2BKYCFMzA9FxJ#1
     contracts:
       embedded:
         type:

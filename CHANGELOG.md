@@ -73,6 +73,9 @@
 
 ### Fix
 
+- accept required exact checkpoint-domain objects or references, calculate their
+  representation-independent exact identity, and preserve duplicate-event detection
+
 - retain the original external processing event and its admitted exact BlueId
   across managed closure steps; expose the identity evidence to hosted
   runtimes without rehashing the retained Source representation

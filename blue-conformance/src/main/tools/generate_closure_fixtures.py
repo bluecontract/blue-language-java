@@ -32,7 +32,7 @@ ENC = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 FE = "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX"
 INITIALIZED_MARKER = "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
 TERMINATED_MARKER = "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v"
-CHECKPOINT_MARKER = "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
+CHECKPOINT_MARKER = "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr"
 
 FIXTURE_DIR = ROOT / "conformance/contracts/fixtures/closure"
 ORACLE_DIR = ROOT / "conformance/contracts/oracles"

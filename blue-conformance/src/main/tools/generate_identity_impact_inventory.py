@@ -164,6 +164,9 @@ SELF_PATHS = frozenset(
     (
         REPORT_PATH,
         SUMMARY_PATH,
+        "docs/reviews/pr36-contextual-reference-repair.pl.md",
+        "docs/checkpoint-domain-correction.md",
+        "blue-conformance/src/main/tools/migration/pr36-contextual-reference-transition.json",
         "blue-conformance/src/main/tools/"
         "generate_identity_impact_inventory.py",
         "blue-conformance/src/main/tools/"
@@ -177,7 +180,7 @@ SELF_PATHS = frozenset(
 FIRST_CHANGED_DEPENDENCY = {
     "language:Dictionary": "Dictionary identity-bearing empty-object semantics",
     "language:List": "List identity-bearing empty-object element semantics",
-    "contracts:ChannelEventCheckpoint": "language:Dictionary",
+    "contracts:ChannelEventCheckpoint": "contracts:CheckpointEntry",
     "contracts:RuntimeLedger": "language:List",
     "contracts:ContractExecutionResult": "contracts:RuntimeLedger",
     "contracts:ScriptedHandler": "contracts:ContractExecutionResult",
@@ -192,6 +195,7 @@ DIRECTLY_CHANGED = frozenset(
         "language:Dictionary",
         "language:List",
         "contracts:ProcessEmbedded",
+        "contracts:CheckpointEntry",
         "document:language-specification",
         "document:contracts-specification",
         "document:identity-constructors",
@@ -232,7 +236,10 @@ DEPENDENCIES = {
     "fixture:c-clo-23-05-a9-to-a10:masterBlueId": (
         "contracts:ProcessEmbedded",
     ),
-    "contracts:ChannelEventCheckpoint": ("language:Dictionary",),
+    "contracts:ChannelEventCheckpoint": (
+        "language:Dictionary",
+        "contracts:CheckpointEntry",
+    ),
     "contracts:RuntimeLedger": ("language:List",),
     "contracts:ContractExecutionResult": (
         "language:List",
@@ -298,6 +305,12 @@ HISTORICAL_PREFIXES = (
     "docs/language-1.0-contracts-kernel-1.0-migration.md",
     "docs/blue-language-1.0-final-clarifications.md",
     "docs/enum-normalization-registry-correction.md",
+    "docs/list-fixture-semantic-binding-review.md",
+    "api/semantic-baseline-rooted-1.0.json",
+    "src/test/java/blue/language/conformance/RootedSemanticBaselineBindingTest.java",
+    "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/historical/",
+    "blue-conformance/src/main/resources/blue-rooted-checkpoint-1.0/tools/test-data/",
+    "blue-conformance/src/main/tools/migration/classify-rooted-",
 )
 
 HISTORICAL_TOP_LEVEL_PREFIXES = (
@@ -510,7 +523,7 @@ def _tracked_text_files(repository: Path) -> list[str]:
         path = value.strip()
         if not path or path in SELF_PATHS:
             continue
-        if path.startswith(("build/", ".gradle/")):
+        if path.startswith(("build/", ".gradle/", "reports/identity/pr36/")):
             continue
         if Path(path).suffix.lower() in TEXT_SUFFIXES:
             result.append(path)
@@ -602,12 +615,13 @@ CCLO34_RUNTIME_DESCRIPTOR = (
 )
 
 
-def _cclo34_source_slice(text: str, symbol: str, method: bool) -> tuple[str, int]:
+def _cclo34_source_slice(text: str, symbol: str, method: bool,
+                         declaring_class: str = "ClosureInvocationVerifierTest") -> tuple[str, int]:
     """Extract one direct class member, retaining its complete line context."""
     code = _java_code_mask(text)
     if not re.search(r"(?m)^package blue\.language\.processor\.closure;\s*$", code):
         raise ValueError("Historical C-CLO-34 declaring package changed")
-    classes = list(re.finditer(r"(?m)^final class ClosureInvocationVerifierTest\s*\{", code))
+    classes = list(re.finditer(r"(?m)^final class " + re.escape(declaring_class) + r"\s*\{", code))
     if len(classes) != 1:
         raise ValueError("Historical C-CLO-34 declaring class changed")
     if method:
@@ -720,6 +734,12 @@ def _cclo34_historical_reference(repository: Path) -> dict[str, Any] | None:
         for name in names:
             if _cclo34_source_slice(text, name, method)[0] != _cclo34_source_slice(original, name, method)[0]:
                 raise ValueError("Historical C-CLO-34 anchored source changed: " + name)
+    anchored_operands = []
+    for name, method in (("C_CLO_34_CANONICAL_INVOCATION_ENVELOPE", False),
+                         ("releasedEnvironment", True)):
+        snippet, first_line = _cclo34_source_slice(text, name, method)
+        anchored_operands.extend({"identity": identity, "line": first_line + line - 1}
+                                 for identity, line in _identifier_occurrences(C_CLO_34_JAVA_TEST, snippet))
     value = json.loads(envelope)
     encoded = canonical(value)
     if encoded != envelope.encode("utf-8") or len(encoded) != 2131 or digest != "sha256:" + hashlib.sha256(encoded).hexdigest():
@@ -742,7 +762,7 @@ def _cclo34_historical_reference(repository: Path) -> dict[str, Any] | None:
             "identity": digest, "symbol": "ClosureInvocationVerifierTest#C_CLO_34_INVOCATION_IDENTITY",
             "provenanceCommit": CCLO34_HISTORICAL_PROVENANCE,
             "canonicalEnvelopeSha256": hashlib.sha256(encoded).hexdigest(),
-            "canonicalEnvelopeBytes": len(encoded)}
+            "canonicalEnvelopeBytes": len(encoded), "anchoredOperands": anchored_operands}
 
 
 def _reference_index(
@@ -769,10 +789,27 @@ def _reference_index(
         text = data.decode("utf-8", errors="replace")
         for identity, number in _identifier_occurrences(path, text):
             entry = {"path": path, "line": number, "disposition": disposition}
-            if historical is not None and (path, number, identity) == (
-                    historical["path"], historical["line"], historical["identity"]):
+            if historical is not None and path == historical["path"] and (
+                    (number, identity) == (historical["line"], historical["identity"])
+                    or {"line": number, "identity": identity} in historical["anchoredOperands"]):
                 entry["disposition"] = "retained-immutable-history"
-                entry["historicalDeclarationProof"] = dict(historical)
+                entry["historicalDeclarationProof"] = {
+                    key: value for key, value in historical.items() if key != "anchoredOperands"
+                }
+            if path == "blue-contracts-core/src/test/java/blue/language/processor/closure/LifecycleCyclicBindingOracle.java":
+                declaration, first_line = _cclo34_source_slice(
+                    text, "OLD_REGISTRY", False, "LifecycleCyclicBindingOracle")
+                old_registry = "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4"
+                if _java_string_constant(data, "OLD_REGISTRY") != old_registry:
+                    raise ValueError("Historical checkpoint registry oracle changed")
+                occurrences = _identifier_occurrences(path, declaration)
+                if (identity, number - first_line + 1) in occurrences:
+                    entry["disposition"] = "retained-immutable-history"
+                    entry["historicalDeclarationProof"] = {
+                        "symbol": "LifecycleCyclicBindingOracle#OLD_REGISTRY",
+                        "identity": old_registry,
+                        "purpose": "reverse only the three reviewed dependencies to verify the frozen invocation oracle",
+                    }
             result.setdefault(identity, []).append(entry)
     return result
 
