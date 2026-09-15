@@ -5046,3 +5046,4 @@ type blue.language.model.wire.JsonPointer access=public super=java.lang.Object i
 type blue.language.model.wire.ParsedJsonPointer access=public,final super=java.lang.Object interfaces=java.lang.Comparable signature=Ljava/lang/Object;Ljava/lang/Comparable<Lblue/language/model/wire/ParsedJsonPointer;>;
 type blue.language.model.wire.SchemaPropertyConstants access=public super=java.lang.Object interfaces=- signature=-
 ```
+
