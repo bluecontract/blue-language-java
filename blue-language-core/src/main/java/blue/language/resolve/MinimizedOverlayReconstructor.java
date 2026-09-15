@@ -30,16 +30,11 @@ final class MinimizedOverlayReconstructor {
     }
 
     Node reconstruct(Node resolved) {
-        return reconstruct(resolved, null);
-    }
-
-    Node reconstruct(Node resolved, Node source) {
         Node minimized = new Node();
         reconstructNode(
                 minimized,
                 resolved,
                 resolved.getType(),
-                source,
                 resolved.getType() != null);
         return minimized;
     }
@@ -48,12 +43,7 @@ final class MinimizedOverlayReconstructor {
             Node minimized,
             Node resolved,
             Node inherited,
-            Node source,
             boolean ownTypeBaseline) {
-        if (isSourceReference(source)) {
-            minimized.blueId(source.getBlueId());
-            return;
-        }
         if (resolved.getBlueId() != null
                 && inherited != null
                 && resolved.getBlueId().equals(inherited.getBlueId())) {
@@ -70,7 +60,6 @@ final class MinimizedOverlayReconstructor {
 
         setTypeIfDifferent(
                 resolved, inherited, minimized, Node::getType, Node::type);
-        preserveExplicitCustomType(resolved, source, minimized);
         setTypeIfDifferent(
                 resolved, inherited, minimized,
                 Node::getItemType, Node::itemType);
@@ -113,26 +102,23 @@ final class MinimizedOverlayReconstructor {
             minimized.schema(resolved.getSchema().clone());
         }
 
-        reconstructContracts(minimized, resolved, inherited, source);
-        reconstructItems(minimized, resolved, inherited, source);
-        reconstructProperties(minimized, resolved, inherited, source);
+        reconstructContracts(minimized, resolved, inherited);
+        reconstructItems(minimized, resolved, inherited);
+        reconstructProperties(minimized, resolved, inherited);
     }
 
     private void reconstructContracts(
             Node minimized,
             Node resolved,
-            Node inherited,
-            Node source) {
+            Node inherited) {
         if (resolved.getContracts() == null) {
             return;
         }
         Node inheritedContracts = inherited != null
                 ? inherited.getContracts()
                 : null;
-        Node sourceContracts = source != null ? source.getContracts() : null;
         if (sameNodeBlueId(
-                resolved.getContracts(), inheritedContracts)
-                && !isSourceReference(sourceContracts)) {
+                resolved.getContracts(), inheritedContracts)) {
             return;
         }
         Node result = new Node();
@@ -142,7 +128,6 @@ final class MinimizedOverlayReconstructor {
                 result,
                 resolved.getContracts(),
                 baseline,
-                sourceContracts,
                 usesOwnTypeBaseline(
                         inheritedContracts,
                         resolved.getContracts()));
@@ -154,26 +139,21 @@ final class MinimizedOverlayReconstructor {
     private void reconstructItems(
             Node minimized,
             Node resolved,
-            Node inherited,
-            Node source) {
+            Node inherited) {
         if (resolved.getItems() == null) {
             return;
         }
         List<Node> result = new ArrayList<>();
-        Map<Integer, Node> sourceItems = sourceItems(
-                source, resolved.getItems().size());
         if (inherited != null && inherited.getItems() != null) {
-            minimizeInheritedItems(result, resolved, inherited, sourceItems);
+            minimizeInheritedItems(result, resolved, inherited);
         } else {
-            for (int index = 0; index < resolved.getItems().size(); index++) {
-                Node item = resolved.getItems().get(index);
+            for (Node item : resolved.getItems()) {
                 Node minimizedItem = new Node();
                 Node baseline = derivationBaseline(null, item);
                 reconstructNode(
                         minimizedItem,
                         item,
                         baseline,
-                        sourceItems.get(index),
                         usesOwnTypeBaseline(null, item));
                 result.add(minimizedItem);
             }
@@ -188,8 +168,7 @@ final class MinimizedOverlayReconstructor {
     private void minimizeInheritedItems(
             List<Node> result,
             Node resolved,
-            Node inherited,
-            Map<Integer, Node> sourceItems) {
+            Node inherited) {
         List<Node> inheritedItems = inherited.getItems();
         int inheritedSize = inheritedItems.size();
         boolean appendOnly = BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY.equals(
@@ -205,8 +184,7 @@ final class MinimizedOverlayReconstructor {
         for (int index = 0; index < commonSize; index++) {
             if (sameNodeBlueId(
                     resolved.getItems().get(index),
-                    inheritedItems.get(index))
-                    && !isSourceReference(sourceItems.get(index))) {
+                    inheritedItems.get(index))) {
                 continue;
             }
             if (appendOnly) {
@@ -215,19 +193,16 @@ final class MinimizedOverlayReconstructor {
             }
             Node resolvedItem = resolved.getItems().get(index);
             Node inheritedItem = inheritedItems.get(index);
-            if (isSourceReference(sourceItems.get(index))
-                    || requiresWholeItemReplacement(resolvedItem, inheritedItem)) {
+            if (requiresWholeItemReplacement(resolvedItem, inheritedItem)) {
                 Node replacement = new Node();
                 reconstructNode(replacement, resolvedItem,
                         derivationBaseline(null, resolvedItem),
-                        sourceItems.get(index),
                         usesOwnTypeBaseline(null, resolvedItem));
                 result.add(new Node().position(index)
                         .properties("$replace", replacement));
             } else {
                 Node item = new Node();
-                reconstructNode(item, resolvedItem, inheritedItem,
-                        sourceItems.get(index), false);
+                reconstructNode(item, resolvedItem, inheritedItem, false);
                 if (!Nodes.isEmptyNode(item)) {
                     result.add(item.position(index));
                 }
@@ -243,7 +218,6 @@ final class MinimizedOverlayReconstructor {
                     item,
                     resolvedItem,
                     baseline,
-                    sourceItems.get(index),
                     usesOwnTypeBaseline(null, resolvedItem));
             result.add(item);
         }
@@ -303,8 +277,7 @@ final class MinimizedOverlayReconstructor {
     private void reconstructProperties(
             Node minimized,
             Node resolved,
-            Node inherited,
-            Node source) {
+            Node inherited) {
         if (resolved.getProperties() == null) {
             return;
         }
@@ -323,8 +296,6 @@ final class MinimizedOverlayReconstructor {
                     && inherited.getProperties() != null
                     ? inherited.getProperties().get(key)
                     : null;
-            Node sourceProperty = source != null && source.getProperties() != null
-                    ? source.getProperties().get(key) : null;
             if (isNonDerivableMaterializedReference(
                     resolvedProperty, inheritedProperty)) {
                 properties.put(key,
@@ -332,8 +303,7 @@ final class MinimizedOverlayReconstructor {
                                 resolvedProperty.getBlueId()));
                 continue;
             }
-            if (sameNodeBlueId(resolvedProperty, inheritedProperty)
-                    && !isSourceReference(sourceProperty)) {
+            if (sameNodeBlueId(resolvedProperty, inheritedProperty)) {
                 continue;
             }
             Node result = new Node();
@@ -343,7 +313,6 @@ final class MinimizedOverlayReconstructor {
                     result,
                     resolvedProperty,
                     baseline,
-                    sourceProperty,
                     usesOwnTypeBaseline(
                             inheritedProperty, resolvedProperty));
             if (!Nodes.isEmptyNode(result)) {
@@ -381,54 +350,8 @@ final class MinimizedOverlayReconstructor {
                 minimizedType,
                 resolvedType,
                 resolvedType.getType(),
-                null,
                 false);
         return minimizedType;
-    }
-
-    private void preserveExplicitCustomType(Node resolved, Node source, Node minimized) {
-        if (minimized.getType() != null || resolved.getType() == null
-                || source == null || source.getType() == null) {
-            return;
-        }
-        Node sourceType = source.getType();
-        if (sourceType.isReferenceOnly()
-                && BlueLanguageConstants.CORE_TYPE_BLUE_IDS.contains(sourceType.getBlueId())) {
-            return;
-        }
-        // Equality with an enclosing constraint does not erase the standalone
-        // Source contribution of an explicitly typed custom value. Preserve its
-        // exact declaration; do not assign that declaration to untyped children.
-        minimized.type(sourceType.clone());
-    }
-
-    private boolean isSourceReference(Node source) {
-        return source != null && source.isReferenceOnly();
-    }
-
-    private Map<Integer, Node> sourceItems(Node source, int resolvedSize) {
-        if (source == null || source.getItems() == null) {
-            return Collections.emptyMap();
-        }
-        Map<Integer, Node> positions = new LinkedHashMap<>();
-        List<Node> appended = new ArrayList<>();
-        for (Node item : source.getItems()) {
-            if (item.getPreviousBlueId() != null) {
-                continue;
-            }
-            if (item.getPosition() == null) {
-                appended.add(item);
-            } else {
-                Node replacement = item.getProperties() != null
-                        ? item.getProperties().get(BlueLanguageConstants.LIST_CONTROL_REPLACE) : null;
-                positions.put(item.getPosition(), replacement != null ? replacement : item);
-            }
-        }
-        int firstAppended = resolvedSize - appended.size();
-        for (int index = 0; index < appended.size(); index++) {
-            positions.putIfAbsent(firstAppended + index, appended.get(index));
-        }
-        return positions;
     }
 
     private void preservePayloadTypeForMetadataOverride(

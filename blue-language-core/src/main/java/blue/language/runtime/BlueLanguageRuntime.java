@@ -685,7 +685,6 @@ public final class BlueLanguageRuntime implements NodeResolver,
                         NO_LIMITS);
             return new MinimizedOverlayBuilder().build(
                     resolution.resolvedRoot(),
-                    preprocessed,
                     resolution.canonicalTypeIdentities());
         });
     }

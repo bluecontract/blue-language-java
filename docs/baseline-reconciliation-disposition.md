@@ -1,5 +1,21 @@
 # Language / Contracts baseline reconciliation — 15 September 2026
 
+## Current delivery decision: C03 deferred
+
+The user has approved completing the baseline first and deferring the whole
+C03 contextual Source-identity family to a later, separately qualified upstream
+delivery. This supersedes the earlier decision to retain the donor's nested
+identity/minimization alternative. The four affected Core production files,
+the Core API baseline and Core test tree are restored exactly to pinned merged
+`450230c18a41df8f873fb761d516f1bc85d7b5bd`. The five Contracts behavior families
+below remain unchanged. See [C03 deferral](baseline-c03-deferral.md) for the exact
+scope, known acceptance exception and pending binding work.
+
+The qualification/import sections below describe the preserved e101 delivery,
+not qualification of this new C03-deferred source. Its artifacts, manifests,
+test reports and the separate contextual-identity WIP remain historical inputs;
+none is relabeled as a newly qualified candidate.
+
 ## Source boundary
 
 The writable candidate starts at freshly fetched merged `origin/next`
@@ -23,17 +39,19 @@ combined source. POC branches, artifacts and optimizations are outside scope.
 | Imported numbered source receipt has a deferred representation tail; reference-only finalization spuriously advances its source epoch. | PR37 preserves admitted processing-event identity and is orthogonal to the source-epoch classifier. | Still needed, with upstream event threading preserved. | Narrowly accept already-reconciled numbered successor carriers under the existing exact imported-event and complete reference-only explanation guards. Real local mutations and ordinary older nonterminal imports remain epoch-advancing. | `FullLifecycleAdmissionTest`, `ManagedCheckpointSettlementOwnershipTest`, and merged `ProcessingEventClosureTest`. Historical focused 62/62; fresh combined run pending. |
 | Immutable A11's proof contains D2 while another exact witness selects D14; one calculating graph rewrites A11. | Upstream still filters witness edges only by lineage membership. | Still needed. | Carry complete immutable proof contexts through graph reconstruction, retry and actual kernel finalization/gas frames; only coherent exact witness edges calculate. Keep complete rows and live ownership promotion. | `RootedWitnessContextTest`, full Contracts owner/graph/rollback controls. Historical complete Contracts 578/578 at its checkpoint; fresh combined run pending. |
 | A fresh terminal cannot select a completed exact same-cause peer without changing its old admitted input. | No merged equivalent state-construction API. | Still needed. | Add `ClosureEvidenceFactory.rootedWitnessSelection(...)` with complete authenticated proofs and fixed inventories; protect owners and pending anchors; require fresh entry. No publication or durable scheduling authority is added. | `RootedWitnessSelectionTest`, rooted input-expansion, birth-retry and downstream terminal-acquisition controls. Historical complete Contracts 586/586 at its checkpoint; fresh combined run pending. |
-| Typed/untyped nested inline children diverge from exact references or lose Source identity after minimized cold reload. | PR36 is not incorporated; the RC25 reconstruction/minimization code is unchanged. | Still needed on this pinned base. | Retain explicit versus inherited custom-type contributions and pass the same preprocessed Source into the additive minimizer overload. Preserve old overload behavior, exact references, logical list positions and removal of derivable fields. | `NestedValueReferenceIdentityTest`, `SourceAwareMinimizedOverlayTest`, existing minimization/reference/selected-scope controls. Fresh combined run pending. |
+| C03: an exact typed child inline versus its reference under a typed Holder field produces different Source identities. Later donor follow-ups addressed untyped/cold-minimization regressions in the attempted correction. | The original typed case remains on pinned upstream; the two follow-ups are not evidence that both also fail there. PR36 is not incorporated. | Explicitly deferred by the user; known issue, not fixed or accepted as intended behavior. | No C03 Core/runtime/API delta remains against pinned 450. Remove only its two added Core test owners from this baseline; preserve their source and evidence in e101 and the separate WIP. No open-PR implementation is imported. | Original MyOS inherited-typed-child acceptance case remains a declared deferral exception. All pinned Core tests and independent exact-capture/minimization guards remain. New tuple qualification is pending. |
 | Named Compute cannot distinguish exact authored `constants` / `functions` from effective defaults. | No merged working-occurrence provenance API. | Still needed for Coordination consumers. | Add immutable `WorkingDocument.sourceContributionsAt(String)` through invocation-bound verified working/reference/type paths. Exclude own type defaults from direct contributions; expose current patches without synthesizing identity. | `ReferenceTransparentExecutionTest` and Coordination exact-provider named/direct controls. Fresh combined run pending. |
 | A valid `$pos` / `$replace` drops the new selector's retained slot-type definition. | Existing upstream list resolution already retains type constraints correctly. | Still needed only in the new provenance selector; not an upstream list-resolution fix. | Preserve slot-type context for deeper paths while discarding replaced ordinary fields; do not inject Dictionary `valueType` defaults. | Four positional replacement controls in `ReferenceTransparentExecutionTest` (historical full owner 40/40). Fresh combined run pending. |
-| Added APIs, one private source, approved specification amendment and current source locations change exact inventories and release bindings. | PR37 contributes its own API ledger/baselines, documentation and source audit; ordinary CI still lacks the donor's four PyYAML guard groups. | Adaptation needed. | Retain upstream event API descriptors and ledger entry; union additive baseline descriptors; preserve four exact historical transition controls and CI Python/PyYAML setup. Use maintained generators to bind the combined implementation, specification and fixture set; preserve historical releases and classification evidence. | API, module ownership, static guards, supported staged generation, documentation generation, clean build and final native quality/RC gates pending. |
+| Retained Contracts APIs, one private source, approved specification amendment and current source locations change exact inventories and release bindings. | PR37 contributes its own API ledger/baselines, documentation and source audit; ordinary CI still lacks the donor's four PyYAML guard groups. | Adaptation needed after C03 removal. | Retain upstream event and additive Contracts descriptors; restore Core's 1148-entry pinned API, without the unpublished Source-aware minimizer overload. Preserve exact historical transition controls and CI Python/PyYAML setup. Use maintained generators to bind the new source, specification and fixture set; preserve historical releases and classification evidence. | API, module ownership, static guards, supported staged generation, documentation generation, clean build and final native quality/RC gates pending. |
 
 ## Alternatives and compatibility
 
-The retained nested-identity path is necessary because the preferred alternative
-is not merged into the selected base. No open PR implementation is copied. A
-whole-Source hash/fallback minimizer would hide provenance loss and increase work;
-the donor instead threads the already available Source occurrence.
+C03 is deferred as a whole rather than retaining the superseded explicit-versus-
+inherited custom-type policy. This is an approved delivery-scope exception, not
+a conclusion that the original exact-node discrepancy is intended or repaired.
+The published two-argument minimizer remains unchanged. Any later upstream C03
+adoption requires a separately pinned source, exact artifacts and qualification;
+the current baseline neither imports nor waits for an open PR.
 
 Existing processing-event evidence added upstream remains the last argument to
 `DocumentStepInput` in `ClosureExecutionSession`. The source-epoch correction
@@ -41,11 +59,12 @@ does not replace the event identity, suppress imported events, relabel a result,
 or change gas tariffs. Immutable-witness changes retain the upstream full proof,
 owner/CAS and input/retry boundaries.
 
-The only normative change is the user-approved later detached-path retarget.
-Other runtime changes correct identity, graph preparation, exact evidence or
-epoch classification under retained contracts. Added APIs remain additive.
+The only retained normative change is the user-approved later detached-path
+retarget. Other retained runtime changes correct graph preparation, exact
+evidence or epoch classification under Contracts. The two added Contracts APIs
+remain additive; no independent Language Core behavior change remains.
 
-## Qualification status
+## Historical e101 qualification and import status
 
 The first full staged regeneration stopped at the managed-receipt exporter:
 the candidate fixtures bound the current Language source projection, while the
