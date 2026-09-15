@@ -165,6 +165,7 @@ SELF_PATHS = frozenset(
         REPORT_PATH,
         SUMMARY_PATH,
         "docs/reviews/pr36-contextual-reference-repair.pl.md",
+        "docs/checkpoint-domain-correction.md",
         "blue-conformance/src/main/tools/migration/pr36-contextual-reference-transition.json",
         "blue-conformance/src/main/tools/"
         "generate_identity_impact_inventory.py",

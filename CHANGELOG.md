@@ -73,6 +73,9 @@
 
 ### Fix
 
+- accept required exact checkpoint-domain objects or references, calculate their
+  representation-independent exact identity, and preserve duplicate-event detection
+
 - finish contextual inline/reference Source canonicalization with explicit
   occurrence materialization evidence, schema-only preservation, and identical
   typed Dictionary/List validation; exact-content hashing remains unchanged
