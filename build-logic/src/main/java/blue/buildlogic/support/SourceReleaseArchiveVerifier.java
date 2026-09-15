@@ -61,7 +61,7 @@ public final class SourceReleaseArchiveVerifier {
                 if (isNonPortable(name)) {
                     violations.add("non-portable-entry:" + name);
                 }
-                if (isDebris(name)) {
+                if (isDebris(name, prefix)) {
                     violations.add("forbidden-debris:" + name);
                 }
                 timestamps.add(entry.getTime());
@@ -138,8 +138,10 @@ public final class SourceReleaseArchiveVerifier {
                 || name.contains("//");
     }
 
-    private static boolean isDebris(String name) {
+    private static boolean isDebris(String name, String rootPrefix) {
         String lower = name.toLowerCase(Locale.ROOT);
+        String relativePath = name.startsWith(rootPrefix + "/")
+                ? name.substring(rootPrefix.length() + 1) : name;
         String[] segments = lower.split("/");
         for (String segment : segments) {
             if (segment.equals(".git")
@@ -163,7 +165,8 @@ public final class SourceReleaseArchiveVerifier {
                 || lower.endsWith(".pyo")
                 || lower.endsWith(".zip")
                 || lower.endsWith(".tar")
-                || lower.endsWith(".tar.gz")
+                || (lower.endsWith(".tar.gz")
+                        && !RepositorySourceFiles.isRequiredVerificationArchive(relativePath))
                 || lower.endsWith(".tgz");
     }
 

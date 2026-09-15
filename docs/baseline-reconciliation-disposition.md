@@ -159,3 +159,49 @@ checker verifies the captured input against its own captured environment and
 does not claim current production execution. The generated public API reference
 still requires the maintained documentation refresh. The parent owns the
 unchanged-source Contracts rerun and root controls before final qualification.
+
+## Build and source-distribution follow-up
+
+The unchanged-source rerun at `70d8d9b06572f5cc906a842c4ef486c5d1802e24`
+passed all 612 Contracts tests and all 480 release fixtures (185 Language and
+295 Contracts, no skips). The selected root controls passed 16/17; the sole
+failure was the conformance build script's 160 lines exceeding the unchanged
+150-line policy. Its five transition task registrations now share one
+configuration block, reducing the script to 133 lines while retaining every
+task name, Python command, input directory and both check/release hooks. No
+test, threshold or release prerequisite was removed.
+
+Source-distribution review found that the existing blanket archive exclusion
+omitted three tracked byte images required by those mandatory transition
+checks. A shared case-sensitive exact-path inclusion set now covers only
+`classify-retired-slot-reviewed-after.tar.gz`,
+`classify-legal-detached-retarget-reviewed-after.tar.gz` and
+`classify-baseline-reconciliation-reviewed-inputs.tar.gz` under
+`blue-conformance/src/main/tools/migration/`. Archive extension detection is
+case-insensitive, while the approved paths remain case-sensitive. All other
+archive/debris exclusions remain; generated copies and wrong-directory,
+wrong-name or wrong-case archives are not admitted. The same rule applies to
+clean-source projection and source-ZIP debris validation.
+
+Four bounded build-logic tests cover those input sets, case/extension negatives,
+after-marker archive mutation/removal, retained ZIP bytes and missing/unexpected
+ZIP entries. The mandatory transition checks still own initial required-file
+presence and exact reviewed-hash authentication. ZIP validation compares the
+declared entry set; it neither authenticates review hashes nor proves that an
+initially absent source input was present. Clean evidence binds changes after
+its marker. The four other historical-only archives remain excluded; this is
+not standalone rebuild coverage for every optional historical tool. No runtime,
+specification, API, fixture or cyclic-role identity changes in this packaging
+correction; new final clean-build evidence must follow the source commit.
+
+The maintained documentation generator completed in the same rerun. All eight
+registered outputs were reviewed; only `reference/public-api.md` and
+`reference/conformance-fixtures.md` differed and were imported byte-for-byte.
+They expose the three approved additive methods and current role/package/spec
+bindings. Their complete API blocks match all seven compiled inventories; the
+fixture reference matches the fresh 480-result report. Gas, host metrics,
+packages, SPI, statuses and module graph outputs are unchanged, as is the
+hand-authored `reference/processing-observations.md`. The generated directory,
+declared input reports, hashes and exact diffs are retained externally. The
+configuration/packaging regression rerun and final ordered native quality/RC
+qualification remain parent-owned and pending; prior failure receipts remain.
