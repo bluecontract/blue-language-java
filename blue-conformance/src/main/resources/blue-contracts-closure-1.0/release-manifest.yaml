@@ -11,8 +11,8 @@ languageDependency:
   specificationSha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   cyclicSetSemanticAlgorithm: Blue Language 1.0 section 15
   cyclicMemberIdentityFormat: MASTER#index
-  cyclicSetFinalizerBaselineIdentity: sha256:d4f8934f82e2330a165a612e4d9d72e0ceff1c7c0df37b0d08772e66629344c7
-  cyclicSetProofVerifierBaselineIdentity: sha256:bd14a60f67cbc9a19fadc4b0d5a4adc8ed7578151f0c14c2591835dd8b9f73a0
+  cyclicSetFinalizerBaselineIdentity: sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b
+  cyclicSetProofVerifierBaselineIdentity: sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834
   inputImplementationBaseline:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ActivationIntervalValidator.java
     sha256: 574c9670f8caefa1f6c834cef5b82819b647048b1c5af04de25fc1e5bfbee955
@@ -61,7 +61,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/CheckpointManager.java
     sha256: ab676cf65c47ee8e1261ab25a0a19afb727cadda9b9058617d99eb9e7efe32c7
   - path: blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java
-    sha256: f9d2bbc2af345a8ad6f0b73eb09ee84a759833dc8b99764323446b42c32e0cb7
+    sha256: b0c0f253d58332976bb4b4b3319a664bb5b5d6653a86488e11ab01711fac837c
   - path: blue-contracts-core/src/main/java/blue/language/processor/CompositeProcessingObserver.java
     sha256: 3600fe3c2b8c4732e687557addc93e46c8b452094da6786899d87d1d6a3d5ee9
   - path: blue-contracts-core/src/main/java/blue/language/processor/ConformanceChangedPath.java
@@ -997,7 +997,7 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputBuilder.java
     sha256: 85ba8531e888fa79651107a0987d0b8a2a616025b79844310a7a47c8e15b8af7
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java
-    sha256: a97d7e6f02628d0a88eb48eee9d6d267b574dd528c14b8239158789333589843
+    sha256: c17972ee12ab23d934afb07131a227820cf3b0386f83803d31343d5646826d8d
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalJsonHasher.java
     sha256: 91df7f443750dfac524066524bd54386a0fd4f142ef2b8bd978f6efdcae095ca
   - path: blue-language-core/src/main/java/blue/language/identity/CanonicalJsonValueWriter.java
@@ -1297,9 +1297,9 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/resolve/ExcludedPathLimits.java
     sha256: 2c1870b94d828c281f389c115c2a2bf008bc798316ca904ded7725242806cda4
   - path: blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayBuilder.java
-    sha256: 9d855f22be25218e1ad92259e39fd98cae2afb1bae4ed11265bcbede0c02057e
+    sha256: 16cc34b3dba8063d02e82083ec297ccbe1afda1fbcd9c82a7150b4dce6b7825c
   - path: blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayReconstructor.java
-    sha256: f6047c51fe98a20c7afc24734fbf948d28558c5631398643676be4d9c42e9a06
+    sha256: d6dae5f1ebdb62bd6b24a93356b04a1d22a7f988338f48894ed2cce35513b91e
   - path: blue-language-core/src/main/java/blue/language/resolve/NoLimits.java
     sha256: cf2b0092577c1a38117d2d102a30bee6ddb20283c806a8d47d36aca1c7cdaf5c
   - path: blue-language-core/src/main/java/blue/language/resolve/NodeToPathLimitsConverter.java
@@ -1317,7 +1317,7 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/runtime/BlueLanguage.java
     sha256: a6e9f6cbc5f5edbb2446b7b8b465363c50e58fa6b64f59a06b82d49623e50353
   - path: blue-language-core/src/main/java/blue/language/runtime/BlueLanguageRuntime.java
-    sha256: 099b351e9ed21f576d96f9a2f0e87192b84253e7aacddd3f595bc905ff925b40
+    sha256: ac3c010fa232f81a91ad6b15fece85ffe5521c02899ca275549dadac71c8851e
   - path: blue-language-core/src/main/java/blue/language/runtime/LanguageMatchingService.java
     sha256: 8ec00f64124905581fc2f14fc4e250e0d082b0f7244f579f3100b8f95cf551c8
   - path: blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java
@@ -1513,7 +1513,7 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:7bd3a699d1649bd20c715ef001d61a39547942fa7db3ab65c434a480e025db47
+  packageIdentity: sha256:9323cd0b2b4202c08d8165a99102aa6d8a52f3e718fc33647e34ba211859a60f
   vectorCount: 182
   fixtureCount: 295
 oraclePackage:
@@ -1542,4 +1542,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:06ca8273a28f9fb0298ec6aae672c2558b613582b3e61d4c651e86399fe67631
+releaseIdentity: sha256:e3dc23d3e43325fde45a3d07e175ce79e66ead7793ebcc41a1633fb3db978044

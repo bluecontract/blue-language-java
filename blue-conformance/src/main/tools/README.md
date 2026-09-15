@@ -166,3 +166,17 @@ rehashed source changes, outcome/gas/order changes and changed runtime inventory
 against the complete frozen hashes. They never regenerate fixtures or execute
 Gradle. Both complete inventories and the review digest must match; there is no
 generic source-hash, inventory-growth or semantic acceptance rule.
+
+## Baseline-first C03 deferral
+
+`classify-baseline-c03-deferral-transition.json` recognizes only the frozen
+donor-e28 package and the complete actual stage generated from clean `6f9af472`.
+Only ten existing Contracts source digests and the derived release identity
+change; all other 382 files, including all 295 executable fixtures, are identical.
+The seven-control `baselineC03DeferralReleaseTransitionTest` reconstructs its
+before-image from the unchanged historical archive and witness-selection
+after-manifest, then uses the actual new generated after-manifest. It adds no
+archive, generic source-hash exception or future fixture approval. Both `check`
+and `releaseConformanceTest` retain all previous transition tasks and require
+the new exact-pair controls. See `docs/baseline-c03-deferral.md` for the approved
+delivery exception and the separate remaining native/artifact qualification.

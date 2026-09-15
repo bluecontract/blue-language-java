@@ -1182,6 +1182,24 @@ def reviewed_baseline_reconciliation_transition(before_files, after_files):
     return None
 
 
+BASELINE_C03_DEFERRAL_REVIEW_INPUT_PATH = (
+    Path(__file__).resolve().parent / "migration" / "classify-baseline-c03-deferral-transition.json"
+)
+BASELINE_C03_DEFERRAL_REVIEW_INPUT_SHA256 = "421d1e0ded89256b267a4a8e710bfaa767a8e1679a5700dba3415ca4c4f86780"
+
+
+def reviewed_baseline_c03_deferral_transition(before_files, after_files):
+    """Recognize only the complete donor-to-reviewed baseline metadata pair."""
+    data = BASELINE_C03_DEFERRAL_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != BASELINE_C03_DEFERRAL_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed C03-deferral binding review bytes changed")
+    review = json.loads(data)
+    if ({path: sha256(file) for path, file in before_files.items()} != review["before"]["files"]
+            or {path: sha256(file) for path, file in after_files.items()} != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
@@ -1662,6 +1680,8 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         reviewed_transition = reviewed_rooted_witness_selection_transition(before_files, after_files)
     if reviewed_transition is None:
         reviewed_transition = reviewed_baseline_reconciliation_transition(before_files, after_files)
+    if reviewed_transition is None:
+        reviewed_transition = reviewed_baseline_c03_deferral_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
         before_root, after_root, after_files, reviewed_transition
     )
@@ -1733,7 +1753,9 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "reviewedBaselineTransition": None if reviewed_transition is None else {
             "id": reviewed_transition["id"],
             "rationale": reviewed_transition["rationale"],
-            "reviewInputSha256": (BASELINE_RECONCILIATION_REVIEW_INPUT_SHA256
+            "reviewInputSha256": (BASELINE_C03_DEFERRAL_REVIEW_INPUT_SHA256
+                if reviewed_transition["id"] == "baseline-c03-deferred-exact-generated-transition"
+                else BASELINE_RECONCILIATION_REVIEW_INPUT_SHA256
                 if reviewed_transition["id"] in {
                     "baseline-reconciliation-upstream-exact-generated-transition",
                     "baseline-reconciliation-donor-exact-generated-transition",

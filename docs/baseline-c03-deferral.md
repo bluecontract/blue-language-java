@@ -53,7 +53,7 @@ The separate `language-contextual-identity` worktree and its unfinished WIP are
 untouched. Existing e101 artifacts and all failed/passing diagnostic evidence
 remain historical; none qualifies this changed baseline.
 
-## Pending binding and verification work
+## Reviewed generation and remaining qualification
 
 This source edit does not manually rewrite generated fixture expectations.
 The maintained cyclic-only bootstrap has restored the two implementation roles
@@ -62,20 +62,45 @@ independent lifecycle helper changes only its two reviewed role constants;
 its original role pair and all frozen event/work/gas/rejection constructors and
 assertions remain intact. The bootstrap receipt is external to this source.
 The 742-path implementation inventory and 817-source ownership count remain
-unchanged: no production file was added or deleted. Four implementation file
-digests change, so the generated release/source manifests, aggregate/resource
-bindings and exact transition review must still be refreshed against the new
-source after the cyclic bootstrap. The Language specification
+unchanged: no production file was added or deleted. Four Core implementation
+digests and the derived Contracts runtime-role binding change against e101.
+The Language specification
 and source-preprocessing specification binding remain at pinned upstream;
 the approved Contracts retarget amendment is retained.
 
-Next, after source review: verify the native API/architecture and affected Core,
-minimization, selected-scope and Contracts owners; use maintained binding and
-package generation; inspect every staged semantic/identity difference before
-import; refresh generated API documentation and qualify a newly sealed tuple.
-Historical transition approvals must remain intact. Existing e101 fixture,
-API-documentation, clean-build and artifact receipts are not fresh evidence.
+Clean input `6f9af4728a4a109684ea315de2f41cd6bf61f8fe` passed the grouped native
+gate: Core 173/173, Contracts 612/612 and nine selected root owners 90/90, with
+no failures or skips. This includes minimization, exact-capture, architecture
+and API checks, not the full native qualification. Gradle used Java 17; the
+actual test executors used the maintained Java 8 runtime. The incorrectly
+qualified SourceStyle selector matched no owner and is not claimed as coverage.
 
-No JVM test, package regeneration or artifact export is claimed by this source
-record. The local input commit and subsequent results belong in the root-owned
-evidence receipts.
+Maintained full package generation from that clean input completed in 1166.874
+seconds with source unchanged. Independent complete-byte/leaf review and static
+package validation passed before exact maintained publication of its 383-file
+Contracts subtree. Relative to frozen donor e28, only ten existing Contracts
+source hashes and the derived release identity change; all other 382 files,
+including all 295 executable fixtures, are byte-identical. Against e101, 80
+closure fixtures and one separate trace change only derived identity fields;
+numeric gas, outcomes, payload/state/history and order remain unchanged.
+
+The new exact donor-to-stage metadata record reuses the already frozen archive
+and witness-selection after-manifest. Its complete inventories and review digest
+are pinned; no generic source-hash waiver or new full-fixture archive is added.
+The original strict classifier rejections remain external evidence. All old
+transition records and approvals remain unchanged, and the new seven-control
+owner rejects unreviewed inventory, source, outcome, gas, order, state and
+identity changes.
+
+The new Contracts release identity is
+`sha256:e3dc23d3e43325fde45a3d07e175ce79e66ead7793ebcc41a1633fb3db978044`;
+its fixture package is
+`sha256:9323cd0b2b4202c08d8165a99102aa6d8a52f3e718fc33647e34ba211859a60f`.
+Generated references, fresh clean/native quality gates, new immutable artifacts
+and downstream qualification remain separate work. Static validation does not
+claim Java-template `PACKAGE_VALID` or implementation conformance. Existing
+e101 API-documentation, clean-build and artifact receipts are not fresh evidence.
+Exact commands, complete manifests, original failures and approvals are retained
+in the root-owned evidence runs, including `language-c03-deferred-affected-01`,
+`language-c03-deferred-regeneration-01`, `language-c03-deferred-stage-review-01`
+and `language-c03-deferred-import-01`.

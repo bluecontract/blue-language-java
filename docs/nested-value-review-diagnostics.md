@@ -1,5 +1,10 @@
 # Nested-value Source identity upstream-review diagnostic
 
+> Historical donor/C03 evidence only. The current baseline defers the whole C03
+> family; see [the approved deferral boundary](baseline-c03-deferral.md). This
+> record preserves the diagnostic, exact-capture oracle and test-style history;
+> it is not fresh qualification of the C03-deferred baseline.
+
 ## Qualification records and test-style correction
 
 Qualification is recorded in immutable external receipts after each source

@@ -16,6 +16,18 @@ not qualification of this new C03-deferred source. Its artifacts, manifests,
 test reports and the separate contextual-identity WIP remain historical inputs;
 none is relabeled as a newly qualified candidate.
 
+Current C03-deferred input `6f9af4728a4a109684ea315de2f41cd6bf61f8fe` passed
+173 Core, 612 Contracts and 90 selected root cases, with native Java 8 test
+executors and Java 17 Gradle. The complete maintained stage and independent
+semantic/static review passed before exact import. Relative to the frozen
+donor package, all 295 executable fixtures and the other 382 package files are
+byte-identical; only ten existing Contracts implementation hashes and the
+derived release identity differ. A separate exact metadata-only transition
+record and seven corruption controls preserve every historical approval.
+Per-correction pending final qualification below is not a claim that the old
+e101 tuple qualifies this source. See the deferral record for exact scope and
+the remaining generated-reference, clean/native and new-artifact gates.
+
 ## Source boundary
 
 The writable candidate starts at freshly fetched merged `origin/next`
