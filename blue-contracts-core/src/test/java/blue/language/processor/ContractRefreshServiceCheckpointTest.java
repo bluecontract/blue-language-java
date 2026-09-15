@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.mapping.TypeClassResolver;
 import blue.language.model.Node;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.CheckpointEntry;
 import blue.language.processor.model.Contract;
@@ -46,7 +47,9 @@ final class ContractRefreshServiceCheckpointTest {
 
     @Test
     void selectedEntriesRestoreExactDomainAndSubject() {
-        Node domain = new Node().blueId("domain-blue-id");
+        String domainId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("selected domain"));
+        Node domain = new Node().blueId(domainId);
         Node subject = new Node().properties(
                 "timelineId", new Node().value("timeline"),
                 "entry", new Node().value(7L));
@@ -61,7 +64,7 @@ final class ContractRefreshServiceCheckpointTest {
                 checkpoint, checkpointNode(selectedEntries));
 
         CheckpointEntry restored = checkpoint.entry("source");
-        assertEquals("domain-blue-id", restored.domainBlueId());
+        assertEquals(domainId, restored.domainBlueId());
         assertEquals(subject.getProperties().get("timelineId").getValue(),
                 restored.getSubject().getProperties()
                         .get("timelineId").getValue());
@@ -69,8 +72,10 @@ final class ContractRefreshServiceCheckpointTest {
 
     @Test
     void referenceOnlySelectedEntryRetainsMaterializedEffectiveFields() {
+        String domainId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("effective domain"));
         ChannelEventCheckpoint checkpoint = new ChannelEventCheckpoint()
-                .putEntry("source", "effective-domain", "effective-subject");
+                .putEntry("source", domainId, "effective-subject");
         Node selectedEntries = new Node().properties(
                 "source", new Node().blueId("checkpoint-entry-reference"));
 
@@ -78,7 +83,7 @@ final class ContractRefreshServiceCheckpointTest {
                 checkpoint, checkpointNode(selectedEntries));
 
         CheckpointEntry restored = checkpoint.entry("source");
-        assertEquals("effective-domain", restored.domainBlueId());
+        assertEquals(domainId, restored.domainBlueId());
         assertEquals("effective-subject", restored.getSubject().getBlueId());
     }
 

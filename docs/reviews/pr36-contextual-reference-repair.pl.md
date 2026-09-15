@@ -1,5 +1,21 @@
 # PR #36: kontrakt naprawy referencji kontekstowych
 
+## Podział na prerequisite Contracts i Source
+
+Definicja domeny checkpointu, kaskada jej identyfikatorów oraz poprawka
+`CheckpointEntry.domainBlueId()` są wydzielone do pierwszego PR.
+[Szczegóły prerequisite](../checkpoint-domain-correction.md) opisują regresję:
+inline i referencja muszą rozpoznawać ten sam powtórzony event. Drugi PR
+zachowuje kanonikalizację Source oraz jawny typ nowych wpisów checkpointu,
+którego kanoniczna reprezentacja zależy od tej zmiany Language.
+
+Po poprawce odczytu domeny ponowna regeneracja pełnego pakietu zmieniła tylko
+hash implementacji `CheckpointEntry.java` i wynikowy `releaseIdentity`.
+Bajty fixture, oracle i gas pozostały identyczne. Poniższy audyt zachowuje
+porównanie całej poprawki do historycznej wersji #36; bieżący diff PR jest
+porównywany do wydzielonego prerequisite.
+
+
 Dotyczy [PR #36](https://github.com/bluecontract/blue-language-java/pull/36)
 i [C03 / development#24](https://github.com/bluecontract/development/issues/24).
 Punkt wyjścia implementacji: `9eb47786cee058af3868ed581bd9fb4b7e15850c`;
