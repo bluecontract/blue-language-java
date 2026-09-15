@@ -20,6 +20,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -34,6 +35,15 @@ final class RepositorySourceFilesTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    private Path projectDirectory;
+    private Path gradleUserHomeDirectory;
+
+    @BeforeEach
+    void prepareProjectDirectories() throws Exception {
+        projectDirectory = Files.createDirectories(temporaryDirectory.resolve("project")).toRealPath();
+        gradleUserHomeDirectory = Files.createDirectories(temporaryDirectory.resolve("gradle-user-home")).toRealPath();
+    }
 
     @Test
     void shouldIncludeOnlyExactRequiredArchivesInCleanAndSourceReleaseInputs() throws Exception {
@@ -59,7 +69,7 @@ final class RepositorySourceFilesTest {
                 write(MIGRATION + "Classify-retired-slot-reviewed-after.tar.gz", "wrong path case"),
                 write(MIGRATION + "classify-legal-detached-retarget-reviewed-after.TAR.GZ", "upper extension"),
                 write(MIGRATION + "classify-baseline-reconciliation-reviewed-inputs.TaR.gZ", "mixed extension"));
-        Project project = ProjectBuilder.builder().withProjectDir(temporaryDirectory.toFile()).build();
+        Project project = newProject();
 
         // when
         Set<String> cleanSource = names(RepositorySourceFiles.create(project).getFiles());
@@ -80,7 +90,7 @@ final class RepositorySourceFilesTest {
         // given
         Project project = fixture();
         Path marker = write("build/clean-build.json", CleanBuildEvidence.createCleanBuild(
-                temporaryDirectory, sourcePaths(project), COMMIT, "42", ":clean", ":build",
+                projectDirectory, sourcePaths(project), COMMIT, "42", ":clean", ":build",
                 List.of("clean", "build"), Collections.emptyList()));
 
         // when / then
@@ -93,7 +103,7 @@ final class RepositorySourceFilesTest {
             assertEquals("source-inputs-changed-since-clean-build", verify(marker, project).getReason());
             write(path, "reviewed:" + path);
             assertTrue(verify(marker, project).isVerified(), path);
-            Files.delete(temporaryDirectory.resolve(path));
+            Files.delete(projectDirectory.resolve(path));
             assertFalse(verify(marker, project).isVerified(), path);
             write(path, "reviewed:" + path);
             assertTrue(verify(marker, project).isVerified(), path);
@@ -106,7 +116,7 @@ final class RepositorySourceFilesTest {
         Project project = fixture();
         List<Path> inputs = RepositorySourceFiles.createForSourceRelease(project).getFiles().stream()
                 .map(File::toPath).collect(Collectors.toCollection(ArrayList::new));
-        inputs.add(temporaryDirectory.resolve(".cz.toml"));
+        inputs.add(projectDirectory.resolve(".cz.toml"));
         Set<String> expected = inputs.stream().map(this::entryName)
                 .collect(Collectors.toCollection(TreeSet::new));
 
@@ -126,14 +136,14 @@ final class RepositorySourceFilesTest {
             }
         }
         List<Path> missing = new ArrayList<>(inputs);
-        missing.remove(temporaryDirectory.resolve(REQUIRED.get(0)));
+        missing.remove(projectDirectory.resolve(REQUIRED.get(0)));
         SourceReleaseArchiveVerifier.Result absent = SourceReleaseArchiveVerifier.verify(
                 zip("missing.zip", missing), expected, "blue-1.0");
         assertFalse(absent.isValid());
         assertTrue(absent.getViolations().contains("missing-entry:blue-1.0/" + REQUIRED.get(0)));
         for (String path : List.of(MIGRATION + "unreviewed.tar.gz", "other/" + REQUIRED.get(0),
                 "build/" + REQUIRED.get(0), MIGRATION + "classify-retired-witness-reviewed-after.tar.gz")) {
-            Path arbitrary = temporaryDirectory.resolve(path);
+            Path arbitrary = projectDirectory.resolve(path);
             List<Path> extraInputs = new ArrayList<>(inputs);
             extraInputs.add(arbitrary);
             Set<String> extraExpected = new TreeSet<>(expected);
@@ -158,7 +168,12 @@ final class RepositorySourceFilesTest {
                 "scratch.tar.gz", "scratch.zip", "scratch.tar", "scratch.tgz")) {
             write(path, "not a required source input");
         }
-        return ProjectBuilder.builder().withProjectDir(temporaryDirectory.toFile()).build();
+        return newProject();
+    }
+
+    private Project newProject() {
+        return ProjectBuilder.builder().withProjectDir(projectDirectory.toFile())
+                .withGradleUserHomeDir(gradleUserHomeDirectory.toFile()).build();
     }
 
     private List<Path> sourcePaths(Project project) {
@@ -167,21 +182,21 @@ final class RepositorySourceFilesTest {
     }
 
     private Set<String> names(Collection<File> files) {
-        return files.stream().map(file -> temporaryDirectory.relativize(file.toPath()).toString()
+        return files.stream().map(file -> projectDirectory.relativize(file.toPath()).toString()
                 .replace(File.separatorChar, '/')).collect(Collectors.toCollection(TreeSet::new));
     }
 
     private CleanBuildEvidence.Verification verify(Path marker, Project project) {
-        return CleanBuildEvidence.verify(marker, temporaryDirectory, sourcePaths(project),
+        return CleanBuildEvidence.verify(marker, projectDirectory, sourcePaths(project),
                 COMMIT, "42", ":clean", ":build");
     }
 
     private String entryName(Path path) {
-        return "blue-1.0/" + temporaryDirectory.relativize(path).toString().replace(File.separatorChar, '/');
+        return "blue-1.0/" + projectDirectory.relativize(path).toString().replace(File.separatorChar, '/');
     }
 
     private Path zip(String name, Collection<Path> files) throws Exception {
-        Path output = temporaryDirectory.resolve("build").resolve(name);
+        Path output = projectDirectory.resolve("build").resolve(name);
         Files.createDirectories(output.getParent());
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(output))) {
             for (Path path : files) {
@@ -196,7 +211,7 @@ final class RepositorySourceFilesTest {
     }
 
     private Path write(String relativePath, String content) throws Exception {
-        Path path = temporaryDirectory.resolve(relativePath);
+        Path path = projectDirectory.resolve(relativePath);
         Files.createDirectories(path.getParent());
         return Files.writeString(path, content, StandardCharsets.UTF_8);
     }
