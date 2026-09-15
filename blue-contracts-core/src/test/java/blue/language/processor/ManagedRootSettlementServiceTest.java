@@ -38,6 +38,40 @@ final class ManagedRootSettlementServiceTest {
             DirectBlueIdCalculator.calculateBlueId(SOURCE_TYPE);
 
     @Test
+    void checkpointValueTypeAcceptsExactObjectDomainsAndRequiresPresence() {
+        // Given the registry's checkpoint Dictionary and an exact object domain.
+        List<String> reads = new ArrayList<>();
+        try (BlueLanguage language = BlueLanguage.builder().nodeProvider(id -> {
+            reads.add(id);
+            return BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider().fetchByBlueId(id);
+        }).build()) {
+            Node domain = language.preprocessing().preprocess(
+                    new Node().properties("runtime", new Node().value("example")));
+            String domainId = language.identity().directBlueId(domain);
+            Node checkpoint = new Node().type(new Node().blueId(
+                    blue.language.processor.registry.RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT));
+            String inlineId = null;
+            // When the domain is supplied inline or as an opaque exact reference.
+            for (Node value : new Node[] {domain, new Node().blueId(domainId)}) {
+                Node entry = new Node().properties("domain", value)
+                        .properties("subject", new Node().value("subject"));
+                Node input = checkpoint.clone().properties("entries",
+                        new Node().properties("channel", entry));
+                String id = language.identity().sourceDocumentBlueId(input);
+                if (inlineId == null) inlineId = id;
+                assertEquals(inlineId, id);
+                language.resolution().resolve(input);
+            }
+            // Then Language enforces presence while domain interpretation belongs
+            // to the owning Contracts runtime; it does not invent a Text constraint.
+            assertFalse(reads.contains(domainId));
+            Node missing = checkpoint.properties("entries", new Node().properties("channel",
+                    new Node().properties("subject", new Node().value("subject"))));
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(missing));
+        }
+    }
+
+    @Test
     void freezesManagerlessNormalizedChannelsAsCanonicalSource() {
         // given
         Node exactChannel = sourceContract();

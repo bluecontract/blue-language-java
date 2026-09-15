@@ -330,6 +330,15 @@ final class ReferenceResolver {
                 || hasConcretePayload(target);
     }
 
+    void validateListItemContribution(Node contribution, Node itemType) {
+        Node exact = contribution.isReferenceOnly()
+                ? canonicalReference(contribution.getBlueId(),
+                        engine.activeResolutionState()).canonical.toNode()
+                : contribution;
+        mergingProcessor.validateListItem(exact, itemType, nodeProvider,
+                engine, engine.canonicalTypeIdentities());
+    }
+
     private boolean hasConcretePayload(Node node) {
         if (node == null) {
             return false;
@@ -345,6 +354,9 @@ final class ReferenceResolver {
                                       ResolutionLimits limits,
                                       ResolutionEngine.ResolutionState state) {
         CanonicalReference canonicalReference = canonicalReference(blueId, state);
+        state.canonicalTypeIdentityIndex.recordVerifiedReferenceContent(
+                blueId, canonicalReference.canonical);
+        state.materializedReferenceTargets.add(target);
         if (canonicalReference.canonical.containsCyclicSetReference()) {
             materializeCyclicSetReference(target, blueId, limits, state, canonicalReference);
             return;
@@ -357,7 +369,7 @@ final class ReferenceResolver {
         }
         engine.mergeCanonicalObjectWithContribution(target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
         engine.copyMaterializedReferenceLabels(target, materialized);
-        target.blueId(blueId);
+        target.blueId(blueId).materializedReferenceBlueId(blueId);
     }
 
     private void materializeCyclicSetReference(Node target,
@@ -382,7 +394,7 @@ final class ReferenceResolver {
             engine.mergeCanonicalObjectWithContribution(
                     target, mergeable, limits, ResolutionEngine.Contribution.MATERIALIZED_REFERENCE);
             engine.copyMaterializedReferenceLabels(target, materialized);
-            target.blueId(blueId);
+            target.blueId(blueId).materializedReferenceBlueId(blueId);
         } finally {
             materializingReferences.remove(blueId);
         }
@@ -431,8 +443,16 @@ final class ReferenceResolver {
         }
 
         try {
+            int[] candidateMark = engine.candidateMark();
             Node resolved = engine.resolveCanonicalWithContribution(
                     canonical.toNode(), limits, ResolutionEngine.Contribution.INSTANCE);
+            /*
+             * Nested references deferred while this content resolved under a
+             * definition goal must complete before the content is cloned into
+             * its enclosing value or cached; the pending candidates point at
+             * these nodes, not at the copies.
+             */
+            engine.materializePendingDefinitionReferences(resolved, candidateMark);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified
                     && resolvedReferenceCache != null && limits == ResolutionLimits.NO_LIMITS) {

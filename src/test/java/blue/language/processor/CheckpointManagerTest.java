@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -26,8 +27,10 @@ final class CheckpointManagerTest {
     private static final long EXPECTED_MARKER_WRITES = 1L;
     private static final long EXPECTED_CHECKPOINT_WRITES = 1L;
     private static final long EXPECTED_IDENTITY_NODES = 10L;
-    private static final long EXPECTED_REBUILT_MEMBERS = 13L;
-    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 22L;
+    // The canonical entry adds one type reference member; its direct input
+    // grows from 136 to 201 bytes, requiring one additional hash block.
+    private static final long EXPECTED_REBUILT_MEMBERS = 14L;
+    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 23L;
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
@@ -138,6 +141,8 @@ final class CheckpointManagerTest {
                                 .DIRECT_IDENTITY_HASH_BLOCK);
         // then
         assertNotNull(stored);
+        assertEquals(RuntimeBlueIds.CHECKPOINT_ENTRY,
+                stored.getAsText("/type/blueId"));
         assertEquals(domainBlueId,
                 stored.getAsText("/domain/blueId"));
         assertEquals("payload",

@@ -491,7 +491,8 @@ class EffectiveFragmentationCatalogTest {
         // then
         assertEquals(inlineSurfaceSignature, fragmentedSurfaceSignature);
         assertEquals(inlineSurfaceSignature, referenceSurfaceSignature);
-        assertNotEquals(inlineRootBlueId, fragmentedRootBlueId);
+        assertEquals(inlineRootBlueId, fragmentedRootBlueId,
+                "inline and fragmented contracts derive one Source identity");
         assertEquals(rootBlueId, fragmentedRootBlueId);
         assertEquals(rootBlueId, referenceRootBlueId);
         assertEquals(

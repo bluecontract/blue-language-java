@@ -18,8 +18,8 @@ import java.util.Map;
  */
 final class FrozenNodeRetainedWeight {
 
-    private static final long FROZEN_NODE_BYTES = 112L;
-    private static final long MUTABLE_NODE_BYTES = 104L;
+    private static final long FROZEN_NODE_BYTES = 120L;
+    private static final long MUTABLE_NODE_BYTES = 112L;
     private static final long SCHEMA_BYTES = 80L;
     private static final long STRING_BYTES = 48L;
     private static final long LIST_BYTES = 32L;
@@ -51,6 +51,7 @@ final class FrozenNodeRetainedWeight {
                         node.name,
                         node.description,
                         node.referenceBlueId,
+                        node.materializedReferenceBlueId,
                         node.mergePolicy,
                         node.previousBlueId,
                         node.cachedBlueId());
@@ -72,6 +73,7 @@ final class FrozenNodeRetainedWeight {
                         node.getName(),
                         node.getDescription(),
                         node.getBlueId(),
+                        node.getMaterializedReferenceBlueId(),
                         node.getMergePolicy(),
                         node.getPreviousBlueId());
                 push(pending, node.getRawValue());
@@ -221,6 +223,7 @@ final class FrozenNodeRetainedWeight {
         weight += retainedString(node.description, seen);
         weight += retainedValue(node.value, seen);
         weight += retainedString(node.referenceBlueId, seen);
+        weight += retainedString(node.materializedReferenceBlueId, seen);
         weight += retainedString(node.mergePolicy, seen);
         weight += retainedString(node.previousBlueId, seen);
         weight += retainedString(node.cachedBlueId(), seen);
@@ -251,6 +254,7 @@ final class FrozenNodeRetainedWeight {
         weight += retainedString(node.description, seen);
         weight += retainedValue(node.value, seen);
         weight += retainedString(node.referenceBlueId, seen);
+        weight += retainedString(node.materializedReferenceBlueId, seen);
         weight += retainedString(node.mergePolicy, seen);
         weight += retainedString(node.previousBlueId, seen);
         weight += retainedNode(node.type, seen);

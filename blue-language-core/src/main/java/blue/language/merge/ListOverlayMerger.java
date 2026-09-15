@@ -394,6 +394,9 @@ final class ListOverlayMerger {
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);
         try {
+            if (expansionAllowed && itemType != null) {
+                engine.validateListItemContribution(child, itemType);
+            }
             if ((child.isReferenceOnly() && itemType != null)
                     || (replacement && (itemType != null || inheritedSchema != null))) {
                 /* Replacement changes the value, not its inherited type or

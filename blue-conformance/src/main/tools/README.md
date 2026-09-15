@@ -59,7 +59,7 @@ the repository entry point and classifier also enforce it internally.
 `implementation-baseline-paths.txt` is the authoritative, strictly sorted
 inventory of every Java source under the fixed `src/main/java` roots of
 `blue-language-model`, `blue-language-core`, `blue-language-mapping`,
-`blue-language-ipfs`, `blue-contracts-core`, and `blue-language-java` (722
+`blue-language-ipfs`, `blue-contracts-core`, and `blue-language-java` (742
 files in this release). `implementation_baseline.py` assigns the complete
 six-module closure to the Contracts processor role and, conservatively, the
 complete Language model-plus-core source closure to both cyclic finalization

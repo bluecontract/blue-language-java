@@ -33,6 +33,7 @@ FE = "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX"
 INITIALIZED_MARKER = "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
 TERMINATED_MARKER = "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v"
 CHECKPOINT_MARKER = "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr"
+CHECKPOINT_ENTRY = "55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne"
 
 FIXTURE_DIR = ROOT / "conformance/contracts/fixtures/closure"
 ORACLE_DIR = ROOT / "conformance/contracts/oracles"
@@ -813,6 +814,7 @@ def generate() -> None:
     attached_b.setdefault("contracts", {})["checkpoint"]={
         "type":ref(CHECKPOINT_MARKER),
         "entries":{"source":{
+            "type":ref(CHECKPOINT_ENTRY),
             "domain":ref(checkpoint_domain_blue_id(source_channel)),
             "subject":ref(event_ids["ATTACH-HISTORICAL"]),
         }},

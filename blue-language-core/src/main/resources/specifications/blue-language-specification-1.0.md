@@ -58,6 +58,12 @@ An empty object is therefore ordinary exact content. Its BlueId is the ordinary 
 
 This equivalence is a load-bearing invariant. A semantic Blue operation MUST be a function of node identity and logical content demanded by that operation. It MUST NOT be a function of whether a node was inline, collapsed, already expanded, cached, fetched from one blob, fetched from many chunks, or represented internally by one host object or many.
 
+The operation and its input mode are part of this contract. Revealing the exact
+contents of an existing node preserves its established identity. Interpreting
+those bytes as a new Source Document can derive a different canonical node.
+Source contextual equivalence and opaque exact-reference boundaries are defined
+in §13.2.1; they do not change direct BlueId or exact reference substitution.
+
 The Blue Language defines four ordinary graph operations:
 
 | Operation | Meaning |
@@ -1069,6 +1075,11 @@ The term **Content BlueId** MAY be used as shorthand for "the BlueId derived fro
 
 All conforming implementations MUST derive the same BlueId for equivalent Source Documents under the same Blue Language release and canonical registry bindings, provided every demanded reference resolves to the same verified node. Provider location, cache contents, lookup order, batching, and other ambient provider state are not identity inputs.
 
+At positions where Source semantics interpret a contribution, equivalent inline
+and verified-reference content MUST follow the same contextual normalization
+under §13.2.1. An opaque exact leaf retains its exact identity; this does not
+promise recursive Source normalization of arbitrary raw documents behind it.
+
 ### 7.2.1 What the Source-derived BlueId identifies (normative)
 
 The Source-derived BlueId identifies the exact Canonical Identity Input, not the original authoring syntax.
@@ -1695,7 +1706,12 @@ For lower/upper-bound interactions, an exclusive bound at the same numeric value
 
 **Resolution** applies Blue type and overlay semantics to a Source Node. It follows effective type links, merges inherited and instance contributions, enforces fixed values, applies list merge rules, accumulates schema constraints, and validates the resolved result.
 
-A **complete Resolved Form** contains the complete semantic result for the root being resolved.
+A **complete Resolved Form** contains the complete semantic result for the root
+being resolved, including every contribution and constraint demanded by the
+effective context. It MAY retain opaque exact-reference leaves as defined in
+§13.2.1. Completeness does not certify the undemanded contents behind those leaves
+as completed instances, and does not mean recursively interpreting every
+reachable raw document as fresh Source.
 
 A **limited resolution result** contains only explicitly demanded paths and the supporting content needed to establish them. It is an operation result, not a different Blue node. Coverage and completeness information are out-of-band and do not affect BlueId.
 
@@ -2440,6 +2456,50 @@ The BlueId derived from a Source Document is the BlueId of its Canonical Identit
 
 A Canonical Identity Input is unique for a given complete Resolved Form under the selected Blue Language release and canonical registry bindings. The provider may be needed to obtain verified referenced nodes, but its cache, location, response order, availability history, and other ambient state do not participate in canonical identity.
 
+Uniqueness is uniqueness of the exact canonical node, including the established
+exact identities of opaque leaves. Faithful expansion or collapse of an exact
+child can change its serialized representation while preserving that node and
+its direct BlueId. Canonicalization is deterministic; it need not be the
+smallest authoring representation.
+
+### 13.2.1 Contextual contributions and opaque exact leaves (normative)
+
+Direct hashing of a pure reference uses its exact child identity. It MUST NOT
+normalize the referenced contents. The direct identities of standalone
+`Text`/`PLN` and a custom `Currency`/`PLN` remain different.
+
+When the Source operation requires a contribution's contents to interpret or
+validate it, the resolver MUST obtain verified exact content or equivalent
+verified evidence and apply the same contextual rules as to that content
+inline. Such contexts include effective types, collection member constraints,
+inherited fixed payloads, and applicable schema. A Dictionary's `valueType` is
+an interpreting constraint, and absence of `itemType` alone does not establish
+that a List element is unconstrained. Inline and referenced inputs MUST retain
+the same accept/reject result; canonicalization MUST NOT weaken validation to
+obtain equal identities.
+
+The canonicalizer MUST use resolver-established materialization evidence for
+the occurrence and context being processed. Ordinary payload shape is not
+evidence: relevant materialized content can consist solely of schema metadata.
+Likewise, content available in a cache does not establish that this occurrence
+was interpreted. Verified exact bytes MAY be cached by BlueId; a contextual
+normalization result MUST NOT be reused under that key alone across different
+semantic contexts or Source/canonical input modes.
+
+A truly unconstrained pure reference MAY remain an opaque exact leaf. Its
+referenced exact value is preserved without fetching and recursively
+normalizing arbitrary raw Source content behind it. At such a boundary the
+guarantee is exact reference substitution, not equivalence with expanding raw
+content and submitting those bytes to a new Source interpretation. Exact
+expand/collapse and canonical/exact loading MUST preserve the established
+identity and MUST NOT silently switch to Source overlay interpretation.
+
+Missing required evidence MUST remain missing or unavailable, and invalid or
+forged evidence MUST remain invalid. Neither is an empty contribution or
+semantic absence. The outcome MUST be independent of cache warmth and call
+order. Definition preparation continues to defer absent instance obligations
+under §9.2.5; it MUST NOT invent a value to complete a valid definition.
+
 ### 13.3 Minimized Overlay (normative)
 
 A **Minimized Overlay** is an author-facing reduced Source overlay that re-resolves to the same complete Resolved Form.
@@ -2506,7 +2566,9 @@ Given a Resolved Form `R`, canonicalization MUST:
   inline content, recursively construct that type's own Canonical Identity
   Input and calculate its direct BlueId before emitting the parent reference;
 - ensure the Canonical Identity Input contains no type aliases; if an instance supplied a type alias, preprocessing MUST replace it with the canonical `type: { blueId: ... }` reference before resolution;
-- for provider-materialized content, preserve the original pure reference when that reference is an instance contribution and the materialized subtree contributes no additional instance-supplied content;
+- normalize provider-materialized value contributions under the same effective
+  context as inline content; preserve an original pure reference only when it
+  identifies the computed canonical contribution under §13.5.1;
 - remove the `blue` directive if present, because it is invalid after preprocessing;
 - normalize Source list `null` elements to `$empty: true` while preserving empty-object and empty-list elements;
 - consume all `$pos` overlays and produce final canonical list content;
@@ -2530,7 +2592,14 @@ Canonicalization can be understood as a deterministic diff between the Resolved 
 
 For each node:
 
-1. If the node has an effective type, include the canonical type reference unless the type reference itself is fully derivable at that path and not required by the canonical identity form.
+1. If a retained, nonredundant child value has an effective custom type, include
+   that type's canonical reference even when its parent declares the same type.
+   A compatible primitive contribution retains the effective custom type under
+   the selected resolution rule. Derivable core type declarations may be
+   omitted. Whole-field omission still applies to non-list values completely
+   supplied by inherited fixed content; absent optional fields are not created.
+   Final List payloads follow §13.6, including omission of derivable List
+   metadata and preservation of their complete item sequence.
 2. For each reserved metadata field other than `type`, include it only when it is an instance contribution that is not derivable from the ancestor form, except where this specification requires preservation.
 3. For each ordinary child field, omit it when the child is fully derivable from the ancestor form. Otherwise include the canonical identity input of the child.
 4. For scalar values, omit an inherited fixed value and include an instance value not derivable from the ancestor.
@@ -2551,7 +2620,13 @@ When multiple candidate identity inputs would represent the same Resolved Form, 
    where `X` is retained from verified reference evidence or derived from the
    exact node's own Canonical Identity Input. Incomplete evidence is not an
    identity and cannot be replaced by an empty or null reference.
-4. **Preserve source pure references materialized only for resolution.** If a Source Document provided a pure reference and the provider materialized it only to resolve or validate content, the Canonical Identity Input MUST prefer the original pure reference form unless the instance supplied an overlay that must be represented.
+4. **Preserve only faithful value references.** First reconstruct the canonical
+   contribution using the verified exact content and the effective context,
+   including the custom-type convention in §13.5. If the whole contribution is
+   derivable, apply omission. Otherwise the original pure reference MUST be
+   preferred only if it identifies that same canonical contribution. Originally
+   authoring a reference is not sufficient. An opaque exact leaf under §13.2.1
+   retains its exact reference without contextual reinterpretation.
 5. **Consume overlay controls.** `$pos`, `$replace`, `$previous`, and raw Source-list `null` MUST NOT appear in Canonical Identity Input. Source-list `null` is represented by `$empty: true`; empty-object and empty-list elements remain ordinary canonical content.
 6. **No authoring aliases.** Type aliases and `blue` preprocessing directives MUST NOT appear in Canonical Identity Input.
 7. **Deterministic map ordering.** When serializing helper maps or canonical JSON, property order is the order defined by RFC 8785 canonical JSON. No locale-sensitive ordering, implementation insertion order, or host map order is permitted.
@@ -3325,7 +3400,10 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
   pure reference to its canonical BlueId produce the same parent Canonical
   Identity Input and Source-derived BlueId; distinct exact inline types retain
   distinct parent identities.
-- **R21.** A source pure reference that is materialized only for resolution canonicalizes back to the pure reference unless the source overlays additional instance content onto it.
+- **R21.** A materialized Source value reference is normalized like equivalent
+  inline content in the same interpreting context. It canonicalizes back to
+  the original pure reference only if that reference identifies the computed
+  canonical contribution. Opaque exact leaves follow §13.2.1.
 - **R22.** A child overlay of an inherited `append-only` list that omits `mergePolicy` remains `append-only`; `$pos` is still rejected.
 - **R23.** A descendant collection that omits inherited `itemType`, `keyType`, or `valueType` retains the inherited constraint.
 - **R24.** Canonical positional list refinements produce final canonical list payloads, not Source overlay instructions.
@@ -3416,7 +3494,7 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 
 The Blue Language 1.0 conformance suite MUST publish machine-readable fixtures with exact expected BlueIds.
 
-The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. It contains 184 behavior fixtures covering 150 vectors. Its manifest and package identity are generated from the complete inventoried fixture set only after the inline-type and empty-object conformance gates pass.
+The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. It contains 195 behavior fixtures covering 150 vectors. Its manifest and package identity are generated from the complete inventoried fixture set only after the inline-type and empty-object conformance gates pass.
 
 Its fixture-package identity is:
 

@@ -35,6 +35,7 @@ public class Node implements Cloneable {
     Map<String, Node> properties;
     Node contracts;
     String blueId;
+    String materializedReferenceBlueId;
     Schema schema;
     String mergePolicy;
     String previousBlueId;
@@ -539,7 +540,33 @@ public class Node implements Cloneable {
      * @return this node
      */
     public Node blueId(String blueId) {
+        if (!java.util.Objects.equals(this.blueId, blueId)) {
+            materializedReferenceBlueId = null;
+        }
         this.blueId = blueId;
+        return this;
+    }
+
+    /**
+     * Returns resolver provenance for this occurrence, outside the wire form.
+     *
+     * @return the exact reference whose verified content was materialized here,
+     *         or {@code null}; this is not a canonical identity
+     */
+    public String getMaterializedReferenceBlueId() {
+        return materializedReferenceBlueId;
+    }
+
+    /**
+     * Carries occurrence-local resolver provenance across resolved-view copies.
+     * New Source interpretation must discard it; it never substitutes for
+     * verified reference content or completed validation.
+     *
+     * @param blueId materialized exact reference, or {@code null} to clear
+     * @return this node
+     */
+    public Node materializedReferenceBlueId(String blueId) {
+        this.materializedReferenceBlueId = blueId;
         return this;
     }
 
@@ -682,6 +709,7 @@ public class Node implements Cloneable {
         properties = copiedProperties;
         contracts = copiedContracts;
         blueId = source.blueId;
+        materializedReferenceBlueId = source.materializedReferenceBlueId;
         schema = copiedSchema;
         mergePolicy = source.mergePolicy;
         previousBlueId = source.previousBlueId;
@@ -770,6 +798,16 @@ public class Node implements Cloneable {
     @Override
     public Node clone() {
         return NodeGraphCopier.copy(this);
+    }
+
+    /**
+     * Copies authored input, discarding resolver provenance throughout the
+     * graph, including schema keywords and enum entries.
+     *
+     * @return an independent graph ready for a new Source interpretation
+     */
+    public Node cloneWithoutResolutionEvidence() {
+        return NodeGraphCopier.copyWithoutResolutionEvidence(this);
     }
 
     @Override

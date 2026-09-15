@@ -1,0 +1,1218 @@
+{
+  "oracle": "hand-constructed canonical nodes + blue_identity.direct_blue_id",
+  "provider": [
+    {
+      "requestedBlueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN",
+      "node": {
+        "name": "Currency",
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        }
+      }
+    },
+    {
+      "requestedBlueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA",
+      "node": {
+        "name": "Holder",
+        "currency": {
+          "type": {
+            "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm",
+      "node": {
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        },
+        "value": "PLN"
+      }
+    },
+    {
+      "requestedBlueId": "GTS7MAC6UEn97shNfD3j88ybsNNzaMgyCJVEBLMwF7Uf",
+      "node": {
+        "type": {
+          "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+        },
+        "value": "PLN"
+      }
+    },
+    {
+      "requestedBlueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe",
+      "node": {
+        "name": "Terms",
+        "title": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo",
+      "node": {
+        "name": "Holder",
+        "terms": {
+          "type": {
+            "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy",
+      "node": {
+        "title": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "Coffee"
+        }
+      }
+    },
+    {
+      "requestedBlueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU",
+      "node": {
+        "title": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "Tea"
+        }
+      }
+    },
+    {
+      "requestedBlueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg",
+      "node": {
+        "name": "Schema holder",
+        "field": {
+          "schema": {
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9",
+      "node": {
+        "schema": {
+          "required": true
+        }
+      }
+    },
+    {
+      "requestedBlueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL",
+      "node": {
+        "name": "Label",
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        }
+      }
+    },
+    {
+      "requestedBlueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf",
+      "node": {
+        "type": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "value": "PLN"
+      }
+    },
+    {
+      "requestedBlueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS",
+      "node": {
+        "name": "List holder",
+        "entries": {
+          "type": {
+            "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          },
+          "itemType": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "FHRuHsM8Ti7LNhb6mtvUqU9h8btjvgYEsk7K9wZnKENi",
+      "node": {
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        },
+        "value": "Coffee"
+      }
+    },
+    {
+      "requestedBlueId": "AfpiTJ2txCUqkMGQL2iPADHuQp2oheNJUnzgqpwA5fig",
+      "node": {
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        },
+        "value": "Tea"
+      }
+    },
+    {
+      "requestedBlueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D",
+      "node": {
+        "type": {
+          "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+        },
+        "items": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      }
+    },
+    {
+      "requestedBlueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir",
+      "node": {
+        "name": "Empty holder",
+        "field": {
+          "schema": {
+            "maxFields": 3
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK",
+      "node": {}
+    },
+    {
+      "requestedBlueId": "HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX",
+      "node": {
+        "name": "empty-string holder",
+        "field": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "GNwiz9RSVGjkEXY8B5riHgCbsPAiT8rZiXsToWNtTWWN",
+      "node": {
+        "type": {
+          "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+        },
+        "value": ""
+      }
+    },
+    {
+      "requestedBlueId": "pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv",
+      "node": {
+        "name": "zero holder",
+        "field": {
+          "type": {
+            "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt",
+      "node": {
+        "type": {
+          "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+        },
+        "value": 0
+      }
+    },
+    {
+      "requestedBlueId": "AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM",
+      "node": {
+        "name": "false holder",
+        "field": {
+          "type": {
+            "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "2RFzT3PmUN6ryMkxFLQPSFAWtW5GNpStBspdovnExsCF",
+      "node": {
+        "type": {
+          "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+        },
+        "value": false
+      }
+    },
+    {
+      "requestedBlueId": "AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z",
+      "node": {
+        "name": "empty-list holder",
+        "field": {
+          "type": {
+            "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          }
+        }
+      }
+    },
+    {
+      "requestedBlueId": "4mfDwwrpfVGMwKn82vsr4rVX484P8DAMy5RNEVXqsy9h",
+      "node": []
+    }
+  ],
+  "cases": [
+    {
+      "name": "currency-inline-text",
+      "source": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedDirectBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "type": {
+            "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedSourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedResolvedValues": {
+        "/currency/type/blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN",
+        "/currency/value": "PLN"
+      }
+    },
+    {
+      "name": "currency-reference-text",
+      "source": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+        }
+      },
+      "expectedDirectBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "type": {
+            "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedSourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedResolvedValues": {
+        "/currency/type/blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN",
+        "/currency/value": "PLN"
+      }
+    },
+    {
+      "name": "currency-inline-custom",
+      "source": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "type": {
+            "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedDirectBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "type": {
+            "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedSourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedResolvedValues": {
+        "/currency/type/blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN",
+        "/currency/value": "PLN"
+      }
+    },
+    {
+      "name": "currency-reference-custom",
+      "source": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "blueId": "GTS7MAC6UEn97shNfD3j88ybsNNzaMgyCJVEBLMwF7Uf"
+        }
+      },
+      "expectedDirectBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+        },
+        "currency": {
+          "blueId": "GTS7MAC6UEn97shNfD3j88ybsNNzaMgyCJVEBLMwF7Uf"
+        }
+      },
+      "expectedSourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+      "expectedResolvedValues": {
+        "/currency/type/blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN",
+        "/currency/value": "PLN"
+      }
+    },
+    {
+      "name": "opaque-text",
+      "source": {
+        "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+      },
+      "expectedDirectBlueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm",
+      "expectedCanonical": {
+        "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+      },
+      "expectedSourceBlueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+    },
+    {
+      "name": "terms-inline-coffee",
+      "source": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        }
+      },
+      "expectedDirectBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "type": {
+            "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+          },
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        }
+      },
+      "expectedSourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+      "expectedResolvedValues": {
+        "/terms/type/blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe",
+        "/terms/title/value": "Coffee"
+      }
+    },
+    {
+      "name": "terms-reference-coffee",
+      "source": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "blueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy"
+        }
+      },
+      "expectedDirectBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "type": {
+            "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+          },
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        }
+      },
+      "expectedSourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+      "expectedResolvedValues": {
+        "/terms/type/blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe",
+        "/terms/title/value": "Coffee"
+      }
+    },
+    {
+      "name": "terms-inline-tea",
+      "source": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          }
+        }
+      },
+      "expectedDirectBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "type": {
+            "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+          },
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          }
+        }
+      },
+      "expectedSourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+      "expectedResolvedValues": {
+        "/terms/type/blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe",
+        "/terms/title/value": "Tea"
+      }
+    },
+    {
+      "name": "terms-reference-tea",
+      "source": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "blueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU"
+        }
+      },
+      "expectedDirectBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        },
+        "terms": {
+          "type": {
+            "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+          },
+          "title": {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          }
+        }
+      },
+      "expectedSourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+      "expectedResolvedValues": {
+        "/terms/type/blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe",
+        "/terms/title/value": "Tea"
+      }
+    },
+    {
+      "name": "terms-absent",
+      "source": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        }
+      },
+      "expectedDirectBlueId": "7i9pjVmQrQ9sHR6syeCphFM2pQJSmeWQUTs5tvLDE6tP",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+        }
+      },
+      "expectedSourceBlueId": "7i9pjVmQrQ9sHR6syeCphFM2pQJSmeWQUTs5tvLDE6tP"
+    },
+    {
+      "name": "schema-inline",
+      "source": {
+        "type": {
+          "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+        },
+        "field": {
+          "schema": {
+            "required": true
+          }
+        }
+      },
+      "expectedDirectBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+        },
+        "field": {
+          "schema": {
+            "minLength": 1,
+            "required": true
+          }
+        }
+      },
+      "expectedSourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U"
+    },
+    {
+      "name": "schema-reference",
+      "source": {
+        "type": {
+          "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+        },
+        "field": {
+          "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+        }
+      },
+      "expectedDirectBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+        },
+        "field": {
+          "schema": {
+            "minLength": 1,
+            "required": true
+          }
+        }
+      },
+      "expectedSourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U"
+    },
+    {
+      "name": "dictionary-invalid-inline",
+      "source": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedDirectBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+      "expectedErrorCategory": "TypeCompatibilityViolation",
+      "expectedResolutionErrorCategory": "TypeCompatibilityViolation"
+    },
+    {
+      "name": "dictionary-invalid-reference",
+      "source": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+        }
+      },
+      "expectedDirectBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+      "expectedErrorCategory": "TypeCompatibilityViolation",
+      "expectedResolutionErrorCategory": "TypeCompatibilityViolation"
+    },
+    {
+      "name": "dictionary-valid-inline",
+      "source": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "type": {
+            "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedDirectBlueId": "HAk99xoRHM6BQqUvLrRbqYBYcKhdp791Y9VNAbePEnuR",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "type": {
+            "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+          },
+          "value": "PLN"
+        }
+      },
+      "expectedSourceBlueId": "HAk99xoRHM6BQqUvLrRbqYBYcKhdp791Y9VNAbePEnuR",
+      "expectedResolvedValues": {
+        "/entry/value": "PLN"
+      }
+    },
+    {
+      "name": "dictionary-valid-reference",
+      "source": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+        }
+      },
+      "expectedDirectBlueId": "HAk99xoRHM6BQqUvLrRbqYBYcKhdp791Y9VNAbePEnuR",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+        },
+        "valueType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "entry": {
+          "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+        }
+      },
+      "expectedSourceBlueId": "HAk99xoRHM6BQqUvLrRbqYBYcKhdp791Y9VNAbePEnuR",
+      "expectedResolvedValues": {
+        "/entry/value": "PLN"
+      }
+    },
+    {
+      "name": "list-invalid-inline",
+      "source": {
+        "type": {
+          "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+        },
+        "itemType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "items": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "PLN"
+          }
+        ]
+      },
+      "expectedDirectBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+      "expectedErrorCategory": "TypeCompatibilityViolation",
+      "expectedResolutionErrorCategory": "TypeCompatibilityViolation"
+    },
+    {
+      "name": "list-invalid-reference",
+      "source": {
+        "type": {
+          "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+        },
+        "itemType": {
+          "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+        },
+        "items": [
+          {
+            "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+          }
+        ]
+      },
+      "expectedDirectBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+      "expectedErrorCategory": "TypeCompatibilityViolation",
+      "expectedResolutionErrorCategory": "TypeCompatibilityViolation"
+    },
+    {
+      "name": "list-inline",
+      "source": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": {
+          "type": {
+            "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+          },
+          "items": [
+            {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "Coffee"
+            },
+            {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "Tea"
+            },
+            {
+              "type": {
+                "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+              },
+              "value": "Coffee"
+            }
+          ]
+        }
+      },
+      "expectedDirectBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedSourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+      "expectedResolvedValues": {
+        "/entries/0/value": "Coffee",
+        "/entries/1/value": "Tea",
+        "/entries/2/value": "Coffee"
+      }
+    },
+    {
+      "name": "list-item-references",
+      "source": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "blueId": "FHRuHsM8Ti7LNhb6mtvUqU9h8btjvgYEsk7K9wZnKENi"
+          },
+          {
+            "blueId": "AfpiTJ2txCUqkMGQL2iPADHuQp2oheNJUnzgqpwA5fig"
+          },
+          {
+            "blueId": "FHRuHsM8Ti7LNhb6mtvUqU9h8btjvgYEsk7K9wZnKENi"
+          }
+        ]
+      },
+      "expectedDirectBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedSourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+      "expectedResolvedValues": {
+        "/entries/0/value": "Coffee",
+        "/entries/1/value": "Tea",
+        "/entries/2/value": "Coffee"
+      }
+    },
+    {
+      "name": "list-whole-reference",
+      "source": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": {
+          "blueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D"
+        }
+      },
+      "expectedDirectBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedSourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+      "expectedResolvedValues": {
+        "/entries/0/value": "Coffee",
+        "/entries/1/value": "Tea",
+        "/entries/2/value": "Coffee"
+      }
+    },
+    {
+      "name": "list-reordered",
+      "source": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedDirectBlueId": "6shqTSYgoJ6E8x9Vt9xHZYa9sc1mwKsv6GqNDkvHXLa5",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Tea"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          },
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedSourceBlueId": "6shqTSYgoJ6E8x9Vt9xHZYa9sc1mwKsv6GqNDkvHXLa5"
+    },
+    {
+      "name": "list-single",
+      "source": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedDirectBlueId": "24gy7mKNBfR64ymiDAfCe1sghYKmZDJ7WEhKuRkg52dz",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+        },
+        "entries": [
+          {
+            "type": {
+              "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+            },
+            "value": "Coffee"
+          }
+        ]
+      },
+      "expectedSourceBlueId": "24gy7mKNBfR64ymiDAfCe1sghYKmZDJ7WEhKuRkg52dz"
+    },
+    {
+      "name": "empty-object-inline",
+      "source": {
+        "type": {
+          "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+        },
+        "field": {}
+      },
+      "expectedDirectBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+        },
+        "field": {}
+      },
+      "expectedSourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi"
+    },
+    {
+      "name": "empty-object-reference",
+      "source": {
+        "type": {
+          "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+        },
+        "field": {
+          "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+        }
+      },
+      "expectedDirectBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+        },
+        "field": {
+          "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+        }
+      },
+      "expectedSourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi"
+    },
+    {
+      "name": "empty-string-inline",
+      "source": {
+        "type": {
+          "blueId": "HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX"
+        },
+        "field": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": ""
+        }
+      },
+      "expectedDirectBlueId": "9xhGzJmtPz2KGjQnyW1ft5SoQsAG1kEg3dGw8wt9Xtu2",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX"
+        },
+        "field": {
+          "type": {
+            "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+          },
+          "value": ""
+        }
+      },
+      "expectedSourceBlueId": "9xhGzJmtPz2KGjQnyW1ft5SoQsAG1kEg3dGw8wt9Xtu2"
+    },
+    {
+      "name": "empty-string-reference",
+      "source": {
+        "type": {
+          "blueId": "HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX"
+        },
+        "field": {
+          "blueId": "GNwiz9RSVGjkEXY8B5riHgCbsPAiT8rZiXsToWNtTWWN"
+        }
+      },
+      "expectedDirectBlueId": "9xhGzJmtPz2KGjQnyW1ft5SoQsAG1kEg3dGw8wt9Xtu2",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX"
+        },
+        "field": {
+          "blueId": "GNwiz9RSVGjkEXY8B5riHgCbsPAiT8rZiXsToWNtTWWN"
+        }
+      },
+      "expectedSourceBlueId": "9xhGzJmtPz2KGjQnyW1ft5SoQsAG1kEg3dGw8wt9Xtu2"
+    },
+    {
+      "name": "zero-inline",
+      "source": {
+        "type": {
+          "blueId": "pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv"
+        },
+        "field": {
+          "type": {
+            "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+          },
+          "value": 0
+        }
+      },
+      "expectedDirectBlueId": "pXLgqv3npsuvehUNNcs5QVvaVkKrCrzHPkbtNUfggCs",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv"
+        },
+        "field": {
+          "type": {
+            "blueId": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+          },
+          "value": 0
+        }
+      },
+      "expectedSourceBlueId": "pXLgqv3npsuvehUNNcs5QVvaVkKrCrzHPkbtNUfggCs"
+    },
+    {
+      "name": "zero-reference",
+      "source": {
+        "type": {
+          "blueId": "pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv"
+        },
+        "field": {
+          "blueId": "DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt"
+        }
+      },
+      "expectedDirectBlueId": "pXLgqv3npsuvehUNNcs5QVvaVkKrCrzHPkbtNUfggCs",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv"
+        },
+        "field": {
+          "blueId": "DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt"
+        }
+      },
+      "expectedSourceBlueId": "pXLgqv3npsuvehUNNcs5QVvaVkKrCrzHPkbtNUfggCs"
+    },
+    {
+      "name": "false-inline",
+      "source": {
+        "type": {
+          "blueId": "AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM"
+        },
+        "field": {
+          "type": {
+            "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+          },
+          "value": false
+        }
+      },
+      "expectedDirectBlueId": "CMECMxxeMepcqSrSyP8uCGyCiSayshBTnf6B7FRpEZbn",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM"
+        },
+        "field": {
+          "type": {
+            "blueId": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
+          },
+          "value": false
+        }
+      },
+      "expectedSourceBlueId": "CMECMxxeMepcqSrSyP8uCGyCiSayshBTnf6B7FRpEZbn"
+    },
+    {
+      "name": "false-reference",
+      "source": {
+        "type": {
+          "blueId": "AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM"
+        },
+        "field": {
+          "blueId": "2RFzT3PmUN6ryMkxFLQPSFAWtW5GNpStBspdovnExsCF"
+        }
+      },
+      "expectedDirectBlueId": "CMECMxxeMepcqSrSyP8uCGyCiSayshBTnf6B7FRpEZbn",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM"
+        },
+        "field": {
+          "blueId": "2RFzT3PmUN6ryMkxFLQPSFAWtW5GNpStBspdovnExsCF"
+        }
+      },
+      "expectedSourceBlueId": "CMECMxxeMepcqSrSyP8uCGyCiSayshBTnf6B7FRpEZbn"
+    },
+    {
+      "name": "empty-list-inline",
+      "source": {
+        "type": {
+          "blueId": "AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z"
+        },
+        "field": []
+      },
+      "expectedDirectBlueId": "8XPmr2eYo7A5jv5hBMMr3FcMhvr5TVY4NXCtEMR6TKJW",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z"
+        },
+        "field": []
+      },
+      "expectedSourceBlueId": "8XPmr2eYo7A5jv5hBMMr3FcMhvr5TVY4NXCtEMR6TKJW"
+    },
+    {
+      "name": "empty-list-reference",
+      "source": {
+        "type": {
+          "blueId": "AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z"
+        },
+        "field": {
+          "blueId": "4mfDwwrpfVGMwKn82vsr4rVX484P8DAMy5RNEVXqsy9h"
+        }
+      },
+      "expectedDirectBlueId": "8XPmr2eYo7A5jv5hBMMr3FcMhvr5TVY4NXCtEMR6TKJW",
+      "expectedCanonical": {
+        "type": {
+          "blueId": "AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z"
+        },
+        "field": {
+          "blueId": "4mfDwwrpfVGMwKn82vsr4rVX484P8DAMy5RNEVXqsy9h"
+        }
+      },
+      "expectedSourceBlueId": "8XPmr2eYo7A5jv5hBMMr3FcMhvr5TVY4NXCtEMR6TKJW"
+    }
+  ]
+}

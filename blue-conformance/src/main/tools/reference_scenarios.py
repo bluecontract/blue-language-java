@@ -1970,6 +1970,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
         if discriminator:
             domain_value["runtimeDiscriminator"] = discriminator
         entry = {
+            "type": {"blueId": "55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne"},
             "domain": {"blueId": direct_blue_id(domain_value)},
             "subject": {"blueId": work_item["eventBlueId"]},
         }

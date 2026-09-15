@@ -36,7 +36,7 @@ final class Cclo23HistoricalEpochMatrixTest {
     private static final DocumentId A = new DocumentId("history-a");
     private static final DocumentId B = new DocumentId("history-b");
     private static final String FINAL_MASTER =
-            "4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh";
+            "8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm";
     // Generated from the independent cyclic oracle by rebind_contextual_companion_oracles.py.
     private static final int FINAL_A_MEMBER_INDEX = 1;
     private static final int FINAL_B_MEMBER_INDEX = 0;

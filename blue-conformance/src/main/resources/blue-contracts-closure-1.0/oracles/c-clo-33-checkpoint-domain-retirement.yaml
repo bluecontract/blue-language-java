@@ -1274,6 +1274,8 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: ZuBZcL91HsnHvftRjirviKdby2RHiDMsW52SGkt2VWo
             subject:
@@ -1309,7 +1311,7 @@ stages:
         document:
           blueId: 4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ
   preliminaryBlueIds:
-    '0': GD3vms4Wp6qVRAR4ZZ3iBVSobTfTBmKKLXy49oY94voW
+    '0': 56mfhPcxogVHvxkGcAuLiRVH6FTLsCEM5GL9FjxUSYzN
     '1': GVtfGYQ7T5qSa6Cau7gMAsffZoPnfhzNhZPAzzbsGY2L
   sortedSourceIndices:
   - 0
@@ -1324,7 +1326,7 @@ stages:
     result:
       blueId: odfSAAcrNtFUFpd1BN5Yor3bsFhgY2iGAnr87Ls4axt
     contracts:
-      blueId: 7tALbNjGWSwB99vF2rSsNH67WN8iDWxG5sbAjatyP1td
+      blueId: 37dW4m2WPqdVCEafLazSigwqVNZDhSNsFhoLLzK4Yg8S
     b:
       blueId: this#1
   - documentId:
@@ -1338,10 +1340,10 @@ stages:
     contracts:
       blueId: 7ZZ5cd3VVPJcWA24oJj2rZw1msy6D6E2TZJWUS41ZStK
   canonicalMasterInputUtf8Bytes: 691
-  masterBlueId: FsJq8HNC8GA52EJ4VQx99WVMRNc53mBmyJRw5fLfFzwF
+  masterBlueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv
   memberBlueIdsInSourceOrder:
-  - FsJq8HNC8GA52EJ4VQx99WVMRNc53mBmyJRw5fLfFzwF#0
-  - FsJq8HNC8GA52EJ4VQx99WVMRNc53mBmyJRw5fLfFzwF#1
+  - 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#0
+  - 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#1
   materializedDocuments:
   - documentId: a
     memberIdentity: a
@@ -1399,17 +1401,19 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: ZuBZcL91HsnHvftRjirviKdby2RHiDMsW52SGkt2VWo
             subject:
               blueId: 4za3n8bAtn5YGRqAEeW6iRswtRnLgGkyZg9EN64gwLy2
     b:
-      blueId: FsJq8HNC8GA52EJ4VQx99WVMRNc53mBmyJRw5fLfFzwF#1
+      blueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#1
   - documentId: b
     memberIdentity: b
     xHandled: 1
     a:
-      blueId: FsJq8HNC8GA52EJ4VQx99WVMRNc53mBmyJRw5fLfFzwF#0
+      blueId: 3LksU7mPFianwYfmjwixff3XmRJTGJdLKLMJ7oMWc4pv#0
     contracts:
       embedded:
         type:

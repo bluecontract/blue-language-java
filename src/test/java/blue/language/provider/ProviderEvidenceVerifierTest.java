@@ -22,7 +22,7 @@ class ProviderEvidenceVerifierTest {
 
     private static final String SOURCE_PREPROCESSING_BASELINE_IDENTITY =
             "blue-language-source-preprocessing-environment-1.0@"
-                    + "sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e";
+                    + "sha256:4e6eaf033ddf952ed213390fcc6a897b4ff186c6b7d6dc44409fc4b33723b1e2";
     private static final String DEFECTIVE_AGGREGATE_RELEASE_IDENTITY =
             "blue-language-contracts-embedded-modules-collection-paths@"
                     + "sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c";

@@ -763,6 +763,8 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: HfsFKajdCf4YgjnPa6MrQchmSRQc1XnUtqycK8vibSQw
             subject:
@@ -831,26 +833,16 @@ stages:
         document:
           blueId: 2rAErftPoQ6e4mEkDC7a53Br6mfhLXBCtLCF9pbq2jqK#1
   preliminaryBlueIds:
-    '0': 1kqB1akoFYtqsVhQNqbWDFpHH5UcpK87QVi6hgh1pmN
+    '0': 8xa7fYYjDJmBAdDzWDErXeExYPUcPFwhmeFhCULET4VA
     '1': E41YCGQtA4SkqnB8iJFr9aCXfaMf1HzcgySb3mjzZVGX
     '2': BVGwkRYDWzBycQCmSXoYxsyuS7x9aEX388b1TJSNRmYe
     '3': 3DdpjEALmtN3oGwJduuLQepjQywTZ2nAjHLg4MHazkTf
   sortedSourceIndices:
-  - 0
   - 3
+  - 0
   - 2
   - 1
   canonicalLimitForm:
-  - documentId:
-      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
-    memberIdentity:
-      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
-    b:
-      blueId: this#3
-    contracts:
-      blueId: EiMH7SbNFFEwSKc7DDBCgxkYv7t8WYC9cfjPGBoyCRNU
-    c:
-      blueId: this#2
   - documentId:
       blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
     memberIdentity:
@@ -860,13 +852,23 @@ stages:
     contracts:
       blueId: GQoHkxQfqN4BvBfM4xnr4WeJJFWBZFesbPr3WX2A6XTN
   - documentId:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    memberIdentity:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    b:
+      blueId: this#3
+    contracts:
+      blueId: 5jBbbTqicFHoUkeVEPm8fCkmdxm7WACZ9KVaCpd32VcG
+    c:
+      blueId: this#2
+  - documentId:
       blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
     memberIdentity:
       blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
     d:
-      blueId: this#1
-    a:
       blueId: this#0
+    a:
+      blueId: this#1
     contracts:
       blueId: 9k42Q6ZKVvo3xh9RW6UnUPp5EG1vPb4bXNsaNXfBLP8x
   - documentId:
@@ -874,21 +876,21 @@ stages:
     memberIdentity:
       blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
     a:
-      blueId: this#0
+      blueId: this#1
     contracts:
       blueId: B7m6vswfZPAtdBAdrt29pkf2EP2VmGHJY7Q22Rq9WeV7
   canonicalMasterInputUtf8Bytes: 1017
-  masterBlueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg
+  masterBlueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr
   memberBlueIdsInSourceOrder:
-  - CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#0
-  - CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#3
-  - CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#2
-  - CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#1
+  - 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#1
+  - 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#3
+  - 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#2
+  - 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#0
   materializedDocuments:
   - documentId: ma
     memberIdentity: ma
     b:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#3
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#3
     contracts:
       embedded:
         type:
@@ -919,16 +921,18 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: HfsFKajdCf4YgjnPa6MrQchmSRQc1XnUtqycK8vibSQw
             subject:
               blueId: A9V4PKJ5qvZoSxhLLpegUFAcLQQTWNQNHQVjz9qAJMKp
     c:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#2
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#2
   - documentId: mb
     memberIdentity: mb
     a:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#0
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#1
     contracts:
       embedded:
         type:
@@ -943,9 +947,9 @@ stages:
   - documentId: mc
     memberIdentity: mc
     d:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#1
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#0
     a:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#0
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#1
     contracts:
       embedded:
         type:
@@ -974,7 +978,7 @@ stages:
   - documentId: md
     memberIdentity: md
     c:
-      blueId: CBdaPpuTKhAUdz5vXKc7iKemVrcfC1tC6pcTxM7QQxqg#2
+      blueId: 4Q656kqcKoisK6v7iibyMgHQHpz9DAH5cj1CFnvRREjr#2
     contracts:
       embedded:
         type:

@@ -747,6 +747,15 @@ public class Schema implements Cloneable {
         return copyWithNodeMapper(Node::clone);
     }
 
+    /**
+     * Copies schema content for fresh Source or exact-content input.
+     *
+     * @return a detached schema without resolver provenance in keyword nodes
+     */
+    public Schema cloneWithoutResolutionEvidence() {
+        return copyWithNodeMapper(Node::cloneWithoutResolutionEvidence);
+    }
+
     @Override
     public String toString() {
         return "Schema{" +

@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-model
-# entryCount: 317
+# entryCount: 321
 field blue.language.model.NodeWireForm$Strategy#OFFICIAL descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.NodeWireForm$Strategy#SIMPLE descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.Nodes$NodeField#BLUE descriptor=Lblue/language/model/Nodes$NodeField; access=public,static,final,enum signature=- constant=-
@@ -88,6 +88,7 @@ method blue.language.model.Node#<init> descriptor=()V access=public signature=- 
 method blue.language.model.Node#blue descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#blueId descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#clone descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.model.Node#cloneWithoutResolutionEvidence descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#contracts descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#description descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#get descriptor=(Ljava/lang/String;)Ljava/lang/Object; access=public signature=- throws=-
@@ -102,6 +103,7 @@ method blue.language.model.Node#getDescription descriptor=()Ljava/lang/String; a
 method blue.language.model.Node#getItemType descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#getItems descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/model/Node;>; throws=-
 method blue.language.model.Node#getKeyType descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.model.Node#getMaterializedReferenceBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.model.Node#getMergePolicy descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.model.Node#getName descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.model.Node#getNode descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
@@ -123,6 +125,7 @@ method blue.language.model.Node#items descriptor=(Ljava/util/List;)Lblue/languag
 method blue.language.model.Node#items descriptor=([Lblue/language/model/Node;)Lblue/language/model/Node; access=public,varargs signature=- throws=-
 method blue.language.model.Node#keyType descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#keyType descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.model.Node#materializedReferenceBlueId descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#mergePolicy descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#name descriptor=(Ljava/lang/String;)Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.model.Node#position descriptor=(Ljava/lang/Integer;)Lblue/language/model/Node; access=public signature=- throws=-
@@ -187,6 +190,7 @@ method blue.language.model.Nodes$NodeField#values descriptor=()[Lblue/language/m
 method blue.language.model.Schema#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.model.Schema#blueId descriptor=(Ljava/lang/String;)Lblue/language/model/Schema; access=public signature=- throws=-
 method blue.language.model.Schema#clone descriptor=()Lblue/language/model/Schema; access=public signature=- throws=-
+method blue.language.model.Schema#cloneWithoutResolutionEvidence descriptor=()Lblue/language/model/Schema; access=public signature=- throws=-
 method blue.language.model.Schema#enumValues descriptor=(Ljava/util/List;)Lblue/language/model/Schema; access=public signature=(Ljava/util/List<Lblue/language/model/Node;>;)Lblue/language/model/Schema; throws=-
 method blue.language.model.Schema#exclusiveMaximum descriptor=(Lblue/language/model/Node;)Lblue/language/model/Schema; access=public signature=- throws=-
 method blue.language.model.Schema#exclusiveMaximum descriptor=(Ljava/math/BigDecimal;)Lblue/language/model/Schema; access=public signature=- throws=-

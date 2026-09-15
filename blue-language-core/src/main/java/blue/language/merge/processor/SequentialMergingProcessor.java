@@ -58,6 +58,14 @@ public class SequentialMergingProcessor implements MergingProcessor, Incremental
     }
 
     @Override
+    public void validateListItem(Node item, Node itemType,
+                                 NodeProvider nodeProvider, NodeResolver nodeResolver,
+                                 CanonicalTypeIdentityLookup typeIdentities) {
+        mergingProcessors.forEach(processor -> processor.validateListItem(
+                item, itemType, nodeProvider, nodeResolver, typeIdentities));
+    }
+
+    @Override
     public boolean hasCompletedValidation(Node node) {
         for (MergingProcessor processor : mergingProcessors) {
             if (processor.hasCompletedValidation(node)) {

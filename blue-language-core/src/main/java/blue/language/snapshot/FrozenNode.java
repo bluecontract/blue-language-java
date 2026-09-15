@@ -27,6 +27,7 @@ public final class FrozenNode {
     final Map<String, FrozenNode> properties;
     final FrozenNode contracts;
     final String referenceBlueId;
+    final String materializedReferenceBlueId;
     final Schema schema;
     final String mergePolicy;
     final String previousBlueId;
@@ -60,6 +61,8 @@ public final class FrozenNode {
         this.properties = FrozenNodeBuilder.freezeMap(builder.properties);
         this.contracts = builder.contracts;
         this.referenceBlueId = builder.referenceBlueId;
+        this.materializedReferenceBlueId = builder.strictCanonical
+                ? null : builder.materializedReferenceBlueId;
         this.schema = builder.schema;
         this.mergePolicy = builder.mergePolicy;
         this.previousBlueId = builder.previousBlueId;

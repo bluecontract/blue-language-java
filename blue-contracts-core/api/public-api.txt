@@ -4,8 +4,8 @@
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f8e41baf14343d05b065745c3d1c569dd15e3fbae09331757efd2f7ffbf6f52b"
-field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:0d1a9ab0ee17712521cccb8d988d838c5b7de949b1d168a1c204ac2538e71834"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_FINALIZER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:71b7c01ac5edddbb6b0df2d624fa69d63054881c19c2b61fe10c783a53e5aeec"
+field blue.language.processor.ClosureRuntimeDescriptor#CYCLIC_PROOF_VERIFIER_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:b011ba281a9bcce5d0ff6f72b7bd19b8bc49a67ce760ca71bed745d25f6c4256"
 field blue.language.processor.DirectSubscriptionSurfaceValidator#INSTANCE descriptor=Lblue/language/processor/DirectSubscriptionSurfaceValidator; access=public,static,final signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#APPLICATION_EVENT_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.DocumentStepRuntimeGapException$Reason#PATCH_CONTINUATION_HOOK_REQUIRED descriptor=Lblue/language/processor/DocumentStepRuntimeGapException$Reason; access=public,static,final,enum signature=- constant=-

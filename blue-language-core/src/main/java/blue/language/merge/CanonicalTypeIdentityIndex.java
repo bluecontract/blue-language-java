@@ -39,9 +39,21 @@ final class CanonicalTypeIdentityIndex
             new IdentityHashMap<>();
     private final Map<SemanticTypeEvidenceKey, Map<String, Evidence>>
             evidenceByStructure = new HashMap<>();
+    private final VerifiedReferenceContents verifiedReferenceContents =
+            VerifiedReferenceContents.mutable();
     private boolean completeCoverage;
     private boolean coverageGap;
     private Node completeCoverageRoot;
+
+    /** Retains the exact verified content of one materialized value reference. */
+    void recordVerifiedReferenceContent(String blueId, FrozenNode content) {
+        verifiedReferenceContents.record(blueId, content);
+    }
+
+    @Override
+    public Optional<Node> findVerifiedReferenceContent(String blueId) {
+        return verifiedReferenceContents.find(blueId);
+    }
 
     /** Distinguishes independently derived and provider-verified evidence. */
     enum EvidenceKind {
@@ -181,19 +193,28 @@ final class CanonicalTypeIdentityIndex
                         Collections.<SemanticTypeEvidenceKey,
                                 Map<String, Evidence>>
                                 emptyMap(),
+                        VerifiedReferenceContents.EMPTY,
                         false);
 
         private final Map<SemanticTypeEvidenceKey, Map<String, Evidence>>
                 evidenceByStructure;
+        private final VerifiedReferenceContents verifiedReferenceContents;
         private final boolean completeCoverage;
         private final long retainedWeightBytes;
 
         private EvidenceSnapshot(
                 Map<SemanticTypeEvidenceKey, Map<String, Evidence>> evidence,
+                VerifiedReferenceContents verifiedReferenceContents,
                 boolean completeCoverage) {
             this.evidenceByStructure = immutableEvidenceBuckets(evidence);
+            this.verifiedReferenceContents = verifiedReferenceContents.frozen();
             this.completeCoverage = completeCoverage;
             this.retainedWeightBytes = calculateRetainedWeightBytes();
+        }
+
+        @Override
+        public Optional<Node> findVerifiedReferenceContent(String blueId) {
+            return verifiedReferenceContents.find(blueId);
         }
 
         static EvidenceSnapshot incompleteEmpty() {
@@ -273,7 +294,8 @@ final class CanonicalTypeIdentityIndex
         }
 
         private long calculateRetainedWeightBytes() {
-            long weight = 32L;
+            long weight = saturatedAdd(32L, verifiedReferenceContents
+                    .approximateRetainedWeightBytes());
             for (Map.Entry<SemanticTypeEvidenceKey, Map<String, Evidence>> entry
                     : evidenceByStructure.entrySet()) {
                 long bucketWeight = saturatedAdd(
@@ -314,6 +336,8 @@ final class CanonicalTypeIdentityIndex
             }
             return new EvidenceSnapshot(
                     combined,
+                    verifiedReferenceContents.union(
+                            other.verifiedReferenceContents),
                     true);
         }
 
@@ -327,12 +351,15 @@ final class CanonicalTypeIdentityIndex
             }
             EvidenceSnapshot that = (EvidenceSnapshot) other;
             return completeCoverage == that.completeCoverage
-                    && evidenceByStructure.equals(that.evidenceByStructure);
+                    && evidenceByStructure.equals(that.evidenceByStructure)
+                    && verifiedReferenceContents.blueIds().equals(
+                            that.verifiedReferenceContents.blueIds());
         }
 
         @Override
         public int hashCode() {
-            return 31 * evidenceByStructure.hashCode()
+            return 31 * (31 * evidenceByStructure.hashCode()
+                    + verifiedReferenceContents.blueIds().hashCode())
                     + (completeCoverage ? 1 : 0);
         }
     }
@@ -545,20 +572,26 @@ final class CanonicalTypeIdentityIndex
             mergeEvidenceBucket(
                     evidenceByStructure, entry.getKey(), entry.getValue());
         }
+        verifiedReferenceContents.putAll(snapshot.verifiedReferenceContents);
     }
 
     EvidenceSnapshot completeSnapshotForResolvedReference(
             Node resolvedRoot) {
         Objects.requireNonNull(resolvedRoot, "resolvedRoot");
+        VerifiedReferenceContents references =
+                verifiedReferenceContents.nestedWithin(resolvedRoot);
         if (coverageGap) {
             return new EvidenceSnapshot(
                     collectEvidenceThroughout(resolvedRoot, false),
+                    references,
                     false);
         }
         return new EvidenceSnapshot(
                 collectEvidenceThroughout(resolvedRoot, true),
+                references,
                 true);
     }
+
 
     void noteCoverageGap() {
         coverageGap = true;
@@ -589,10 +622,12 @@ final class CanonicalTypeIdentityIndex
 
     EvidenceSnapshot snapshot() {
         if (!completeCoverage || completeCoverageRoot == null) {
-            return new EvidenceSnapshot(evidenceByStructure, false);
+            return new EvidenceSnapshot(
+                    evidenceByStructure, verifiedReferenceContents, false);
         }
         return new EvidenceSnapshot(
                 collectEvidenceThroughout(completeCoverageRoot, true),
+                verifiedReferenceContents,
                 true);
     }
 

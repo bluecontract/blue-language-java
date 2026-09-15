@@ -46,6 +46,13 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                 StandardCharsets.UTF_8);
         String specificationHash = DeterministicHashing.sha256(specification)
                 .substring("sha256:".length());
+        // Independent canonical JSON for this small fixture; a made-up digest
+        // must not bypass the production release-manifest authentication.
+        String canonicalRelease = "{\"fixturePackage\":{\"packageIdentity\":\"sha256:"
+                + repeat('a') + "\"},\"releaseIdentity\":null,"
+                + "\"specificationDocument\":{\"sha256\":\"" + specificationHash + "\"}}";
+        String releaseIdentity = DeterministicHashing.sha256(
+                canonicalRelease.getBytes(StandardCharsets.UTF_8));
         Path release = Files.writeString(
                 temporaryDirectory.resolve("release-manifest.yaml"),
                 "specificationDocument:\n"
@@ -53,7 +60,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                         + "fixturePackage:\n"
                         + "  packageIdentity: sha256:"
                         + repeat('a') + "\n"
-                        + "releaseIdentity: sha256:" + repeat('b') + "\n",
+                        + "releaseIdentity: " + releaseIdentity + "\n",
                 StandardCharsets.UTF_8);
         AssembleImmutableStagedRepositoryTask task = project.getTasks().register(
                 "assembleFixtureRepository",
@@ -89,6 +96,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                 "\"schema\":\"blue-development-maven-repository/1.0\""));
         assertTrue(manifest.contains("\"contractsSpecificationIdentity\":\"sha256:"
                 + specificationHash + "\""));
+        assertTrue(manifest.contains("\"contractsReleaseIdentity\":\"" + releaseIdentity + "\""));
         assertTrue(Files.isRegularFile(
                 target.resolve(StagedRepositoryManifest.MANIFEST_CHECKSUM_FILE)));
         try (Stream<Path> paths = Files.walk(target)) {

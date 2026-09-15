@@ -57,7 +57,7 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldReportEveryLanguageFixturePassingInExactRelease() {
         // given
-        int expectedLanguageFixtures = 185;
+        int expectedLanguageFixtures = 195;
 
         // when
         BlueReleaseConformanceReport release =
@@ -125,15 +125,15 @@ class BlueContractsConformanceReportTest {
         String expectedLanguageRegistry =
                 "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
         String expectedLanguageFixtures =
-                "sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695";
+                "sha256:5a49eef38d6f8ffbdd2e8c1d0e7f423ded5fd0e744395280d49493219fb52406";
         String expectedContractsRegistry =
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
         String expectedContractsGas =
                 "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
         String expectedContractsFixtures =
-                "sha256:19e7a5e85afcaa2a69c45034207f788f0743045e18ae63fcc44ff5d3d39523b7";
+                "sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509";
         String expectedContractsRelease =
-                "sha256:8c71f588568a2abda22e4a70c2ce91d5fb73e3fd98b0e7c6f511d87df499f0fc";
+                "sha256:99da5368d7f65a37b1a1a1eeb12792272da10b0daf00b367a5cbfa9a006eb107";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -252,10 +252,10 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:c8f95abf0b25bdeb285d0474e9b2f54e953e270260f9551c8d257630baf9a482",
+                "sha256:e40f10a477607bc1ae736bd07e112d30e2eb8362da5caf5d708c6fab79613986",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:19e7a5e85afcaa2a69c45034207f788f0743045e18ae63fcc44ff5d3d39523b7",
+                "sha256:28ed686624a079c11c12e4889605eb082c46ee9ce0c6da40e9c20cd6d3341509",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -279,7 +279,7 @@ class BlueContractsConformanceReportTest {
         assertTrue(BlueContractsConformanceReport
                 .fixturePackageIdentityMatchesFixtureFiles());
         assertEquals(
-                "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
+                "0e2453223fd3dc7f933d17eb6530eb45687c24c58ad58e4d2758cd490af8db24",
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(

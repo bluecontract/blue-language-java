@@ -63,18 +63,28 @@ public class ListProcessor implements MergingProcessor {
 
         if (target.getItemType() != null && source.getItems() != null) {
             for (Node item : source.getItems()) {
-                if (item.getType() != null
-                        && !EffectiveTypeChecks.isCollectionMemberCompatible(
-                        item.getType(),
-                        target.getItemType(),
-                        nodeProvider,
-                        nodeResolver,
-                        typeIdentities)) {
-                    String errorMessage = String.format("Item of type '%s' is not a subtype of the list's item type '%s'.",
-                            NodeWireForm.get(item.getType()), NodeWireForm.get(target.getItemType()));
-                    throw new IllegalArgumentException(errorMessage);
-                }
+                validateExplicitListItemType(item, target.getItemType(), nodeProvider, nodeResolver, typeIdentities);
             }
+        }
+    }
+
+    @Override
+    public void validateListItem(Node item, Node itemType,
+                                 NodeProvider nodeProvider, NodeResolver nodeResolver,
+                                 CanonicalTypeIdentityLookup typeIdentities) {
+        validateExplicitListItemType(EffectiveTypeChecks.withExactScalarType(item), itemType,
+                nodeProvider, nodeResolver, typeIdentities);
+    }
+
+    private void validateExplicitListItemType(Node item, Node itemType,
+                                              NodeProvider nodeProvider, NodeResolver nodeResolver,
+                                              CanonicalTypeIdentityLookup typeIdentities) {
+        if (item.getType() != null && itemType != null
+                && !EffectiveTypeChecks.isCollectionMemberCompatible(
+                item.getType(), itemType, nodeProvider, nodeResolver, typeIdentities)) {
+            throw new IllegalArgumentException(String.format(
+                    "Item of type '%s' is not a subtype of the list's item type '%s'.",
+                    NodeWireForm.get(item.getType()), NodeWireForm.get(itemType)));
         }
     }
 

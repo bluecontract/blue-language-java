@@ -51,6 +51,8 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: Akf1Eq9dqc56nPuMZoM63WxNUxSZCWcCASM9RMKpdX9S
             subject:
@@ -59,7 +61,7 @@ stages:
       blueId: this#0
   preliminaryBlueIds:
     '0': FJUXKTPhPanTxExYVW5CBoiYLG6DAPG2wdW422RjZfW3
-    '1': AnsRh1abd6Rbu2R7R4KhUqHzmvoRNH8dBpNECuz4v9JX
+    '1': F8teanouCTDgHNiRA9u9E1EeCmYrssEYd7Uh9H9NAa28
   sortedSourceIndices:
   - 1
   - 0
@@ -71,7 +73,7 @@ stages:
     observedA:
       blueId: DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt
     contracts:
-      blueId: FQeJp2hHiMVwYsw8AUNvtEJ4zTniD7yB1Z3zCkPNn9Tp
+      blueId: HPdFuoyGA129j6R9C83pwmH115EWnNRh6c3P5C775PPv
     a:
       blueId: this#1
   - documentId:
@@ -85,16 +87,16 @@ stages:
     contracts:
       blueId: 5GCXRDC4LgUBKCAfA9J1cS2Jg4cKQtGc86783cLuhwdH
   canonicalMasterInputUtf8Bytes: 623
-  masterBlueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh
+  masterBlueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm
   memberBlueIdsInSourceOrder:
-  - 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#1
-  - 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#0
+  - 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#1
+  - 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#0
   materializedDocuments:
   - documentId: history-a
     memberIdentity: history-a
     counter: 10
     b:
-      blueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#0
+      blueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#0
     contracts:
       embedded:
         type:
@@ -138,12 +140,14 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: Akf1Eq9dqc56nPuMZoM63WxNUxSZCWcCASM9RMKpdX9S
             subject:
               blueId: EjPyZQvo3QrWXq8Fypkf5Xxa3gvfF1JXt5ttqpzYn2h2
     a:
-      blueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#1
+      blueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#1
 - name: result-0
   sourceDocumentsWithThisReferences:
   - documentId: history-a
@@ -194,6 +198,8 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: Akf1Eq9dqc56nPuMZoM63WxNUxSZCWcCASM9RMKpdX9S
             subject:
@@ -202,7 +208,7 @@ stages:
       blueId: this#0
   preliminaryBlueIds:
     '0': FJUXKTPhPanTxExYVW5CBoiYLG6DAPG2wdW422RjZfW3
-    '1': AnsRh1abd6Rbu2R7R4KhUqHzmvoRNH8dBpNECuz4v9JX
+    '1': F8teanouCTDgHNiRA9u9E1EeCmYrssEYd7Uh9H9NAa28
   sortedSourceIndices:
   - 1
   - 0
@@ -214,7 +220,7 @@ stages:
     observedA:
       blueId: DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt
     contracts:
-      blueId: FQeJp2hHiMVwYsw8AUNvtEJ4zTniD7yB1Z3zCkPNn9Tp
+      blueId: HPdFuoyGA129j6R9C83pwmH115EWnNRh6c3P5C775PPv
     a:
       blueId: this#1
   - documentId:
@@ -228,16 +234,16 @@ stages:
     contracts:
       blueId: 5GCXRDC4LgUBKCAfA9J1cS2Jg4cKQtGc86783cLuhwdH
   canonicalMasterInputUtf8Bytes: 623
-  masterBlueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh
+  masterBlueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm
   memberBlueIdsInSourceOrder:
-  - 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#1
-  - 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#0
+  - 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#1
+  - 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#0
   materializedDocuments:
   - documentId: history-a
     memberIdentity: history-a
     counter: 10
     b:
-      blueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#0
+      blueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#0
     contracts:
       embedded:
         type:
@@ -281,9 +287,11 @@ stages:
           blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
         entries:
           source:
+            type:
+              blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
             domain:
               blueId: Akf1Eq9dqc56nPuMZoM63WxNUxSZCWcCASM9RMKpdX9S
             subject:
               blueId: EjPyZQvo3QrWXq8Fypkf5Xxa3gvfF1JXt5ttqpzYn2h2
     a:
-      blueId: 4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh#1
+      blueId: 8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm#1

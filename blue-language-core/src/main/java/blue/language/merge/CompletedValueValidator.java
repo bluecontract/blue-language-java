@@ -3,6 +3,7 @@ package blue.language.merge;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.NodePathEditor;
 import blue.language.model.Nodes;
 import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.ResolutionLimits;
@@ -32,6 +33,7 @@ final class CompletedValueValidator {
     private final Map<Node, Boolean> semanticPresenceByResolvedNode =
             new IdentityHashMap<>();
     private Map<String, ValidationCandidate> candidates;
+    private List<ValidationCandidate> candidateOrder;
     private Map<String, PresenceGate> presenceGates;
     private Set<String> incompletePaths;
     private final List<ValidationCandidate> definitionCandidates = new ArrayList<>();
@@ -278,7 +280,12 @@ final class CompletedValueValidator {
         ValidationCandidate candidate = candidates.get(path);
         if (candidate == null) {
             candidate = new ValidationCandidate();
+            candidate.path = path;
             candidates.put(path, candidate);
+            if (candidateOrder == null) {
+                candidateOrder = new ArrayList<>();
+            }
+            candidateOrder.add(candidate);
         }
         return candidate;
     }
@@ -385,6 +392,177 @@ final class CompletedValueValidator {
                     candidate.presence.present,
                     entry.getKey(),
                     engine.canonicalTypeIdentities());
+        }
+    }
+
+    /**
+     * Marks the current end of the candidate lists so a later flush inspects
+     * only candidates observed after this point.
+     */
+    int[] candidateMark() {
+        return new int[] {
+                definitionCandidates.size(),
+                candidateOrder == null ? 0 : candidateOrder.size()};
+    }
+
+    /**
+     * Materializes pending candidate references observed since {@code mark}
+     * that live inside {@code subtreeRoot}, before that subtree's canonical
+     * identity is recorded or its content is copied elsewhere.
+     *
+     * <p>Resolution defers value-reference materialization inside type
+     * declarations to the end of the invocation. An authored inline type,
+     * including the root document of a canonicalization run, records its
+     * canonical identity and detaches a copy of its resolved body earlier
+     * than that, and materialized reference content is cloned into its
+     * enclosing value; references whose context requires content must be
+     * complete first. Only complete candidates are materialized; validation
+     * still happens in {@link #validateCompletedCandidates}. The work is
+     * linear in the candidates observed since the mark and in the nodes
+     * they add.</p>
+     */
+    void materializePendingDefinitionReferences(
+            ResolutionEngine.ResolutionState state,
+            Node subtreeRoot,
+            int[] mark) {
+        int definitionStart = mark[0];
+        int candidateStart = mark[1];
+        if (definitionCandidates.size() <= definitionStart
+                && (candidateOrder == null
+                || candidateOrder.size() <= candidateStart)) {
+            return;
+        }
+        List<String> savedPath = new ArrayList<>(state.path);
+        Set<Node> subtree = subtreeNodes(subtreeRoot);
+        try {
+            boolean progressed = true;
+            while (progressed) {
+                progressed = false;
+                for (int index = definitionStart; index < definitionCandidates.size(); index++) {
+                    ValidationCandidate definition = definitionCandidates.get(index);
+                    if (definition.pendingReferenceBlueId != null
+                            && definition.complete
+                            && !isIncomplete(state, definition.definitionPath)
+                            && materializeWithin(state, savedPath, subtree, subtreeRoot,
+                                    definition.definitionPath, definition, true)) {
+                        progressed = true;
+                    }
+                }
+                for (int index = candidateStart;
+                     candidateOrder != null && index < candidateOrder.size(); index++) {
+                    ValidationCandidate candidate = candidateOrder.get(index);
+                    if (candidate.pendingReferenceBlueId != null
+                            && candidate.complete
+                            && ancestorsPresent(candidate)
+                            && materializeWithin(state, savedPath, subtree, subtreeRoot,
+                                    candidate.path, candidate, false)) {
+                        progressed = true;
+                    }
+                }
+            }
+        } finally {
+            state.path.clear();
+            state.path.addAll(savedPath);
+        }
+    }
+
+    /**
+     * Materializes one pending candidate when its target lives inside the
+     * subtree. A candidate observed before its enclosing value was merged
+     * into a fresh target may point at an orphaned node; the live node at
+     * the same path is then the target, provided it still awaits that
+     * reference.
+     */
+    private boolean materializeWithin(
+            ResolutionEngine.ResolutionState state,
+            List<String> basePath,
+            Set<Node> subtree,
+            Node subtreeRoot,
+            String pointer,
+            ValidationCandidate candidate,
+            boolean definitionGoal) {
+        List<String> relative = relativeSegments(basePath, pointer);
+        if (relative == null) {
+            return false;
+        }
+        if (!subtree.contains(candidate.node)) {
+            Node live = NodePathEditor.getOrNull(
+                    subtreeRoot, JsonPointer.toPointer(relative));
+            if (live == null
+                    || !subtree.contains(live)
+                    || !candidate.pendingReferenceBlueId.equals(live.getBlueId())
+                    || state.materializedReferenceTargets.contains(live)) {
+                return false;
+            }
+            candidate.node = live;
+        }
+        materializePendingReference(state, relative, pointer, candidate, definitionGoal);
+        addSubtreeNodes(subtree, candidate.node);
+        return true;
+    }
+
+    private void materializePendingReference(
+            ResolutionEngine.ResolutionState state,
+            List<String> relative,
+            String pointer,
+            ValidationCandidate candidate,
+            boolean definitionGoal) {
+        enterPath(state, pointer);
+        int segments = enterLimitPath(candidate.pendingReferenceLimits,
+                JsonPointer.toPointer(relative), candidate.node);
+        boolean previousGoal = state.definitionGoal;
+        state.definitionGoal = definitionGoal || previousGoal;
+        try {
+            referenceResolver.materializeReferenceAtCurrentPath(candidate.node,
+                    candidate.pendingReferenceBlueId,
+                    candidate.pendingReferenceLimits, state);
+        } finally {
+            state.definitionGoal = previousGoal;
+            exitLimitPath(candidate.pendingReferenceLimits, segments);
+        }
+        candidate.pendingReferenceBlueId = null;
+        candidate.pendingReferenceLimits = null;
+    }
+
+    private static List<String> relativeSegments(List<String> base, String pointer) {
+        List<String> segments = JsonPointer.split(pointer);
+        if (segments.size() < base.size()
+                || !segments.subList(0, base.size()).equals(base)) {
+            return null;
+        }
+        return segments.subList(base.size(), segments.size());
+    }
+
+    private static Set<Node> subtreeNodes(Node root) {
+        Set<Node> nodes = Collections.newSetFromMap(new IdentityHashMap<>());
+        addSubtreeNodes(nodes, root);
+        return nodes;
+    }
+
+    /**
+     * Adds every node reachable from {@code root}. The root may already be a
+     * member whose children were attached afterwards by a materialization,
+     * so membership of the root never stops the walk.
+     */
+    private static void addSubtreeNodes(Set<Node> nodes, Node root) {
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        List<Node> pending = new ArrayList<>();
+        pending.add(root);
+        while (!pending.isEmpty()) {
+            Node current = pending.remove(pending.size() - 1);
+            if (current == null || !visited.add(current)) {
+                continue;
+            }
+            nodes.add(current);
+            if (current.getProperties() != null) {
+                pending.addAll(current.getProperties().values());
+            }
+            if (current.getItems() != null) {
+                pending.addAll(current.getItems());
+            }
+            if (current.getContracts() != null) {
+                pending.add(current.getContracts());
+            }
         }
     }
 
@@ -497,6 +675,7 @@ final class CompletedValueValidator {
     }
 
     private static final class ValidationCandidate {
+        private String path;
         private String definitionPath;
         private Node node;
         private boolean observed;

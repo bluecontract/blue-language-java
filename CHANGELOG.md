@@ -76,6 +76,15 @@
 - accept required exact checkpoint-domain objects or references, calculate their
   representation-independent exact identity, and preserve duplicate-event detection
 
+- finish contextual inline/reference Source canonicalization with explicit
+  occurrence materialization evidence, schema-only preservation, and identical
+  typed Dictionary/List validation; exact-content hashing remains unchanged
+- specify retained effective custom child types, faithful reference reuse,
+  and opaque exact-reference boundaries; publish independent identity oracles
+  and a commit-pinned change inventory because corrected Source IDs can change
+- align `CheckpointEntry.domain` with the Contracts exact-node requirement and
+  write checkpoint entries with their canonical type; dependent registry and
+  fixture identities rotate while historical exact content stays unchanged
 - retain the original external processing event and its admitted exact BlueId
   across managed closure steps; expose the identity evidence to hosted
   runtimes without rehashing the retained Source representation

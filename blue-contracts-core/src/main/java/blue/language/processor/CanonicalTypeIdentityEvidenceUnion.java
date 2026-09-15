@@ -76,6 +76,18 @@ final class CanonicalTypeIdentityEvidenceUnion
     }
 
     @Override
+    public Optional<Node> findVerifiedReferenceContent(String blueId) {
+        for (CanonicalTypeIdentityLookup constituent : constituents) {
+            Optional<Node> content =
+                    constituent.findVerifiedReferenceContent(blueId);
+            if (content.isPresent()) {
+                return content;
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public Optional<String> findCanonicalTypeBlueId(Node completedType) {
         return findCanonicalTypeIdentityEvidence(completedType)
                 .map(CanonicalTypeIdentityEvidence::blueId);

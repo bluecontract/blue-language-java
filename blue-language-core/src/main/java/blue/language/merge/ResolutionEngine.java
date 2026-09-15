@@ -20,6 +20,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -293,6 +294,7 @@ final class ResolutionEngine implements NodeResolver {
         LabelProvenanceTracker.LabelProvenanceScope outermostLabelScope = null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
+            source = source.cloneWithoutResolutionEvidence();
             InlineTypeCycleValidator.validate(target);
             InlineTypeCycleValidator.validate(source);
             state = new ResolutionState(
@@ -432,6 +434,9 @@ final class ResolutionEngine implements NodeResolver {
 
             if (source.getBlueId() != null) {
                 target.blueId(source.getBlueId());
+                if (source.getBlueId().equals(source.getMaterializedReferenceBlueId())) {
+                    target.materializedReferenceBlueId(source.getBlueId());
+                }
             }
 
             mergingProcessor.postProcess(
@@ -488,6 +493,10 @@ final class ResolutionEngine implements NodeResolver {
         return listOverlayMerger.applyItemType(child, itemType);
     }
 
+    void validateListItemContribution(Node child, Node itemType) {
+        referenceResolver.validateListItemContribution(child, itemType);
+    }
+
     private Node itemTypeReference(Node itemType) {
         return listOverlayMerger.itemTypeReference(itemType);
     }
@@ -515,6 +524,36 @@ final class ResolutionEngine implements NodeResolver {
             return;
         }
         Node targetValue = target.getProperties().get(sourceKey);
+        if (target.getValueType() != null) {
+            // valueType is an interpreting context. Materialize an exact entry
+            // at this path before applying it, using canonical List payloads.
+            Node contribution = sourceValue;
+            boolean exactReference = sourceValue.isReferenceOnly();
+            if (exactReference) {
+                contribution = new Node();
+                referenceResolver.materializeReferenceAtCurrentPath(
+                        contribution, sourceValue.getBlueId(), limits,
+                        activeResolutionState());
+            }
+            if (contribution.getType() == null) {
+                contribution = contribution.clone().type(target.getValueType().clone());
+            }
+            Node memberSource = contribution;
+            Node member = exactReference
+                    ? resolveCanonical(memberSource, limits)
+                    : resolve(memberSource, limits);
+            if (targetValue == null) {
+                target.getProperties().put(sourceKey, member);
+            } else if (exactReference) {
+                withCanonicalListPayloads(() -> {
+                    mergeInstanceObject(targetValue, member, limits);
+                    return null;
+                });
+            } else {
+                mergeInstanceObject(targetValue, member, limits);
+            }
+            return;
+        }
         if (targetValue == null) {
             Node node = resolve(sourceValue, limits);
             target.getProperties().put(sourceKey, node);
@@ -734,6 +773,23 @@ final class ResolutionEngine implements NodeResolver {
         return completedValueValidator.currentPath(state);
     }
 
+    /** Marks the candidate lists before a nested resolution starts. */
+    int[] candidateMark() {
+        return completedValueValidator.candidateMark();
+    }
+
+    /**
+     * Materializes complete pending references observed since {@code mark}
+     * inside {@code subtreeRoot}.
+     */
+    void materializePendingDefinitionReferences(Node subtreeRoot, int[] mark) {
+        ResolutionState state = activeResolutionState();
+        if (state != null) {
+            completedValueValidator.materializePendingDefinitionReferences(
+                    state, subtreeRoot, mark);
+        }
+    }
+
     private void resolveTypeMetadata(Node source, ResolutionLimits limits) {
         typeMetadataResolver.resolve(source, limits);
     }
@@ -756,6 +812,7 @@ final class ResolutionEngine implements NodeResolver {
         boolean outermost = state == null;
         boolean enteredOutermostLimit = false;
         if (outermost) {
+            node = node.cloneWithoutResolutionEvidence();
             InlineTypeCycleValidator.validate(node);
             BlueIdReferenceValidator.validate(node);
             state = new ResolutionState(
@@ -842,6 +899,9 @@ final class ResolutionEngine implements NodeResolver {
         Map<Node, Set<String>> appliedTypeContributions;
         final Map<Node, String> completedTypeMaterializations =
                 new IdentityHashMap<>();
+        /** Targets whose value reference this invocation already materialized. */
+        final Set<Node> materializedReferenceTargets =
+                Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
         long incompleteTraversalEpoch;
         boolean definitionGoal;
         Node rootSource;

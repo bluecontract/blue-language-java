@@ -1,0 +1,161 @@
+id: R_contextual_dictionary_invalid_reference
+category: Canonicalization
+operation: canonicalize
+description: 'Contextual exact-reference contract: dictionary-invalid-reference'
+source:
+  type:
+    blueId: 5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF
+  valueType:
+    blueId: 5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL
+  entry:
+    blueId: 6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm
+provider:
+- requestedBlueId: A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN
+  node:
+    name: Currency
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+- requestedBlueId: 3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA
+  node:
+    name: Holder
+    currency:
+      type:
+        blueId: A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN
+- requestedBlueId: 6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm
+  node:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: PLN
+- requestedBlueId: GTS7MAC6UEn97shNfD3j88ybsNNzaMgyCJVEBLMwF7Uf
+  node:
+    type:
+      blueId: A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN
+    value: PLN
+- requestedBlueId: 3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe
+  node:
+    name: Terms
+    title:
+      type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+- requestedBlueId: CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo
+  node:
+    name: Holder
+    terms:
+      type:
+        blueId: 3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe
+- requestedBlueId: 5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy
+  node:
+    title:
+      type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+      value: Coffee
+- requestedBlueId: HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU
+  node:
+    title:
+      type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+      value: Tea
+- requestedBlueId: BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg
+  node:
+    name: Schema holder
+    field:
+      schema:
+        minLength: 1
+- requestedBlueId: 6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9
+  node:
+    schema:
+      required: true
+- requestedBlueId: 5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL
+  node:
+    name: Label
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+- requestedBlueId: bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf
+  node:
+    type:
+      blueId: 5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL
+    value: PLN
+- requestedBlueId: 3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS
+  node:
+    name: List holder
+    entries:
+      type:
+        blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
+      itemType:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+- requestedBlueId: FHRuHsM8Ti7LNhb6mtvUqU9h8btjvgYEsk7K9wZnKENi
+  node:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: Coffee
+- requestedBlueId: AfpiTJ2txCUqkMGQL2iPADHuQp2oheNJUnzgqpwA5fig
+  node:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: Tea
+- requestedBlueId: 8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D
+  node:
+    type:
+      blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
+    items:
+    - type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+      value: Coffee
+    - type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+      value: Tea
+    - type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+      value: Coffee
+- requestedBlueId: G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir
+  node:
+    name: Empty holder
+    field:
+      schema:
+        maxFields: 3
+- requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  node: {}
+- requestedBlueId: HwcCdTm45qd8Fdf1gUwYDw857p9FF4nJFLTPEsJd7BMX
+  node:
+    name: empty-string holder
+    field:
+      type:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+- requestedBlueId: GNwiz9RSVGjkEXY8B5riHgCbsPAiT8rZiXsToWNtTWWN
+  node:
+    type:
+      blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+    value: ''
+- requestedBlueId: pmUhHLoAh9U8d4sN4tZDovftyZJB5kK5giNfSsMTGPv
+  node:
+    name: zero holder
+    field:
+      type:
+        blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+- requestedBlueId: DBB5aS539NouuDkdsPMUGoUyGRiB9h413zqL4xbzV1Nt
+  node:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 0
+- requestedBlueId: AyQh3DBTvB27FxB7FymHjiTPp4ekzoApWN83WEikGZiM
+  node:
+    name: false holder
+    field:
+      type:
+        blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+- requestedBlueId: 2RFzT3PmUN6ryMkxFLQPSFAWtW5GNpStBspdovnExsCF
+  node:
+    type:
+      blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+    value: false
+- requestedBlueId: AgReuA8H1P8rvsEJVjVZJhQ71eb9BuVp54rRyzd5dc8z
+  node:
+    name: empty-list holder
+    field:
+      type:
+        blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
+- requestedBlueId: 4mfDwwrpfVGMwKn82vsr4rVX484P8DAMy5RNEVXqsy9h
+  node: []
+expectError: true
+expectedErrorCategory: TypeCompatibilityViolation
+note: Expected canonical content is authored independently; IDs use the existing direct oracle.

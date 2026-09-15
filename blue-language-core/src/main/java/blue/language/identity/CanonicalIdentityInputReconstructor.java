@@ -2,6 +2,7 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.NodeIdentities;
+import blue.language.model.NodeWireForm;
 import blue.language.model.Nodes;
 import blue.language.model.Schema;
 
@@ -41,7 +42,8 @@ final class CanonicalIdentityInputReconstructor {
                 resolved,
                 resolved.getType(),
                 source,
-                resolved.getType() != null);
+                resolved.getType() != null,
+                true);
         validateCanonicalTypeReferences(
                 canonical,
                 "",
@@ -49,12 +51,34 @@ final class CanonicalIdentityInputReconstructor {
         return canonical;
     }
 
+    /**
+     * @param sourceComplete whether {@code source} is the complete authored
+     *        content of this node rather than a partial overlay of inherited
+     *        content, such as a positional list refinement
+     */
     private void reconstructNode(
             Node canonical,
             Node resolved,
             Node inherited,
             Node source,
-            boolean ownTypeBaseline) {
+            boolean ownTypeBaseline,
+            boolean sourceComplete) {
+        if (isSourceReference(source) && isMaterializedReference(resolved, source)) {
+            Node content = typeIdentities.findVerifiedReferenceContent(
+                    source.getBlueId()).orElseThrow(() -> new IllegalStateException(
+                            "Missing verified content for materialized reference: "
+                                    + source.getBlueId()));
+            /*
+             * The resolver materialized this reference, so its exact
+             * verified content is the authored lane of the child. It
+             * reconstructs through the same path as inline content and
+             * only then decides whether the pure reference form stays.
+             */
+            reconstructNode(canonical, resolved, inherited, content,
+                    ownTypeBaseline, true);
+            preserveFaithfulReference(canonical, resolved, source, content);
+            return;
+        }
         if (resolved.getBlueId() != null
                 && inherited != null
                 && resolved.getBlueId().equals(inherited.getBlueId())
@@ -120,21 +144,67 @@ final class CanonicalIdentityInputReconstructor {
         }
         reconstructSchema(canonical, resolved, inherited, source);
 
-        reconstructContracts(canonical, resolved, inherited, source);
-        reconstructItems(canonical, resolved, source);
-        reconstructProperties(canonical, resolved, inherited, source);
+        reconstructContracts(canonical, resolved, inherited, source,
+                sourceComplete);
+        reconstructItems(canonical, resolved, source, sourceComplete);
+        reconstructProperties(canonical, resolved, inherited, source,
+                sourceComplete);
 
         if (isSourceReference(source)) {
-            canonical.replaceWith(
-                    new Node().blueId(source.getBlueId()));
+            preserveFaithfulReference(canonical, resolved, source, null);
         }
+    }
+
+    /**
+     * Keeps an authored pure reference only where it identifies the same
+     * exact node that canonicalizing the referenced content in this context
+     * produces.
+     *
+     * <p>A reference whose context contributes nothing stays opaque: the
+     * resolver never materialized it and it is the exact child. Where the
+     * context obliged materialization (a declared type, inherited payload or
+     * a payload-dependent schema), the child is canonicalized exactly like an
+     * inline child. If that canonical form hashes to the referenced BlueId,
+     * the pure reference form is retained because both contribute the same
+     * identity. Otherwise the context changed the child's meaning and the
+     * materialized canonical form is the identity input, so inline and
+     * referenced representations of one value derive the same Source
+     * identity.</p>
+     */
+    private void preserveFaithfulReference(
+            Node canonical, Node resolved, Node source, Node content) {
+        String blueId = source.getBlueId();
+        if (!isMaterializedReference(resolved, source)) {
+            canonical.replaceWith(new Node().blueId(blueId));
+            return;
+        }
+        if (Nodes.isEmptyNode(canonical)) {
+            return;
+        }
+        // The exact content is verified to hash to the reference, so a
+        // canonical child that is structurally that content is faithful
+        // without recomputing its BlueId.
+        boolean faithful = content != null
+                && NodeWireForm.get(canonical).equals(NodeWireForm.get(content))
+                || blueId.equals(DirectBlueIdCalculator.calculateBlueId(
+                        canonical));
+        if (faithful) {
+            canonical.replaceWith(new Node().blueId(blueId));
+        }
+    }
+
+    /** Resolver-established evidence for this occurrence, never a shape/cache guess. */
+    private boolean isMaterializedReference(Node resolved, Node source) {
+        return source != null && source.getBlueId() != null
+                && source.getBlueId().equals(resolved.getMaterializedReferenceBlueId());
     }
 
     private void reconstructContracts(
             Node canonical,
             Node resolved,
             Node inherited,
-            Node source) {
+            Node source,
+            boolean sourceComplete) {
         if (resolved.getContracts() == null) {
             return;
         }
@@ -159,7 +229,8 @@ final class CanonicalIdentityInputReconstructor {
                 sourceContracts,
                 usesOwnTypeBaseline(
                         inheritedContracts,
-                        resolved.getContracts()));
+                        resolved.getContracts()),
+                sourceComplete);
         if (!Nodes.isEmptyNode(result)) {
             canonical.contracts(result);
         }
@@ -198,7 +269,8 @@ final class CanonicalIdentityInputReconstructor {
     private void reconstructItems(
             Node canonical,
             Node resolved,
-            Node source) {
+            Node source,
+            boolean sourceComplete) {
         if (resolved.getItems() == null) {
             return;
         }
@@ -209,12 +281,15 @@ final class CanonicalIdentityInputReconstructor {
             Node item = resolved.getItems().get(index);
             Node result = new Node();
             Node baseline = derivationBaseline(null, item);
+            SourceItem sourceItem = sourceItem(
+                    source, index, resolved.getItems().size());
             reconstructNode(
                     result,
                     item,
                     baseline,
-                    sourceItem(source, index, resolved.getItems().size()),
-                    usesOwnTypeBaseline(null, item));
+                    sourceItem.node,
+                    usesOwnTypeBaseline(null, item),
+                    sourceComplete && !sourceItem.partial);
             items.add(Nodes.isEmptyNode(result)
                     ? Nodes.emptyPlaceholder()
                     : result);
@@ -226,7 +301,8 @@ final class CanonicalIdentityInputReconstructor {
             Node canonical,
             Node resolved,
             Node inherited,
-            Node source) {
+            Node source,
+            boolean sourceComplete) {
         if (resolved.getProperties() == null) {
             return;
         }
@@ -250,13 +326,33 @@ final class CanonicalIdentityInputReconstructor {
                     && inherited.getProperties() != null
                     ? inherited.getProperties().get(key)
                     : null;
+            if (inheritedProperty == null) {
+                inheritedProperty = declaredProperty(resolved, key);
+            }
             Node sourceProperty = source != null
                     && source.getProperties() != null
                     ? source.getProperties().get(key)
                     : null;
             if (sameNodeBlueId(resolvedProperty, inheritedProperty)
                     && resolvedProperty.getItems() == null
-                    && !isSourceReference(sourceProperty)) {
+                    && !(Nodes.hasObjectPayload(resolvedProperty)
+                    && !Nodes.hasObjectPayload(inheritedProperty)
+                    && inheritedProperty.getBlueId() == null)
+                    && (!isSourceReference(sourceProperty)
+                    || isMaterializedReference(resolvedProperty, sourceProperty))) {
+                // Fully derivable from the ancestor form. A materialized
+                // reference that contributed nothing beyond it is omitted
+                // exactly like the same content written inline.
+                continue;
+            }
+            if (sourceComplete
+                    && source != null
+                    && !source.isReferenceOnly()
+                    && sourceProperty == null
+                    && isPayloadFree(resolvedProperty)) {
+                // Not authored and carrying no payload: a declaration merged
+                // from the type chain, derivable regardless of how deep the
+                // resolver happened to expand it.
                 continue;
             }
             Node result = new Node();
@@ -268,7 +364,8 @@ final class CanonicalIdentityInputReconstructor {
                     baseline,
                     sourceProperty,
                     usesOwnTypeBaseline(
-                            inheritedProperty, resolvedProperty));
+                            inheritedProperty, resolvedProperty),
+                    sourceComplete);
             if (!Nodes.isEmptyNode(result)) {
                 properties.put(key, result);
             }
@@ -278,12 +375,24 @@ final class CanonicalIdentityInputReconstructor {
         }
     }
 
-    private Node sourceItem(
+    /** Authored lane of one list element and whether it is only an overlay. */
+    private static final class SourceItem {
+        private static final SourceItem ABSENT = new SourceItem(null, false);
+        private final Node node;
+        private final boolean partial;
+
+        private SourceItem(Node node, boolean partial) {
+            this.node = node;
+            this.partial = partial;
+        }
+    }
+
+    private SourceItem sourceItem(
             Node source,
             int resolvedIndex,
             int resolvedSize) {
         if (source == null || source.getItems() == null) {
-            return null;
+            return SourceItem.ABSENT;
         }
         List<Node> appended = new ArrayList<>();
         for (Node item : source.getItems()) {
@@ -296,10 +405,12 @@ final class CanonicalIdentityInputReconstructor {
                     if (positioned.getProperties() != null
                             && positioned.getProperties().containsKey(
                             LIST_CONTROL_REPLACE)) {
-                        return positioned.getProperties().get(
-                                LIST_CONTROL_REPLACE);
+                        return new SourceItem(positioned.getProperties().get(
+                                LIST_CONTROL_REPLACE), false);
                     }
-                    return positioned;
+                    // A positional map overlay refines an inherited element;
+                    // it is not that element's complete authored content.
+                    return new SourceItem(positioned, true);
                 }
                 continue;
             }
@@ -308,8 +419,8 @@ final class CanonicalIdentityInputReconstructor {
         int appendedIndex = resolvedIndex
                 - (resolvedSize - appended.size());
         return appendedIndex >= 0 && appendedIndex < appended.size()
-                ? appended.get(appendedIndex)
-                : null;
+                ? new SourceItem(appended.get(appendedIndex), false)
+                : SourceItem.ABSENT;
     }
 
     private void setTypeIfDifferent(
@@ -334,13 +445,25 @@ final class CanonicalIdentityInputReconstructor {
         if (inheritedTypeBlueId != null
                 && isInheritedPrimitiveContribution(
                         resolvedType, authoredType, inheritedTypeBlueId)) {
+            if (OBJECT_TYPE.equals(fieldName)
+                    && !CORE_TYPE_BLUE_IDS.contains(inheritedTypeBlueId)) {
+                setter.accept(canonical, pureTypeReference(
+                        inheritedTypeBlueId, fieldName));
+            }
             return;
         }
         String resolvedTypeBlueId = effectiveTypeBlueId(
                 resolvedType,
                 authoredType,
                 fieldName);
-        if (inheritedTypeBlueId != null) {
+        // A child's custom type identifies the value independently of its
+        // enclosing field. Retaining it keeps the canonical child equal to the
+        // same value published on its own, so a verified reference to that
+        // publication stays a faithful pure reference in identity input.
+        // Derivable core types and other metadata remain omitted.
+        if (inheritedTypeBlueId != null
+                && (!OBJECT_TYPE.equals(fieldName)
+                || CORE_TYPE_BLUE_IDS.contains(resolvedTypeBlueId))) {
             if (resolvedTypeBlueId.equals(inheritedTypeBlueId)) {
                 return;
             }
@@ -680,6 +803,56 @@ final class CanonicalIdentityInputReconstructor {
 
     private boolean isSourceReference(Schema source) {
         return source != null && source.isReferenceOnly();
+    }
+
+    /**
+     * Returns the declaration of {@code key} contributed by the node's own
+     * effective type chain when the enclosing declaration does not mention
+     * it.
+     *
+     * <p>Resolution merges payload-less declarations of a node's type into
+     * the completed node, while the enclosing declaration may know nothing
+     * about that type's fields, for example a contracts entry whose Handler
+     * type declares {@code order} or a recursive boundary re-expanded one
+     * level deeper. Those fields are derivable from the type chain and must
+     * not be mistaken for instance contributions.</p>
+     */
+    private Node declaredProperty(Node resolved, String key) {
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        Node type = resolved.getType();
+        while (type != null && !type.isReferenceOnly() && visited.add(type)) {
+            if (type.getProperties() != null
+                    && type.getProperties().containsKey(key)) {
+                return type.getProperties().get(key);
+            }
+            type = type.getType();
+        }
+        return null;
+    }
+
+    /**
+     * Tells whether a completed node carries no payload anywhere: no value,
+     * list, pure reference or contracts. A BlueId annotating expanded content
+     * is resolution metadata, not payload.
+     */
+    private boolean isPayloadFree(Node node) {
+        if (node == null) {
+            return true;
+        }
+        if (node.isReferenceOnly()
+                || node.getValue() != null
+                || node.getItems() != null
+                || node.getContracts() != null) {
+            return false;
+        }
+        if (node.getProperties() != null) {
+            for (Node child : node.getProperties().values()) {
+                if (!isPayloadFree(child)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private Node derivationBaseline(Node inherited, Node resolved) {

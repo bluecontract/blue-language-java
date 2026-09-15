@@ -1,0 +1,3178 @@
+{
+  "schema": "blue-contextual-reference-identity-comparison/1.0",
+  "executions": [
+    {
+      "path": "next-matrix.json",
+      "sha256": "c5980925f02679dd4203371deb0d655ed4d929075a2e792f6ca7205458b7ecb5",
+      "sourceRevision": "952b90ba5748f6b3605482700608bd0429839a83"
+    },
+    {
+      "path": "original-pr36-matrix.json",
+      "sha256": "ae835bab7de01c7628c656394a70de7f1973580734c54c9e4c93c8cd2ac5e937",
+      "sourceRevision": "9eb47786cee058af3868ed581bd9fb4b7e15850c"
+    },
+    {
+      "path": "repaired-matrix.json",
+      "sha256": "626335f24f01e6f6c27b24f66ceae46dd3616cc3b7ba6b0c2b2b1c25d9e9c93e",
+      "sourceRevision": "89dbaa114c8f11a571ac4fa111aa8776e27ce24d"
+    }
+  ],
+  "sharedHarness": [
+    {
+      "path": "blue-language-core/src/test/java/blue/language/runtime/ContextualReferenceIdentityMatrixTest.java",
+      "sha256": "2c72771adb58bc06b91357cdbf074242d1671f560c0a77ec5221fb14eef9c766"
+    },
+    {
+      "path": "blue-language-core/src/test/resources/identity/contextual-reference-matrix.json",
+      "sha256": "229700d9c3ae8ba2d9754b84b3c46b272a0f518e357fe0b3629808776bbdf5dc"
+    }
+  ],
+  "rowCountPerExecution": 132,
+  "comparisons": [
+    {
+      "beforeRevision": "952b90ba5748f6b3605482700608bd0429839a83",
+      "afterRevision": "89dbaa114c8f11a571ac4fa111aa8776e27ce24d",
+      "directIdentityChanges": 0,
+      "unexplainedChanges": 0,
+      "beforeOracleMismatches": 60,
+      "afterOracleMismatches": 0,
+      "changes": [
+        {
+          "case": "currency-inline-custom",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-custom",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-custom",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-custom",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-text",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-text",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-text",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-inline-text",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                },
+                "value": "PLN"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-reference-text",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-reference-text",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-reference-text",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "currency-reference-text",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "844qf3Ye22h84i9vMm5Jpg8t5M6UFBBo5AaBhbsCawMq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "3vZvAB5unPV5z3vp1wTXCz461tNjBJGErasewFhARM7F",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3WZswxQosL5XB2akb3qLKjgiz2jL1ZvBJWsfVMx2xHTA"
+              },
+              "currency": {
+                "type": {
+                  "blueId": "A6bEQcVduDsMYqrecotcG1NPMXeYf8PncRbqe3CFTUXN"
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "items": [
+                {
+                  "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+                }
+              ]
+            },
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "items": [
+                {
+                  "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+                }
+              ]
+            },
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "items": [
+                {
+                  "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+                }
+              ]
+            },
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "Ev3ZKffaMRmtUN9vL57QuLj3mTZ6E4KNeQaxBJ1ASjhW",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "items": [
+                {
+                  "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+                }
+              ]
+            },
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-whole-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "complete-referenced-list-payload",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "blueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "items": [
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Tea"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "case": "list-whole-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "complete-referenced-list-payload",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "blueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "items": [
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Tea"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "case": "list-whole-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "complete-referenced-list-payload",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "blueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "items": [
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Tea"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "case": "list-whole-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "complete-referenced-list-payload",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "eALV4vFq52W3svnWexgXzwDPQs15cSX8NaBiRkVsVdv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "blueId": "8DBmuTHSoX7isgj29VYSVoaizNoLWTjvdAu9PM66u68D"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "2S2R71BEzPHxnuBR1mFGW6uMm1hRATLjRiLTnEDsat9K",
+            "canonicalInput": {
+              "type": {
+                "blueId": "3DQv7GTkARcgXmJmrKjXmvCNE6qUjpqQtG4w44bv3VwS"
+              },
+              "entries": {
+                "items": [
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Tea"
+                  },
+                  {
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    },
+                    "value": "Coffee"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-coffee",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-coffee",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-coffee",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-coffee",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-tea",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-tea",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-tea",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-inline-tea",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-coffee",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-coffee",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-coffee",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-coffee",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "C9M4bQzFnzak7ta8wGhouAo8FX7my146KvCVNBEz3teE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "5jkas7WzJRgkLC5xTP1K3MpdS3ikaGGrkjRncnGe6iVy"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Bc8kafqa41bbpQqEPTciXyKERWnGNeQi91To2xM2TGjX",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Coffee"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-tea",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-tea",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-tea",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "terms-reference-tea",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "canonical-custom-type",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "D61roNDWD4ajWWu8PSkvZBjhARcML57cGpd73FUpzVGw",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "blueId": "HPmmGFMfNYvYpZxnrF8HjedCFoxBXF7ND3vvMFLe1XVU"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "E6S11gqKCQ1tP6rGPS8Z888BgY6ehUtVsVnyei6bhLpE",
+            "canonicalInput": {
+              "type": {
+                "blueId": "CiFh1TXC7LrgQ7vtzPdoev7J42nYmMMrEcDNRAHQ7ipo"
+              },
+              "terms": {
+                "type": {
+                  "blueId": "3rs6iCSpXaK2EsYrN3KYVkVP3akNXLCkVgqsvCnQnRwe"
+                },
+                "title": {
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  },
+                  "value": "Tea"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "beforeRevision": "9eb47786cee058af3868ed581bd9fb4b7e15850c",
+      "afterRevision": "89dbaa114c8f11a571ac4fa111aa8776e27ce24d",
+      "directIdentityChanges": 0,
+      "unexplainedChanges": 0,
+      "beforeOracleMismatches": 32,
+      "afterOracleMismatches": 0,
+      "changes": [
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-invalid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-value-type-validation",
+          "changedFields": [
+            "sourceBlueId",
+            "sourceError",
+            "canonicalInput",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceBlueId": "CEk2m7LcdNNyWKSeVJeDdJtYZM7k4aPDmU6LEX6rS6mw",
+            "sourceError": null,
+            "canonicalInput": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "blueId": "5GZwwyJdJsejKfEuaeXpjsNymFowPKfvkgH289Sw4giL"
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "6UPPMcrAfJFYCHyS1gxf5MasLBqQ7qqWkwp6bqucmnXm"
+              }
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceBlueId": null,
+            "sourceError": "TypeCompatibilityViolation",
+            "canonicalInput": null,
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "dictionary-valid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "dictionary-completed-payload",
+          "changedFields": [
+            "resolved"
+          ],
+          "before": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "blueId": "bAnT7cKuucB7ggFAwCpEk1w857HzopFsn6djbHommzf"
+              }
+            }
+          },
+          "after": {
+            "resolved": {
+              "type": {
+                "blueId": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF"
+              },
+              "valueType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "entry": {
+                "type": {
+                  "name": "Label",
+                  "type": {
+                    "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                  }
+                },
+                "value": "PLN"
+              }
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-inline",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {}
+            }
+          }
+        },
+        {
+          "case": "empty-object-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {
+                "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+              }
+            }
+          }
+        },
+        {
+          "case": "empty-object-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {
+                "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+              }
+            }
+          }
+        },
+        {
+          "case": "empty-object-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {
+                "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+              }
+            }
+          }
+        },
+        {
+          "case": "empty-object-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "present-empty-object",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "HEgF1d1vKNiWjaefJdyukGJPquxtKqtzbKdLqZhpjvdq",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "Cwi51GuAeRVzArPooNbcvjuL9QZDspDAVWd8pnVEFfpi",
+            "canonicalInput": {
+              "type": {
+                "blueId": "G7ASDtHkjreF1AeTL9zm1VSdnwmixUrGvxjk8GK5T7ir"
+              },
+              "field": {
+                "blueId": "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK"
+              }
+            }
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceError",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceError": "CanonicalizationError",
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceError": "TypeCompatibilityViolation",
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceError",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceError": "CanonicalizationError",
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceError": "TypeCompatibilityViolation",
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceError",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceError": "CanonicalizationError",
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceError": "TypeCompatibilityViolation",
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "list-invalid-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "list-item-type-validation",
+          "changedFields": [
+            "sourceError",
+            "resolved",
+            "resolutionError"
+          ],
+          "before": {
+            "sourceError": "CanonicalizationError",
+            "resolved": {
+              "type": {
+                "blueId": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK"
+              },
+              "itemType": {
+                "name": "Label",
+                "type": {
+                  "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                }
+              },
+              "items": [
+                {
+                  "type": {
+                    "name": "Label",
+                    "type": {
+                      "blueId": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
+                    }
+                  },
+                  "value": "PLN"
+                }
+              ]
+            },
+            "resolutionError": null
+          },
+          "after": {
+            "sourceError": "TypeCompatibilityViolation",
+            "resolved": null,
+            "resolutionError": "TypeCompatibilityViolation"
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "cold",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "pre-resolved",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "warm-forward",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "case": "schema-reference",
+          "mode": "warm-reverse",
+          "classification": "intended-language-correction",
+          "reason": "schema-materialization-evidence",
+          "changedFields": [
+            "sourceBlueId",
+            "canonicalInput"
+          ],
+          "before": {
+            "sourceBlueId": "AayjMVcmTYNpqksgYzuQy2pCYTKhWEtpPeTzWcFL1YYv",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "blueId": "6ViRSHXkE8CHJoLWUXLbSnCvcvbUUKTHUxg91ufkRaH9"
+              }
+            }
+          },
+          "after": {
+            "sourceBlueId": "F7G4WgorWZFmc9MA3ZAzSfzyyHQA4UgRWHpUKmy4bY4U",
+            "canonicalInput": {
+              "type": {
+                "blueId": "BL4FcGaLQyyHq3GSbWrd3UFNvWvYc34GsLMe7guWPtxg"
+              },
+              "field": {
+                "schema": {
+                  "required": true,
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "miniGate": "deferred-by-user; not executed or qualified"
+}

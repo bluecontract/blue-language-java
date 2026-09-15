@@ -28,6 +28,12 @@ public interface BlueIdentity {
      * obligations. Success establishes identity, not completed-value conformance;
      * use {@code BlueResolution.resolve} to certify an instance.
      *
+     * <p>A pure value reference remains an exact identity leaf when its context
+     * requires no content. This operation does not fetch document bodies behind
+     * unconstrained list elements solely to calculate identity. Inline/reference
+     * Source identity parity at such paths is guaranteed when the referenced
+     * exact content is already canonical identity input.</p>
+     *
      * @param sourceDocument authored Source Document
      * @return canonical Base58 SHA-256 BlueId
      */
@@ -37,6 +43,9 @@ public interface BlueIdentity {
      * Produces the unique direct identity input for a Source Document.
      * Definitions without sample payloads are accepted when their currently
      * evaluable constraints are valid. No validation goal enters this content.
+     *
+     * <p>Pure value references whose context requires no content remain opaque,
+     * under the same locality contract as {@link #sourceDocumentBlueId(Node)}.</p>
      *
      * @param sourceDocument authored Source Document
      * @return canonical direct BlueId input

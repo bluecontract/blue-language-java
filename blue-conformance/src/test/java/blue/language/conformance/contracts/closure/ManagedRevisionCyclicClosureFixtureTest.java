@@ -32,7 +32,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
     private static final String RELEASED_FIXTURE =
             "c-clo-23-05-a9-to-a10";
     private static final String MASTER =
-            "4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh";
+            "8ytvxQsxkKfyHxF8KAAd9mWUuX83nit8i6U1f1ZbsqBm";
     private static final int A_MEMBER_INDEX = 1;
 
     // Frozen after the focused fixture is executed once against the release
