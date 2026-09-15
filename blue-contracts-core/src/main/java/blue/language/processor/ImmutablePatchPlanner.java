@@ -181,8 +181,10 @@ final class ImmutablePatchPlanner {
         }
         FrozenNode existing = read(path);
         if (existing == null) {
+            // The overlay upserts absent object members but must still reject
+            // REPLACE at a missing list index.
             CanonicalPatchResult added = new CanonicalOverlayPatchEngine(root)
-                    .apply(JsonPatch.add(path, patch.getVal()));
+                    .apply(patch);
             return new PatchPlan(added.root(),
                     null,
                     added.after(),
@@ -220,7 +222,7 @@ final class ImmutablePatchPlanner {
         FrozenNode existing = read(patch.path());
         if (existing == null) {
             CanonicalPatchResult added = new CanonicalOverlayPatchEngine(root)
-                    .apply(BluePatchOperation.ADD,
+                    .apply(patch.blueOperation(),
                             patch.path(), patch.valueFor(root));
             return new PatchPlan(added.root(),
                     null,
@@ -425,7 +427,7 @@ final class ImmutablePatchPlanner {
         }
         if (read(path) == null) {
             return engine.apply(
-                    BluePatchOperation.ADD, path, value).root();
+                    op.blueOperation(), path, value).root();
         }
         FrozenNode removed = engine
                 .apply(BluePatchOperation.REMOVE, path, null)
