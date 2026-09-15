@@ -702,7 +702,7 @@ def derive_loop_trace(
         )
     marker_types = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
+        "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr",
     }
 
     def participating_contract_keys(document_id: str) -> list[str]:
@@ -1656,7 +1656,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
     event_ordinal = 0
     marker_types = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
+        "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr",
     }
 
     for work_item in work:
@@ -1940,7 +1940,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
         if marker is None:
             marker = {
                 "type": {
-                    "blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
+                    "blueId": "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr"
                 },
                 "entries": {},
             }
@@ -2893,7 +2893,7 @@ def derive_managed_revision_trace(
     )
     marker_type_ids = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
+        "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr",
     }
     participating_contract_keys = []
     for contract_key, contract in source_contracts.items():

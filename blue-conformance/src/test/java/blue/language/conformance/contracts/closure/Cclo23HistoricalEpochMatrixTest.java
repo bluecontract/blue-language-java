@@ -36,7 +36,10 @@ final class Cclo23HistoricalEpochMatrixTest {
     private static final DocumentId A = new DocumentId("history-a");
     private static final DocumentId B = new DocumentId("history-b");
     private static final String FINAL_MASTER =
-            "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5";
+            "4bEH2RWarcvQoNE72mbYkveNY3SAkutVfWFx37BtudGh";
+    // Generated from the independent cyclic oracle by rebind_contextual_companion_oracles.py.
+    private static final int FINAL_A_MEMBER_INDEX = 1;
+    private static final int FINAL_B_MEMBER_INDEX = 0;
 
     private static final List<Row> MATRIX = Arrays.asList(
             new Row("c-clo-23-00-attach-a5-retry", null, null,
@@ -128,9 +131,9 @@ final class Cclo23HistoricalEpochMatrixTest {
                 assertEquals(FINAL_MASTER,
                         result.resultingComponents().get(0).masterBlueId(),
                         row.fixtureId);
-                assertEquals(FINAL_MASTER + "#0", afterA.afterBlueId(),
+                assertEquals(FINAL_MASTER + "#" + FINAL_A_MEMBER_INDEX, afterA.afterBlueId(),
                         row.fixtureId);
-                assertEquals(FINAL_MASTER + "#1", afterB.afterBlueId(),
+                assertEquals(FINAL_MASTER + "#" + FINAL_B_MEMBER_INDEX, afterB.afterBlueId(),
                         row.fixtureId);
             } else {
                 assertEquals(2, result.resultingComponents().size(),

@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
 registryKind: runtime-type
 specificationVersion: '1.0'
 languageVersion: '1.0'
-fixturePackageIdentity: sha256:d2141ee6c13b76e3c9afa70273cdec53ff01ee448a27a06ea441f40b4efb4bde
+fixturePackageIdentity: sha256:4d28454407ca982da83a24bdb098c48547380895fb983ccd6b3c85a6b44b16ef
 entries:
 - key: Channel
   path: Channel.blue
@@ -12,14 +12,14 @@ entries:
   fixtureOnly: false
 - key: ChannelEventCheckpoint
   path: ChannelEventCheckpoint.blue
-  blueId: Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS
-  sha256: 002cc9c8b9307387acb0bf335eda91dddbe7d6029efd36db0ef1dae5cd5d361b
+  blueId: 6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr
+  sha256: 7bbfb319d973eaac1d710edd33704d1d8e96773c3cb80c343512d066903ce7c4
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: CheckpointEntry
   path: CheckpointEntry.blue
-  blueId: 2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY
-  sha256: aace592e4597ac5d1a33109d456e9a876c7667fefceda72d8ba04b154b170c85
+  blueId: 55JVRmcrK9fcbGmpvYv6KLtoKendvDUBrYfv3nasuQne
+  sha256: e7a697a2e6b6f1b0ad54711f6b444eda424370dc8bad9ff9df8c17c9f1d1d663
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: Contract
@@ -176,4 +176,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity and fixturePackageIdentity are null before hashing
-packageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+packageIdentity: sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6

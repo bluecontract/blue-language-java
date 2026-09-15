@@ -32,8 +32,33 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class BlueRuntimeTypeRegistryTest {
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldAcceptExactObjectDomainsAndRequireDomainPresence(boolean referenced) {
+        // given
+        Blue blue = new Blue();
+        Node domain = new Node().properties("runtime", new Node().value("example"));
+        String domainId = DirectBlueIdCalculator.calculateBlueId(domain);
+        Node value = referenced ? new Node().blueId(domainId) : domain;
+        Node entry = new Node().type(new Node().blueId(RuntimeBlueIds.CHECKPOINT_ENTRY))
+                .properties("domain", value)
+                .properties("subject", new Node().value("subject"));
+        Node missing = new Node().type(new Node().blueId(RuntimeBlueIds.CHECKPOINT_ENTRY))
+                .properties("subject", new Node().value("subject"));
+
+        // when
+        Node resolved = blue.resolve(entry);
+
+        // then
+        assertNotNull(resolved.getProperties().get("domain"));
+        assertThrows(IllegalArgumentException.class, () -> blue.resolve(missing));
+    }
 
     @Test
     void shouldCalculateCorrectedEnumBearingRuntimeBlueIds() {

@@ -1,7 +1,7 @@
 fixturePackage: blue-contracts-conformance
 specificationVersion: '1.0'
 schemaVersion: blue-contracts-fixture/1.0
-registryPackageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+registryPackageIdentity: sha256:684d691c11aa16f87e1d56fa7a331a4267cddf9fbda3193fb33d84eeaabf92b6
 vectorCount: 128
 behaviorFixtureCount: 126
 gasFixtureCount: 58
@@ -36,7 +36,7 @@ files:
   bytes: 1354
 - path: chk/c-chk-04.yaml
   role: behavior-fixture
-  sha256: d16c2bf488ac7f41affc879f55ae73e16af0ce8af9cfadaac550fd5134bfacab
+  sha256: 2a79923ba3babede99739acdd8814f3f5cc465c6973c9b2b7dc8cb6d04a830cf
   bytes: 1479
 - path: chk/c-chk-05.yaml
   role: behavior-fixture
@@ -48,7 +48,7 @@ files:
   bytes: 1496
 - path: chk/c-chk-07.yaml
   role: behavior-fixture
-  sha256: a152c722edceb12eb3f53f75c039936ce2cf9eaf1a39b01bc2c290d86a016722
+  sha256: e06aca3818b0b731f1f5f6a6286e119e1f933bf197f21416471c41f0d2b955e9
   bytes: 2296
 - path: disc/c-disc-01.yaml
   role: behavior-fixture
@@ -148,7 +148,7 @@ files:
   bytes: 2243
 - path: emb/c-emb-11.yaml
   role: behavior-fixture
-  sha256: 799e848f11e5bd691f386ef3581749b5e88890b447d84dee57ca563c5e92caad
+  sha256: 298f99883a5c91ec5882c2c3b84bfae36a64b985f1783238d1effd4565c33205
   bytes: 2788
 - path: emb/c-emb-12.yaml
   role: behavior-fixture
@@ -216,7 +216,7 @@ files:
   bytes: 2094
 - path: evo/c-evo-07-checkpoint.yaml
   role: behavior-fixture
-  sha256: b4ac254077bc8bfed50f79f5387effbcf6aacf93442bdd4ca3b640465d1ececc
+  sha256: b075df53b65b7765ce7d2195f1d84b499df34194fd95da027adbf53ba0289439
   bytes: 1817
 - path: evo/c-evo-07-initialized.yaml
   role: behavior-fixture
@@ -388,7 +388,7 @@ files:
   bytes: 1577
 - path: feed/c-feed-17.yaml
   role: behavior-fixture
-  sha256: 0499339f266b6edef1f93d131f231d541a764ac6578b82894cf25e8c53258324
+  sha256: 4a70ff27fcbe6c10429a8e52d1a9f45d94f59787977bb9efdfed61338f430e98
   bytes: 2671
 - path: feed/c-feed-18.yaml
   role: behavior-fixture
@@ -775,7 +775,7 @@ packageIdentityAlgorithm:
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:d2141ee6c13b76e3c9afa70273cdec53ff01ee448a27a06ea441f40b4efb4bde
+packageIdentity: sha256:4d28454407ca982da83a24bdb098c48547380895fb983ccd6b3c85a6b44b16ef
 gasSchedule: blue-contracts/gas/1.0
 gasManifestPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
 gasManifestSha256: 54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8

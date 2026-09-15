@@ -42,7 +42,7 @@ class ReferenceScenarioGasTest(unittest.TestCase):
         self.assertEqual(6, len(reference.check_identity_transition_gas()))
 
     def test_empty_object_contributes_to_direct_hash_bytes(self):
-        marker = {"type": {"blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"}, "entries": {}}
+        marker = {"type": {"blueId": "6H1dvQ7QnuNRhr9uRCewc7w7yn1UhZuHF2kZYhUKecQr"}, "entries": {}}
         rows = []
         reference._reference_charge_direct_node(marker,
             charge=lambda ns, counter, quantity, reason, context: rows.append((counter, quantity)),
