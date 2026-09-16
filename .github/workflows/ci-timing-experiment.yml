@@ -1,0 +1,119 @@
+name: CI timing experiment (no publication)
+
+on:
+  push:
+    branches: ['codex/ci/language-parallel-experiment']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-timing-experiment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/codex/ci/language-parallel-experiment'
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify complete, disjoint test assignment
+        run: node --test .github/scripts/*.test.js
+      - id: matrix
+        run: echo "matrix=$(node .github/scripts/ci-timing-experiment.js matrix)" >> "$GITHUB_OUTPUT"
+
+  measure:
+    name: Measure ${{ matrix.group }}
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      CI: true
+      EXPERIMENT_GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set reproducible timestamp from the shared commit
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+      - name: Set up Java 8 test runtime
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: corretto
+      - name: Set up JDK 17, matching Release RC
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: corretto
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Both variants start cold; Gradle still reuses outputs within a job.
+          cache-disabled: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.3
+      - name: Run verification only and record timings
+        run: node .github/scripts/ci-timing-experiment.js run "$EXPERIMENT_GROUP" "$RUNNER_TEMP/ci-timing"
+      - name: Save timings, including failed commands
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timing-${{ matrix.group }}
+          path: ${{ runner.temp }}/ci-timing/*.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Save verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.group }}
+          path: |
+            build/reports/**
+            build/test-results/**
+            blue-*/build/reports/**
+            blue-*/build/test-results/**
+            build-logic/build/reports/**
+            smoke-tests/published/build/reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  compare:
+    name: Compare timings and require every test group
+    needs: [plan, measure]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: timing-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/ci-timing
+      - name: Require all jobs to succeed
+        env:
+          MEASURE_RESULT: ${{ needs.measure.result }}
+        run: test "$MEASURE_RESULT" = success
+      - name: Compare complete results from the same commit
+        run: node .github/scripts/ci-timing-experiment.js summary "$RUNNER_TEMP/ci-timing"
