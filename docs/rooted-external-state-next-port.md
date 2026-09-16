@@ -55,7 +55,7 @@ producer runtime, restore bytes in a fresh consumer and compare complete results
 Every reaction retains the originally admitted identity and original event value;
 internal payloads do not become the processing cause. No handler runs during
 decoding. Complete result bytes, including gas/events, match resident execution.
-These are intended assertions, not a PASS claim before execution.
+Both cases passed in the completed native gate below.
 
 ## Qualification boundary
 
@@ -64,10 +64,34 @@ test receipts and timings are historical provenance. They do **not** qualify thi
 new source tuple; their commands naming deferred C03 tests are not the gate for
 this port. No prior MyOS acceptance or performance result transfers automatically.
 
-Fresh grouped native verification will cover Core exact/resolver storage,
+Fresh grouped native verification covered Core exact/resolver storage,
 Contracts invocation/snapshot/result storage and reuse, upstream processing-event
 controls, witness/lifecycle/representation controls, pinned minimization guards,
 API compatibility, Javadoc and package assembly. Exact clean-source inputs and
 unmodified original failures/results are retained outside the repository under
 `processing-measurement13/baseline31/lang-*`. Full conformance regeneration is not
 part of this storage-only port unless a maintained gate establishes a real need.
+
+## Completed qualification — 2026-09-16
+
+Tested implementation: `fafffe916badf99d856d72771cd1c785c6b67463` (clean,
+unchanged throughout execution). Core passed 60 tests across 9 owners; Contracts
+passed 244 across 22 owners: **304/304**, zero failures, errors or skips. The two
+cold processing-event cases are included. API compatibility (no removals), both
+module Javadocs, package-cycle checks and jar assembly passed. C03 files were
+independently checked byte-identical to the pinned merged next.
+
+The exported Language artifact was used by the coherent local BEX/Catalog/
+Coordination tuple. Coordination passed 256 focused tests; MyOS passed the same
+five focused scenarios in both resident and external-state/PostgreSQL modes
+(10/10), including restart. These are targeted port regressions, not full
+conformance/acceptance or qualification of the original long graph.
+
+Evidence root:
+`/Users/kamil/Documents/Projects/Blue/rooted-external-resumption-evidence.c0VVLS/processing-measurement13/baseline31/`.
+See `lang-audit.json`, `lang-controls01/`, `dependency-summary.json`, and
+`combined-smoke-summary.json`. The corresponding host report is
+`worktrees/rooted-external-myos-baseline31/docs/poc-baseline-refresh-20260916.md`
+under the Blue project directory. Subsequent documentation-only commits do not
+change the tested implementation or relabel its immutable artifact. No remote
+branch, PR or release was modified.
