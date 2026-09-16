@@ -1,0 +1,81 @@
+{
+  "schema": "language-component-evidence/1",
+  "qualification": "Focused component qualification only; not complete durable SDK or MyOS recovery",
+  "baseCommit": "bd09c2818b7dd368c1adddb0cda3f2c020877666",
+  "branch": "codex/rooted-execution-evidence-storage",
+  "archiveRoot": "/Users/kamil/Documents/Projects/Blue/rooted-execution-evidence-storage-evidence.7KQVQH",
+  "finalGate": {
+    "directory": "green-export-ready",
+    "startedUtc": "2026-09-11T03:35:05Z",
+    "finishedUtc": "2026-09-11T03:35:28Z",
+    "javaHome": "/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home",
+    "exitCode": 0,
+    "tests": 60,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "javadoc": "PASS",
+    "sourceStable": true,
+    "testedInputCount": 3020,
+    "receiptSha256": "a40182446289c22c5ba8194bde83952a3cc9fc3a5813840f12d7ad22cddc611d",
+    "sourceManifestSha256": "bf4fa92455e309097a5371e0af4ca896de4441da454705091052081e17161a09",
+    "testedSourceArchive": "tested-source.tar.gz",
+    "testedSourceArchiveSha256": "59d67fdb30ea88f10244eddad36bc8b442dfc0aad582c8873f565e01b9e490f5",
+    "gradleLogSha256": "06cb90975eb26c7691a6547fb88029d4206959740fb99e1ff891fa23004d079f",
+    "xmlDirectory": "xml",
+    "reproductionCommandLocation": "receipt.json:command",
+    "sourceRelation": "This compact evidence manifest was added after the frozen gate; every previously captured source input remains byte-identical. No production, test, build or prose input was changed after qualification."
+  },
+  "focusedScope": [
+    "ClosureExecutionEvidenceStorageCodecTest (7)",
+    "FullLifecycleAdmissionTest.storedManagedRevisionRetry* (2)",
+    "ManagedCheckpointSettlementOwnershipTest.storedHistoricalInputsRetainCompleteRepresentationProvenance (1)",
+    "ManagedCheckpointSettlementOwnershipTest.rooted* (6)",
+    "ProspectiveBirthAuthenticationTest (3)",
+    "ProspectiveBirthRetryTest (4)",
+    "ClosureResourceDemandTest (10)",
+    "ExactEventIdentityEvidenceStorageCodecTest (5)",
+    "ExactEventIdentityEvidenceTest (8)",
+    "ClosureEventStorageTest (3)",
+    "ClosureProcessResultStorageCodecTest (4)",
+    "RootedHistoricalWitnessTest (4)",
+    "ClosureAdmissionRejectionProcessorTest (3)"
+  ],
+  "causalRedControls": [
+    {
+      "directory": "reverse-association-red",
+      "tests": 1,
+      "failures": 1,
+      "sourceStable": true,
+      "cause": "A rooted input could be paired with an ordinary committing result sharing its ordinary invocation identity and snapshot.",
+      "receiptSha256": "d72cc6ca57846c709419ffbb414822dec66ea47893970ec4b5c064f2673def3b",
+      "testedSourceArchiveSha256": "402aafe53f46d16c1e924eb631b52b4467530ca856e5c1fe7e8a0dc3b4582257"
+    },
+    {
+      "directory": "expanded-result-red",
+      "tests": 1,
+      "failures": 1,
+      "sourceStable": true,
+      "cause": "Actual nested-birth completed result decode incorrectly compared expanded executed input to the original rooted entry context.",
+      "receiptSha256": "fa593f779ae37a9222748b87c6f64bb45b80b3c9709cee5ef09997cb62d35f44",
+      "testedSourceArchiveSha256": "98d5dd6c6df1a1e3d4d9b993eaf2b02224db6084135a6ef08dfad1bb2ff9f446"
+    },
+    {
+      "directory": "absent-inline-red",
+      "tests": 1,
+      "failures": 1,
+      "sourceStable": true,
+      "cause": "An actual successful historical retry with absent optional inline demand body failed result decode with NullPointerException: suppliedExactValue.",
+      "receiptSha256": "e5d0b25c4ac39da43b4f5284c028560d60e140081e12802f446e4d4ef947ef92",
+      "testedSourceArchiveSha256": "a7e800b11c94d8f14bb84cebeb8c8a9737d5a0ec494c2d6855d0b07362e41217"
+    }
+  ],
+  "independentExpandedResultReproduction": {
+    "directory": "/Users/kamil/Documents/Projects/Blue/rooted-document-index-evidence.GFWfnV/pending-join-direct-result-red",
+    "originalResultFile": "pending-join-original-result.bin",
+    "originalResultSha256": "16ae6eb23e5ed79ce96869ae180a63733a8f2889fdea38b678f2b54846caec90",
+    "qualification": "Independent pre-fix Coordination result-only red; no downstream green is claimed here."
+  },
+  "counting": "The final 60-test gate supersedes overlapping intermediate runs. Earlier runs and independent reproductions are not added to its total.",
+  "trustBoundary": "Authenticated pinned host-retained bytes, not untrusted admission evidence. Framing checksums do not authenticate processor or BEX authority. Normal semantic verification remains unchanged when restored values are used."
+}

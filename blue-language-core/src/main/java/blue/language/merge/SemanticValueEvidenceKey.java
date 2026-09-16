@@ -105,6 +105,37 @@ final class SemanticValueEvidenceKey {
         return calculateRetainedWeightBytes();
     }
 
+    /** Reconstructs a normalized representative without changing lookup semantics. */
+    Object storageValue() {
+        IdentityHashMap<SemanticValueEvidenceKey, Object> copies = new IdentityHashMap<>();
+        Deque<SemanticValueEvidenceKey> pending = new ArrayDeque<>();
+        Object result = storageValue(this, copies, pending);
+        while (!pending.isEmpty()) {
+            SemanticValueEvidenceKey key = pending.removeFirst();
+            if (key.kind == Kind.SEQUENCE) {
+                @SuppressWarnings("unchecked") List<Object> list = (List<Object>) copies.get(key);
+                for (SemanticValueEvidenceKey element : key.elements) list.add(storageValue(element, copies, pending));
+            } else {
+                @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>) copies.get(key);
+                for (Property property : key.properties)
+                    map.put(property.name, storageValue(property.value, copies, pending));
+            }
+        }
+        return result;
+    }
+
+    private static Object storageValue(SemanticValueEvidenceKey key,
+            IdentityHashMap<SemanticValueEvidenceKey, Object> copies,
+            Deque<SemanticValueEvidenceKey> pending) {
+        if (key.kind == Kind.SCALAR) return key.scalar;
+        Object copy = copies.get(key);
+        if (copy == null) {
+            copy = key.kind == Kind.SEQUENCE ? new ArrayList<Object>() : new java.util.LinkedHashMap<String, Object>();
+            copies.put(key, copy); pending.addLast(key);
+        }
+        return copy;
+    }
+
     @Override
     public boolean equals(Object other) {
         if (this == other) {

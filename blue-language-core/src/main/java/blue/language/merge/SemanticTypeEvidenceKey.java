@@ -50,6 +50,61 @@ final class SemanticTypeEvidenceKey {
         return new SemanticTypeEvidenceKey(SemanticNode.copyOf(node));
     }
 
+    /** A normalized, detached representative of this complete structural key. */
+    Node storageNode() {
+        IdentityHashMap<SemanticNode, Node> copies = new IdentityHashMap<>();
+        Deque<SemanticNode> pending = new ArrayDeque<>();
+        Node result = storageNode(root, copies, pending);
+        while (!pending.isEmpty()) {
+            SemanticNode source = pending.removeFirst();
+            Node target = copies.get(source);
+            target.name(source.name).description(source.description)
+                    .type(storageNode(source.type, copies, pending))
+                    .itemType(storageNode(source.itemType, copies, pending))
+                    .keyType(storageNode(source.keyType, copies, pending))
+                    .valueType(storageNode(source.valueType, copies, pending))
+                    .value(source.value.storageValue()).items(storageNodes(source.items, copies, pending))
+                    .contracts(storageNode(source.contracts, copies, pending)).blueId(source.referenceBlueId)
+                    .mergePolicy(source.mergePolicy).previousBlueId(source.previousBlueId).position(source.position)
+                    .blue(storageNode(source.blue, copies, pending));
+            if (source.properties != null) {
+                Map<String, Node> properties = new java.util.LinkedHashMap<>();
+                for (Property property : source.properties)
+                    properties.put(property.name, storageNode(property.value, copies, pending));
+                target.properties(properties);
+            }
+            if (source.schema != null) {
+                List<SemanticNode> k = source.schema.keywords;
+                target.schema(new Schema().blueId(source.schema.referenceBlueId)
+                        .required(storageNode(k.get(0), copies, pending)).minLength(storageNode(k.get(1), copies, pending))
+                        .maxLength(storageNode(k.get(2), copies, pending)).minimum(storageNode(k.get(3), copies, pending))
+                        .maximum(storageNode(k.get(4), copies, pending)).exclusiveMinimum(storageNode(k.get(5), copies, pending))
+                        .exclusiveMaximum(storageNode(k.get(6), copies, pending)).multipleOf(storageNode(k.get(7), copies, pending))
+                        .minItems(storageNode(k.get(8), copies, pending)).maxItems(storageNode(k.get(9), copies, pending))
+                        .uniqueItems(storageNode(k.get(10), copies, pending)).minFields(storageNode(k.get(11), copies, pending))
+                        .maxFields(storageNode(k.get(12), copies, pending))
+                        .enumValues(storageNodes(source.schema.enumValues, copies, pending)));
+            }
+        }
+        return result;
+    }
+
+    private static Node storageNode(SemanticNode source, IdentityHashMap<SemanticNode, Node> copies,
+                                    Deque<SemanticNode> pending) {
+        if (source == null) return null;
+        Node copy = copies.get(source);
+        if (copy == null) { copy = new Node(); copies.put(source, copy); pending.addLast(source); }
+        return copy;
+    }
+
+    private static List<Node> storageNodes(List<SemanticNode> source, IdentityHashMap<SemanticNode, Node> copies,
+                                          Deque<SemanticNode> pending) {
+        if (source == null) return null;
+        List<Node> result = new ArrayList<>();
+        for (SemanticNode node : source) result.add(storageNode(node, copies, pending));
+        return result;
+    }
+
     /** Conservative retained-heap estimate used by cache admission bounds. */
     long approximateRetainedWeightBytes() {
         long weight = retainedWeightBytes;

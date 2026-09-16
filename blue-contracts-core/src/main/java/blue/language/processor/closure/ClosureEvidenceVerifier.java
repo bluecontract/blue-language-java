@@ -38,8 +38,15 @@ final class ClosureEvidenceVerifier {
      * purported authoritative snapshot.
      */
     static void verifySnapshot(AffectedClosureSnapshot snapshot) {
+        verifySnapshot(snapshot, null);
+    }
+
+    // Package-only observation of actual full verifier work; production installs no observer.
+    static void verifySnapshot(AffectedClosureSnapshot snapshot, Runnable beforeFullVerification) {
         AffectedClosureSnapshot selected = Objects.requireNonNull(
                 snapshot, "snapshot");
+        if (selected.hasVerifiedOwnedState()) return;
+        if (beforeFullVerification != null) beforeFullVerification.run();
         verifyFinalizedState(selected, selected, null);
         verifyMarkers(selected);
     }

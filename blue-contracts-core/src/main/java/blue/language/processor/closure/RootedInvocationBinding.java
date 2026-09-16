@@ -24,7 +24,7 @@ final class RootedInvocationBinding {
         }
     }
 
-    private RootedInvocationBinding(RootedProcessingContext context, String deliveryIdentity,
+    RootedInvocationBinding(RootedProcessingContext context, String deliveryIdentity,
             String entryInvocationIdentity, Map<DocumentId, DocumentId> birthParents) {
         this.context = context;
         this.deliveryIdentity = ClosureValueSupport.requireSha256Identity(

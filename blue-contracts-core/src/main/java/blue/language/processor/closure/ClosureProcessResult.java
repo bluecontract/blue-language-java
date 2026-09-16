@@ -45,6 +45,11 @@ public final class ClosureProcessResult {
             managedTransitionReceipts;
     private final String managedTransitionReceiptsIdentity;
     private final boolean managedTransitionReceiptSurfacePresent;
+    private final AffectedClosureSnapshot storageInputSnapshot;
+    private final RootedWitnessFrame.State storageOutputWitnesses;
+    private final List<ManagedOccurrenceEvidenceResolution> storageResolutions;
+    private final AdmissionCandidate storageRejectedCandidate;
+    private volatile ClosureProcessResultStorageCodec.DecodedOutput verifiedStorageOutput;
 
     /**
      * Creates and semantically cross-validates one complete result.
@@ -191,7 +196,7 @@ public final class ClosureProcessResult {
                 Collections.<DocumentTransitionEvidence>emptyList(),
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                Collections.<DocumentId>emptySet(),
+                null,
                 Collections.<ManagedOccurrenceEvidenceResolution>
                         emptyList());
     }
@@ -256,7 +261,7 @@ public final class ClosureProcessResult {
                 documentTransitionEvidence,
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                Collections.<DocumentId>emptySet(),
+                null,
                 Collections.<ManagedOccurrenceEvidenceResolution>
                         emptyList());
     }
@@ -323,7 +328,7 @@ public final class ClosureProcessResult {
                 documentTransitionEvidence,
                 managedTransitionReceipts,
                 true,
-                Collections.<DocumentId>emptySet(),
+                null,
                 Collections.<ManagedOccurrenceEvidenceResolution>
                         emptyList());
     }
@@ -388,7 +393,7 @@ public final class ClosureProcessResult {
                 documentTransitionEvidence,
                 managedTransitionReceipts,
                 true,
-                Collections.<DocumentId>emptySet(),
+                null,
                 resolutions);
     }
 
@@ -452,12 +457,12 @@ public final class ClosureProcessResult {
                 Collections.<DocumentTransitionEvidence>emptyList(),
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                candidateGasDocumentIds(rejectedAdmissionCandidate),
+                Objects.requireNonNull(rejectedAdmissionCandidate, "rejectedAdmissionCandidate"),
                 Collections.<ManagedOccurrenceEvidenceResolution>
                         emptyList());
     }
 
-    private ClosureProcessResult(
+    ClosureProcessResult(
             AffectedClosureSnapshot inputSnapshot,
             ProcessorStatus status,
             String invocationIdentity,
@@ -486,12 +491,61 @@ public final class ClosureProcessResult {
             List<DocumentTransitionEvidence> documentTransitionEvidence,
             List<ManagedDocumentTransitionReceipt> managedTransitionReceipts,
             boolean managedTransitionReceiptSurfacePresent,
-            Set<DocumentId> supplementalGasDocumentIds,
+            AdmissionCandidate rejectedAdmissionCandidate,
             List<ManagedOccurrenceEvidenceResolution>
                     managedOccurrenceResolutions) {
+        this(inputSnapshot, status, invocationIdentity, outputClosureIdentity, graphGeneration,
+                resultingDocuments, resultingComponents, occurrenceBindings, occurrenceBindingSetIdentity,
+                graphChanges, graphChangesIdentity, subscriptionDeltas, subscriptionDeltasIdentity,
+                checkpointWrites, checkpointWritesIdentity, publicEvents, publicEventsIdentity,
+                totalGas, gasTrace, gasTraceIdentity, rejectedCharge, rejectedWorkOccurrence,
+                platformCommitCompanion, diagnostic, reusableFinalization, documentTransitionEvidence,
+                managedTransitionReceipts, managedTransitionReceiptSurfacePresent, rejectedAdmissionCandidate,
+                managedOccurrenceResolutions, null);
+    }
+
+    // Storage alone may borrow an exact input proof from its current bounded call.
+    // No call or proof is retained by the resulting value; ordinary construction
+    // delegates with null and keeps every original verification.
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence,
+            List<ManagedDocumentTransitionReceipt> managedTransitionReceipts,
+            boolean managedTransitionReceiptSurfacePresent,
+            AdmissionCandidate rejectedAdmissionCandidate,
+            List<ManagedOccurrenceEvidenceResolution> managedOccurrenceResolutions,
+            SnapshotStorageCall storageCall) {
         this.rootedProjection = null;
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
+        this.storageInputSnapshot = input;
+        this.storageOutputWitnesses = reusableFinalization == null ? input.rootedWitnesses() : reusableFinalization.rootedWitnesses();
+        this.storageResolutions = immutableList(managedOccurrenceResolutions, "managedOccurrenceResolutions");
+        this.storageRejectedCandidate = rejectedAdmissionCandidate;
         this.status = Objects.requireNonNull(status, "status");
         this.invocationIdentity = identity(
                 invocationIdentity, "invocationIdentity");
@@ -555,14 +609,16 @@ public final class ClosureProcessResult {
                     "Reusable finalization is valid only for a committing result");
         }
         Set<DocumentId> supplementalGasDocuments =
-                immutableDocumentIds(supplementalGasDocumentIds);
+                immutableDocumentIds(rejectedAdmissionCandidate == null ? Collections.<DocumentId>emptySet()
+                        : candidateGasDocumentIds(rejectedAdmissionCandidate));
         if (!supplementalGasDocuments.isEmpty()
                 && status != ProcessorStatus.INVALID_PROCESSING_DOCUMENT) {
             throw new IllegalArgumentException(
                     "Supplemental gas documents apply only to rejected admission candidates");
         }
         validateInputIdentity(input);
-        ClosureEvidenceVerifier.verifySnapshot(input);
+        if (storageCall == null) ClosureEvidenceVerifier.verifySnapshot(input);
+        else storageCall.verifyResultInput(input);
         validateCanonicalEvidence();
         AffectedClosureSnapshot output = validateResultSnapshot(reusableFinalization == null
                 ? input.rootedWitnesses() : reusableFinalization.rootedWitnesses());
@@ -591,6 +647,21 @@ public final class ClosureProcessResult {
      * @return immutable rooted projection, or null for legacy/failure results
      */
     public RootedPublicationProjection rootedProjection() { return rootedProjection; }
+
+    // Complete private result-validation evidence, never exposed as retry/birth authority.
+    AffectedClosureSnapshot storageInputSnapshot() { return storageInputSnapshot; }
+    AffectedClosureSnapshot storageVerifiedOutput() {
+        ClosureProcessResultStorageCodec.DecodedOutput selected = verifiedStorageOutput;
+        return selected == null ? null : selected.outputFor(this);
+    }
+    void acceptDecodedOutput(ClosureProcessResultStorageCodec.DecodedOutput certificate) {
+        Objects.requireNonNull(certificate, "certificate").outputFor(this);
+        verifiedStorageOutput = certificate;
+    }
+    RootedWitnessFrame.State storageOutputWitnesses() { return storageOutputWitnesses; }
+    List<ManagedOccurrenceEvidenceResolution> storageResolutions() { return storageResolutions; }
+    AdmissionCandidate storageRejectedCandidate() { return storageRejectedCandidate; }
+    boolean storageReceiptSurfacePresent() { return managedTransitionReceiptSurfacePresent; }
 
     ClosureProcessResult withRootedProjection(RootedOwnershipTracker.Snapshot ownership) {
         return ownership == null ? this : new ClosureProcessResult(this, ownership);
@@ -625,6 +696,10 @@ public final class ClosureProcessResult {
         managedTransitionReceipts = base.managedTransitionReceipts;
         managedTransitionReceiptsIdentity = base.managedTransitionReceiptsIdentity;
         managedTransitionReceiptSurfacePresent = base.managedTransitionReceiptSurfacePresent;
+        storageInputSnapshot = base.storageInputSnapshot;
+        storageOutputWitnesses = base.storageOutputWitnesses;
+        storageResolutions = base.storageResolutions;
+        storageRejectedCandidate = base.storageRejectedCandidate;
         rootedProjection = new RootedPublicationProjection(base, ownership);
     }
 

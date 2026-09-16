@@ -146,6 +146,25 @@ final class RootedWitnessFrame {
                     targetProof.managedDocument(binding.targetDocumentId()).blueId());
         }
 
+        // Package-only complete storage transport; never an externally supplied source allowlist.
+        Map<DocumentId, AffectedClosureSnapshot> storedOriginals() { return originals; }
+
+        static State fromStoredOriginals(Map<DocumentId, AffectedClosureSnapshot> originals) {
+            return fromStoredOriginals(originals, null);
+        }
+
+        static State fromStoredOriginals(Map<DocumentId, AffectedClosureSnapshot> originals,
+                AffectedClosureSnapshotStorageCodec.DecodedRecords records) {
+            for (Map.Entry<DocumentId, AffectedClosureSnapshot> entry : originals.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null || !entry.getValue().contains(entry.getKey())) {
+                    throw new IllegalArgumentException("Stored witness omits its exact source document");
+                }
+                if (records == null) ClosureEvidenceVerifier.verifySnapshot(entry.getValue());
+                else records.requireVerified(entry.getValue());
+            }
+            return new State(originals);
+        }
+
         void requireUnchanged(Map<DocumentId, Node> bodies, Collection<ManagedOccurrenceBinding> bindings) {
             for (Map.Entry<DocumentId, AffectedClosureSnapshot> entry : originals.entrySet()) {
                 DocumentId id = entry.getKey();

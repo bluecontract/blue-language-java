@@ -64,7 +64,7 @@ final class CanonicalTypeIdentityIndex
         private final FrozenNode canonicalTypeIdentityInput;
         private final FrozenNode authoredTypeSource;
 
-        private Evidence(
+        Evidence(
                 String blueId,
                 EvidenceKind kind,
                 FrozenNode canonicalTypeIdentityInput,
@@ -93,6 +93,9 @@ final class CanonicalTypeIdentityIndex
         EvidenceKind kind() {
             return kind;
         }
+
+        FrozenNode storageCanonicalInput() { return canonicalTypeIdentityInput; }
+        FrozenNode storageAuthoredSource() { return authoredTypeSource; }
 
         Evidence combine(Evidence other) {
             if (!blueId.equals(other.blueId)) {
@@ -188,7 +191,7 @@ final class CanonicalTypeIdentityIndex
         private final boolean completeCoverage;
         private final long retainedWeightBytes;
 
-        private EvidenceSnapshot(
+        EvidenceSnapshot(
                 Map<SemanticTypeEvidenceKey, Map<String, Evidence>> evidence,
                 boolean completeCoverage) {
             this.evidenceByStructure = immutableEvidenceBuckets(evidence);
@@ -198,6 +201,10 @@ final class CanonicalTypeIdentityIndex
 
         static EvidenceSnapshot incompleteEmpty() {
             return INCOMPLETE_EMPTY;
+        }
+
+        Map<SemanticTypeEvidenceKey, Map<String, Evidence>> storageEntries() {
+            return evidenceByStructure;
         }
 
         @Override

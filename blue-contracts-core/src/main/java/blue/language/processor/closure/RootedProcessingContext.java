@@ -31,7 +31,7 @@ public final class RootedProcessingContext {
     private final String identity;
     private final String entryClosureIdentity;
 
-    private RootedProcessingContext(List<DocumentId> owners,
+    RootedProcessingContext(List<DocumentId> owners,
             Map<String, Object> ownerDescriptor, String entryClosureIdentity) {
         this.entryOwners = Collections.unmodifiableList(new ArrayList<DocumentId>(owners));
         this.ownerDescriptor = RootedIdentity.owner(ownerDescriptor);
@@ -100,6 +100,8 @@ public final class RootedProcessingContext {
             throw new IllegalArgumentException("Root context belongs to another exact entry snapshot");
         }
     }
+
+    String storageEntryClosureIdentity() { return entryClosureIdentity; }
 
     /**
      * Constructs the closed history envelope after admission authentication.

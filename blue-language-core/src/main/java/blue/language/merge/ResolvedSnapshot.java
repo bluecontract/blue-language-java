@@ -161,6 +161,14 @@ public final class ResolvedSnapshot {
         this.sourceBacked = sourceBacked;
     }
 
+    /** Language-owned restoration after complete physical framing verification. */
+    static ResolvedSnapshot restoreStored(FrozenNode source, FrozenNode canonical,
+            FrozenNode resolved, ResolutionProvenance provenance,
+            CanonicalTypeIdentityLookup identities, boolean complete, boolean sourceBacked) {
+        return new ResolvedSnapshot(source, canonical, resolved,
+                canonical == null ? null : canonical.blueId(), provenance, identities, complete, sourceBacked);
+    }
+
     /**
      * Preserves verified-reference provenance from one authoritative resolver run.
      *

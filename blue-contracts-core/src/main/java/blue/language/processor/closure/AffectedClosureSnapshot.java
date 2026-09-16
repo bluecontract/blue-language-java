@@ -24,6 +24,8 @@ public final class AffectedClosureSnapshot {
     private final List<DocumentId> publicRootDocumentIds;
     private final Map<DocumentId, ManagedDocumentSnapshot> documentsById;
     private final RootedWitnessFrame.State rootedWitnesses;
+    private volatile boolean verifiedStorageSnapshot;
+    private volatile boolean verifiedOwnedDerivedState;
 
     /**
      * Creates one closed authoritative affected-closure state.
@@ -74,6 +76,33 @@ public final class AffectedClosureSnapshot {
     }
 
     RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
+
+    // Pure immutable-state verification only; never context, policy or publication authority.
+    boolean hasVerifiedStorageSnapshot() { return verifiedStorageSnapshot; }
+
+    // Derived-state proof is distinct from having been a parsed storage record.
+    boolean hasVerifiedOwnedState() { return verifiedStorageSnapshot || verifiedOwnedDerivedState; }
+
+    void acceptStorageVerification(AffectedClosureSnapshotStorageCodec.DecodedSnapshot certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Snapshot storage certificate names another or unverified value");
+        }
+        verifiedStorageSnapshot = true;
+    }
+
+    void acceptDerivedVerification(ClosureProcessResultStorageCodec.DerivedSnapshotVerification certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Derived snapshot certificate names another or unverified value");
+        }
+        verifiedOwnedDerivedState = true;
+    }
+
+    void acceptRetainedVerification(RootedPublicationProjection.RetainedSnapshotVerification certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Retained snapshot certificate names another or unverified value");
+        }
+        verifiedOwnedDerivedState = true;
+    }
 
     ManagedDocumentGraph graph() {
         return ManagedDocumentGraph.fromBindings(documentsById.keySet(), occurrences, rootedWitnesses);

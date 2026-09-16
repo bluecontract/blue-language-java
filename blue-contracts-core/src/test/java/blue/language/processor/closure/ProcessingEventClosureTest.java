@@ -183,6 +183,125 @@ class ProcessingEventClosureTest {
     }
 
     @Test
+    void shouldRetainAdmittedCauseAcrossColdInvocationAndStoredBirthRetry() {
+        Node original = event("go").type(new Node().name("Cold birth processing event type"));
+        Node child = document().name("Cold child");
+        Node parent = document();
+        parent.getContracts().properties("embedded", processEmbedded("/child"));
+        List<Observation> observations = new ArrayList<>();
+        Consumer<ProcessorExecutionContext> action = context -> {
+            observations.add(new Observation(context));
+            if ("external".equals(context.contractKey())) {
+                context.applyPatch(JsonPatch.add("/child", child));
+            } else if ("onInit".equals(context.contractKey())) {
+                context.emitEvent(event("ping"));
+            }
+        };
+        ClosureExecutionEvidenceStorageCodec storage = new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+        ClosureProcessResultStorageCodec results = new ClosureProcessResultStorageCodec(16 * 1024 * 1024, 128);
+        byte[] invocationBytes, suspendedBytes, expectedBytes;
+        String admittedBlueId;
+        try (Fixture producer = new Fixture(action)) {
+            admittedBlueId = producer.backingContracts.runtimeAccess().languageRuntime()
+                    .calculateSourceDocumentBlueId(original.clone());
+            ClosureInvocationInput input = producer.external(snapshot(parent, true), original, ROOT, admittedBlueId);
+            invocationBytes = storage.encodeInvocation(input);
+            ClosureAttemptResult missing = producer.attempt(input);
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES, missing.kind());
+            assertEquals(1, missing.resourceDemands().size());
+            ManagedOccurrenceEvidenceDemand demand = (ManagedOccurrenceEvidenceDemand) missing.resourceDemands().get(0);
+            suspendedBytes = storage.encodeAttempt(input, null, missing, demand);
+            ClosureInvocationInput retry = ClosureEvidenceFactory.withProspectiveBirths(input,
+                    Collections.singletonList(new ManagedDocumentBirth(demand, new DocumentId("cold-child"), child)));
+            observations.clear();
+            ClosureProcessResult resident = producer.process(retry);
+            assertTrue(resident.commits(), diagnostic(resident));
+            assertEquals(Arrays.asList("external", "onInit", "triggered"), handlers(observations));
+            assertAdmittedCause(observations, original, admittedBlueId);
+            expectedBytes = results.encode(resident);
+        }
+        observations.clear();
+        // Neither the producer runtime nor its invocation/selected-demand objects survives this handoff.
+        try (Fixture consumer = new Fixture(action)) {
+            ClosureInvocationInput restored = storage.decodeInvocation(invocationBytes);
+            ClosureExecutionEvidenceStorageCodec.StoredAttempt cold = storage.decodeAttempt(suspendedBytes);
+            assertTrue(observations.isEmpty(), "Restoring an invocation or demand must not execute handlers");
+            assertArrayEquals(invocationBytes, storage.encodeInvocation(restored));
+            assertEquals(restored.invocationIdentity(), cold.input().invocationIdentity());
+            assertSame(cold.attempt().resourceDemands().get(0), cold.selectedDemand());
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES, consumer.attempt(restored).kind());
+            assertAdmittedCause(observations, original, admittedBlueId);
+            observations.clear();
+            ClosureInvocationInput retry = ClosureEvidenceFactory.withProspectiveBirths(cold.input(),
+                    Collections.singletonList(new ManagedDocumentBirth((ManagedOccurrenceEvidenceDemand) cold.selectedDemand(),
+                            new DocumentId("cold-child"), child)));
+            ClosureInvocationInput coldRetry = storage.decodeInvocation(storage.encodeInvocation(retry));
+            assertTrue(observations.isEmpty(), "Preparing the exact birth retry must not execute lifecycle reactions");
+            ClosureProcessResult actual = consumer.process(coldRetry);
+            assertTrue(actual.commits(), diagnostic(actual));
+            assertEquals(Arrays.asList("external", "onInit", "triggered"), handlers(observations));
+            assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
+                    observations.get(1).payload.getType().getBlueId());
+            assertAdmittedCause(observations, original, admittedBlueId);
+            assertArrayEquals(expectedBytes, results.encode(actual), "Cold retry preserves complete result, event order and gas");
+        }
+    }
+
+    @Test
+    void shouldRetainAdmittedCauseAcrossColdEmbeddedDeliveryAndParentUpdate() {
+        DocumentId childId = new DocumentId("cold-embedded-child");
+        Node child = initialized(document().name("Cold embedded child"));
+        Node parent = document().properties("child", new Node().blueId(id(child)));
+        parent.getContracts().properties("embedded", processEmbedded("/child"))
+                .properties("fromChild", typed(RuntimeBlueIds.EMBEDDED_NODE_CHANNEL)
+                        .properties("sourcePath", new Node().value("/child")))
+                .properties("onChild", handler("fromChild").properties("event", event("ping")));
+        initialized(parent);
+        Node original = event("go").type(new Node().name("Cold embedded processing event type"))
+                .properties("values", new Node().items(Arrays.asList(new Node().value("first"), new Node().value("second"))));
+        List<Observation> observations = new ArrayList<>();
+        Consumer<ProcessorExecutionContext> action = context -> {
+            observations.add(new Observation(context));
+            if ("external".equals(context.contractKey())) context.emitEvent(event("ping"));
+            else if ("onChild".equals(context.contractKey())) context.applyPatch(JsonPatch.replace("/count", new Node().value(1L)));
+        };
+        ClosureExecutionEvidenceStorageCodec storage = new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+        ClosureProcessResultStorageCodec results = new ClosureProcessResultStorageCodec(16 * 1024 * 1024, 128);
+        byte[] invocationBytes, expectedBytes;
+        String admittedBlueId;
+        try (Fixture producer = new Fixture(action)) {
+            ManagedOccurrenceBinding binding = ManagedOccurrenceBinding.derived(
+                    producer.environment.managedBindingPolicyIdentity(), ROOT, ScopeAddress.embedded("/child", 1L),
+                    childId, id(child), true, null);
+            Map<DocumentId, Node> bodies = new LinkedHashMap<>();
+            bodies.put(ROOT, parent); bodies.put(childId, child);
+            admittedBlueId = producer.backingContracts.runtimeAccess().languageRuntime()
+                    .calculateSourceDocumentBlueId(original.clone());
+            ClosureInvocationInput input = producer.external(snapshot(bodies, Collections.singletonList(binding), ROOT,
+                    Collections.emptyMap()), original, childId, admittedBlueId);
+            invocationBytes = storage.encodeInvocation(input);
+            ClosureProcessResult resident = producer.process(input);
+            assertTrue(resident.commits(), diagnostic(resident));
+            assertEquals(Arrays.asList("external", "triggered", "onChild", "updated"), handlers(observations));
+            assertAdmittedCause(observations, original, admittedBlueId);
+            expectedBytes = results.encode(resident);
+        }
+        observations.clear();
+        try (Fixture consumer = new Fixture(action)) {
+            ClosureInvocationInput restored = storage.decodeInvocation(invocationBytes);
+            assertTrue(observations.isEmpty(), "Cold storage restoration must not execute embedded reactions");
+            assertArrayEquals(invocationBytes, storage.encodeInvocation(restored));
+            ClosureProcessResult actual = consumer.process(restored);
+            assertTrue(actual.commits(), diagnostic(actual));
+            assertEquals(Arrays.asList("external", "triggered", "onChild", "updated"), handlers(observations));
+            assertEquals("/child", observations.get(2).payload.getNode("/sourcePath").getValue());
+            assertEquals("/count", observations.get(3).payload.getNode("/path").getValue());
+            assertAdmittedCause(observations, original, admittedBlueId);
+            assertArrayEquals(expectedBytes, results.encode(actual), "Cold processing preserves complete result, event order and gas");
+        }
+    }
+
+    @Test
     void shouldHaveNoProcessingEventDuringSeparateAdmissionEvenAfterExternalProcessing() {
         // given
         List<Observation> observations = new ArrayList<>();

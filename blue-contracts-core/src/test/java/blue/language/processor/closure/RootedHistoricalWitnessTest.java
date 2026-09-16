@@ -31,7 +31,21 @@ final class RootedHistoricalWitnessTest {
         });
     }
 
+    @Test
+    void storedHistoricalWitnessSupportsAColdSecondInvocation() {
+        historicalReaction(false, output -> assertThrows(IllegalArgumentException.class, () -> publicCopy(output)), true);
+    }
+
+    @Test
+    void storedRetiredReturnWitnessSupportsAColdSecondInvocation() {
+        historicalReaction(true, output -> assertNull(publicCopy(output).rootedWitnesses()), true);
+    }
+
     private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy) {
+        historicalReaction(retiredReturn, verifyPublicCopy, false);
+    }
+
+    private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy, boolean cold) {
         try (CompositionCampaignFixture fixture = new CompositionCampaignFixture(true)) {
             Node source0 = initialized(document("source"));
             source0.getContracts().properties("embedded", process("paths", "/peer"));
@@ -144,6 +158,39 @@ final class RootedHistoricalWitnessTest {
                 assertEquals(reverse.bindingIdentity(), nextResult.occurrenceBindings().stream()
                         .filter(row -> row.sourceDocumentId().equals(S)).findFirst().get().bindingIdentity());
                 assertTrue(nextResult.managedTransitionReceipts().stream().noneMatch(value -> value.documentId().equals(S)));
+                if (cold) {
+                    ClosureProcessResultStorageCodecTest.assertRoundTrip(result);
+                    ClosureProcessResultStorageCodecTest.assertRoundTrip(nextResult);
+                    AffectedClosureSnapshotStorageCodec codec = new AffectedClosureSnapshotStorageCodec(4 * 1024 * 1024, 128);
+                    byte[] stored = codec.encode(output);
+                    AffectedClosureSnapshot reopened = new AffectedClosureSnapshotStorageCodec(4 * 1024 * 1024, 128).decode(stored);
+                    assertNotSame(output, reopened);
+                    assertNotSame(output.rootedWitnesses(), reopened.rootedWitnesses());
+                    assertNotSame(output.rootedWitnesses().storedOriginals().get(S), reopened.rootedWitnesses().storedOriginals().get(S));
+                    assertArrayEquals(stored, codec.encode(reopened));
+                    try (CompositionCampaignFixture restarted = new CompositionCampaignFixture(true);
+                         BlueClosureContracts coldContracts = new BlueClosureContracts(restarted.owner)) {
+                        fixture.exact.forEach((key, value) -> restarted.exact.put(key, value.clone()));
+                        RootedProcessingContext reopenedContext = RootedProcessingContext.derive(reopened, P, Collections.singletonMap(P, hash('b')));
+                        ClosureInvocationInput reopenedInput = ClosureEvidenceFactory.processClosure(reopened, nextCause,
+                                Collections.<DirectLogicalDelivery>emptyList(), input.executionPolicy(), restarted.environment)
+                                .withRootedContext(reopenedContext, reopenedContext.retainedDeliveryBasisIdentity(nextCause, nextPending,
+                                        nextReceipt.transitionReceiptIdentity()));
+                        assertEquals(nextInput.invocationIdentity(), reopenedInput.invocationIdentity());
+                        ClosureAttemptResult coldAttempt = coldContracts.processClosure(reopenedInput);
+                        assertTrue(coldAttempt.isComplete(), coldAttempt.resourceDemands().toString());
+                        ClosureProcessResult coldResult = coldAttempt.processResult();
+                        assertEquals(nextResult.status(), coldResult.status());
+                        assertEquals(nextResult.totalGas(), coldResult.totalGas());
+                        assertEquals(nextResult.gasTraceIdentity(), coldResult.gasTraceIdentity());
+                        assertEquals(nextResult.commitCompanion().companionIdentity(), coldResult.commitCompanion().companionIdentity());
+                        assertEquals(nextResult.managedTransitionReceiptsIdentity(), coldResult.managedTransitionReceiptsIdentity());
+                        assertEquals(nextResult.rootedProjection().ownedDocumentIds(), coldResult.rootedProjection().ownedDocumentIds());
+                        assertArrayEquals(codec.encode(nextResult.rootedProjection().resultingSnapshot()),
+                                codec.encode(coldResult.rootedProjection().resultingSnapshot()));
+                        assertEquals(Collections.singletonList("parent:1"), restarted.reactions);
+                    }
+                }
                 ClosureInvocationInput tight = ClosureEvidenceFactory.processClosure(input.snapshot(), cause,
                         Collections.<DirectLogicalDelivery>emptyList(), ClosureEvidenceFactory.executionPolicy(result.totalGas() - 1,
                                 Collections.<DocumentId, Long>emptyMap(), "rooted-witness"), fixture.environment)
@@ -153,6 +200,7 @@ final class RootedHistoricalWitnessTest {
                 assertEquals(blue.language.processor.ProcessorStatus.GAS_LIMIT_EXCEEDED, failed.status());
                 assertNotNull(failed.rejectedCharge());
                 assertNull(failed.rootedProjection());
+                if (cold) ClosureProcessResultStorageCodecTest.assertRoundTrip(failed);
             }
         }
     }
