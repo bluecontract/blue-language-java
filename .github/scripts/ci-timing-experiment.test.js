@@ -4,9 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const {execFileSync, spawnSync} = require('node:child_process');
-const { groups, commandsFor, summarize } = require('./ci-timing-experiment');
+const { groups, commandsFor, summarize, validateReceipt } = require('./ci-timing-experiment');
 
-test('every excluded transition test has exactly one parallel owner', () => {
+test('every delegated transition test has exactly one parallel owner', () => {
   const source = fs.readFileSync(path.join(__dirname, '../../blue-conformance/build.gradle'), 'utf8');
   const registered = [...source.matchAll(/name: '([^']+ReleaseTransitionTest)'/g)]
     .map(match => `:blue-conformance:${match[1]}`).sort();
@@ -14,13 +14,13 @@ test('every excluded transition test has exactly one parallel owner', () => {
   assert.equal(registered.length, 6);
   assert.deepEqual(assigned, registered);
   assert.equal(new Set(assigned).size, assigned.length);
-  const core = commandsFor('core')[0];
-  assert.deepEqual(core.filter((value, index) => core[index - 1] === '-x').sort(), registered);
+  assert.ok(commandsFor('core').flat().every(value => value !== '-x'));
 });
 
-test('baseline retains separate build and RC verification; core uses one task graph', () => {
+test('core preserves separate build and RC verification and imports remote results without exclusions', () => {
   assert.deepEqual(commandsFor('baseline').slice(0, 2), [['clean', 'build'], ['rcVerify']]);
-  assert.deepEqual(commandsFor('core')[0].slice(0, 4), ['clean', 'build', 'rcVerify', 'verifyFinalApiBaseline']);
+  assert.deepEqual(commandsFor('core')[0], ['--init-script', '.github/scripts/ci-transition-receipts.init.gradle', 'clean', 'build']);
+  assert.deepEqual(commandsFor('core')[1], ['--init-script', '.github/scripts/ci-transition-receipts.init.gradle', 'rcVerify']);
   for (const group of Object.keys(groups)) assert.deepEqual(commandsFor(group), [groups[group]]);
 });
 
@@ -35,8 +35,10 @@ test('no experiment entry point invokes remote publication or accepts arbitrary 
 
 function reports() {
   return ['baseline', 'core', ...Object.keys(groups)].map((group, index) => ({
-    group, commit: 'same-commit', elapsedSeconds: index === 0 ? 100 : 20,
-    success: true,
+    group, commit: 'same-commit', sourceTree: 'same-tree', runId: '123', runAttempt: '1',
+    elapsedSeconds: index === 0 ? 100 : 20, success: true,
+    startedAtMs: 1000000, finishedAtMs: 1000000 + (index === 0 ? 100000 : 20000),
+    commands: commandsFor(group).map(args => ({args, exitCode: 0, elapsedSeconds: 20})),
   }));
 }
 
@@ -72,4 +74,31 @@ test('a failed Gradle process fails the runner and leaves unsuccessful timing ev
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
+});
+
+const identity = {commit: 'same-commit', sourceTree: 'same-tree', runId: '123', runAttempt: '1'};
+function receipt(group = 'detached-retarget') {
+  return {group, ...identity, success: true, elapsedSeconds: 20,
+    commands: commandsFor(group).map(args => ({args, exitCode: 0, elapsedSeconds: 20}))};
+}
+test('only a complete successful same-source same-attempt receipt satisfies a transition', () => {
+  const task = groups['detached-retarget'][0];
+  assert.doesNotThrow(() => validateReceipt(receipt(), 'detached-retarget', task, identity));
+  for (const field of ['commit', 'sourceTree', 'runId', 'runAttempt']) {
+    assert.throws(() => validateReceipt({...receipt(), [field]: 'other'}, 'detached-retarget', task, identity));
+  }
+  for (const patch of [{success: false}, {commands: []}, {elapsedSeconds: 0},
+    {commands: [{args: ['help'], exitCode: 0, elapsedSeconds: 20}]},
+    {commands: [{args: groups['detached-retarget'], exitCode: 1, elapsedSeconds: 20}]}]) {
+    assert.throws(() => validateReceipt({...receipt(), ...patch}, 'detached-retarget', task, identity));
+  }
+  assert.throws(() => validateReceipt(receipt(), 'detached-retarget', ':someOtherTest', identity));
+});
+
+test('comparison includes staggered command starts rather than assuming perfect overlap', () => {
+  const values = reports();
+  values[2].startedAtMs += 10000;
+  values[2].finishedAtMs += 10000;
+  assert.match(summarize(values), /30\.0 s/);
+  assert.match(summarize(values), /70\.0%/);
 });

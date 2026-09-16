@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ci-timing-experiment-${{ github.ref }}
@@ -70,12 +71,15 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install PyYAML==6.0.3
       - name: Run verification only and record timings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_TRANSITION_RECEIPTS: ${{ runner.temp }}/transition-receipts
         run: node .github/scripts/ci-timing-experiment.js run "$EXPERIMENT_GROUP" "$RUNNER_TEMP/ci-timing"
       - name: Save timings, including failed commands
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: timing-${{ matrix.group }}
+          name: timing-${{ github.run_attempt }}-${{ matrix.group }}
           path: ${{ runner.temp }}/ci-timing/*.json
           if-no-files-found: error
           retention-days: 7
@@ -91,7 +95,67 @@ jobs:
             blue-*/build/test-results/**
             build-logic/build/reports/**
             smoke-tests/published/build/reports/**
+            ${{ runner.temp }}/transition-receipts/**
           if-no-files-found: ignore
+          retention-days: 7
+
+  test-forks:
+    name: Full clean build with ${{ matrix.forks }} test process(es)
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        forks: [1, 4]
+    env:
+      CI: true
+      TEST_FORKS: ${{ matrix.forks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set reproducible timestamp
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+      - name: Set up Java 8 test runtime
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: corretto
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: corretto
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.3
+      - name: Measure full clean build without test exclusions
+        shell: bash
+        run: |
+          SECONDS=0
+          set +e
+          ./gradlew --no-daemon --no-build-cache --max-workers=4 \
+            -PblueTestMaxParallelForks="$TEST_FORKS" clean build
+          result=$?
+          echo "Full clean build: forks=$TEST_FORKS, seconds=$SECONDS, exit=$result" >> "$GITHUB_STEP_SUMMARY"
+          exit "$result"
+      - name: Save full-build test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-build-forks-${{ matrix.forks }}
+          path: |
+            build/test-results/**
+            blue-*/build/test-results/**
+            build/reports/**
+            blue-*/build/reports/**
+          if-no-files-found: error
           retention-days: 7
 
   compare:
@@ -108,7 +172,7 @@ jobs:
           node-version: '22'
       - uses: actions/download-artifact@v4
         with:
-          pattern: timing-*
+          pattern: timing-${{ github.run_attempt }}-*
           merge-multiple: true
           path: ${{ runner.temp }}/ci-timing
       - name: Require all jobs to succeed
