@@ -19,6 +19,14 @@ public final class CommitBoundDevelopmentCandidate {
         return version != null && LOCAL_RC.matcher(version).matches();
     }
 
+    public static boolean isLocalStable(String version) {
+        return "3.1.0".equals(version);
+    }
+
+    public static boolean isLocalRelease(String version) {
+        return isLocalRc(version) || isLocalStable(version);
+    }
+
     public static void verify(
             String version,
             String sourceCommit,
@@ -30,10 +38,10 @@ public final class CommitBoundDevelopmentCandidate {
 
         Matcher versionMatcher = VERSION.matcher(exactVersion);
         boolean development = versionMatcher.matches();
-        if (!development && !isLocalRc(exactVersion)) {
+        if (!development && !isLocalRelease(exactVersion)) {
             throw new GradleException(
                     "Immutable staged candidate version must match "
-                            + "3.1.0-dev.<40 lowercase hex commit> or 3.1.0-rc.<positive integer>: "
+                            + "3.1.0-dev.<40 lowercase hex commit> or 3.1.0-rc.<positive integer> or stable 3.1.0: "
                             + exactVersion);
         }
         if (!COMMIT.matcher(exactSourceCommit).matches()) {

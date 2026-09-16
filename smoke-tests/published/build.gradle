@@ -14,7 +14,7 @@ def artifacts = [
         'blue-language-java'
 ]
 
-if (blueVersion ==~ /3\.1\.0-rc\.[1-9][0-9]*/) {
+if (blueVersion == '3.1.0' || blueVersion ==~ /3\.1\.0-rc\.[1-9][0-9]*/) {
     artifacts.add('blue-conformance')
 }
 
@@ -38,9 +38,12 @@ repositories {
 }
 
 java {
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
+
+tasks.withType(JavaCompile).configureEach { options.release = 8 }
 
 application {
     mainClass = 'blue.smoke.PublishedArtifactSmoke'

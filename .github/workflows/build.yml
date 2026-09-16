@@ -33,7 +33,6 @@ jobs:
       commit: ${{ needs.prepare.outputs.commit }}
       tree: ${{ needs.prepare.outputs.tree }}
       prepared: ${{ needs.prepare.outputs.prepared }}
-      java: '25'
 
   Build:
     needs: prepare
@@ -53,8 +52,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
-        with:
-          java: '25'
       - uses: ./.github/actions/verify-core
         with:
           release: 'false'

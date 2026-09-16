@@ -102,3 +102,19 @@ test('comparison includes staggered command starts rather than assuming perfect 
   assert.match(summarize(values), /30\.0 s/);
   assert.match(summarize(values), /70\.0%/);
 });
+
+const {compareProduction} = require('./ci-timing-experiment');
+function productionReports() {
+  return [...reports().filter(r => r.group !== 'core'),
+    ...['rc25', 'build25', 'stable25'].map(group => ({group, ...identity, success: true,
+      verificationScope: group === 'build25' ? 'build' : 'release',
+      startedAtMs: 1000000, finishedAtMs: 1020000, elapsedSeconds: 20}))];
+}
+test('Java25 production comparison requires complete same-source RC and owners', () => {
+  assert.match(compareProduction(productionReports()), /80\.0%/);
+  assert.throws(() => compareProduction(productionReports().filter(r => r.group !== 'stable25')));
+  assert.throws(() => compareProduction(productionReports().filter(r => r.group !== 'detached-retarget')));
+  assert.throws(() => compareProduction(productionReports().map(r => r.group === 'baseline' ? {...r, commit: 'wrong'} : r)));
+  assert.throws(() => compareProduction(productionReports().map(r => r.group === 'rc25' ? {...r, verificationScope: 'build'} : r)));
+  assert.throws(() => compareProduction(productionReports().map(r => r.group === 'baseline' ? {...r, commands: []} : r)));
+});

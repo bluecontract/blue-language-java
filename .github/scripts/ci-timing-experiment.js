@@ -172,12 +172,79 @@ function summarize(reports) {
   ].join('\n');
 }
 
-module.exports = {sourceIdentity, validatePreparedIdentity, groups, commandsFor, summarize, validateReceipt};
+function recordCore(directory) {
+  require('./ci-verification-source').check();
+  const scope = process.env.BLUE_CI_SCOPE;
+  if (!['rc25', 'build25', 'stable25'].includes(scope)) throw new Error('Unknown measured core scope');
+  const startedAtMs = Number(process.env.VERIFY_STARTED_AT);
+  const finishedAtMs = Date.now();
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0 || finishedAtMs <= startedAtMs) {
+    throw new Error('Invalid core verification start');
+  }
+  const report = {group: scope, ...sourceIdentity(), success: true,
+    verificationScope: scope === 'build25' ? 'build' : 'release', startedAtMs, finishedAtMs,
+    elapsedSeconds: (finishedAtMs - startedAtMs) / 1000};
+  fs.mkdirSync(directory, {recursive: true});
+  fs.writeFileSync(path.join(directory, `core-${scope}.json`), JSON.stringify(report, null, 2) + '\n');
+}
+
+function compareProduction(reports) {
+  const byGroup = new Map();
+  const expected = ['baseline', 'rc25', 'build25', 'stable25', ...Object.keys(groups)];
+  for (const report of reports) {
+    if (!expected.includes(report.group)) throw new Error('Unknown production timing report');
+    if (byGroup.has(report.group)) throw new Error('Duplicate production timing report');
+    byGroup.set(report.group, report);
+  }
+  const core = byGroup.get('rc25');
+  if (!core || core.verificationScope !== 'release') throw new Error('Missing full RC verification');
+  for (const scope of ['rc25', 'build25', 'stable25']) {
+    const report = byGroup.get(scope);
+    if (!report || report.verificationScope !== (scope === 'build25' ? 'build' : 'release')
+        || report.success !== true || !Number.isFinite(report.elapsedSeconds) || report.elapsedSeconds <= 0
+        || !Number.isFinite(report.startedAtMs) || !Number.isFinite(report.finishedAtMs)
+        || report.finishedAtMs <= report.startedAtMs
+        || Math.abs(report.elapsedSeconds - (report.finishedAtMs - report.startedAtMs) / 1000) > 0.01
+        || report.runId !== core.runId || report.runAttempt !== core.runAttempt) {
+      throw new Error(`Incomplete production verification: ${scope}`);
+    }
+  }
+  const baseline = byGroup.get('baseline');
+  if (!baseline) throw new Error('Missing serial baseline');
+  validateReport(baseline, 'baseline', core);
+  const parallel = [core];
+  for (const [group, tasks] of Object.entries(groups)) {
+    const report = byGroup.get(group);
+    if (!report) throw new Error(`Missing transition group: ${group}`);
+    for (const task of tasks) validateReceipt(report, group, task, core);
+    if (!Number.isFinite(report.startedAtMs) || !Number.isFinite(report.finishedAtMs)
+        || report.finishedAtMs <= report.startedAtMs) throw new Error('Missing transition timestamps');
+    parallel.push(report);
+  }
+  const seconds = (Math.max(...parallel.map(r => r.finishedAtMs))
+    - Math.min(...parallel.map(r => r.startedAtMs))) / 1000;
+  return ['## Java 25 verification — no publication', '',
+    '| Candidate | Core verification seconds |', '| --- | ---: |',
+    ...['build25', 'rc25', 'stable25'].map(scope => `| ${scope} | ${byGroup.get(scope).elapsedSeconds.toFixed(1)} |`), '',
+    `Same-source RC serial baseline: **${baseline.elapsedSeconds.toFixed(1)} s**; distributed command window: **${seconds.toFixed(1)} s**.`,
+    `Observed reduction: **${((1 - seconds / baseline.elapsedSeconds) * 100).toFixed(1)}%**.`, '',
+    'Both RC variants use the same prepared commit/tree, Java 25 and workflow attempt. All groups passed.',
+    'Setup, final uploads and publication/Maven propagation are excluded; receipt waits are included.'].join('\n');
+}
+
+module.exports = {compareProduction, sourceIdentity, validatePreparedIdentity, groups, commandsFor, summarize, validateReceipt};
 
 if (require.main === module) {
   try {
     const [mode, argument, directory] = process.argv.slice(2);
-    if (mode === 'matrix') console.log(JSON.stringify({group: groupNames}));
+    if (mode === 'record-core') recordCore(argument);
+    else if (mode === 'compare-production') {
+      const reports = fs.readdirSync(argument).filter(name => name.endsWith('.json'))
+        .map(name => JSON.parse(fs.readFileSync(path.join(argument, name), 'utf8')));
+      const markdown = compareProduction(reports);
+      console.log(markdown);
+      if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+    } else if (mode === 'matrix') console.log(JSON.stringify({group: groupNames}));
     else if (mode === 'assignments') console.log(JSON.stringify(groups));
     else if (mode === 'run') {
       if (!directory) throw new Error('Report directory is required');

@@ -53,7 +53,6 @@ jobs:
       commit: ${{ needs.prepare.outputs.commit }}
       tree: ${{ needs.prepare.outputs.tree }}
       prepared: ${{ needs.prepare.outputs.prepared }}
-      java: '17'
 
   ReleaseRC:
     needs: prepare
@@ -73,8 +72,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
-        with:
-          java: '17'
       - uses: ./.github/actions/verify-core
         with:
           release: 'true'

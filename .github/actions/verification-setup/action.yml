@@ -1,9 +1,9 @@
 name: Set up verified CI source
 description: Import the exact prepared source and install verification runtimes
 inputs:
-  java:
-    description: Build JDK version
-    required: true
+  cache-disabled:
+    description: Use cold dependency caches for controlled timing comparisons
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -19,13 +19,11 @@ runs:
       run: node .github/scripts/ci-verification-source.js restore
     - uses: actions/setup-java@v4
       with:
-        java-version: '8'
-        distribution: corretto
-    - uses: actions/setup-java@v4
-      with:
-        java-version: ${{ inputs.java }}
+        java-version: '25'
         distribution: corretto
     - uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: ${{ inputs.cache-disabled }}
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'

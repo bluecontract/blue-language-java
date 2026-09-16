@@ -31,7 +31,7 @@ function check() {
 
 function prepare(directory, mode) {
   const eventCommit = process.env.GITHUB_SHA;
-  if (!['existing', 'rc', 'fixture'].includes(mode) || git('rev-parse', 'HEAD') !== eventCommit) {
+  if (!['existing', 'rc', 'fixture', 'stable-fixture'].includes(mode) || git('rev-parse', 'HEAD') !== eventCommit) {
     throw new Error('Preparation requires the event checkout and a known mode');
   }
   git('diff', '--quiet', 'HEAD', '--');
@@ -48,11 +48,17 @@ function prepare(directory, mode) {
     });
     git('add', '.cz.toml');
     git('commit', '-m', `chore: release ${version}`);
-  } else if (mode === 'fixture') {
+  } else if (mode === 'fixture' || mode === 'stable-fixture') {
     if (process.env.GITHUB_REF !== 'refs/heads/codex/ci/language-parallel-experiment') {
       throw new Error('Prepared-source fixture requires the experiment branch');
     }
-    // Exercise changed tree/commit transfer without assigning any new RC version.
+    // These local verification commits never reserve or publish a version.
+    if (mode === 'stable-fixture') {
+      const source = fs.readFileSync('.cz.toml', 'utf8');
+      const match = source.match(/^version\s*=\s*"(3\.1\.0)(?:-rc\.[1-9][0-9]*)?"/m);
+      if (!match) throw new Error('Stable fixture requires the 3.1.0 release line');
+      fs.writeFileSync('.cz.toml', source.replace(/^version\s*=\s*"[^"]+"/m, 'version = "3.1.0"'));
+    }
     fs.appendFileSync('.cz.toml', '\n# Isolated CI source-transfer verification.\n');
     git('add', '.cz.toml');
     git('commit', '-m', 'ci: exercise prepared source transfer');

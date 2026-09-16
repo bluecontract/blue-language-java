@@ -2,6 +2,9 @@ name: Independent transition verification
 on:
   workflow_call:
     inputs:
+      cache-disabled:
+        type: boolean
+        default: false
       scope:
         type: string
         required: true
@@ -12,9 +15,6 @@ on:
         type: string
         required: true
       prepared:
-        type: string
-        required: true
-      java:
         type: string
         required: true
 permissions:
@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
         with:
-          java: ${{ inputs.java }}
+          cache-disabled: ${{ inputs.cache-disabled }}
       - name: Run owned transition tasks
         env:
           GROUP: ${{ matrix.group }}

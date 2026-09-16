@@ -78,7 +78,7 @@ final class StagedRepositoryManifestTest {
                 "\"schema\":\"blue-development-maven-repository/1.0\""));
         assertTrue(manifest.contains("\"stagePurpose\":\"DEVELOPMENT\""));
         assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
-        assertTrue(manifest.contains("\"builtWithJava\":17"));
+        assertTrue(manifest.contains("\"builtWithJava\":25"));
         assertTrue(manifest.contains("\"sourceTree\":\"" + TREE + "\""));
         assertTrue(manifest.contains("\"sourceDirty\":false"));
         assertFalse(manifest.contains("\"kind\":\"sources\""));
@@ -114,6 +114,27 @@ final class StagedRepositoryManifestTest {
                 Collections.singletonList(ARTIFACT), fixture.bindings));
         assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
                 Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+    }
+
+    @Test
+    void shouldExportStableWithExactSourceAndCompletePublications() throws Exception {
+        String version = "3.1.0";
+        Fixture fixture = fixture(Collections.singletonList(ARTIFACT), version);
+        StagedRepositoryManifest.assemble(fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings);
+        String manifest = Files.readString(fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
+        assertTrue(manifest.contains("\"schema\":\"blue-local-stable-maven-repository/1.0\""));
+        assertTrue(manifest.contains("\"stagePurpose\":\"LOCAL_STABLE\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains("\"builtWithJava\":25"));
+        assertTrue(manifest.contains("\"kind\":\"sources\""));
+        assertTrue(manifest.contains("\"kind\":\"javadoc\""));
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+        StagedRepositoryManifest.Bindings dirty = StagedRepositoryManifest.bindings(
+                fixture.specification, fixture.releaseManifest, COMMIT, TREE, true, 25);
+        assertFalse(StagedRepositoryManifest.verify(
+                fixture.target, GROUP, version, Collections.singletonList(ARTIFACT), dirty).getViolations().isEmpty());
     }
 
     @Test
@@ -356,7 +377,15 @@ final class StagedRepositoryManifestTest {
     }
 
     @Test
-    void shouldRejectBuildJdkOtherThan17() throws Exception {
+    void shouldBindNewBuildsToJava25() throws Exception {
+        Fixture fixture = fixture();
+        StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
+                fixture.specification, fixture.releaseManifest, COMMIT, TREE, false, 25);
+        assertEquals(25, bindings.getBuiltWithJava());
+    }
+
+    @Test
+    void shouldRejectBuildJdkOtherThan25() throws Exception {
         // given
         Fixture fixture = fixture();
 
@@ -372,7 +401,7 @@ final class StagedRepositoryManifestTest {
                         21));
 
         // then
-        assertTrue(failure.getMessage().contains("must be built with Java 17"));
+        assertTrue(failure.getMessage().contains("must be built with Java 25"));
         assertTrue(failure.getMessage().contains("received Java 21"));
     }
 
