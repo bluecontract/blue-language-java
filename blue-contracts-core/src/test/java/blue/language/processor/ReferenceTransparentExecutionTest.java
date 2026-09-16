@@ -19,6 +19,11 @@ import blue.language.runtime.BlueLanguage;
 import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -614,6 +619,200 @@ final class ReferenceTransparentExecutionTest {
             assertEquals(BigInteger.valueOf(11),
                     working.canonicalAt(
                             "/counterValue").getValue());
+        }
+    }
+
+    @Test
+    void exactSourceContributionSurvivesAnAlreadyExpandedReference() {
+        Node definitionType = new Node().properties("inherited", new Node().value("default"));
+        Node definition = new Node()
+                .type(new Node().blueId(blueId(definitionType)))
+                .properties("explicit", new Node().value("retained"));
+        Node unrelated = new Node().properties("payload", new Node().value("cold"));
+        CountingProvider provider = new CountingProvider().found(definitionType).found(definition).found(unrelated);
+        Node root = new Node()
+                .properties("definition", new Node().blueId(blueId(definition)))
+                .properties("unrelated", new Node().blueId(blueId(unrelated)));
+        try (Fixture fixture = new Fixture(provider, root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertEquals("default", working.resolvedAt("/definition/inherited").getValue());
+            List<FrozenNode> exact = working.sourceContributionsAt("/definition");
+            assertEquals(1, exact.size());
+            assertEquals(blueId(definition), exact.get(0).blueId());
+            assertNull(exact.get(0).property("inherited"));
+            assertEquals("retained", exact.get(0).property("explicit").getValue());
+            assertThrows(UnsupportedOperationException.class, () -> exact.add(exact.get(0)));
+            assertEquals(0, provider.reads(blueId(unrelated)));
+        }
+    }
+
+    @Test
+    void sourceContributionFindsInheritedDefinitionBelowAPartiallyOverlaidContainer() {
+        Node definition = new Node().properties("explicit", new Node().value("retained"));
+        Node library = new Node().properties("definition", new Node().blueId(blueId(definition)));
+        Node base = new Node().properties("library", library);
+        Node root = new Node().type(new Node().blueId(blueId(base)))
+                .properties("library", new Node().properties("local", new Node().value("overlay")));
+        CountingProvider provider = new CountingProvider().found(definition).found(library).found(base);
+        try (Fixture fixture = new Fixture(provider, root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertEquals("retained", working.resolvedAt("/library/definition/explicit").getValue());
+            List<FrozenNode> exact = working.sourceContributionsAt("/library/definition");
+            assertEquals(1, exact.size());
+            assertEquals(blueId(definition), exact.get(0).blueId());
+        }
+    }
+
+    @Test
+    void sourceContributionsReadWorkingPatchesWithoutPublishingOrUsingStalePaths() {
+        Node first = new Node().properties("explicit", new Node().value("first"));
+        Node second = new Node().properties("explicit", new Node().value("second"));
+        CountingProvider provider = new CountingProvider().found(first).found(second);
+        Node root = new Node().properties("definition", new Node().blueId(blueId(first)));
+        try (Fixture fixture = new Fixture(provider, root)) {
+            WorkingDocument working = fixture.runtime.workingDocument("/");
+            try {
+                List<FrozenNode> before = working.sourceContributionsAt("/definition");
+                working.applyPatch(JsonPatch.replace("/definition", new Node().blueId(blueId(second))));
+                assertEquals("second", working.sourceContributionsAt("/definition")
+                        .get(0).property("explicit").getValue());
+                assertEquals("first", before.get(0).property("explicit").getValue());
+                assertEquals("first", fixture.runtime.resolvedFrozenAt("/definition/explicit").getValue());
+            } finally {
+                working.close();
+            }
+            assertThrows(IllegalStateException.class, () -> working.sourceContributionsAt("/definition"));
+        }
+    }
+
+    @Test
+    void sourceContributionsSelectEffectiveListSlotsRatherThanOverlayOffsets() {
+        Node first = new Node().properties("label", new Node().value("first"));
+        Node oldSecond = new Node().properties("label", new Node().value("old second"));
+        Node replacement = new Node().properties("label", new Node().value("replacement"));
+        Node appended = new Node().properties("label", new Node().value("appended"));
+        Node prefix = new Node().items(Arrays.asList(first, oldSecond));
+        Node root = new Node().properties("definitions", new Node()
+                .type(prefix)
+                .items(Arrays.asList(
+                        new Node().position(1).properties("$replace", replacement), appended)));
+        try (Fixture fixture = new Fixture(new CountingProvider(), root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            for (int index = 0; index < 3; index++) {
+                String expected = Arrays.asList("first", "replacement", "appended").get(index);
+                String pointer = "/definitions/" + index;
+                assertEquals(expected, working.resolvedAt(pointer + "/label").getValue());
+                List<FrozenNode> exact = working.sourceContributionsAt(pointer);
+                assertEquals(1, exact.size(), pointer);
+                assertEquals(expected, exact.get(0).property("label").getValue(), pointer);
+            }
+            assertTrue(working.sourceContributionsAt("/definitions/3").isEmpty());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"inherited-slot-type", "explicit-replacement-type", "list-item-type", "untyped-slot"})
+    void positionalReplacementRetainsTypeContributionsButNotReplacedFields(String mode) {
+        // Given a valid whole-item replacement, not a bare non-scalar $pos overlay.
+        Node definition = new Node().properties("explicit", new Node().value("retained"));
+        Node slotType = new Node().name("Replacement slot type")
+                .properties("definition", new Node().blueId(blueId(definition)));
+        Node inherited = new Node().properties("obsolete", new Node().value("old field"));
+        Node replacement = new Node().properties("marker", new Node().value("new field"));
+        Node prefix = new Node().type(new Node().blueId(LIST_TYPE_BLUE_ID))
+                .items(Collections.singletonList(inherited));
+        if ("list-item-type".equals(mode)) {
+            prefix.itemType(new Node().blueId(blueId(slotType)));
+        } else if ("untyped-slot".equals(mode)) {
+            inherited.properties("definition", new Node().blueId(blueId(definition)));
+        } else {
+            inherited.type(new Node().blueId(blueId(slotType)));
+        }
+        if ("explicit-replacement-type".equals(mode)) {
+            replacement.type(new Node().blueId(blueId(slotType)));
+        }
+        Node root = new Node().properties("definitions", new Node().type(prefix)
+                .items(Collections.singletonList(new Node().position(0)
+                        .properties("$replace", replacement))));
+        try (Fixture fixture = new Fixture(new CountingProvider().found(definition).found(slotType), root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            // First prove the maintained resolver accepts this input and replaces ordinary fields.
+            assertEquals("new field", working.resolvedAt("/definitions/0/marker").getValue());
+            assertNull(working.resolvedAt("/definitions/0/obsolete"));
+            String pointer = "/definitions/0/definition";
+            if ("untyped-slot".equals(mode)) {
+                assertNull(working.resolvedAt(pointer));
+                assertTrue(working.sourceContributionsAt(pointer).isEmpty());
+            } else {
+                assertEquals("retained", working.resolvedAt(pointer + "/explicit").getValue());
+                // The oracle is the independent exact definition, not the observed contribution list.
+                List<FrozenNode> contributions = working.sourceContributionsAt(pointer);
+                assertEquals(1, contributions.size(), mode);
+                assertEquals(blueId(definition), contributions.get(0).blueId(), mode);
+            }
+        }
+    }
+
+    @Test
+    void sourceContributionsFindNestedDefinitionsSuppliedByAnItemType() {
+        Node definition = new Node().properties("explicit", new Node().value("retained"));
+        Node itemType = new Node().properties("definition", new Node().blueId(blueId(definition)));
+        Node root = new Node().properties("entries", new Node()
+                .type(new Node().blueId(LIST_TYPE_BLUE_ID))
+                .itemType(new Node().blueId(blueId(itemType)))
+                .items(Collections.singletonList(new Node().properties(Collections.emptyMap()))));
+        try (Fixture fixture = new Fixture(new CountingProvider().found(definition).found(itemType), root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertEquals("retained", working.resolvedAt("/entries/0/definition/explicit").getValue());
+            List<FrozenNode> exact = working.sourceContributionsAt("/entries/0/definition");
+            assertEquals(1, exact.size());
+            assertEquals(blueId(definition), exact.get(0).blueId());
+            assertNull(working.sourceContributionsAt("/entries/0").get(0).property("definition"));
+        }
+    }
+
+    @Test
+    void sourceContributionsDoNotTurnDictionaryValueTypeValidationIntoInheritance() {
+        Node definition = new Node().properties("explicit", new Node().value("retained"));
+        Node valueType = new Node().properties("definition", new Node().blueId(blueId(definition)));
+        Node dictionaryType = new Node().type(new Node().blueId(DICTIONARY_TYPE_BLUE_ID))
+                .valueType(new Node().blueId(blueId(valueType)));
+        Node root = new Node().properties("entries", new Node()
+                .type(new Node().blueId(blueId(dictionaryType)))
+                .properties("alice", new Node().properties(Collections.emptyMap())));
+        CountingProvider provider = new CountingProvider().found(definition).found(valueType).found(dictionaryType);
+        try (Fixture fixture = new Fixture(provider, root);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertNotNull(working.resolvedAt("/entries/alice"));
+            assertNull(working.resolvedAt("/entries/alice/definition"));
+            assertTrue(working.sourceContributionsAt("/entries/alice/definition").isEmpty());
+        }
+        Node explicitlyTypedRoot = new Node().properties("entries", new Node()
+                .type(new Node().blueId(blueId(dictionaryType)))
+                .properties("alice", new Node().type(new Node().blueId(blueId(valueType)))
+                        .properties(Collections.emptyMap())));
+        try (Fixture fixture = new Fixture(provider, explicitlyTypedRoot);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertEquals("retained", working.resolvedAt("/entries/alice/definition/explicit").getValue());
+            List<FrozenNode> exact = working.sourceContributionsAt("/entries/alice/definition");
+            assertEquals(1, exact.size());
+            assertEquals(blueId(definition), exact.get(0).blueId());
+            assertTrue(working.sourceContributionsAt("/entries/bob/definition").isEmpty());
+        }
+    }
+
+    @Test
+    void sourceContributionsKeepManagedReadsBoundToTheSelectedPathAndExactIdentity() {
+        Node child = new Node().properties("count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
+        CountingProvider provider = new CountingProvider().unavailable(childBlueId, "must use managed evidence");
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(childBlueId, child), childBlueId);
+        try (ManagedFixture fixture = new ManagedFixture(provider, managedRoot(childBlueId), overlay);
+             WorkingDocument working = fixture.runtime.workingDocument("/")) {
+            assertEquals(childBlueId, working.sourceContributionsAt("/peer").get(0).blueId());
+            assertEquals(BigInteger.valueOf(7), working.sourceContributionsAt("/peer/count").get(0).getValue());
+            assertEquals(0, provider.reads(childBlueId));
         }
     }
 

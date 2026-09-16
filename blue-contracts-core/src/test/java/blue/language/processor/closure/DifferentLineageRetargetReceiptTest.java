@@ -33,6 +33,86 @@ final class DifferentLineageRetargetReceiptTest {
     private static final String PATH = "/peer";
 
     @Test
+    void inactiveForeignSelectionUsesReservedGenerationAndExactAddOrHistoricalEvidence() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            for (boolean active : Arrays.asList(false, true)) {
+                Scenario scenario = inactiveForeignScenario(active, 4L, bindingPolicyIdentity());
+                ClosureInvocationInput input = invocation(scenario.input.snapshot, environment);
+                ManagedOccurrenceEvidenceDemand demand = historicalDemand(input, scenario.after.expectedTargetBlueId());
+                ManagedOccurrenceEvidenceResolution resolution = ManagedOccurrenceEvidenceResolution.derived(
+                        demand, C, active ? 0L : -1L);
+                ClosureInvocationVerifier.verifyRetry(ClosureProcessRetryInput.derived(input,
+                        Collections.singletonList(resolution)), owner.administration()::runtimeAccess);
+                ClosureProcessResult result = ClosureSuccessResultAssembler.assemble(
+                        input, executionState(scenario.output), Collections.singletonList(resolution));
+                assertTrue(result.commits());
+                assertEquals(4L, result.occurrenceBindings().get(0).activationGeneration());
+                assertNotEquals(scenario.before.occurrenceIdentity(), result.occurrenceBindings().get(0).occurrenceIdentity());
+                assertEquals(active ? 8L : 7L, result.graphGeneration());
+                assertEquals(active ? 1 : 0, result.graphChanges().size());
+                if (active) {
+                    assertEquals(GraphChange.Kind.ADD, result.graphChanges().get(0).changeKind());
+                    assertEquals(null, result.graphChanges().get(0).before());
+                }
+                assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(
+                        input, executionState(scenario.output)));
+                for (Scenario invalid : Arrays.asList(
+                        inactiveForeignScenario(active, 5L, bindingPolicyIdentity()),
+                        inactiveForeignScenario(active, 3L, bindingPolicyIdentity()),
+                        inactiveForeignScenario(active, 4L, hash('f')))) {
+                    assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(
+                            input, executionState(invalid.output), Collections.singletonList(resolution)));
+                }
+                ManagedOccurrenceEvidenceResolution wrongEpoch = ManagedOccurrenceEvidenceResolution.derived(
+                        demand, C, active ? -1L : 0L);
+                assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(
+                        input, executionState(scenario.output), Collections.singletonList(wrongEpoch)));
+                assertFalse(resolution.selectsInactiveRetarget(input.snapshot(), ManagedOccurrenceBinding.derived(
+                        scenario.before.bindingPolicyIdentity(), A, ScopeAddress.embedded(PATH, 5L), B,
+                        scenario.before.expectedTargetBlueId(), false, null)), "A new retirement is not the input reservation");
+            }
+        }
+    }
+
+    private static Scenario inactiveForeignScenario(boolean active, long generation, String policy) {
+        Node authored = new Node().name("Authored foreign source");
+        Node target = marked(authored);
+        Node old = marked(new Node().name("Reserved old source"));
+        ManagedOccurrenceBinding before = ManagedOccurrenceBinding.derived(bindingPolicyIdentity(), A,
+                ScopeAddress.embedded(PATH, 4L), B, blueId(old), false, null);
+        ManagedOccurrenceBinding after = ManagedOccurrenceBinding.derived(policy, A,
+                ScopeAddress.embedded(PATH, generation), C, blueId(active ? target : authored),
+                active, active ? null : Long.valueOf(-1L));
+        SnapshotEvidence input = initializedSources(finalizedSnapshot(7L,
+                bodies(new Node().name("Parent"), old, target), Collections.singletonList(before), generations()));
+        Map<DocumentId, Long> next = ComponentGenerationTransition.assign(input.snapshot.graph(),
+                componentGenerations(input.snapshot), ManagedDocumentGraph.fromBindings(Arrays.asList(A, B, C),
+                        Collections.singletonList(after)));
+        SnapshotEvidence output = initializedSources(finalizedSnapshot(active ? 8L : 7L,
+                bodies(new Node().name("Parent").properties("peer", new Node().blueId(after.expectedTargetBlueId())), old, target),
+                Collections.singletonList(after), next));
+        return new Scenario(input, output, before, after);
+    }
+
+    private static Node marked(Node authored) {
+        return authored.clone().contracts(new Node().properties("initialized",
+                new Node().type(new Node().blueId(blue.language.processor.registry.RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                        .properties("document", new Node().blueId(blueId(authored)))));
+    }
+
+    private static SnapshotEvidence initializedSources(SnapshotEvidence evidence) {
+        List<ManagedDocumentSnapshot> documents = new ArrayList<>();
+        for (ManagedDocumentSnapshot d : evidence.snapshot.managedDocuments()) {
+            documents.add(new ManagedDocumentSnapshot(d.documentId(), d.blueId(), d.document(),
+                    !d.documentId().equals(A), d.terminated(), d.publicRoot(), d.epoch(), d.componentGeneration()));
+        }
+        return new SnapshotEvidence(ClosureEvidenceFactory.affectedClosure(evidence.snapshot.graphGeneration(),
+                documents, evidence.snapshot.occurrences(), evidence.snapshot.components(), evidence.snapshot.publicRootDocumentIds()),
+                evidence.finalization);
+    }
+
+    @Test
     void reservedHistoricalSelectionKeepsItsGenerationAndRequiresExactRetryEvidence() {
         try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
             ClosureEnvironment environment = environment(owner);

@@ -232,8 +232,7 @@ final class ClosureExecutionSession
             }
         }
         this.currentWitnesses = rootedWitnessFrame == null ? null : rootedWitnessFrame.at(currentBindings, documentIds);
-        this.inputGraph = ManagedDocumentGraph.fromBindings(documentIds, currentBindings,
-                currentWitnesses == null ? Collections.<DocumentId>emptySet() : currentWitnesses.sources());
+        this.inputGraph = ManagedDocumentGraph.fromBindings(documentIds, currentBindings, currentWitnesses);
         this.existingBlueIds = finalizationGas.existingIdentities(
                 latestBodies);
         this.stepProcessor = new ManagedDocumentStepProcessor(
@@ -2484,11 +2483,6 @@ final class ClosureExecutionSession
         graphGeneration = ClosureGraphGenerationTransition.assign(
                 input.snapshot().graphGeneration(), ManagedDocumentGraph.fromBindings(
                         inputGraph.documentIds(), input.snapshot().occurrences()), after);
-        Map<DocumentId, Long> generations =
-                ComponentGenerationTransition.assign(
-                        inputGraph,
-                        inputComponentGenerations,
-                        after);
         Map<DocumentId, Node> sourceBodies = cloneBodies(latestBodies);
         ComponentFinalizationResult finalized;
         long finalizationStarted =
@@ -2504,6 +2498,10 @@ final class ClosureExecutionSession
             recorder.endComponentFinalizationProof(finalizationStarted);
         }
         finalized = rebindInactiveProspectiveRows(finalized);
+        // Occurrence ADD/REMOVE accounting above uses every actual active row.
+        // Component work below must use the same witness contexts as the kernel.
+        ManagedDocumentGraph finalizationGraph = finalized.finalizedGraph();
+        Map<DocumentId, Long> generations = finalized.componentGenerations();
         final ClosureFinalizationGasCharger.CyclicFinalizationPlan
                 cyclicPlan = executionMode == ExecutionMode.ADMISSION
                 ? ClosureFinalizationGasCharger.plan(
@@ -2522,7 +2520,7 @@ final class ClosureExecutionSession
                         .CHECKPOINT_SETTLEMENT) {
             gasFrame = finalizationGas.beginCheckpointSettlement(
                     stepProcessor,
-                    after,
+                    finalizationGraph,
                     generations,
                     0L,
                     recorder.finalizationCount(),
@@ -2530,7 +2528,7 @@ final class ClosureExecutionSession
         } else if (boundary.kind()
                 == TentativeFinalization.Boundary.Kind.WORK) {
             gasFrame = finalizationGas.beginFinalization(
-                    stepProcessor, after, generations,
+                    stepProcessor, finalizationGraph, generations,
                     Objects.requireNonNull(owner, "owner"),
                     recorder.finalizationCount(),
                     cyclicPlan.memberSets());
@@ -2539,7 +2537,7 @@ final class ClosureExecutionSession
                         .INITIALIZATION_BATCH) {
             gasFrame = finalizationGas.beginInitializationBatch(
                     stepProcessor,
-                    after,
+                    finalizationGraph,
                     generations,
                     recorder.finalizationCount(),
                     cyclicPlan.memberSets());
@@ -2548,7 +2546,7 @@ final class ClosureExecutionSession
                         .TERMINATION_MARKER) {
             gasFrame = finalizationGas.beginTerminationMarker(
                     stepProcessor,
-                    after,
+                    finalizationGraph,
                     generations,
                     Objects.requireNonNull(
                             boundary.afterWorkOrdinal(),
@@ -2742,9 +2740,10 @@ final class ClosureExecutionSession
          * epoch.  A managed-revision boundary may retain the authoritative
          * source epoch only when the final body delta is completely explained
          * below by active occurrence-reference re-encoding.  This applies
-         * while reconciling the selected historical row and, after activation,
-         * while delivering that source receipt's exact imported event.  Local
-         * source work and every unexplained finalizer change remain strict.
+         * while reconciling the selected historical row and while delivering
+         * that source receipt's exact imported event after activation or when
+         * a numbered successor carrier defers activation.  Local source work
+         * and every unexplained finalizer change remain strict.
          */
         boolean reconcilesHistoricalRow = false;
         for (ManagedOccurrenceBinding binding
@@ -2813,8 +2812,14 @@ final class ClosureExecutionSession
     private boolean isImportedManagedRevisionSourceReceiptBoundary(
             DocumentId documentId,
             ClosureWorkOccurrence owner) {
+        // A numbered carrier reconciles its receipt and imports its events now,
+        // but deliberately defers activation until the captured tail is consumed.
+        // This does not extend the exception to other nonterminal history steps.
+        boolean reconciledNumberedSuccessor = managedRevisionReceiptReconciled
+                && input.cause() instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) input.cause()).successorRepresentationCause().isPresent();
         if (!(input.cause() instanceof ManagedHistoryStep)
-                || !managedRevisionActivationCompleted
+                || (!managedRevisionActivationCompleted && !reconciledNumberedSuccessor)
                 || importedManagedEventDeliveryDepth <= 0
                 || owner.kind() != WorkKind.EMBEDDED_EVENT) {
             return false;
@@ -3215,7 +3220,12 @@ final class ClosureExecutionSession
                                 + "row");
             }
             ManagedOccurrenceBinding before = replacement.get(match);
-            boolean reservedSelection = resolution.selectsInactiveReservation(input.snapshot(), before)
+            // A committed inactive slot can select another exact lineage at
+            // its already allocated generation. Only this actual demand
+            // boundary may replace the tentative row; read expansion cannot.
+            boolean inactiveRetarget = resolution.selectsInactiveRetarget(input.snapshot(), before);
+            boolean reservedSelection = (resolution.selectsInactiveReservation(input.snapshot(), before)
+                    || inactiveRetarget)
                     && !processEmbeddedRetirementFences.contains(
                             new ProcessEmbeddedSurfaceReconciler.OccurrencePath(
                                     before.sourceDocumentId(), before.sourcePath()));
@@ -3238,8 +3248,9 @@ final class ClosureExecutionSession
                             resolution.targetDocumentId(),
                             demand.suppliedValueBlueId(),
                             false,
-                            Long.valueOf(
-                                    resolution.pendingHistoricalEpoch()));
+                            inactiveRetarget && resolution.pendingHistoricalEpoch() == currentSnapshot.managedDocument(
+                                    resolution.targetDocumentId()).epoch()
+                                    ? null : Long.valueOf(resolution.pendingHistoricalEpoch()));
             replacement.set(match, after);
             consumed.add(demand.demandIdentity());
         }
@@ -3375,7 +3386,7 @@ final class ClosureExecutionSession
             return finalized;
         }
         ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
-                finalized.finalizedGraph().documentIds(), rebound, finalized.finalizedGraph().immutableSources());
+                finalized.finalizedGraph().documentIds(), rebound, finalized.rootedWitnesses());
         return new ComponentFinalizationResult(
                 graph,
                 finalized.componentGenerations(),

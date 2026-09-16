@@ -76,6 +76,35 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
+     * Selects exact immutable witness positions before admitting a new rooted operation.
+     *
+     * <p>Only existing, library-authenticated noncalculating witness primaries may
+     * change. Owners, live documents, public roots and direct pending source anchors
+     * remain unchanged. Each selected primary and its complete source-owned rows
+     * come from an independently verified snapshot; other witnesses retain their
+     * original complete proof contexts. Selection preserves the document and
+     * occurrence-identity inventory and its graph generation.</p>
+     *
+     * <p>This state-only constructor neither grants publication authority nor
+     * authenticates durable provenance, same-cause scheduling, terminal eligibility
+     * or current-head compare-and-set conditions. Those remain host obligations.
+     * Callers must use the returned state for a fresh operation, never to replace
+     * an admitted input or reset its meter. The ordinary rooted read-expansion
+     * and retry guards are unchanged.</p>
+     *
+     * @param original verified state carrying existing immutable witness roles
+     * @param selectedWitnessProofs selected existing witness lineages and their
+     *        complete exact source snapshots; an empty map is a verified no-op
+     * @return independently verified fresh state; executes and publishes nothing
+     * @throws IllegalArgumentException for ineligible selection, invalid proof,
+     *         changed inventory or an incompatible exact component selection
+     */
+    public static AffectedClosureSnapshot rootedWitnessSelection(AffectedClosureSnapshot original,
+            Map<DocumentId, AffectedClosureSnapshot> selectedWitnessProofs) {
+        return RootedWitnessSelection.prepare(original, selectedWitnessProofs);
+    }
+
+    /**
      * Captures host retained positions alongside an unchanged, successful rooted result.
      * The host must bind these positions to its atomically stored receipts; this factory
      * verifies exact ownership, the permitted single host increment, and all source proofs.

@@ -128,12 +128,13 @@ final class ClosureInvocationVerifier {
             }
             if (active == null || !(active.active()
                     || resolution.selectsInactiveReservation(base.snapshot(), active)
+                    || resolution.selectsInactiveRetarget(base.snapshot(), active)
                     || (isVerifiedManagedReceiptEventSource(base, active)
                             && !active.targetDocumentId().equals(
                                     resolution.targetDocumentId())))) {
                 throw new IllegalArgumentException(
                         "A managed-occurrence process retry requires an "
-                                + "active source row, initialized same-lineage reservation, or verified different-lineage receipt event");
+                                + "active source row, initialized exact reservation selection, or verified different-lineage receipt event");
             }
         }
         return new Verification(

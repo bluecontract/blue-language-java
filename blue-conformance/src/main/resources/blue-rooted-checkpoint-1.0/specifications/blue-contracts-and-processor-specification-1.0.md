@@ -1264,8 +1264,10 @@ exactly the preceding generation plus one with fresh occurrence and binding
 identities. That successor cannot reactivate in the invocation that creates it.
 After it is committed and supplied as an inactive input row to a later
 invocation, re-add activates it without another generation or
-occurrence-identity allocation. An inactive row remains bound to its reserved
-lineage. An active row may instead atomically rebind to another exact managed
+occurrence-identity allocation for the same lineage. A later invocation MAY
+select another exact managed lineage for an inactive input reservation under
+§5.6, preserving its reserved generation and deriving fresh occurrence and
+binding identities. An active row may instead atomically rebind to another exact managed
 lineage under §5.6: the next generation and fresh occurrence/binding identities
 belong to the new target, and the old lineage retires in the same result.
 Overflow fails closed; a generation is never reused after a successful
@@ -3174,10 +3176,22 @@ closed evidence and the binding policy is unchanged. This different-lineage
 - is subject to the invocation retirement fence, so the same source path cannot
   retire or reactivate again in that invocation.
 
-An inactive prospective or retirement-successor row MUST NOT retarget. It
-remains bound to its reserved managed lineage and only that lineage may activate
-it in a later invocation. Contracts defines no ambient or feeder-side mutation
-of an authoritative row outside a new verified closed invocation.
+An inactive input reservation with `pendingHistoricalEpoch: null` MAY select
+another initialized managed lineage through exact demand-bound resolution in a
+new verified closed invocation. The resolution MUST bind the unchanged input
+row's source path, the exact installed value, and the selected target lineage
+and historical epoch; the replacement retains the input binding policy. The original input row remains
+immutable; only the actual post-effect demand boundary derives its replacement.
+The replacement preserves the already allocated activation generation and
+source path/policy, but derives fresh occurrence and binding identities because
+the target DocumentId changes. A current-state selection activates that new
+occurrence and records an `ADD`, not an active `REBIND`. A historical selection
+remains inactive with its exact selected cursor until ordinary catch-up
+activates it; it does not transfer the retired lineage's history, checkpoints,
+pending work or cut-off state. An inactive historical row with a non-null
+cursor remains governed by its existing managed-history lane. The retirement
+fence still forbids activation of a successor created in the same invocation.
+Contracts defines no ambient or feeder-side mutation of an authoritative row.
 
 The activation generation changes when the active path is removed, allocating
 its inactive successor, and when an active path performs a different-lineage
@@ -3191,7 +3205,9 @@ Generation numbering is exact: the managed Root scope uses generation `0`; a
 first embedded occurrence reservation or activation uses generation `1`; and
 every successful retirement-successor allocation at that source path uses
 exactly the preceding generation plus one. Later-invocation activation or
-re-add of an existing same-lineage reservation does not increment it.
+re-add of an existing same-lineage reservation does not increment it. Selecting
+a different lineage for an existing inactive input reservation also preserves
+its already allocated generation, but changes occurrence and binding identities.
 Same-lineage BlueId changes, including managed-revision and cyclic-finalization
 churn, retain the generation. An active different-lineage `REBIND` uses exactly
 the preceding generation plus one.
@@ -3284,8 +3300,9 @@ A whole occurrence may be added, removed, replaced with another exact state of
 the same managed lineage, or actively rebound to another exact managed lineage
 through an allowed patch at its immediate source path. Exact binding evidence,
 the all-Root demand preflight, and graph reclassification are then required.
-An inactive reservation cannot be retargeted, and a remove-then-re-add sequence
-cannot evade the same-invocation retirement fence.
+An inactive input reservation may select another exact initialized lineage
+under §5.6. A remove-then-re-add sequence cannot evade the same-invocation
+retirement fence.
 
 ### 5.9 Frozen target sets, removal, and cut-off
 

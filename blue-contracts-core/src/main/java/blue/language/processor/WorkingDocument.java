@@ -288,6 +288,22 @@ public final class WorkingDocument implements AutoCloseable {
     }
 
     /**
+     * Reads exact Source contributions to one current working occurrence.
+     * Reference and type ancestors on the requested path are verified through
+     * this invocation's manager. Results are ordered ancestor before descendant;
+     * they are not a merged value and have no synthesized occurrence identity.
+     * The selected node's own type defaults are not direct contributions.
+     * Earlier working patches are visible; this read never publishes them.
+     *
+     * @param absolutePointer requested occurrence, normalized before traversal
+     * @return immutable exact contributions, empty when no Source contributes
+     */
+    public List<FrozenNode> sourceContributionsAt(String absolutePointer) {
+        return transparentPathAccess(workingSequenceManager()).sourceContributionsAt(
+                canonicalRoot, PointerUtils.normalizePointer(absolutePointer));
+    }
+
+    /**
      * Applies one defensively captured mutable patch to this preview.
      *
      * @param patch patch to apply; {@code null} is a no-op

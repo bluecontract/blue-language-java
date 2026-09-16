@@ -96,6 +96,35 @@ final class ManagedOccurrenceDemandDiscoveryTest {
     }
 
     @Test
+    void retiredReservationStillRequestsEvidenceForAmbiguousForeignLineages() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot target = document(B, "reserved-target");
+        ManagedDocumentSnapshot foreign = document(C, "foreign-target");
+        ManagedDocumentSnapshot alias = document(new DocumentId("d"), "foreign-target");
+        List<ClosureResourceDemand> demands = reconciler.resourceDemands(
+                A, source.document().properties("peer", new Node().blueId(foreign.blueId())),
+                Collections.singletonList(path("/peer")),
+                Collections.singletonList(binding(A, "/peer", 2L, target, false)),
+                Arrays.asList(source, target, foreign, alias), context(true));
+        assertEquals(1, demands.size());
+        assertTrue(demands.get(0) instanceof ManagedOccurrenceEvidenceDemand);
+    }
+
+    @Test
+    void savedReservationReferenceStillNeedsLineageEvidenceWhenAnotherCurrentViewHasThoseBytes() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot current = document(B, "target-current");
+        ManagedDocumentSnapshot alias = document(C, "target-saved");
+        List<ClosureResourceDemand> demands = reconciler.resourceDemands(
+                A, source.document().properties("peer", new Node().blueId(alias.blueId())),
+                Collections.singletonList(path("/peer")),
+                Collections.singletonList(binding(A, "/peer", 2L, current, false)),
+                Arrays.asList(source, current, alias), context(true));
+        assertEquals(1, demands.size(), "A current-view BlueId alone cannot select a foreign lineage over saved history");
+        assertTrue(demands.get(0) instanceof ManagedOccurrenceEvidenceDemand);
+    }
+
+    @Test
     void missingPureExactReferenceProducesExactNodeDemandAtItsSourcePath() {
         ManagedDocumentSnapshot source = document(A, "source-a");
         String missingBlueId = blueId(new Node().name("provider target"));

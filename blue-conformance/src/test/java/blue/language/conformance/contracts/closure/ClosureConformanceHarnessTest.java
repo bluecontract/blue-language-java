@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class ClosureConformanceHarnessTest {
 
     private static final String C_CLO_34_FIXTURE_SHA256 =
-            "5bdf1321a1dd564aa788a880a52b314ffc1030a6493d2dc866c0ac8ab47a9470";
+            "84e023e0eac568152e0fd885e7d50f3f89d72ea3c6df45208c33923a72f2e296";
 
     @Test
     void shouldVerifyAndInventoryExactFinalClosureFixtures() {

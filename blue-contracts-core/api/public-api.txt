@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-contracts-core
-# entryCount: 2963
+# entryCount: 2964
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
@@ -1821,6 +1821,7 @@ method blue.language.processor.WorkingDocument#previewAndApplyPatches descriptor
 method blue.language.processor.WorkingDocument#resolvedAt descriptor=(Ljava/lang/String;)Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.WorkingDocument#resolvedRoot descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.WorkingDocument#snapshot descriptor=()Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
+method blue.language.processor.WorkingDocument#sourceContributionsAt descriptor=(Ljava/lang/String;)Ljava/util/List; access=public signature=(Ljava/lang/String;)Ljava/util/List<Lblue/language/snapshot/FrozenNode;>; throws=-
 method blue.language.processor.WorkingDocument#usedMaterializedFallback descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.WorkingDocument$Preview#close descriptor=()V access=public signature=- throws=-
 method blue.language.processor.closure.AdmissionCandidate#ambiguousPreliminaryMembers descriptor=(Ljava/util/List;)Lblue/language/processor/closure/AdmissionCandidate; access=public,static signature=(Ljava/util/List<Lblue/language/processor/closure/AdmissionCandidate$CandidateCyclicMember;>;)Lblue/language/processor/closure/AdmissionCandidate; throws=-

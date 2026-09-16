@@ -503,20 +503,13 @@ final class ClosureEvidenceVerifier {
         for (ManagedOccurrenceBinding before : input.occurrences()) {
             ManagedOccurrenceBinding after = occurrenceAt(output.occurrences(),
                     before.sourceDocumentId(), before.sourcePath());
-            if (!before.active() && before.pendingHistoricalEpoch() == null
-                    && after != null && after.pendingHistoricalEpoch() != null) {
-                boolean proven = false;
-                for (ManagedOccurrenceEvidenceResolution resolution : resolutions) {
-                    ManagedOccurrenceEvidenceDemand demand = resolution.demand();
-                    proven |= resolution.selectsInactiveReservation(input, before)
-                            && sameLineage(before, after) && !after.active()
-                            && demand.inputClosureIdentity().equals(input.closureIdentity())
-                            && demand.inputGraphGeneration() == input.graphGeneration()
-                            && demand.suppliedValueBlueId().equals(after.expectedTargetBlueId())
-                            && resolution.pendingHistoricalEpoch() == after.pendingHistoricalEpoch().longValue();
+            if (!before.active() && before.pendingHistoricalEpoch() == null && after != null
+                    && (after.pendingHistoricalEpoch() != null
+                            || !before.targetDocumentId().equals(after.targetDocumentId()))) {
+                if (!verifiedInactiveSelection(input, before, after, resolutions)) {
+                    throw new IllegalArgumentException(
+                            "Reservation selection lacks exact demand-bound resolution evidence");
                 }
-                if (!proven) throw new IllegalArgumentException(
-                        "Historical reservation selection lacks exact demand-bound resolution evidence");
             }
         }
         Map<String, GraphChange.Side> active = activeSides(input.occurrences());
@@ -532,8 +525,15 @@ final class ClosureEvidenceVerifier {
                         selected.occurrenceIdentity());
                 ManagedOccurrenceBinding reserved = beforeRows.get(
                         selected.occurrenceIdentity());
-                if (current != null || reserved == null || reserved.active()
-                        || !sameLineage(reserved, lineage)) {
+                boolean selectedInactiveTarget = false;
+                if (reserved == null) {
+                    ManagedOccurrenceBinding prior = occurrenceAt(input.occurrences(),
+                            lineage.sourceDocumentId(), lineage.sourcePath());
+                    selectedInactiveTarget = prior != null && lineage.active()
+                            && verifiedInactiveSelection(input, prior, lineage, resolutions);
+                }
+                if (current != null || !selectedInactiveTarget
+                        && (reserved == null || reserved.active() || !sameLineage(reserved, lineage))) {
                     throw new IllegalArgumentException(
                             "Graph ADD must activate an input prospective row");
                 }
@@ -734,6 +734,47 @@ final class ClosureEvidenceVerifier {
                 && left.activationGeneration()
                 == right.activationGeneration()
                 && sameStableTargetAndPolicy(left, right);
+    }
+
+    private static boolean sameReservedLocationAndGeneration(
+            ManagedOccurrenceBinding before,
+            ManagedOccurrenceBinding after) {
+        return before.sourceDocumentId().equals(after.sourceDocumentId())
+                && before.sourcePath().equals(after.sourcePath())
+                && before.bindingPolicyIdentity().equals(after.bindingPolicyIdentity())
+                && before.activationGeneration() == after.activationGeneration()
+                && !before.targetDocumentId().equals(after.targetDocumentId())
+                && !before.occurrenceIdentity().equals(after.occurrenceIdentity())
+                && !before.bindingIdentity().equals(after.bindingIdentity());
+    }
+
+    private static boolean verifiedInactiveSelection(
+            AffectedClosureSnapshot input,
+            ManagedOccurrenceBinding before,
+            ManagedOccurrenceBinding after,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        if (before.active() || before.pendingHistoricalEpoch() != null) return false;
+        for (ManagedOccurrenceEvidenceResolution resolution : resolutions) {
+            ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+            boolean selectedLineage = resolution.selectsInactiveReservation(input, before)
+                    && sameLineage(before, after)
+                    || resolution.selectsInactiveRetarget(input, before)
+                    && sameReservedLocationAndGeneration(before, after)
+                    && resolution.targetDocumentId().equals(after.targetDocumentId());
+            if (!selectedLineage || !demand.inputClosureIdentity().equals(input.closureIdentity())
+                    || demand.inputGraphGeneration() != input.graphGeneration()) continue;
+            if (after.active()) {
+                ManagedDocumentSnapshot target = input.managedDocument(resolution.targetDocumentId());
+                if (after.pendingHistoricalEpoch() == null && target != null
+                        && resolution.pendingHistoricalEpoch() == target.epoch()
+                        && demand.suppliedValueBlueId().equals(target.blueId())) return true;
+            } else if (after.pendingHistoricalEpoch() != null
+                    && demand.suppliedValueBlueId().equals(after.expectedTargetBlueId())
+                    && resolution.pendingHistoricalEpoch() == after.pendingHistoricalEpoch().longValue()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean sameStableTargetAndPolicy(

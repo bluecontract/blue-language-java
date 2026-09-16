@@ -1024,6 +1024,15 @@
       ]
     },
     {
+      "id": "rooted-baseline-working-source-contributions",
+      "requirement": "docs/working-source-contributions.md",
+      "rationale": "Record exactly the additive read-only WorkingDocument sourceContributionsAt capability required to distinguish exact named-definition fields from inherited defaults after reference resolution and current-invocation patches. It returns immutable verified Source contributions, not a new identity, admission policy, processing order or gas rule. Existing signatures and historical migration entries remain unchanged. This candidate entry records the proposed library correction for baseline review; it does not establish release readiness or maintainer approval.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "method added: blue.language.processor.WorkingDocument :: sourceContributionsAt(Ljava/lang/String;)Ljava/util/List;"
+      ]
+    },
+    {
       "id": "rooted-checkpoint-draft2-public-evidence-types",
       "requirement": "Reviewed Iteration 2 rooted-checkpoint profile: entry owner context, local calculation versus owned publication, authenticated historical checkpoint representation; blue-rooted-checkpoint-1.0 specifications and conformance obligations.",
       "rationale": "Record only the exact two current public classes RootedProcessingContext and RootedPublicationProjection. The first derives frozen entry ownership from complete verified forward graph and established history evidence. The second exposes processor-created owned publication, dependency views, actual topology boundaries and checkpoint-reference proof; it has no public constructor that can manufacture ownership or proof. This addition records implemented rooted evidence APIs and does not authorize supplied hashes as commit authority, alter runtime/gas behavior, accept future API inventory changes, or establish release readiness. All historical baseline identities and previous exact approvals are unchanged.",

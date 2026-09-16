@@ -55,7 +55,7 @@ public final class ComponentFinalizationInput {
                 this.latestLocalBodies.keySet(),
                 new ArrayList<ManagedOccurrenceBinding>(Objects.requireNonNull(
                         resultingBindings, "resultingBindings")),
-                rootedWitnesses == null ? Collections.<DocumentId>emptySet() : rootedWitnesses.sources());
+                rootedWitnesses);
     }
 
     RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }

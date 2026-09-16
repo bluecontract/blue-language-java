@@ -31,7 +31,7 @@ final class RootedInputExpansion {
             generations.put(document.documentId(), document.componentGeneration());
         }
         RootedWitnessFrame.State witnesses = RootedWitnessFrame.readExpansion(original, selected, rows, proofs);
-        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(bodies.keySet(), rows, witnesses.sources());
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(bodies.keySet(), rows, witnesses);
         ComponentFinalizationResult finalized = new ComponentFinalizationKernel().finalizeComponents(new ComponentFinalizationInput(
                 graph, generations, bodies, rows, witnesses));
         for (ManagedDocumentSnapshot document : selected) {

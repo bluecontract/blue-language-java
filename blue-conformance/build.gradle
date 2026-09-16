@@ -59,6 +59,43 @@ tasks.register('rootedCheckerTest') {
 tasks.named('check') { dependsOn tasks.named('rootedCheckerTest') }
 tasks.named('releaseConformanceTest') { dependsOn tasks.named('rootedCheckerTest') }
 
+def releaseTransitionTasks = [
+    [name: 'inactiveRetargetReleaseTransitionTest',
+     script: 'test_inactive_retarget_release_transition.py',
+     description: 'Verifies the exact inactive-retarget release binding and corruption negatives.'],
+    [name: 'legalDetachedRetargetReleaseTransitionTest',
+     script: 'test_legal_detached_retarget_release_transition.py',
+     description: 'Verifies the exact legal detached-retarget generated pair and corruption negatives.',
+     includeFixturePackage: true],
+    [name: 'witnessContextReleaseTransitionTest',
+     script: 'test_witness_context_release_transition.py',
+     description: 'Verifies the exact witness-context metadata pair and corruption negatives.'],
+    [name: 'witnessSelectionReleaseTransitionTest',
+     script: 'test_witness_selection_release_transition.py',
+     description: 'Verifies the exact fresh witness-selection generated pair and corruption negatives.'],
+    [name: 'baselineReconciliationReleaseTransitionTest',
+     script: 'test_baseline_reconciliation_release_transition.py',
+     description: 'Verifies the exact merged-base reconciliation pairs and corruption negatives.'],
+    [name: 'baselineC03DeferralReleaseTransitionTest',
+     script: 'test_baseline_c03_deferral_release_transition.py',
+     description: 'Verifies the exact C03-deferred metadata pair and corruption negatives.']
+].collect { transition ->
+    tasks.register(transition.name, Exec) {
+        group = 'verification'
+        description = transition.description
+        def tools = layout.projectDirectory.dir('src/main/tools')
+        workingDir tools
+        commandLine providers.gradleProperty('bluePythonExecutable').getOrElse('python3'),
+                '-B', tools.file(transition.script).asFile.absolutePath
+        inputs.dir(tools)
+        if (transition.includeFixturePackage) {
+            inputs.dir(layout.projectDirectory.dir('src/main/resources/blue-contracts-closure-1.0'))
+        }
+    }
+}
+tasks.named('check') { dependsOn releaseTransitionTasks }
+tasks.named('releaseConformanceTest') { dependsOn releaseTransitionTasks }
+
 tasks.register('exportFullLifecycleFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath

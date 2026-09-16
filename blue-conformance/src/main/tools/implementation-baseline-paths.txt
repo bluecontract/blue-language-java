@@ -412,6 +412,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/RootedOwnershi
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedProcessingContext.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedPublicationProjection.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessFrame.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessSelection.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java

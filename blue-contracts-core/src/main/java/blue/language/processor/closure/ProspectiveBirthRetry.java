@@ -65,7 +65,7 @@ final class ProspectiveBirthRetry {
         // The added edges are inactive: all predecessor components and exact
         // document heads remain untouched. Canonical component ordering is
         // computed over the expanded inventory without finalizing live heads.
-        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(documents.keySet(), bindings);
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(documents.keySet(), bindings, before.rootedWitnesses());
         Map<DocumentId, ComponentSnapshot> byMember = new HashMap<>();
         for (ComponentSnapshot component : components) {
             for (DocumentId id : component.orderedMemberDocumentIds()) byMember.put(id, component);
@@ -74,9 +74,15 @@ final class ProspectiveBirthRetry {
         for (List<DocumentId> members : new SccPartitioner().partition(graph)) {
             sorted.add(byMember.get(members.get(0)));
         }
-        AffectedClosureSnapshot expanded = ClosureEvidenceFactory.affectedClosure(
-                before.graphGeneration(), new ArrayList<>(documents.values()), bindings,
-                sorted, before.publicRootDocumentIds());
+        java.util.Collections.sort(bindings);
+        ClosureIdentityService identities = ClosureIdentityService.INSTANCE;
+        String bindingIdentity = identities.occurrenceBindingSetIdentity(bindings);
+        AffectedClosureSnapshot provisional = new AffectedClosureSnapshot(
+                before.closureIdentity(), before.graphGeneration(), new ArrayList<>(documents.values()), bindings,
+                bindingIdentity, sorted, before.publicRootDocumentIds(), before.rootedWitnesses());
+        AffectedClosureSnapshot expanded = new AffectedClosureSnapshot(
+                identities.affectedClosureIdentity(provisional), before.graphGeneration(), new ArrayList<>(documents.values()),
+                bindings, bindingIdentity, sorted, before.publicRootDocumentIds(), before.rootedWitnesses());
         ClosureInvocationInput prepared;
         if (input.operation() == ClosureInvocationInput.Operation.ADMIT_CLOSURE) {
             prepared = ClosureEvidenceFactory.admitClosure(expanded, (AdmissionCause) input.cause(),

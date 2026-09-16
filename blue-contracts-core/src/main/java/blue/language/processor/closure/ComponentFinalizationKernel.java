@@ -423,7 +423,7 @@ public final class ComponentFinalizationKernel {
                     null));
         }
         return ManagedDocumentGraph.fromBindings(
-                graph.documentIds(), rebound, graph.immutableSources());
+                graph.documentIds(), rebound, graph.rootedWitnesses());
     }
 
     private static void validateFinalizedReferences(

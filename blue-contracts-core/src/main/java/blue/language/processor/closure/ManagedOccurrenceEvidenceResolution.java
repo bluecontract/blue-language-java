@@ -134,6 +134,26 @@ public final class ManagedOccurrenceEvidenceResolution
         return false;
     }
 
+    /** Selects another exact lineage for an unchanged inactive input reservation. */
+    boolean selectsInactiveRetarget(AffectedClosureSnapshot input, ManagedOccurrenceBinding row) {
+        if (row == null || row.active() || row.pendingHistoricalEpoch() != null
+                || row.targetDocumentId().equals(targetDocumentId)
+                || !row.sourceDocumentId().equals(demand.sourceDocumentId())
+                || !row.sourcePath().equals(demand.sourcePath())) return false;
+        ManagedDocumentSnapshot reserved = input.managedDocument(row.targetDocumentId());
+        ManagedDocumentSnapshot target = input.managedDocument(targetDocumentId);
+        if (reserved == null || !reserved.initialized() || target == null || !target.initialized()
+                || pendingHistoricalEpoch > target.epoch()
+                || pendingHistoricalEpoch == target.epoch()
+                        && !demand.suppliedValueBlueId().equals(target.blueId())) return false;
+        for (ManagedOccurrenceBinding original : input.occurrences()) {
+            if (original.occurrenceIdentity().equals(row.occurrenceIdentity())
+                    && original.bindingIdentity().equals(row.bindingIdentity())
+                    && !original.active() && original.pendingHistoricalEpoch() == null) return true;
+        }
+        return false;
+    }
+
     @Override
     public int compareTo(ManagedOccurrenceEvidenceResolution other) {
         ManagedOccurrenceEvidenceResolution selected = Objects.requireNonNull(
