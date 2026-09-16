@@ -1,0 +1,38 @@
+name: Verify core with distributed transitions
+description: Run normal build/release gates with exact same-run Python receipts
+inputs:
+  release:
+    description: Whether to include full release verification
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Check source identity before verification
+      shell: bash
+      run: node .github/scripts/ci-verification-source.js check
+    - name: Execute clean Gradle build
+      shell: bash
+      run: ./gradlew --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
+    - name: Execute RC verification
+      if: inputs.release == 'true'
+      shell: bash
+      run: ./gradlew --init-script .github/scripts/ci-transition-receipts.init.gradle rcVerify
+    - name: Verify reproducible source release
+      if: inputs.release == 'true'
+      shell: bash
+      run: |
+        mapfile -t source_archives < <(find build/release -maxdepth 1 -type f -name '*-source-release.zip')
+        test "${#source_archives[@]}" -eq 1
+        first_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+        ./gradlew sourceReleaseArchive --rerun-tasks
+        second_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+        test "$first_sha" = "$second_sha"
+    - name: Verify final API baseline
+      if: inputs.release == 'true'
+      shell: bash
+      run: ./gradlew verifyFinalApiBaseline
+    - name: Require every transition receipt and unchanged verified source
+      shell: bash
+      run: |
+        node .github/scripts/ci-verification-source.js check
+        node .github/scripts/ci-verification-gate.js

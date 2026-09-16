@@ -42,6 +42,21 @@ function sourceIdentity() {
   };
 }
 
+function validatePreparedIdentity(manifest, trusted, checkout) {
+  for (const key of ['eventCommit', 'commit', 'sourceTree', 'parentCommit', 'runId', 'runAttempt', 'scope', 'prepared']) {
+    if (manifest[key] !== trusted[key]) throw new Error(`Mismatched prepared ${key}`);
+  }
+  for (const key of ['eventCommit', 'commit', 'sourceTree', 'runId', 'runAttempt', 'scope']) {
+    if (!manifest[key]) throw new Error(`Missing prepared ${key}`);
+  }
+  if (typeof manifest.prepared !== 'boolean'
+      || (manifest.prepared ? manifest.parentCommit !== manifest.eventCommit
+        : manifest.commit !== manifest.eventCommit)) throw new Error('Invalid prepared source linkage');
+  for (const key of ['commit', 'sourceTree', 'runId', 'runAttempt']) {
+    if (manifest[key] !== checkout[key]) throw new Error(`Mismatched checkout ${key}`);
+  }
+}
+
 function validateReport(report, group, identity) {
   if (report.group !== group || report.success !== true) throw new Error(`Failed group: ${group}`);
   for (const key of ['commit', 'sourceTree', 'runId', 'runAttempt']) {
@@ -62,19 +77,22 @@ function validateReceipt(report, group, task, identity) {
 
 function consumeReceipt(group, task, directory) {
   const identity = sourceIdentity();
-  if (process.env.GITHUB_REF !== 'refs/heads/codex/ci/language-parallel-experiment'
+  const distributed = process.env.BLUE_CI_DISTRIBUTED === 'verified-source';
+  if (distributed) require('./ci-verification-source').check();
+  if (!distributed && (process.env.GITHUB_REF !== 'refs/heads/codex/ci/language-parallel-experiment'
       || process.env.EXPERIMENT_GROUP !== 'core'
       || identity.runId === 'local' || identity.runAttempt === 'local'
-      || process.env.GITHUB_SHA !== identity.commit) throw new Error('Receipt import requires the isolated CI run');
+      || process.env.GITHUB_SHA !== identity.commit)) throw new Error('Receipt import requires the isolated CI run');
   if (!Object.hasOwn(groups, group) || !groups[group].includes(task)) throw new Error('Unknown transition assignment');
-  const target = path.join(directory, `attempt-${identity.runAttempt}`, group);
+  const scope = distributed ? process.env.BLUE_CI_SCOPE : '';
+  const target = path.join(directory, scope, `attempt-${identity.runAttempt}`, group);
   const file = path.join(target, `${group}.json`);
   const deadline = Date.now() + 25 * 60 * 1000;
   while (!fs.existsSync(file)) {
     fs.mkdirSync(target, {recursive: true});
     const download = spawnSync('gh', ['run', 'download', identity.runId,
       '--repo', process.env.GITHUB_REPOSITORY,
-      '--name', `timing-${identity.runAttempt}-${group}`, '--dir', target],
+      '--name', `${scope ? `verification-${scope}` : 'timing'}-${identity.runAttempt}-${group}`, '--dir', target],
       {encoding: 'utf8', timeout: 60000});
     if (download.status === 0 && fs.existsSync(file)) break;
     // Failed/partial downloads must not leave a file accepted on the next loop.
@@ -95,6 +113,7 @@ function sourceArchiveHash() {
 }
 
 function run(group, reportDirectory) {
+  if (process.env.BLUE_CI_DISTRIBUTED === 'verified-source') require('./ci-verification-source').check();
   const commands = commandsFor(group);
   const identity = sourceIdentity();
   const started = performance.now();
@@ -153,6 +172,8 @@ function summarize(reports) {
   ].join('\n');
 }
 
+module.exports = {sourceIdentity, validatePreparedIdentity, groups, commandsFor, summarize, validateReceipt};
+
 if (require.main === module) {
   try {
     const [mode, argument, directory] = process.argv.slice(2);
@@ -177,5 +198,3 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-
-module.exports = {groups, commandsFor, summarize, validateReceipt};

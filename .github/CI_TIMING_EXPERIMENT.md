@@ -1,13 +1,13 @@
 # Language verification timing experiment
 
 Based on `next`; experimental branch: `codex/ci/language-parallel-experiment`.
-Only this branch triggers `CI timing experiment (no publication)` on push.
-The workflow also checks the branch before running a manual dispatch.
+The historical `CI timing experiment (no publication)` is now manual-only.
+It checks this branch before running; the production-topology verification below runs on branch pushes.
 
 No version preparation, commits, tags, GitHub releases or Maven Central
 publication run in this workflow. Its token has only `contents: read` and `actions: read`, checkout
-credentials are not persisted, and it receives no release secrets. The existing
-build and release workflows and the normal Gradle task graph are unchanged.
+credentials are not persisted, and it receives no release secrets. The timing workflow does not call production release workflows. The proposed
+Build/Release RC integration below preserves the normal Gradle verification rules.
 Release verification still stages Maven artifacts **locally** to test consumers.
 
 ## Comparison
@@ -83,8 +83,35 @@ that four forks are safe for every release-verification task.
 The earlier `core` partition experiment failed because task exclusions prevent
 clean-build evidence from being issued. Its elapsed time is not a valid speedup.
 The corrected core retains the complete task graph and validates remote task
-results before normal evidence generation; it no longer uses `-x`. Existing release workflows are unchanged.
+results before normal evidence generation; it no longer uses `-x`. Production workflow migration is described separately below.
 
 For a rerun, rerun **all** jobs. Receipts from earlier attempts are deliberately
 rejected. Because receipt importing needs artifacts from the current run, the
 core job alone cannot reproduce a distributed run from an earlier attempt.
+
+## Proposed production integration
+
+`verify-production-topology.yml` now exercises the same shared source import,
+setup and core verification actions used by Build and validate and Release RC. It runs only on the experiment branch and has no release commands or
+publication secrets. The JDK 17 variant creates a local, .cz.toml-only fixture
+commit without changing its version or creating a tag; JDK 25 verifies the event
+commit and the build-only scope, matching Build and validate. JDK 17 runs the
+full release verification scope. Each has five parallel
+Python owner jobs, with receipts scoped to that invocation and workflow attempt.
+
+The real RC workflow prepares its version exactly once on `next`, then transfers
+that commit in a Git bundle. The core runner and Python owners check the trusted
+prepare-job commit/tree outputs, event parent, run and attempt. Core keeps its
+own build outputs and local staging repository, so existing publication and
+provenance checks still happen in that same workspace after all receipts pass.
+Stable Release is unchanged and remains restricted to `master`. Its existing
+JDK 25/stable-version setup conflicts with the current immutable repository
+contract (JDK 17 and 3.1.0 RC/development versions only); resolving that contract
+is outside this optimization. No publication workflow is invoked by this branch.
+
+The historical A/B timing workflow is now manual-only to avoid repeating the
+hour-long unchanged baseline on each integration fix. The new branch push runs
+only the production-topology verification. Full Java test forking still defaults
+to one; its opt-in experiment is unchanged. Report uploads now include examples
+JUnit XML. When rerunning verification, rerun the whole workflow: receipts from
+an older attempt are intentionally rejected.

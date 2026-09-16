@@ -1,0 +1,126 @@
+name: Verify distributed production topology (no publication)
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/ci/language-parallel-experiment']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: verify-production-topology-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare-rc17:
+    if: github.ref == 'refs/heads/codex/ci/language-parallel-experiment'
+    uses: ./.github/workflows/prepare-verification-source.yml
+    with:
+      mode: fixture
+      scope: rc17
+  transitions-rc17:
+    needs: prepare-rc17
+    uses: ./.github/workflows/transition-verification.yml
+    with:
+      scope: rc17
+      commit: ${{ needs.prepare-rc17.outputs.commit }}
+      tree: ${{ needs.prepare-rc17.outputs.tree }}
+      prepared: ${{ needs.prepare-rc17.outputs.prepared }}
+      java: '17'
+
+  core-rc17:
+    needs: prepare-rc17
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      CI: true
+      BLUE_CI_DISTRIBUTED: verified-source
+      BLUE_RELEASE_CHANNEL: rc
+      BLUE_CI_SCOPE: rc17
+      BLUE_CI_COMMIT: ${{ needs.prepare-rc17.outputs.commit }}
+      BLUE_CI_TREE: ${{ needs.prepare-rc17.outputs.tree }}
+      BLUE_CI_PREPARED: ${{ needs.prepare-rc17.outputs.prepared }}
+      BLUE_CI_SOURCE: ${{ github.workspace }}/../verification-source
+      CI_TRANSITION_RECEIPTS: ${{ github.workspace }}/../transition-receipts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/verification-setup
+        with:
+          java: '17'
+      - uses: ./.github/actions/verify-core
+        with:
+          release: 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: topology-reports-rc17
+          path: |
+            build/reports
+            build/test-results
+            blue-*/build/reports
+            blue-*/build/test-results
+            examples/build/reports
+            examples/build/test-results
+            build-logic/build/reports
+            smoke-tests/published/build/reports
+  prepare-jdk25:
+    if: github.ref == 'refs/heads/codex/ci/language-parallel-experiment'
+    uses: ./.github/workflows/prepare-verification-source.yml
+    with:
+      mode: existing
+      scope: jdk25
+  transitions-jdk25:
+    needs: prepare-jdk25
+    uses: ./.github/workflows/transition-verification.yml
+    with:
+      scope: jdk25
+      commit: ${{ needs.prepare-jdk25.outputs.commit }}
+      tree: ${{ needs.prepare-jdk25.outputs.tree }}
+      prepared: ${{ needs.prepare-jdk25.outputs.prepared }}
+      java: '25'
+
+  core-jdk25:
+    needs: prepare-jdk25
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      CI: true
+      BLUE_CI_DISTRIBUTED: verified-source
+      BLUE_RELEASE_CHANNEL: rc
+      BLUE_CI_SCOPE: jdk25
+      BLUE_CI_COMMIT: ${{ needs.prepare-jdk25.outputs.commit }}
+      BLUE_CI_TREE: ${{ needs.prepare-jdk25.outputs.tree }}
+      BLUE_CI_PREPARED: ${{ needs.prepare-jdk25.outputs.prepared }}
+      BLUE_CI_SOURCE: ${{ github.workspace }}/../verification-source
+      CI_TRANSITION_RECEIPTS: ${{ github.workspace }}/../transition-receipts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/verification-setup
+        with:
+          java: '25'
+      - uses: ./.github/actions/verify-core
+        with:
+          release: 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: topology-reports-jdk25
+          path: |
+            build/reports
+            build/test-results
+            blue-*/build/reports
+            blue-*/build/test-results
+            examples/build/reports
+            examples/build/test-results
+            build-logic/build/reports
+            smoke-tests/published/build/reports

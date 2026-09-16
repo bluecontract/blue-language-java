@@ -1,13 +1,18 @@
-// Only the experimental workflow uses this script. Production release tasks and
-// their evidence rules remain unchanged. A delegated test is satisfied only by
-// a successful, complete receipt from this exact commit and workflow attempt.
+// Verification workflows opt in to same-run remote transition receipts.
+// Production evidence rules remain unchanged; publication is never allowed in
+// this invocation. Every delegated test requires an exact-source receipt.
 gradle.projectsEvaluated {
     def root = gradle.rootProject
     def script = new File(root.projectDir, '.github/scripts/ci-timing-experiment.js')
     if (!script.isFile()) return // Included build-logic build has no such script.
-    if (System.getenv('GITHUB_REF') != 'refs/heads/codex/ci/language-parallel-experiment'
+    def distributed = System.getenv('BLUE_CI_DISTRIBUTED') == 'verified-source'
+    if (distributed) {
+        def check = ['node', new File(root.projectDir, '.github/scripts/ci-verification-source.js').absolutePath, 'check'].execute(null, root.projectDir)
+        if (check.waitFor() != 0) throw new GradleException('Prepared CI source identity is invalid: ' + check.err.text)
+    }
+    if (!distributed && (System.getenv('GITHUB_REF') != 'refs/heads/codex/ci/language-parallel-experiment'
             || System.getenv('EXPERIMENT_GROUP') != 'core'
-            || !System.getenv('CI_TRANSITION_RECEIPTS')) {
+            || !System.getenv('CI_TRANSITION_RECEIPTS'))) {
         throw new GradleException('Remote test receipts are restricted to the isolated CI experiment')
     }
     if (!gradle.startParameter.excludedTaskNames.empty) {

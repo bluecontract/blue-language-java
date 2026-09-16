@@ -1,8 +1,6 @@
 name: CI timing experiment (no publication)
 
 on:
-  push:
-    branches: ['codex/ci/language-parallel-experiment']
   workflow_dispatch:
 
 permissions:
@@ -103,6 +101,7 @@ jobs:
             build/test-results/**
             blue-*/build/reports/**
             blue-*/build/test-results/**
+            examples/build/test-results/**
             build-logic/build/reports/**
             smoke-tests/published/build/reports/**
             ${{ runner.temp }}/transition-receipts/**
@@ -173,6 +172,7 @@ jobs:
           path: |
             build/test-results/**
             blue-*/build/test-results/**
+            examples/build/test-results/**
             build/reports/**
             blue-*/build/reports/**
           if-no-files-found: error

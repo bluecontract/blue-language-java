@@ -1,0 +1,41 @@
+name: Set up verified CI source
+description: Import the exact prepared source and install verification runtimes
+inputs:
+  java:
+    description: Build JDK version
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - uses: actions/download-artifact@v4
+      with:
+        name: source-${{ env.BLUE_CI_SCOPE }}-${{ github.run_attempt }}
+        path: ${{ env.BLUE_CI_SOURCE }}
+    - name: Verify and import the prepared source commit
+      shell: bash
+      run: node .github/scripts/ci-verification-source.js restore
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '8'
+        distribution: corretto
+    - uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java }}
+        distribution: corretto
+    - uses: gradle/actions/setup-gradle@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - shell: bash
+      run: python -m pip install PyYAML==6.0.3
+    - name: Prepare Gradle distribution
+      shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if ./gradlew --version; then exit 0; fi
+          if [ "$attempt" -lt 3 ]; then sleep 5; fi
+        done
+        exit 1
