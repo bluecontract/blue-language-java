@@ -28684,10 +28684,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 130,
+      "line": 133,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
@@ -28699,10 +28699,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 131,
+      "line": 134,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/Java8LibraryConventionsPlugin.java",
@@ -28792,7 +28792,7 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 450,
+      "line": 453,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
@@ -28807,7 +28807,7 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 451,
+      "line": 454,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
@@ -31739,10 +31739,10 @@
       "E-invalid-fieldless-list-position": 5,
       "context-only-not-empty-sentinel-decision": 1857
     },
-    "changedFileHitCount": 1230,
+    "changedFileHitCount": 1232,
     "contextOnlyHitCount": 1857,
     "decisionRelevantHitCount": 256,
     "productionHitCount": 2113,
-    "unchangedFileHitCount": 883
+    "unchangedFileHitCount": 881
   }
 }
