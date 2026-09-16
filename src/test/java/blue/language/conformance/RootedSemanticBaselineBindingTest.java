@@ -25,15 +25,15 @@ class RootedSemanticBaselineBindingTest {
         restoreReviewedBinding(rooted, historical, "specifications", "contractsSha256",
                 "5cc29e91cd8d4aa4d3dca98214da5ceb49b2daa82554ac561260bd98ce5063b8");
         restoreReviewedBinding(rooted, historical, "release", "packageIdentity",
-                "sha256:4ff4aca93baf241f3141626e05d5a58d99aa5373b0654957ca81ee3e9a0df139");
+                "sha256:b824e1c4873bf952843341290f5fd08cda4bb1f2a1e8f47dcc9ed8ba55b88b20");
         restoreReviewedBinding(rooted, historical, "release", "contractsReleaseIdentity",
-                "sha256:06ca8273a28f9fb0298ec6aae672c2558b613582b3e61d4c651e86399fe67631");
+                "sha256:e3dc23d3e43325fde45a3d07e175ce79e66ead7793ebcc41a1633fb3db978044");
         restoreReviewedBinding(rooted, historical, "packages", "contractsRelease",
-                "sha256:06ca8273a28f9fb0298ec6aae672c2558b613582b3e61d4c651e86399fe67631");
+                "sha256:e3dc23d3e43325fde45a3d07e175ce79e66ead7793ebcc41a1633fb3db978044");
         restoreReviewedBinding(rooted, historical, "packages", "contractsFixtures",
-                "sha256:7bd3a699d1649bd20c715ef001d61a39547942fa7db3ab65c434a480e025db47");
+                "sha256:9323cd0b2b4202c08d8165a99102aa6d8a52f3e718fc33647e34ba211859a60f");
         restoreReviewedBinding(rooted, historical, "gas", "oraclePackageIdentity",
-                "sha256:7bd3a699d1649bd20c715ef001d61a39547942fa7db3ab65c434a480e025db47");
+                "sha256:9323cd0b2b4202c08d8165a99102aa6d8a52f3e718fc33647e34ba211859a60f");
 
         // then
         assertEquals(
