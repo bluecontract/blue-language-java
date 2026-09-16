@@ -294,16 +294,6 @@ final class PatchPlanningEngine {
              */
             ImmutablePatchPlanner.forFrozen(workingCanonical)
                     .validateMutationPath(prepared.path());
-            ImmutablePatchPlanner resolvedBeforeMaterialization =
-                    ImmutablePatchPlanner.forFrozen(workingResolved);
-            if (!prepared.path().isRoot()
-                    && resolvedBeforeMaterialization.read(
-                            prepared.path().parent()) == null) {
-                throw new ProcessorFailureException(
-                        ProcessorErrorCategory.InvalidPatch,
-                        "Final parent does not exist for patch path: "
-                                + prepared.normalizedPath());
-            }
             PatchBase patchBase = materializePatchBase(
                     workingCanonical,
                     workingResolved,
@@ -313,6 +303,16 @@ final class PatchPlanningEngine {
             workingResolved = patchBase.resolved;
             workingResolutionComplete =
                     patchBase.resolutionComplete;
+            // Parent existence is semantic, not the visibility of a child in
+            // the collapsed representation supplied to the planner.
+            if (!prepared.path().isRoot()
+                    && ImmutablePatchPlanner.forFrozen(workingResolved)
+                            .read(prepared.path().parent()) == null) {
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory.InvalidPatch,
+                        "Final parent does not exist for patch path: "
+                                + prepared.normalizedPath());
+            }
             if (frozenGeneralizationPolicy == null) {
                 frozenGeneralizationPolicy =
                         TypeGeneralizationPolicyResolver.freeze(
