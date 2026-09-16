@@ -14,7 +14,9 @@ Release verification still stages Maven artifacts **locally** to test consumers.
 
 All seven measurement jobs use the same commit, Ubuntu 24.04, Corretto JDK 17,
 Java 8 test runtime and PyYAML 6.0.3. Both variants start without a restored Gradle
-cache, while incremental outputs within a job remain available.
+cache, while incremental outputs within a job remain available. Gradle distribution
+bootstrap (`--version`, up to three attempts for network errors) occurs before
+timing in every job; build and test failures are never retried automatically.
 
 - **baseline:** the existing sequential `clean build`, `rcVerify`, source-archive
   reproducibility check and API-baseline verification, stopping before publication.
