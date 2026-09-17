@@ -152,17 +152,21 @@ if (args[0] === 'api') {
   });
 }
 
-test('release guards reject invalid refs explicitly before preparation', () => {
-  for (const [file, branch] of [['release-rc.yml', 'next'], ['release.yml', 'master']]) {
-    const source = fs.readFileSync(path.join(__dirname, '../workflows', file), 'utf8');
-    assert.match(source, /guard:\n    runs-on: ubuntu-latest/);
-    assert.match(source, /prepare:\n    needs: guard/);
-    const command = source.match(/run: (test "\$RELEASE_REF" = '[^']+')/)[1];
+test('release branch validation runs inside preparation without a standalone guard', () => {
+  const prepare = fs.readFileSync(path.join(__dirname, '../workflows/prepare-verification-source.yml'), 'utf8');
+  const command = prepare.match(/run: (case "\$RELEASE_SCOPE"[^\n]+)/)?.[1];
+  assert.ok(command, 'first preparation step validates channel branch');
+  assert.ok(prepare.indexOf(command) < prepare.indexOf('actions/checkout'));
+  for (const [scope, branch] of [['rc', 'next'], ['stable', 'master']]) {
     for (const ref of [`refs/heads/${branch}`, 'refs/heads/untrusted', 'refs/tags/v3.1.0']) {
-      assert.equal(spawnSync('bash', ['-c', command], {env: {...process.env, RELEASE_REF: ref}}).status,
+      assert.equal(spawnSync('bash', ['-c', command], {env: {...process.env, RELEASE_SCOPE: scope, RELEASE_REF: ref}}).status,
         ref === `refs/heads/${branch}` ? 0 : 1);
     }
-    assert.ok(source.indexOf('./.github/actions/verify-core') < source.indexOf('run: ./gradlew publish'));
+  }
+  assert.equal(spawnSync('bash', ['-c', command], {env: {...process.env, RELEASE_SCOPE: 'build', RELEASE_REF: 'refs/pull/1/merge'}}).status, 0);
+  for (const file of ['release-rc.yml', 'release.yml']) {
+    const source = fs.readFileSync(path.join(__dirname, '../workflows', file), 'utf8');
+    assert.doesNotMatch(source, /  guard:|needs: guard/);
   }
 });
 

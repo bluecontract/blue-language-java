@@ -31,3 +31,16 @@ test('publication polling is skipped only for the explicitly split deployment in
   const build = fs.readFileSync(path.join(__dirname, '../../build.gradle'), 'utf8');
   assert.match(build, /skipPublicationCheck = providers\.gradleProperty\('blueMavenCentralSkipPublicationCheck'\)\s*\.map \{ it\.toBoolean\(\) \}\.getOrElse\(false\)/);
 });
+
+for (const [file, branch] of [['release-rc.yml', 'next'], ['release.yml', 'master']]) {
+  test(`${file} binds JReleaser to the validated release branch`, () => {
+    const workflow = fs.readFileSync(path.join(__dirname, '../workflows', file), 'utf8');
+    assert.match(workflow, new RegExp(`JRELEASER_BRANCH: ${branch}\\b`));
+  });
+}
+
+test('automatic RC reservation commits skip work without waiting behind a release', () => {
+  const workflow = fs.readFileSync(path.join(__dirname, '../workflows/release-rc.yml'), 'utf8');
+  assert.match(workflow, /group: "release-rc-\$\{\{ github.ref \}\}-\$\{\{ github.event_name == 'push' && startsWith\(github.event.head_commit.message, 'chore: release '\) && github.run_id \|\| 'active' \}\}"/);
+  assert.match(workflow, /prepare:\n    if: "github.event_name == 'workflow_dispatch' \|\| !startsWith\(github.event.head_commit.message, 'chore: release '\)"/);
+});

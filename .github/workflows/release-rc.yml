@@ -33,22 +33,15 @@ permissions:
 env:
   CI: true
   BLUE_RELEASE_CHANNEL: rc
+  JRELEASER_BRANCH: next
 
 concurrency:
-  group: release-rc-${{ github.ref }}
+  group: "release-rc-${{ github.ref }}-${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore: release ') && github.run_id || 'active' }}"
   cancel-in-progress: false
 
 jobs:
-  guard:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require next release branch
-        env:
-          RELEASE_REF: ${{ github.ref }}
-        run: test "$RELEASE_REF" = 'refs/heads/next'
   prepare:
-    needs: guard
-    if: "github.ref == 'refs/heads/next' && (github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore: release '))"
+    if: "github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore: release ')"
     uses: ./.github/workflows/prepare-verification-source.yml
     with:
       mode: rc

@@ -30,7 +30,7 @@ so a failed old receipt is never overwritten or mistaken for a successful retry.
 There is no independent 25-minute receipt deadline. Polling follows owner status,
 including runner queue time. Core jobs have an explicit 90-minute total runtime
 budget; owner jobs have 30 minutes after runner start. An arbitrarily long queue
-can still exhaust the core budget. Invalid manual release refs fail a root guard
+can still exhaust the core budget. Invalid manual release refs fail the first source-preparation step before checkout
 (RC: `next`, Stable: `master`) rather than silently skipping the workflow.
 
 Both experiment workflows, comparison helpers, fixture preparation modes and
@@ -59,3 +59,11 @@ the final GitHub release. The final `jreleaserFullRelease --exclude-deployer-nam
 retains the original release/upload/package/announce lifecycle without redeploying.
 Plain `jreleaserRelease` also includes deployment in JReleaser 1.24.0 and is not a
 safe wait-only command. This split does not repeat the Gradle verification graph.
+
+Release jobs set `JRELEASER_BRANCH` explicitly (`next` for RC, `master` for stable),
+because imported source is detached and JReleaser otherwise defaults to `main`.
+The first source-preparation step rejects invalid release refs before checkout.
+Automatic `chore: release ...` pushes skip all RC jobs and use their own concurrency
+group, so they do not wait behind the release that created them. Manual RC dispatch
+still prepares a new RC; rerunning an old run uses its old workflow revision and
+does not resume only GitHub finalization. No publication-resume mode is provided.
