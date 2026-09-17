@@ -31,6 +31,11 @@ jobs:
       prepared: ${{ steps.source.outputs.prepared }}
       version: ${{ steps.source.outputs.version }}
     steps:
+      - name: Validate release branch before preparation
+        env:
+          RELEASE_SCOPE: ${{ inputs.scope }}
+          RELEASE_REF: ${{ github.ref }}
+        run: case "$RELEASE_SCOPE" in rc) test "$RELEASE_REF" = 'refs/heads/next' ;; stable) test "$RELEASE_REF" = 'refs/heads/master' ;; build) true ;; *) exit 1 ;; esac
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

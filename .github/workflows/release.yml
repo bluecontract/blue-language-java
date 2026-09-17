@@ -12,16 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  guard:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require master release branch
-        env:
-          RELEASE_REF: ${{ github.ref }}
-        run: test "$RELEASE_REF" = 'refs/heads/master'
   prepare:
-    needs: guard
-    if: github.ref == 'refs/heads/master'
     uses: ./.github/workflows/prepare-verification-source.yml
     with:
       mode: existing
@@ -43,6 +34,7 @@ jobs:
     env:
       CI: true
       BLUE_RELEASE_CHANNEL: stable
+      JRELEASER_BRANCH: master
       BLUE_CI_DISTRIBUTED: verified-source
       BLUE_CI_SCOPE: stable
       BLUE_CI_COMMIT: ${{ needs.prepare.outputs.commit }}
