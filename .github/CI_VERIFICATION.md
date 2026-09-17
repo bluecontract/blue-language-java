@@ -14,7 +14,9 @@ setup/core actions avoid divergent checks between Build, RC and Stable.
 
 Preparation exports its attempt along with commit and tree. A failed-job rerun
 can import the successful earlier source bundle without preparing a new version.
-Each owner receipt and artifact records its own execution attempt. The consumer
+Each owner receipt and artifact records its own execution attempt. GitHub copies
+successful job records into later attempts without rerunning them; matching
+execution timestamps identify the original attempt that uploaded the artifact. The consumer
 checks the latest owner job for its exact scope/group, accepts successful reused
 owners or retried owners, and binds every receipt to the same run, source generation,
 commit, tree and command list. A newer queued/running owner prevents reuse of older

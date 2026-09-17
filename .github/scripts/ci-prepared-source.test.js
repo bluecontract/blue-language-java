@@ -173,3 +173,16 @@ test('core archive artifact names cannot collide across failed-job reruns', () =
     for (const name of names) assert.match(name, /\$\{\{ github.run_attempt \}\}/);
   }
 });
+
+test('GitHub copied successful job records retain the original artifact execution attempt', () => {
+  const {selectOwnerAttempt} = require('./ci-transition-verification');
+  const original = {id: 105070797323, name: 'transitions / Python build / detached-retarget',
+    run_attempt: 1, status: 'completed', conclusion: 'success',
+    started_at: '2026-09-17T04:00:50Z', completed_at: '2026-09-17T04:10:21Z'};
+  const copied = {...original, id: 105073686193, run_attempt: 2};
+  assert.equal(selectOwnerAttempt([original, copied], 'build', 'detached-retarget', '1', '2'), '1');
+  const rerun = {...copied, started_at: '2026-09-17T04:15:44Z', completed_at: '2026-09-17T04:25:00Z'};
+  assert.equal(selectOwnerAttempt([original, rerun], 'build', 'detached-retarget', '1', '2'), '2');
+  assert.equal(selectOwnerAttempt([original, {...copied, status: 'queued', completed_at: null}],
+    'build', 'detached-retarget', '1', '2'), null);
+});

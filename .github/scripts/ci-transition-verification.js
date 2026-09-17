@@ -42,7 +42,15 @@ function selectOwnerAttempt(jobs, scope, group, sourceAttempt, consumerAttempt) 
   if (latest.length !== 1) throw new Error('Ambiguous transition owner');
   const owner = latest[0];
   if (owner.status !== 'completed') return null;
-  if (owner.conclusion === 'success') return String(newest);
+  if (owner.conclusion === 'success') {
+    // GitHub copies reused successful jobs into a rerun with new IDs and
+    // run_attempt, retaining their original execution timestamps. The artifact
+    // belongs to the earliest record of that exact successful execution.
+    const copies = owner.started_at && owner.completed_at ? candidates.filter(job =>
+      job.status === 'completed' && job.conclusion === 'success'
+      && job.started_at === owner.started_at && job.completed_at === owner.completed_at) : latest;
+    return String(Math.min(...copies.map(job => attemptNumber(job.run_attempt))));
+  }
   // A failed previous attempt may be awaiting creation of its rerun job.
   if (newest < last) return null;
   throw new Error(`Transition owner failed: ${name} (${owner.conclusion})`);
