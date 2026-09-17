@@ -3,7 +3,7 @@ const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 
 // Independent Python checks execute on their owning runners. The verification
-// core validates their same-run receipts at the normal Gradle task boundaries.
+// visible gate validates their receipts before release verification/publication.
 const groups = {
   'detached-retarget': [':blue-conformance:legalDetachedRetargetReleaseTransitionTest'],
   reconciliation: [':blue-conformance:baselineReconciliationReleaseTransitionTest'],
@@ -174,9 +174,16 @@ if (require.main === module) {
     else if (mode === 'run') {
       if (!directory) throw new Error('Report directory is required');
       run(argument, directory);
+    } else if (mode === 'defer') {
+      require('./ci-verification-source').check();
+      if (process.env.BLUE_CI_DEFER_TRANSITIONS !== 'true'
+          || !Object.hasOwn(groups, argument) || !groups[argument].includes(directory)) {
+        throw new Error('Invalid deferred transition assignment');
+      }
+      console.log(`Pending transition verification: ${directory}; required by the workflow transition gate`);
     } else if (mode === 'receipt') {
       if (!process.env.CI_TRANSITION_RECEIPTS) throw new Error('CI_TRANSITION_RECEIPTS is required');
       consumeReceipt(argument, directory, process.env.CI_TRANSITION_RECEIPTS);
-    } else throw new Error('Expected assignments, run or receipt');
+    } else throw new Error('Expected assignments, run, defer or receipt');
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

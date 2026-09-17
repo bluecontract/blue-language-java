@@ -64,6 +64,7 @@ jobs:
       source-attempt: ${{ needs.prepare.outputs.attempt }}
 
   ReleaseRC:
+    name: Verify and release RC
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -83,9 +84,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
-      - uses: ./.github/actions/verify-core
+      - name: Build and run local checks
+        uses: ./.github/actions/verify-core
         with:
-          release: 'true'
+          phase: build
+
+      - name: Wait for transition verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node .github/scripts/ci-verification-source.js check
+          node .github/scripts/ci-verification-gate.js
+
+      - name: Verify release after all transition checks
+        uses: ./.github/actions/verify-core
+        with:
+          phase: release
         env:
           GH_TOKEN: ${{ github.token }}
 
