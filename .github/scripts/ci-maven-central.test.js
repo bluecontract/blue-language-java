@@ -9,7 +9,10 @@ for (const file of ['release-rc.yml', 'release.yml']) {
     const submit = workflow.indexOf('./gradlew jreleaserDeploy -PblueMavenCentralSkipPublicationCheck=true');
     const snapshot = workflow.indexOf('cp build/jreleaser/output.properties build/jreleaser/maven-central-submitted.properties');
     const wait = workflow.indexOf('python .github/scripts/wait-maven-central.py');
-    const finish = workflow.indexOf('./gradlew jreleaserFullRelease --exclude-deployer=mavenCentral');
+    const finish = workflow.indexOf('./gradlew jreleaserFullRelease --exclude-deployer-name=sonatype');
+    assert.doesNotMatch(workflow, /--exclude-deployer=/, 'JReleaser 1.24 type normalization does not match mavenCentral');
+    const build = fs.readFileSync(path.join(__dirname, '../../build.gradle'), 'utf8');
+    assert.match(build, /mavenCentral\s*\{\s*sonatype\s*\{/, 'excluded name matches the configured Maven Central deployer');
     assert.ok(submit > 0, 'submission is a separate deployment phase');
     assert.ok(submit < snapshot && snapshot < wait && wait < finish, 'PUBLISHED confirmation precedes GitHub release');
     assert.match(workflow.slice(0, submit), /rm -f build\/jreleaser\/output\.properties build\/jreleaser\/maven-central-published\.json build\/jreleaser\/maven-central-submitted\.properties/);

@@ -108,7 +108,7 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-        run: ./gradlew jreleaserFullRelease --exclude-deployer=mavenCentral
+        run: ./gradlew jreleaserFullRelease --exclude-deployer-name=sonatype
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
