@@ -20,16 +20,14 @@ writable-owner list.
 
 ## Storage-only solution
 
-`blue.language.processor.closure.ClosureProcessResultStorageCodec` exposes:
+`blue.language.processor.closure.ClosureProcessResultStorageCodec` exposes the
+following API signatures (an inventory, not a runnable Java example):
 
-```java
-new ClosureProcessResultStorageCodec(maximumBytes, maximumDepth);
-byte[] encode(ClosureProcessResult result);
-byte[] encode(ClosureProcessResult result,
-    Function<String, CyclicSetProof> externalProofs);
-ClosureProcessResult decode(byte[] bytes);
-ClosureProcessResult decode(byte[] bytes, ProcessorRuntimeAccess runtime);
-```
+- Constructor: `ClosureProcessResultStorageCodec(int maximumBytes, int maximumDepth)`.
+- Encoding: `byte[] encode(ClosureProcessResult result)`; a compatibility overload
+  also accepts `Function<String, CyclicSetProof> externalProofs`.
+- Decoding: `ClosureProcessResult decode(byte[] bytes)`; a compatibility overload
+  also accepts `ProcessorRuntimeAccess runtime`.
 
 The current format binding is `blue-contracts/closure-process-result-storage/2`.
 Version 1 is rejected rather than silently re-admitting retained events. Version 2

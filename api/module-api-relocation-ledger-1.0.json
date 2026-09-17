@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 544,
-    "publicTypeIdentity": "sha256:18ceeebda3a4ae81a051a913c57d6a8e842cd698987fe5abf92cc85a77153649",
+    "publicProductionTypeCount": 558,
+    "publicTypeIdentity": "sha256:c564370267d2628e75cef21d50682d587c66c4c86f66c29159652afb7cf30d74",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "internal-type-removed-from-public-surface": 279,
-      "new-supported-api-spi": 65
+      "new-supported-api-spi": 79
     }
   },
   "allowedClassifications": [
@@ -1433,6 +1433,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.merge.ResolvedSnapshotStorageCodec",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/merge/ResolvedSnapshotStorageCodec.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.merge.ResolvedSnapshotStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.merge.SnapshotResolution",
       "sourcePath": "blue-language-core/src/main/java/blue/language/merge/SnapshotResolution.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -2544,6 +2555,17 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ExactEventIdentityEvidenceStorageCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidenceStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ExactEventIdentityEvidenceStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.ExecutableBodySourceDescriptor",
@@ -4110,6 +4132,17 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.closure.AffectedClosureSnapshotStorageCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshotStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AffectedClosureSnapshotStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.closure.BlueClosureContracts",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -4286,6 +4319,39 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionEvidenceStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec$OriginalRootedBinding",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionEvidenceStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec$OriginalRootedBinding",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec$StoredAttempt",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionEvidenceStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureExecutionEvidenceStorageCodec$StoredAttempt",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.closure.ClosureExecutionObserver",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -4339,6 +4405,50 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessResultStorageCodec",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResultStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessResultStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessResultStorageCodec$FrameKey",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResultStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessResultStorageCodec$FrameKey",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessResultStorageCodec$Reuse",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResultStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessResultStorageCodec$Reuse",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessResultStorageCodec$VerifiedFrame",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResultStorageCodec.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessResultStorageCodec$VerifiedFrame",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.ClosureProcessRetryInput",
@@ -6073,6 +6183,39 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.snapshot.ExactNodeStorageCodec",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/ExactNodeStorageCodec.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.snapshot.ExactNodeStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.snapshot.ExactNodeStorageCodec$Decoder",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/ExactNodeStorageCodec.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.snapshot.ExactNodeStorageCodec$Decoder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.snapshot.ExactNodeStorageCodec$Encoder",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/ExactNodeStorageCodec.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.snapshot.ExactNodeStorageCodec$Encoder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.snapshot.FrozenCanonicalWriter",
       "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/FrozenCanonicalWriter.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -6159,6 +6302,17 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.snapshot.FrozenNodeStorageCodec",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeStorageCodec.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.snapshot.FrozenNodeStorageCodec",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.snapshot.FrozenNodeStructuralKey",

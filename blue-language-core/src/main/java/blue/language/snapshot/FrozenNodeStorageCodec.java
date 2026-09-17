@@ -38,7 +38,7 @@ public final class FrozenNodeStorageCodec {
      * @return complete checksummed bytes
      */
     public byte[] encode(FrozenNode value) {
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, "frozen node");
         return nodes.encodeEnvelope(FORMAT, out -> {
             write(out, value, 0, new IdentityHashMap<FrozenNode, Integer>());
         });
