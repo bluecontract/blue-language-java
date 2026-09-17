@@ -35,7 +35,7 @@ class WaitCentral(unittest.TestCase):
         for row in [None, {}, dict(deploymentId=ID, deploymentState='FAILED'),
                     dict(deploymentId='wrong', deploymentState='PUBLISHED'),
                     dict(deploymentId=ID, deploymentState='UNKNOWN'),
-                    dict(deploymentId=ID, deploymentState='PUBLISHED', errors={'x':['bad']})]:
+                    dict(deploymentId=ID, deploymentState='FAILED', errors={'x':['bad']})]:
             with self.subTest(row=row), self.assertRaises(ValueError):
                 w.wait(ID, 'secret', request=lambda *args: row)
 
@@ -127,5 +127,20 @@ class Diagnostics(unittest.TestCase):
                 self.assertNotIn('secret', stderr.getvalue())
                 self.assertFalse(receipt.exists())
                 self.assertEqual(opener.return_value.open.call_count, int(bool(credentials)))
+
+    def test_published_state_is_authoritative_even_with_error_metadata(self):
+        rows = iter([
+            dict(deploymentId=ID, deploymentState='PUBLISHING', errors={'artifact':['historical-message']}),
+            dict(deploymentId=ID, deploymentState='PUBLISHED', errors={'artifact':['historical-message']}),
+        ])
+        output = io.StringIO()
+        import contextlib
+        with contextlib.redirect_stdout(output):
+            result = w.wait(ID, 'secret-token', request=lambda *args: next(rows), sleep=lambda seconds: None)
+        self.assertEqual(result, dict(deploymentId=ID, deploymentState='PUBLISHED'))
+        self.assertNotIn('historical-message', output.getvalue())
+        with self.assertRaises(ValueError):
+            w.wait(ID, 'secret-token', request=lambda *args: dict(
+                deploymentId='wrong', deploymentState='PUBLISHED', errors={'artifact':['historical-message']}))
 
 if __name__ == '__main__': unittest.main()

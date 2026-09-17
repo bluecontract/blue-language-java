@@ -75,8 +75,8 @@ def wait(deployment, token, *, request=status, clock=time.monotonic, sleep=time.
                 raise StatusError('missing deployment ID in status response')
             if row['deploymentId'] != deployment:
                 raise StatusError('deployment ID mismatch in status response')
-            if row.get('errors'):
-                raise StatusError('deployment status contains validation errors')
+            # Sonatype can retain error metadata even after publication. Like
+            # JReleaser, decide readiness from the matching deployment's state.
             state = row.get('deploymentState')
             if state == 'PUBLISHED':
                 return dict(deploymentId=deployment, deploymentState=state)
