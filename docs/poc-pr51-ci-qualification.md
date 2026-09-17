@@ -36,3 +36,34 @@ Focused local requalification on JDK 17 passed 18 root architecture/style/docs
 controls and seven exact storage codec controls: **25/25**, zero failures,
 errors or skips, in 12 seconds. The API union was regenerated from all seven
 compiled published modules. Subsequent CI must still qualify the complete branch.
+
+## Post-merge release inventory correction
+
+Both exact-head builds (`35276838249` and `35276842696`, source `85a32d20`)
+passed, including their five transition groups. PR 51 was merged as `4a1742d2`.
+The post-merge build `35278524435` also passed. RC run `35278524429` then passed
+its build and transition groups but stopped at the release-only sentinel audit;
+no version/tag was pushed and no artifact was published by that run.
+
+The audit still described the earlier source tree. Regeneration with the
+unchanged generator preserves all 256 decision-relevant classifications, while
+refreshing source positions and adding a net 44 context-only search matches
+(2,113 → 2,157 total). The new codec property-count writes retain distinct
+encodings for absent (`-1`) and present empty (`0`) properties; this inventory
+refresh does not change their implementation or claim new semantic evidence.
+
+An independent check of the other release preflights also found eleven new
+storage/reuse sources absent from the implementation inventory. Regenerate that
+closed inventory with its existing generator (742 → 753 paths); preserve exact
+source discovery, sorting, uniqueness and role-projection checks. Update the
+two stale exact test counts to 753 runtime files and 253 Language model/core
+files (the prior runtime assertion still said 741 despite a 742-path inventory).
+Historical fixture-transition counts remain unchanged.
+
+This correction changes generated inventories and their exact count assertions,
+not runtime Java, protocol rules, fixtures, API descriptors or release workflows.
+The regenerated release preflight, identity-impact inventory and final API
+baseline checks pass locally. All 23 focused generator, stale-report diagnostic
+and implementation-inventory tests also pass. Full release qualification remains
+required; a local `rcVerify --continue` diagnostic is not a clean-source release
+certificate and must not replace the automatic RC pipeline.

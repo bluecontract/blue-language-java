@@ -53,7 +53,7 @@ def create_minimal_runtime_tree(root: Path) -> tuple[str, ...]:
 class ImplementationBaselineTest(unittest.TestCase):
 
     def test_authoritative_inventory_is_complete_sorted_and_checked_in(self) -> None:
-        self.assertEqual(741, len(IMPLEMENTATION_BASELINE_SOURCE_PATHS))
+        self.assertEqual(753, len(IMPLEMENTATION_BASELINE_SOURCE_PATHS))
         self.assertEqual(
             tuple(sorted(IMPLEMENTATION_BASELINE_SOURCE_PATHS)),
             IMPLEMENTATION_BASELINE_SOURCE_PATHS,
@@ -92,7 +92,7 @@ class ImplementationBaselineTest(unittest.TestCase):
                 ("blue-language-core/", "blue-language-model/")
             )
         )
-        self.assertEqual(250, len(language_closure))
+        self.assertEqual(253, len(language_closure))
         self.assertEqual(
             language_closure,
             source_paths_for_role(CYCLIC_FINALIZER),
