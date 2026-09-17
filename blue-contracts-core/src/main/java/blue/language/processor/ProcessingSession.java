@@ -61,12 +61,26 @@ final class ProcessingSession {
     }
 
     void executeLogicalDeliveries() {
-        execution.prepareLogicalDeliveries();
-        execution.executeLogicalDeliveries();
+        completeExecutionPhase(() -> {
+            execution.prepareLogicalDeliveries();
+            execution.executeLogicalDeliveries();
+        });
     }
 
     void drainInternalOccurrences() {
-        execution.drainInternalEvents();
+        completeExecutionPhase(execution::drainInternalEvents);
+    }
+
+    private void completeExecutionPhase(Runnable phase) {
+        try {
+            phase.run();
+        } catch (RunTerminationException terminated) {
+            if (execution.hasFailure()) {
+                throw terminated;
+            }
+            // Successful Root termination stops handlers, but the PROCESS
+            // transaction still requires soundness and subscription validation.
+        }
     }
 
     void validateFinalSoundness() {
