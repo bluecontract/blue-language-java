@@ -29669,7 +29669,7 @@
       "reason": "Broad required/presence vocabulary matched traversal, metadata, diagnostics, or a non-object constraint rather than an empty-object presence decision.",
       "relevance": "context-only",
       "reviewDisposition": "resolved-context-only",
-      "source": "public static final int REQUIRED_BUILD_JAVA = 25;",
+      "source": "public static final int REQUIRED_BUILD_JAVA = 17;",
       "symbol": "StagedRepositoryManifest"
     },
     {

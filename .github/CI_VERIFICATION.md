@@ -1,6 +1,6 @@
 # Distributed production verification
 
-The original Build, Release RC and Release workflows run on Java 25. Each starts
+The original Build, Release RC and Release workflows run on Java 17. Each starts
 one source-preparation job, five independent Python transition owners, and a core
 job. Core and owners overlap. The core first runs the normal clean build with six Python transition commands
 explicitly delegated to their owners. This intermediate build success does not

@@ -35,7 +35,7 @@ public final class StagedRepositoryManifest {
     public static final String SCHEMA = "blue-development-maven-repository/1.0";
     public static final String LOCAL_RC_SCHEMA = "blue-local-rc-maven-repository/1.0";
     public static final String LOCAL_STABLE_SCHEMA = "blue-local-stable-maven-repository/1.0";
-    public static final int REQUIRED_BUILD_JAVA = 25;
+    public static final int REQUIRED_BUILD_JAVA = 17;
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}|[0-9a-f]{64}");

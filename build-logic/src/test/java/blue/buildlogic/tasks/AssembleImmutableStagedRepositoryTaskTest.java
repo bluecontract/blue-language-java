@@ -82,7 +82,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
         assertTrue(manifest.contains("\"sourceCommit\":\"" + COMMIT + "\""));
         assertTrue(manifest.contains("\"sourceTree\":\"" + TREE + "\""));
         assertTrue(manifest.contains("\"sourceDirty\":false"));
-        assertTrue(manifest.contains("\"builtWithJava\":25"));
+        assertTrue(manifest.contains("\"builtWithJava\":17"));
         assertTrue(manifest.contains("\"stagePurpose\":\"DEVELOPMENT\""));
         assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
         assertTrue(manifest.contains(

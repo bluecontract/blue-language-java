@@ -168,7 +168,7 @@ final class DevelopmentVerificationFunctionalTest {
                 + "    testClassesDirs = sourceSets.test.output.classesDirs\n"
                 + "    classpath = sourceSets.test.runtimeClasspath\n"
                 + "    javaLauncher.set(javaToolchains.launcherFor {\n"
-                + "        languageVersion = JavaLanguageVersion.of(25)\n"
+                + "        languageVersion = JavaLanguageVersion.of(17)\n"
                 + "    })\n"
                 + "    selectionRequired.set(true)\n"
                 + "}\n");

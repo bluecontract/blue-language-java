@@ -77,4 +77,55 @@ class WaitCentral(unittest.TestCase):
             self.assertEqual(row['propertiesSha256'], w.hashlib.sha256(props.read_bytes()).hexdigest())
             self.assertEqual(row['deploymentState'], 'PUBLISHED')
 
+
+class Diagnostics(unittest.TestCase):
+    def test_cli_reports_safe_categories_without_secret_details(self):
+        cases = [
+            (HTTPError('secret-url', 401, 'secret-body', {}, None), 'HTTP 401'),
+            (KeyError('JRELEASER_MAVENCENTRAL_PASSWORD'), 'missing environment variable JRELEASER_MAVENCENTRAL_PASSWORD'),
+            (json.JSONDecodeError('secret-body', 'secret-body', 0), 'invalid JSON response'),
+            (OSError('secret-path'), 'local file or network error'),
+        ]
+        for failure, expected in cases:
+            with self.subTest(expected=expected):
+                diagnostic = w.failure_message(failure)
+                self.assertIn(expected, diagnostic)
+                self.assertNotIn('secret', diagnostic)
+
+    def test_response_failure_categories_are_distinct_and_safe(self):
+        for row, expected in [
+            ({}, 'missing deployment ID'),
+            (dict(deploymentId='secret-id'), 'deployment ID mismatch'),
+            (dict(deploymentId=ID, deploymentState='FAILED'), 'deployment state FAILED'),
+            (dict(deploymentId=ID, deploymentState='secret-state'), 'unknown deployment state'),
+        ]:
+            with self.subTest(expected=expected), self.assertRaises(ValueError) as caught:
+                w.wait(ID, 'secret-token', request=lambda *args: row)
+            self.assertIn(expected, w.failure_message(caught.exception))
+            self.assertNotIn('secret', w.failure_message(caught.exception))
+
+    def test_actual_cli_missing_environment_and_http_error_are_safe(self):
+        import contextlib
+        import os
+        import runpy
+        import sys
+        with tempfile.TemporaryDirectory() as tmp:
+            props, receipt = Path(tmp)/'submitted.properties', Path(tmp)/'receipt.json'
+            props.write_text('# JReleaser output\n'+w.KEY+'='+ID+'\n')
+            argv = [str(Path(__file__).with_name('wait-maven-central.py')), str(props), '--receipt', str(receipt)]
+            env = dict(JRELEASER_MAVENCENTRAL_USERNAME='secret-user', JRELEASER_MAVENCENTRAL_PASSWORD='secret-password')
+            for credentials, expected in [({}, 'missing environment variable JRELEASER_MAVENCENTRAL_USERNAME'), (env, 'HTTP 403')]:
+                receipt.write_text('stale')
+                stderr = io.StringIO()
+                with patch.dict(os.environ, credentials, clear=True), patch.object(sys, 'argv', argv), \
+                        patch('urllib.request.build_opener') as opener, contextlib.redirect_stderr(stderr):
+                    opener.return_value.open.side_effect = HTTPError('secret-url',403,'secret-body',{},None)
+                    with self.assertRaises(SystemExit) as caught:
+                        runpy.run_path(argv[0], run_name='__main__')
+                self.assertEqual(caught.exception.code, 1)
+                self.assertIn(expected, stderr.getvalue())
+                self.assertNotIn('secret', stderr.getvalue())
+                self.assertFalse(receipt.exists())
+                self.assertEqual(opener.return_value.open.call_count, int(bool(credentials)))
+
 if __name__ == '__main__': unittest.main()

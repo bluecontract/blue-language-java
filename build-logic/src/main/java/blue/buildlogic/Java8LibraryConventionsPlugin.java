@@ -26,7 +26,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
 
     private static final int BYTECODE_VERSION = 8;
-    private static final int JAVA_RUNTIME_VERSION = 25;
+    private static final int JAVA_RUNTIME_VERSION = 17;
     private static final int SINGLE_TEST_FORK = 1;
     private static final long REUSE_TEST_PROCESS = 0L;
     private static final String CHARACTER_ENCODING_UTF_8 = "UTF-8";
