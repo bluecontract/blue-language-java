@@ -12,7 +12,8 @@ Changes:
   copy of its exact frame only when the snapshot has library-issued state proof
   and a detached representation. This lets an immediate exact readback use the
   codec's existing accepted-frame path. Public mutable copies and incomplete or
-  failed encodes cannot issue this capability. Witness validation remains.
+  failed encodes cannot issue this capability. A call with reuse disabled also
+  disables encoder-side admission. Witness validation remains.
 - Inside `NodeToBlueIdInput` only, append an escaped child to the private canonical
   parent directly. The public/general JSON-pointer appender is unchanged.
 

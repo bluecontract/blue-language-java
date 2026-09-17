@@ -98,7 +98,7 @@ public final class AffectedClosureSnapshotStorageCodec {
         // emitted representation (including witness originals) is detached.
         // writeSnapshot above still validates every otherwise-unverified witness.
         // Public/freshly mutable input and an incomplete encode never qualify.
-        if (snapshot.hasVerifiedOwnedState() && snapshot.hasDetachedRepresentation()) {
+        if (call.reuseEnabled() && snapshot.hasVerifiedOwnedState() && snapshot.hasDetachedRepresentation()) {
             acceptedBytes.retainEncoded(encoded);
         }
         return encoded;
