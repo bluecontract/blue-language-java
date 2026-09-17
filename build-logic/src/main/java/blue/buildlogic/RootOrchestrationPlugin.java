@@ -49,7 +49,8 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 /** Configures the root as a verification-only orchestrator over the published modules. */
 public final class RootOrchestrationPlugin implements Plugin<Project> {
 
-    private static final int JAVA_VERSION = 8;
+    private static final int BYTECODE_VERSION = 8;
+    private static final int JAVA_RUNTIME_VERSION = 17;
     private static final int EXECUTABLE_FILE_MODE = 0755;
     private static final int REGULAR_FILE_MODE = 0644;
     private static final String COMPATIBILITY_SOURCE_DIRECTORY =
@@ -237,7 +238,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
                             task.getExpectedArtifacts().set(project.provider(() ->
-                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                    CommitBoundDevelopmentCandidate.isLocalRelease(project.getVersion().toString())
                                             ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getSourceCommit().set(sourceCommit);
                             task.getSourceTree().set(sourceTree);
@@ -267,7 +268,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
                             task.getExpectedArtifacts().set(project.provider(() ->
-                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                    CommitBoundDevelopmentCandidate.isLocalRelease(project.getVersion().toString())
                                             ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
                             task.getSourceCommit().set(sourceCommit);
@@ -426,6 +427,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
 
     private static void configureRootJava(Project project) {
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
+        java.getToolchain().getLanguageVersion().set(JavaLanguageVersion.of(JAVA_RUNTIME_VERSION));
         java.setSourceCompatibility(org.gradle.api.JavaVersion.VERSION_1_8);
         java.setTargetCompatibility(org.gradle.api.JavaVersion.VERSION_1_8);
         SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
@@ -437,21 +439,22 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 .configure(task -> task.setEnabled(false));
         project.getTasks().withType(JavaCompile.class).configureEach(task -> {
             task.getOptions().setEncoding("UTF-8");
-            task.getOptions().getRelease().set(JAVA_VERSION);
+            task.getOptions().getRelease().set(BYTECODE_VERSION);
         });
         JavaToolchainService toolchains =
                 project.getExtensions().getByType(JavaToolchainService.class);
-        org.gradle.api.provider.Provider<JavaLauncher> javaEight = toolchains.launcherFor(
-                spec -> spec.getLanguageVersion().set(JavaLanguageVersion.of(JAVA_VERSION)));
+        org.gradle.api.provider.Provider<JavaLauncher> javaLauncher = toolchains.launcherFor(
+                spec -> spec.getLanguageVersion().set(JavaLanguageVersion.of(JAVA_RUNTIME_VERSION)));
         project.getTasks().withType(Test.class).configureEach(task -> {
-            task.getJavaLauncher().set(javaEight);
+            task.getJavaLauncher().set(javaLauncher);
             task.useJUnitPlatform();
+            task.setMaxParallelForks(1);
             task.systemProperty("junit.jupiter.execution.parallel.enabled", "false");
             task.getReports().getJunitXml().getRequired().set(true);
             task.getReports().getHtml().getRequired().set(true);
         });
         project.getTasks().withType(JavaExec.class).configureEach(task ->
-                task.getJavaLauncher().set(javaEight));
+                task.getJavaLauncher().set(javaLauncher));
     }
 
     /**

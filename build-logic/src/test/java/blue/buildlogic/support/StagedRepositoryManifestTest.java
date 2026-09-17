@@ -117,6 +117,27 @@ final class StagedRepositoryManifestTest {
     }
 
     @Test
+    void shouldExportStableWithExactSourceAndCompletePublications() throws Exception {
+        String version = "3.1.0";
+        Fixture fixture = fixture(Collections.singletonList(ARTIFACT), version);
+        StagedRepositoryManifest.assemble(fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings);
+        String manifest = Files.readString(fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
+        assertTrue(manifest.contains("\"schema\":\"blue-local-stable-maven-repository/1.0\""));
+        assertTrue(manifest.contains("\"stagePurpose\":\"LOCAL_STABLE\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains("\"builtWithJava\":17"));
+        assertTrue(manifest.contains("\"kind\":\"sources\""));
+        assertTrue(manifest.contains("\"kind\":\"javadoc\""));
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+        StagedRepositoryManifest.Bindings dirty = StagedRepositoryManifest.bindings(
+                fixture.specification, fixture.releaseManifest, COMMIT, TREE, true, 17);
+        assertFalse(StagedRepositoryManifest.verify(
+                fixture.target, GROUP, version, Collections.singletonList(ARTIFACT), dirty).getViolations().isEmpty());
+    }
+
+    @Test
     void shouldRejectTamperedPayloadAndChecksum() throws Exception {
         // given
         Fixture fixture = fixture();
@@ -353,6 +374,14 @@ final class StagedRepositoryManifestTest {
                 () -> StagedRepositoryManifest.bindings(fixture.specification, fixture.releaseManifest,
                         COMMIT, TREE, false, StagedRepositoryManifest.REQUIRED_BUILD_JAVA));
         assertTrue(failure.getMessage().contains("release identity does not authenticate"));
+    }
+
+    @Test
+    void shouldBindNewBuildsToJava17() throws Exception {
+        Fixture fixture = fixture();
+        StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
+                fixture.specification, fixture.releaseManifest, COMMIT, TREE, false, 17);
+        assertEquals(17, bindings.getBuiltWithJava());
     }
 
     @Test

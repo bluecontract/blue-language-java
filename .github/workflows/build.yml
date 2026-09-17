@@ -17,63 +17,72 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  prepare:
+    uses: ./.github/workflows/prepare-verification-source.yml
+    with:
+      mode: existing
+      scope: build
+  transitions:
+    needs: prepare
+    uses: ./.github/workflows/transition-verification.yml
+    with:
+      scope: build
+      commit: ${{ needs.prepare.outputs.commit }}
+      tree: ${{ needs.prepare.outputs.tree }}
+      prepared: ${{ needs.prepare.outputs.prepared }}
+      source-attempt: ${{ needs.prepare.outputs.attempt }}
+
   Build:
+    needs: prepare
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       CI: true
+      BLUE_CI_DISTRIBUTED: verified-source
+      BLUE_CI_SCOPE: build
+      BLUE_CI_COMMIT: ${{ needs.prepare.outputs.commit }}
+      BLUE_CI_TREE: ${{ needs.prepare.outputs.tree }}
+      BLUE_CI_SOURCE_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
+      BLUE_CI_PREPARED: ${{ needs.prepare.outputs.prepared }}
+      BLUE_CI_SOURCE: ${{ github.workspace }}/../verification-source
+      CI_TRANSITION_RECEIPTS: ${{ github.workspace }}/../transition-receipts
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Java 8 test runtime
-        uses: actions/setup-java@v3
         with:
-          java-version: '8'
-          distribution: 'corretto'
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v3
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/verification-setup
+      - name: Build and run local checks
+        uses: ./.github/actions/verify-core
         with:
-          java-version: '25'
-          distribution: 'corretto'
+          phase: build
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Test release tooling
-        run: node --test .github/scripts/*.test.js
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install classifier verification dependencies
-        run: python -m pip install PyYAML==6.0.3
-
-      - name: Execute Gradle build
-        run: ./gradlew clean build
+      - name: Wait for transition verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node .github/scripts/ci-verification-source.js check
+          node .github/scripts/ci-verification-gate.js
 
       - name: Archive test results
         uses: actions/upload-artifact@v4
-        if: always() # run even if build failed
+        if: always()
         with:
-          name: test-results
+          name: test-results-${{ github.run_attempt }}
           path: |
             build/reports
+            build/test-results
             blue-*/build/reports
+            blue-*/build/test-results
             examples/build/reports
+            examples/build/test-results
             build-logic/build/reports
             smoke-tests/published/build/reports
-
       - name: Archive libs
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-${{ github.run_attempt }}
           path: blue-*/build/libs

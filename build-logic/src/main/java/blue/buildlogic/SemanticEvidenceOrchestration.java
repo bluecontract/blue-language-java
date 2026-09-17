@@ -33,7 +33,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService;
 /** Registers the release reports and executable proofs for semantic compatibility. */
 final class SemanticEvidenceOrchestration {
 
-    private static final int JAVA_VERSION = 8;
+    private static final int JAVA_VERSION = 17;
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
     private static final List<String> LEGACY_SEMANTIC_LOCALITY_FILES =
             Collections.unmodifiableList(Arrays.asList(
@@ -218,7 +218,7 @@ final class SemanticEvidenceOrchestration {
                 }).getStandardOutput().getAsText().map(String::trim);
         JavaToolchainService toolchains = project.getExtensions()
                 .getByType(JavaToolchainService.class);
-        Provider<String> javaEightRuntime = toolchains.launcherFor(
+        Provider<String> testRuntime = toolchains.launcherFor(
                 spec -> spec.getLanguageVersion().set(JavaLanguageVersion.of(JAVA_VERSION)))
                 .map(launcher -> launcher.getMetadata().getJavaRuntimeVersion().toString());
 
@@ -260,7 +260,7 @@ final class SemanticEvidenceOrchestration {
                             task.getCommitAutomationDiff().set(commitAutomationDiff);
                             task.getApiBaselineDiff().set(apiBaselineDiff);
                             task.getGradleVersion().set(project.getGradle().getGradleVersion());
-                            task.getTestJavaRuntimeVersion().set(javaEightRuntime);
+                            task.getTestJavaRuntimeVersion().set(testRuntime);
                             task.getRequiredLocalityTests().set(requiredLocalityTests);
                             task.getRequiredHostedRuntimeSuites().set(requiredHostedRuntimeSuites);
                             task.getBenchmarkCompilationSuccessful().set(true);

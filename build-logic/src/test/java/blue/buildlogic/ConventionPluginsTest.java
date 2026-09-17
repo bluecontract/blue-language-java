@@ -122,7 +122,7 @@ final class ConventionPluginsTest {
         org.gradle.api.tasks.testing.Test test =
                 (org.gradle.api.tasks.testing.Test) project.getTasks().getByName("test");
         assertTrue(test.getOptions() instanceof JUnitPlatformOptions);
-        assertEquals(8, test.getJavaLauncher().get()
+        assertEquals(17, test.getJavaLauncher().get()
                 .getMetadata().getLanguageVersion().asInt());
         assertEquals("UTF-8", test.getDefaultCharacterEncoding());
         assertEquals(1, test.getMaxParallelForks());

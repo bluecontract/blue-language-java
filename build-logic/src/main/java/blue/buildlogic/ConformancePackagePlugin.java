@@ -47,7 +47,7 @@ public final class ConformancePackagePlugin implements Plugin<Project> {
                 task.getMainClass().set(
                         "blue.language.conformance.cli.ReleaseConformanceCli");
                 task.getJavaLauncher().set(toolchains.launcherFor(spec -> spec
-                        .getLanguageVersion().set(JavaLanguageVersion.of(8))));
+                        .getLanguageVersion().set(JavaLanguageVersion.of(17))));
                 task.args(
                         project.getLayout().getBuildDirectory().file(
                                 "reports/conformance/release-conformance.json")

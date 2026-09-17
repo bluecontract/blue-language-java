@@ -100,6 +100,17 @@ For example, after selecting a fresh RC coordinate:
   -PstagedDependencyRepository=/absolute/path/to/blue-local-rc-maven-repository
 ```
 
+Stable `3.1.0` verification uses the same clean-source and complete seven-module
+export rules with schema `blue-local-stable-maven-repository/1.0` and
+`stagePurpose: LOCAL_STABLE`. This is a local verification repository, not a
+publication or release-readiness claim. Existing RC/development schema names and
+source-binding rules remain unchanged; historical published manifests are not
+rewritten.
+
+All build, test, conformance and benchmark launchers now use Java 17. Published
+library class files remain Java 8 compatible through `javac --release 8`; that
+bytecode guarantee is distinct from executing the test suite on Java 8.
+
 ## Evidence is fail-closed
 
 Reports are generated from declared task outputs, never broad stale build

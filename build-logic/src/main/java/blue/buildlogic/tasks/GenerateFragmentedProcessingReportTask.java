@@ -789,7 +789,7 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
         Map<String, Object> gradle = new TreeMap<>();
         gradle.put("version", getGradleVersion().get());
         Map<String, Object> testJvm = new TreeMap<>();
-        testJvm.put("languageVersion", "8");
+        testJvm.put("languageVersion", "17");
         testJvm.put("runtimeVersion", getTestJavaRuntimeVersion().get());
         Map<String, Object> value = new TreeMap<>();
         value.put("buildJvm", buildJvm);

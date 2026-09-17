@@ -36,6 +36,9 @@ jreleaser {
                     url = 'https://central.sonatype.com/api/v1/publisher'
                     applyMavenCentralRules = true
                     snapshotSupported = true
+                    // CI confirms PUBLISHED in its next step; ordinary releases still wait here.
+                    skipPublicationCheck = providers.gradleProperty('blueMavenCentralSkipPublicationCheck')
+                            .map { it.toBoolean() }.getOrElse(false)
                     stagingRepository('build/staging-deploy')
                 }
             }

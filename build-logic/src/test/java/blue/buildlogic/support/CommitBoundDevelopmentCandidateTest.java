@@ -11,6 +11,15 @@ final class CommitBoundDevelopmentCandidateTest {
     private static final String OTHER = "89abcdef0123456789abcdef0123456789abcdef";
 
     @Test
+    void acceptsCleanStableSourceWithoutWeakeningCommitBinding() {
+        assertDoesNotThrow(() -> CommitBoundDevelopmentCandidate.verify("3.1.0", HEAD, HEAD, ""));
+        assertThrows(GradleException.class,
+                () -> CommitBoundDevelopmentCandidate.verify("3.1.0", HEAD, OTHER, ""));
+        assertThrows(GradleException.class,
+                () -> CommitBoundDevelopmentCandidate.verify("3.1.0", HEAD, HEAD, " M source.java"));
+    }
+
+    @Test
     void acceptsOnlyCleanExactDevelopmentOrLocalRcSource() {
         for (String version : new String[] {"3.1.0-dev." + HEAD, "3.1.0-rc.24"}) {
             assertDoesNotThrow(() -> CommitBoundDevelopmentCandidate.verify(version, HEAD, HEAD, ""));
@@ -21,7 +30,7 @@ final class CommitBoundDevelopmentCandidateTest {
             assertThrows(GradleException.class,
                     () -> CommitBoundDevelopmentCandidate.verify(version, "not-a-commit", HEAD, ""));
         }
-        for (String version : new String[] {"3.1.0", "3.1.0-rc.0", "3.1.0-rc.01",
+        for (String version : new String[] {"3.2.0", "3.1.0-rc.0", "3.1.0-rc.01",
                 "3.2.0-rc.1", "3.1.0-rc.24-SNAPSHOT", "3.1.0-dev." + OTHER}) {
             assertThrows(GradleException.class,
                     () -> CommitBoundDevelopmentCandidate.verify(version, HEAD, HEAD, ""));

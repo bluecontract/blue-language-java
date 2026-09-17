@@ -1,0 +1,67 @@
+name: Prepare verification source
+on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        required: true
+      scope:
+        type: string
+        required: true
+    outputs:
+      attempt:
+        value: ${{ jobs.prepare.outputs.attempt }}
+      commit:
+        value: ${{ jobs.prepare.outputs.commit }}
+      tree:
+        value: ${{ jobs.prepare.outputs.tree }}
+      prepared:
+        value: ${{ jobs.prepare.outputs.prepared }}
+      version:
+        value: ${{ jobs.prepare.outputs.version }}
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      attempt: ${{ steps.source.outputs.attempt }}
+      commit: ${{ steps.source.outputs.commit }}
+      tree: ${{ steps.source.outputs.tree }}
+      prepared: ${{ steps.source.outputs.prepared }}
+      version: ${{ steps.source.outputs.version }}
+    steps:
+      - name: Validate release branch before preparation
+        env:
+          RELEASE_SCOPE: ${{ inputs.scope }}
+          RELEASE_REF: ${{ github.ref }}
+        run: case "$RELEASE_SCOPE" in rc) test "$RELEASE_REF" = 'refs/heads/next' ;; stable) test "$RELEASE_REF" = 'refs/heads/master' ;; build) true ;; *) exit 1 ;; esac
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test release tooling
+        run: |
+          node --test .github/scripts/*.test.js
+          python3 -m unittest discover -s .github/scripts -p 'test_wait_maven_central.py'
+      - name: Fetch master and tags
+        if: inputs.mode == 'rc'
+        run: git fetch origin master:refs/remotes/origin/master --tags
+      - name: Prepare one immutable source bundle
+        id: source
+        env:
+          SOURCE_MODE: ${{ inputs.mode }}
+          BLUE_CI_SCOPE: ${{ inputs.scope }}
+        run: |
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          node .github/scripts/ci-verification-source.js prepare "$RUNNER_TEMP/verification-source" "$SOURCE_MODE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-${{ inputs.scope }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/verification-source
+          if-no-files-found: error
+          retention-days: 7

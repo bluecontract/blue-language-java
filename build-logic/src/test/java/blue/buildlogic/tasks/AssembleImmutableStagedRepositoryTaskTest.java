@@ -53,7 +53,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                         + "fixturePackage:\n"
                         + "  packageIdentity: sha256:"
                         + repeat('a') + "\n"
-                        + "releaseIdentity: sha256:" + repeat('b') + "\n",
+                        + "releaseIdentity: sha256:" + "6998d173b83153bc3856fd4de682d6974c7d58a6ec34c8fdc5f095496d74c58e" + "\n",
                 StandardCharsets.UTF_8);
         AssembleImmutableStagedRepositoryTask task = project.getTasks().register(
                 "assembleFixtureRepository",
@@ -160,7 +160,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                         + "  sha256: " + specificationHash + "\n"
                         + "fixturePackage:\n"
                         + "  packageIdentity: sha256:" + repeat('a') + "\n"
-                        + "releaseIdentity: sha256:" + repeat('b') + "\n",
+                        + "releaseIdentity: sha256:" + "6998d173b83153bc3856fd4de682d6974c7d58a6ec34c8fdc5f095496d74c58e" + "\n",
                 StandardCharsets.UTF_8);
         AssembleImmutableStagedRepositoryTask task = project.getTasks().register(
                 name, AssembleImmutableStagedRepositoryTask.class).get();

@@ -1,0 +1,44 @@
+name: Verify local build or fully gated release
+description: Run the local build before the visible transition gate, or release checks after it
+inputs:
+  phase:
+    description: build before the transition gate, release after it
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Validate verification phase
+      shell: bash
+      env:
+        VERIFICATION_PHASE: ${{ inputs.phase }}
+      run: case "$VERIFICATION_PHASE" in build|release) ;; *) echo 'Unknown verification phase' >&2; exit 1 ;; esac
+    - name: Check source identity before verification
+      shell: bash
+      run: node .github/scripts/ci-verification-source.js check
+    - name: Execute clean Gradle build
+      if: inputs.phase == 'build'
+      shell: bash
+      env:
+        BLUE_CI_DEFER_TRANSITIONS: 'true'
+      run: ./gradlew --max-workers=4 --no-parallel --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
+    - name: Execute RC verification
+      if: inputs.phase == 'release'
+      shell: bash
+      run: ./gradlew --max-workers=4 --no-parallel --init-script .github/scripts/ci-transition-receipts.init.gradle rcVerify
+    - name: Verify reproducible source release
+      if: inputs.phase == 'release'
+      shell: bash
+      run: |
+        mapfile -t source_archives < <(find build/release -maxdepth 1 -type f -name '*-source-release.zip')
+        test "${#source_archives[@]}" -eq 1
+        first_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+        ./gradlew sourceReleaseArchive --rerun-tasks
+        second_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+        test "$first_sha" = "$second_sha"
+    - name: Verify final API baseline
+      if: inputs.phase == 'release'
+      shell: bash
+      run: ./gradlew verifyFinalApiBaseline
+    - name: Require unchanged verified source
+      shell: bash
+      run: node .github/scripts/ci-verification-source.js check
