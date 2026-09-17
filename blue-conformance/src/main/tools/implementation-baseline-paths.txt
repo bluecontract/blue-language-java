@@ -92,6 +92,7 @@ blue-contracts-core/src/main/java/blue/language/processor/EvidenceDeliveryOrches
 blue-contracts-core/src/main/java/blue/language/processor/ExactBlueValue.java
 blue-contracts-core/src/main/java/blue/language/processor/ExactContractNodeFieldRestorer.java
 blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidence.java
+blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidenceStorageCodec.java
 blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyLoader.java
 blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyPathCatalog.java
 blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodySourceDescriptor.java
@@ -318,6 +319,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandi
 blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCause.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionKind.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshot.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshotStorageCodec.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ChannelOccurrence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointDomainValue.java
@@ -333,6 +335,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureDirectS
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceFactory.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceVerifier.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionEvidenceStorageCodec.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionRecorder.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java
@@ -343,12 +346,15 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureIdentit
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureImplementationEvidence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationVerifier.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureOwnedRepresentation.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResult.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResultStorageCodec.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessRetryInput.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessor.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemand.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandException.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResultAssemblySupport.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResultStorageValues.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureRollbackResultAssembler.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureSuccessResultAssembler.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureValueSupport.java
@@ -371,6 +377,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepPr
 blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ExactNodeDemand.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionPolicy.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionStorageCall.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ExternalEventCause.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedComponentEvidence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedDocumentEvidence.java
@@ -415,6 +422,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessF
 blue-contracts-core/src/main/java/blue/language/processor/closure/RootedWitnessSelection.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/SnapshotStorageCall.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionState.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java
@@ -549,6 +557,7 @@ blue-language-core/src/main/java/blue/language/merge/ResolvedReferenceCacheLifec
 blue-language-core/src/main/java/blue/language/merge/ResolvedReferenceCacheStatistics.java
 blue-language-core/src/main/java/blue/language/merge/ResolvedReferenceGraphIndex.java
 blue-language-core/src/main/java/blue/language/merge/ResolvedSnapshot.java
+blue-language-core/src/main/java/blue/language/merge/ResolvedSnapshotStorageCodec.java
 blue-language-core/src/main/java/blue/language/merge/SchemaValueTypeResolver.java
 blue-language-core/src/main/java/blue/language/merge/SemanticTypeEvidenceKey.java
 blue-language-core/src/main/java/blue/language/merge/SemanticValueEvidenceKey.java
@@ -664,6 +673,7 @@ blue-language-core/src/main/java/blue/language/snapshot/BluePatch.java
 blue-language-core/src/main/java/blue/language/snapshot/BluePatchOperation.java
 blue-language-core/src/main/java/blue/language/snapshot/CanonicalOverlayPatchEngine.java
 blue-language-core/src/main/java/blue/language/snapshot/CanonicalPatchResult.java
+blue-language-core/src/main/java/blue/language/snapshot/ExactNodeStorageCodec.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenCanonicalDigester.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenCanonicalWriter.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNode.java
@@ -672,6 +682,7 @@ blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeConverter.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeIdentity.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeNavigator.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeRetainedWeight.java
+blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeStorageCodec.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeStructuralKey.java
 blue-language-core/src/main/java/blue/language/snapshot/FrozenNodeToBlueIdInput.java
 blue-language-core/src/main/java/blue/language/snapshot/ImmutableBluePatch.java
