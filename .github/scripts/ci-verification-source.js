@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {execFileSync} = require('node:child_process');
-const {sourceIdentity, validatePreparedIdentity} = require('./ci-timing-experiment');
+const {sourceIdentity, validatePreparedIdentity} = require('./ci-transition-verification');
 const git = (...args) => execFileSync('git', args, {encoding: 'utf8'}).trim();
 const output = (key, value) => fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 
@@ -13,7 +13,7 @@ function trustedIdentity() {
   if (!['true', 'false'].includes(env.BLUE_CI_PREPARED)) throw new Error('Expected prepared flag');
   return {eventCommit: env.GITHUB_SHA, commit: env.BLUE_CI_COMMIT, sourceTree: env.BLUE_CI_TREE,
     parentCommit: env.BLUE_CI_PREPARED === 'true' ? env.GITHUB_SHA : '', prepared: env.BLUE_CI_PREPARED === 'true',
-    runId: env.GITHUB_RUN_ID, runAttempt: env.GITHUB_RUN_ATTEMPT, scope: env.BLUE_CI_SCOPE};
+    runId: env.GITHUB_RUN_ID, runAttempt: env.BLUE_CI_SOURCE_ATTEMPT, scope: env.BLUE_CI_SCOPE};
 }
 
 function check() {
@@ -31,7 +31,7 @@ function check() {
 
 function prepare(directory, mode) {
   const eventCommit = process.env.GITHUB_SHA;
-  if (!['existing', 'rc', 'fixture', 'stable-fixture'].includes(mode) || git('rev-parse', 'HEAD') !== eventCommit) {
+  if (!['existing', 'rc'].includes(mode) || git('rev-parse', 'HEAD') !== eventCommit) {
     throw new Error('Preparation requires the event checkout and a known mode');
   }
   git('diff', '--quiet', 'HEAD', '--');
@@ -48,26 +48,13 @@ function prepare(directory, mode) {
     });
     git('add', '.cz.toml');
     git('commit', '-m', `chore: release ${version}`);
-  } else if (mode === 'fixture' || mode === 'stable-fixture') {
-    if (process.env.GITHUB_REF !== 'refs/heads/codex/ci/language-parallel-experiment') {
-      throw new Error('Prepared-source fixture requires the experiment branch');
-    }
-    // These local verification commits never reserve or publish a version.
-    if (mode === 'stable-fixture') {
-      const source = fs.readFileSync('.cz.toml', 'utf8');
-      const match = source.match(/^version\s*=\s*"(3\.1\.0)(?:-rc\.[1-9][0-9]*)?"/m);
-      if (!match) throw new Error('Stable fixture requires the 3.1.0 release line');
-      fs.writeFileSync('.cz.toml', source.replace(/^version\s*=\s*"[^"]+"/m, 'version = "3.1.0"'));
-    }
-    fs.appendFileSync('.cz.toml', '\n# Isolated CI source-transfer verification.\n');
-    git('add', '.cz.toml');
-    git('commit', '-m', 'ci: exercise prepared source transfer');
   }
   const manifest = {...sourceIdentity(), eventCommit, scope, prepared: mode !== 'existing',
     parentCommit: mode === 'existing' ? '' : eventCommit};
   fs.mkdirSync(directory, {recursive: true});
   git('bundle', 'create', path.join(directory, 'source.bundle'), 'HEAD');
   fs.writeFileSync(path.join(directory, 'identity.json'), JSON.stringify(manifest, null, 2) + '\n');
+  output('attempt', manifest.runAttempt);
   output('commit', manifest.commit);
   output('tree', manifest.sourceTree);
   output('prepared', String(manifest.prepared));

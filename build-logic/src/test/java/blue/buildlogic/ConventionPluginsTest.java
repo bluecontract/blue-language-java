@@ -139,22 +139,6 @@ final class ConventionPluginsTest {
     }
 
     @Test
-    void shouldAllowFourIsolatedTestProcessesWithoutConcurrentJUnitMethods() {
-        Project project = ProjectBuilder.builder()
-                .withProjectDir(temporaryDirectory.toFile())
-                .build();
-        project.getExtensions().getExtraProperties().set("blueTestMaxParallelForks", "4");
-
-        project.getPluginManager().apply(Java8LibraryConventionsPlugin.class);
-
-        org.gradle.api.tasks.testing.Test test =
-                (org.gradle.api.tasks.testing.Test) project.getTasks().getByName("test");
-        assertEquals(4, test.getMaxParallelForks());
-        assertEquals("false", test.getSystemProperties()
-                .get("junit.jupiter.execution.parallel.enabled"));
-    }
-
-    @Test
     void shouldRegisterAndWireThreeDeterministicArchiveReplicas() {
         // given
         Project project = ProjectBuilder.builder()

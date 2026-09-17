@@ -1,9 +1,5 @@
 name: Set up verified CI source
 description: Import the exact prepared source and install verification runtimes
-inputs:
-  cache-disabled:
-    description: Use cold dependency caches for controlled timing comparisons
-    default: 'false'
 runs:
   using: composite
   steps:
@@ -12,7 +8,7 @@ runs:
         node-version: '22'
     - uses: actions/download-artifact@v4
       with:
-        name: source-${{ env.BLUE_CI_SCOPE }}-${{ github.run_attempt }}
+        name: source-${{ env.BLUE_CI_SCOPE }}-${{ env.BLUE_CI_SOURCE_ATTEMPT }}
         path: ${{ env.BLUE_CI_SOURCE }}
     - name: Verify and import the prepared source commit
       shell: bash
@@ -22,8 +18,6 @@ runs:
         java-version: '25'
         distribution: corretto
     - uses: gradle/actions/setup-gradle@v4
-      with:
-        cache-disabled: ${{ inputs.cache-disabled }}
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'

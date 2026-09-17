@@ -124,10 +124,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
             task.setDefaultCharacterEncoding(CHARACTER_ENCODING_UTF_8);
             task.setFailFast(false);
             task.setForkEvery(REUSE_TEST_PROCESS);
-            // Opt in for timing experiments; retain isolated, sequential JUnit execution.
-            Object parallelForks = project.findProperty("blueTestMaxParallelForks");
-            task.setMaxParallelForks(parallelForks == null
-                    ? SINGLE_TEST_FORK : Integer.parseInt(parallelForks.toString()));
+            task.setMaxParallelForks(SINGLE_TEST_FORK);
             task.systemProperty(
                     JUNIT_PARALLEL_EXECUTION_PROPERTY,
                     JUNIT_PARALLEL_EXECUTION_DISABLED);

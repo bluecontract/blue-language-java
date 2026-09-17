@@ -448,9 +448,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         project.getTasks().withType(Test.class).configureEach(task -> {
             task.getJavaLauncher().set(javaLauncher);
             task.useJUnitPlatform();
-            Object parallelForks = project.findProperty("blueTestMaxParallelForks");
-            task.setMaxParallelForks(parallelForks == null
-                    ? 1 : Integer.parseInt(parallelForks.toString()));
+            task.setMaxParallelForks(1);
             task.systemProperty("junit.jupiter.execution.parallel.enabled", "false");
             task.getReports().getJunitXml().getRequired().set(true);
             task.getReports().getHtml().getRequired().set(true);

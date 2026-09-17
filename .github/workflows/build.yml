@@ -33,16 +33,19 @@ jobs:
       commit: ${{ needs.prepare.outputs.commit }}
       tree: ${{ needs.prepare.outputs.tree }}
       prepared: ${{ needs.prepare.outputs.prepared }}
+      source-attempt: ${{ needs.prepare.outputs.attempt }}
 
   Build:
     needs: prepare
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       CI: true
       BLUE_CI_DISTRIBUTED: verified-source
       BLUE_CI_SCOPE: build
       BLUE_CI_COMMIT: ${{ needs.prepare.outputs.commit }}
       BLUE_CI_TREE: ${{ needs.prepare.outputs.tree }}
+      BLUE_CI_SOURCE_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
       BLUE_CI_PREPARED: ${{ needs.prepare.outputs.prepared }}
       BLUE_CI_SOURCE: ${{ github.workspace }}/../verification-source
       CI_TRANSITION_RECEIPTS: ${{ github.workspace }}/../transition-receipts
@@ -62,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: test-results-${{ github.run_attempt }}
           path: |
             build/reports
             build/test-results
@@ -75,5 +78,5 @@ jobs:
       - name: Archive libs
         uses: actions/upload-artifact@v4
         with:
-          name: libs
+          name: libs-${{ github.run_attempt }}
           path: blue-*/build/libs

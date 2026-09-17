@@ -9,6 +9,8 @@ on:
         type: string
         required: true
     outputs:
+      attempt:
+        value: ${{ jobs.prepare.outputs.attempt }}
       commit:
         value: ${{ jobs.prepare.outputs.commit }}
       tree:
@@ -23,6 +25,7 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
+      attempt: ${{ steps.source.outputs.attempt }}
       commit: ${{ steps.source.outputs.commit }}
       tree: ${{ steps.source.outputs.tree }}
       prepared: ${{ steps.source.outputs.prepared }}
