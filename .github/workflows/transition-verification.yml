@@ -1,0 +1,57 @@
+name: Independent transition verification
+on:
+  workflow_call:
+    inputs:
+      source-attempt:
+        type: string
+        required: true
+      scope:
+        type: string
+        required: true
+      commit:
+        type: string
+        required: true
+      tree:
+        type: string
+        required: true
+      prepared:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  transitions:
+    name: Python ${{ inputs.scope }} / ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [detached-retarget, reconciliation, witness-context, inactive-retarget, short-transitions]
+    env:
+      CI: true
+      BLUE_CI_DISTRIBUTED: verified-source
+      BLUE_CI_SCOPE: ${{ inputs.scope }}
+      BLUE_CI_COMMIT: ${{ inputs.commit }}
+      BLUE_CI_TREE: ${{ inputs.tree }}
+      BLUE_CI_SOURCE_ATTEMPT: ${{ inputs.source-attempt }}
+      BLUE_CI_PREPARED: ${{ inputs.prepared }}
+      BLUE_CI_SOURCE: ${{ github.workspace }}/../source-${{ inputs.scope }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/verification-setup
+      - name: Run owned transition tasks
+        env:
+          GROUP: ${{ matrix.group }}
+        run: node .github/scripts/ci-transition-verification.js run "$GROUP" "$RUNNER_TEMP/transition-timing"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-${{ inputs.scope }}-${{ github.run_attempt }}-${{ matrix.group }}
+          path: ${{ runner.temp }}/transition-timing/*.json
+          if-no-files-found: error
+          retention-days: 7

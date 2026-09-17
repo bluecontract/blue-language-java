@@ -34,7 +34,8 @@ public final class StagedRepositoryManifest {
     public static final String MANIFEST_CHECKSUM_FILE = MANIFEST_FILE + ".sha256";
     public static final String SCHEMA = "blue-development-maven-repository/1.0";
     public static final String LOCAL_RC_SCHEMA = "blue-local-rc-maven-repository/1.0";
-    public static final int REQUIRED_BUILD_JAVA = 17;
+    public static final String LOCAL_STABLE_SCHEMA = "blue-local-stable-maven-repository/1.0";
+    public static final int REQUIRED_BUILD_JAVA = 25;
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}|[0-9a-f]{64}");
@@ -284,10 +285,12 @@ public final class StagedRepositoryManifest {
                 ? "3.1.0-dev.tree." + bindings.getSourceTree()
                 : "3.1.0-dev." + bindings.getSourceCommit();
         boolean localRc = CommitBoundDevelopmentCandidate.isLocalRc(checkedVersion);
-        if (localRc && bindings.isSourceDirty()) {
-            throw new GradleException("Local RC repository requires clean source provenance");
+        boolean localStable = CommitBoundDevelopmentCandidate.isLocalStable(checkedVersion);
+        boolean localRelease = localRc || localStable;
+        if (localRelease && bindings.isSourceDirty()) {
+            throw new GradleException("Local release repository requires clean source provenance");
         }
-        if (!localRc && !checkedVersion.equals(expectedVersion)) {
+        if (!localRelease && !checkedVersion.equals(expectedVersion)) {
             throw new GradleException(
                     "Development repository version is not bound to exact source provenance: "
                             + checkedVersion + " != " + expectedVersion);
@@ -324,11 +327,11 @@ public final class StagedRepositoryManifest {
                 bindings.getContractsSpecificationIdentity());
         manifest.put("groupId", checkedGroup);
         manifest.put("releaseReadinessClaimed", false);
-        manifest.put("schema", localRc ? LOCAL_RC_SCHEMA : SCHEMA);
+        manifest.put("schema", localRc ? LOCAL_RC_SCHEMA : localStable ? LOCAL_STABLE_SCHEMA : SCHEMA);
         manifest.put("sourceCommit", bindings.getSourceCommit());
         manifest.put("sourceDirty", bindings.isSourceDirty());
         manifest.put("sourceTree", bindings.getSourceTree());
-        manifest.put("stagePurpose", localRc ? "LOCAL_RC" : "DEVELOPMENT");
+        manifest.put("stagePurpose", localRc ? "LOCAL_RC" : localStable ? "LOCAL_STABLE" : "DEVELOPMENT");
         manifest.put("version", checkedVersion);
         return manifest;
     }
@@ -353,7 +356,7 @@ public final class StagedRepositoryManifest {
         for (String artifact : sorted) {
             String base = groupPath + "/" + artifact + "/" + checkedVersion
                     + "/" + artifact + "-" + checkedVersion;
-            for (ArtifactKind kind : CommitBoundDevelopmentCandidate.isLocalRc(checkedVersion)
+            for (ArtifactKind kind : CommitBoundDevelopmentCandidate.isLocalRelease(checkedVersion)
                     ? LOCAL_RC_KINDS : KINDS) {
                 files.add(new ArtifactFile(artifact, kind.name, base + kind.suffix));
             }

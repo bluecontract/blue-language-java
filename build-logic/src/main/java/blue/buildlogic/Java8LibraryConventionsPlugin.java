@@ -25,7 +25,8 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 /** Shared Java 8 bytecode, JUnit 5, source/Javadoc artifact, and repository conventions. */
 public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
 
-    private static final int JAVA_LANGUAGE_VERSION = 8;
+    private static final int BYTECODE_VERSION = 8;
+    private static final int JAVA_RUNTIME_VERSION = 25;
     private static final int SINGLE_TEST_FORK = 1;
     private static final long REUSE_TEST_PROCESS = 0L;
     private static final String CHARACTER_ENCODING_UTF_8 = "UTF-8";
@@ -43,6 +44,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
         project.getPluginManager().apply(JavaLibraryPlugin.class);
 
         JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
+        java.getToolchain().getLanguageVersion().set(JavaLanguageVersion.of(JAVA_RUNTIME_VERSION));
         java.setSourceCompatibility(JavaVersion.VERSION_1_8);
         java.setTargetCompatibility(JavaVersion.VERSION_1_8);
         java.withSourcesJar();
@@ -50,7 +52,7 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
 
         project.getTasks().withType(JavaCompile.class).configureEach(task -> {
             task.getOptions().setEncoding(CHARACTER_ENCODING_UTF_8);
-            task.getOptions().getRelease().set(JAVA_LANGUAGE_VERSION);
+            task.getOptions().getRelease().set(BYTECODE_VERSION);
         });
         configureJavadocs(project);
         configureTesting(project);
@@ -113,11 +115,11 @@ public final class Java8LibraryConventionsPlugin implements Plugin<Project> {
 
         JavaToolchainService toolchains =
                 project.getExtensions().getByType(JavaToolchainService.class);
-        org.gradle.api.provider.Provider<JavaLauncher> javaEightLauncher =
+        org.gradle.api.provider.Provider<JavaLauncher> javaLauncher =
                 toolchains.launcherFor(spec -> spec.getLanguageVersion()
-                        .set(JavaLanguageVersion.of(JAVA_LANGUAGE_VERSION)));
+                        .set(JavaLanguageVersion.of(JAVA_RUNTIME_VERSION)));
         project.getTasks().withType(Test.class).configureEach(task -> {
-            task.getJavaLauncher().convention(javaEightLauncher);
+            task.getJavaLauncher().convention(javaLauncher);
             task.useJUnitPlatform();
             task.setDefaultCharacterEncoding(CHARACTER_ENCODING_UTF_8);
             task.setFailFast(false);

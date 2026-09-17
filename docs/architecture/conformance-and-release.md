@@ -51,7 +51,7 @@ duplicated in this runtime dependency handoff.
 
 The root `artifact-manifest.json` uses schema
 `blue-development-maven-repository/1.0`. It declares `DEVELOPMENT` purpose,
-does not claim release readiness, records the actual Java 17 build JVM, and
+does not claim release readiness, records the actual Java 25 build JVM, and
 binds paths and hashes to the exact clean Git commit and tree, Contracts
 specification identity, Contracts fixture-package identity, and Contracts
 release identity. The manifest deliberately excludes its own byte identity;
@@ -66,7 +66,7 @@ parse/write entry points. The 185 Language and 295 Contracts fixture suites
 remain mandatory source conformance gates. The disposable publication task may
 delete only `build/staging-deploy`; it never deletes or overwrites the
 repository already handed to a downstream consumer. From a clean checkout,
-create an explicit commit-bound handoff repository with a Java 17 Gradle JVM:
+create an explicit commit-bound handoff repository with a Java 25 Gradle JVM:
 
 ```bash
 COMMIT=$(git rev-parse HEAD)
@@ -84,7 +84,7 @@ that all `blue.language` coordinates resolve from the handoff repository only.
 
 
 A local RC uses the same non-overwriting export task with an explicit
-`3.1.0-rc.N` version. It requires the exact clean source commit and Java 17,
+`3.1.0-rc.N` version. It requires the exact clean source commit and Java 25,
 and exports all seven published modules with runtime, sources, Javadoc and
 POM files. Its manifest uses `blue-local-rc-maven-repository/1.0` and
 `stagePurpose: LOCAL_RC`; development exports retain their existing schema
@@ -99,6 +99,17 @@ For example, after selecting a fresh RC coordinate:
   -PreleaseVersion=3.1.0-rc.24 \
   -PstagedDependencyRepository=/absolute/path/to/blue-local-rc-maven-repository
 ```
+
+Stable `3.1.0` verification uses the same clean-source and complete seven-module
+export rules with schema `blue-local-stable-maven-repository/1.0` and
+`stagePurpose: LOCAL_STABLE`. This is a local verification repository, not a
+publication or release-readiness claim. Existing RC/development schema names and
+source-binding rules remain unchanged; historical published manifests are not
+rewritten.
+
+All build, test, conformance and benchmark launchers now use Java 25. Published
+library class files remain Java 8 compatible through `javac --release 8`; that
+bytecode guarantee is distinct from executing the test suite on Java 8.
 
 ## Evidence is fail-closed
 
