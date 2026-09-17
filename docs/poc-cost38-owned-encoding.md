@@ -1,6 +1,8 @@
 # Cost38: preserve owned encoding evidence
 
-POC-only performance correction; verification pending on the combined candidate.
+POC-only performance correction. The final Language controls pass 49/49. The
+combined PostgreSQL long-graph and cold-restart check also passes; its latency
+target does not. This is not a release qualification.
 
 Problem: storage encoded a library-verified privately owned snapshot and then
 immediately decoded those bytes as wholly unknown input. Canonical BlueId path
@@ -20,5 +22,8 @@ Changes:
 Neither correction changes BlueIds, canonical bytes, gas, event order, logical
 operations or failure policy. Tests cover owned cyclic witness readback, mutable
 aliases, byte limits, eviction, tampering, escaped/empty/private indexed paths,
-and exact failure paths. Coordination and MyOS must then verify this same locally
-pinned artifact set. No library is published and no upstream PR is modified.
+and exact failure paths. The first control run detected missing enforcement of
+the disabled-call retention flag; production code was corrected and the original
+assertions passed unchanged. Final Language commit: `833aa953`. Coordination's
+relevant codec/failure/selection subset also passes 24/24 on that final artifact.
+No library is published and no upstream PR is modified.
