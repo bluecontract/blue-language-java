@@ -98,6 +98,11 @@ public final class PublicEventOccurrence {
         return event.event();
     }
 
+    /** Retains the original exact capability for processor-owned storage. */
+    ExactEventIdentityEvidence exactEventIdentityEvidence() {
+        return event;
+    }
+
     Map<String, Object> identityValue() {
         LinkedHashMap<String, Object> value =
                 new LinkedHashMap<String, Object>();

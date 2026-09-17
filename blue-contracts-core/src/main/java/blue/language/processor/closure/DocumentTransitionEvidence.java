@@ -85,7 +85,7 @@ public final class DocumentTransitionEvidence {
                 generalizationWrites);
     }
 
-    private DocumentTransitionEvidence(
+    DocumentTransitionEvidence(
             DocumentId documentId,
             String workOccurrenceIdentity,
             String beforeDocumentBlueId,
@@ -218,7 +218,7 @@ public final class DocumentTransitionEvidence {
         private final String beforeValueBlueId;
         private final String afterValueBlueId;
 
-        private AuthoredContractPatch(
+        AuthoredContractPatch(
                 Operation operation,
                 String path,
                 String authoredValueBlueId,
@@ -330,7 +330,7 @@ public final class DocumentTransitionEvidence {
         private final String valueBlueId;
         private final int requiringPatchIndex;
 
-        private GeneratedGeneralizationWrite(
+        GeneratedGeneralizationWrite(
                 String path,
                 String valueBlueId,
                 int requiringPatchIndex) {

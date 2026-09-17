@@ -1,6 +1,8 @@
 package blue.language.processor.closure;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.IdentityHashMap;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -24,6 +26,8 @@ public final class AffectedClosureSnapshot {
     private final List<DocumentId> publicRootDocumentIds;
     private final Map<DocumentId, ManagedDocumentSnapshot> documentsById;
     private final RootedWitnessFrame.State rootedWitnesses;
+    private volatile boolean verifiedStorageSnapshot;
+    private volatile boolean verifiedOwnedDerivedState;
 
     /**
      * Creates one closed authoritative affected-closure state.
@@ -74,6 +78,58 @@ public final class AffectedClosureSnapshot {
     }
 
     RootedWitnessFrame.State rootedWitnesses() { return rootedWitnesses; }
+
+    // Pure immutable-state verification only; never context, policy or publication authority.
+    boolean hasVerifiedStorageSnapshot() { return verifiedStorageSnapshot; }
+
+    // Derived-state proof is distinct from having been a parsed storage record.
+    boolean hasVerifiedOwnedState() { return verifiedStorageSnapshot || verifiedOwnedDerivedState; }
+
+    void acceptStorageVerification(AffectedClosureSnapshotStorageCodec.DecodedSnapshot certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Snapshot storage certificate names another or unverified value");
+        }
+        verifiedStorageSnapshot = true;
+    }
+
+    void acceptDerivedVerification(ClosureProcessResultStorageCodec.DerivedSnapshotVerification certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Derived snapshot certificate names another or unverified value");
+        }
+        verifiedOwnedDerivedState = true;
+    }
+
+    void acceptRetainedVerification(RootedPublicationProjection.RetainedSnapshotVerification certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Retained snapshot certificate names another or unverified value");
+        }
+        verifiedOwnedDerivedState = true;
+    }
+
+    void acceptProcessorVerification(ClosureProcessResult.ProcessorSnapshotVerification certificate) {
+        if (certificate == null || !certificate.certifies(this)) {
+            throw new IllegalArgumentException("Processor snapshot certificate names another value");
+        }
+        verifiedOwnedDerivedState = true;
+    }
+
+    boolean hasDetachedRepresentation() {
+        ArrayDeque<AffectedClosureSnapshot> pending = new ArrayDeque<>();
+        IdentityHashMap<AffectedClosureSnapshot, Boolean> visited = new IdentityHashMap<>();
+        pending.add(this);
+        while (!pending.isEmpty()) {
+            AffectedClosureSnapshot selected = pending.removeLast();
+            if (visited.put(selected, Boolean.TRUE) != null) continue;
+            for (ManagedDocumentSnapshot document : selected.managedDocuments) {
+                if (!document.hasDetachedStandardDocument()) return false;
+            }
+            for (ComponentSnapshot component : selected.components) {
+                if (!component.hasDetachedStandardProof()) return false;
+            }
+            if (selected.rootedWitnesses != null) pending.addAll(selected.rootedWitnesses.storedOriginals().values());
+        }
+        return true;
+    }
 
     ManagedDocumentGraph graph() {
         return ManagedDocumentGraph.fromBindings(documentsById.keySet(), occurrences, rootedWitnesses);

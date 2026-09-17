@@ -41,6 +41,8 @@ public final class ClosureCommitCompanion {
     private final boolean managedTransitionBindingPresent;
     private final ClosureEnvironment environment;
 
+    ClosureEnvironment storageEnvironment() { return environment; }
+
     /**
      * Creates and independently verifies a complete companion.
      *

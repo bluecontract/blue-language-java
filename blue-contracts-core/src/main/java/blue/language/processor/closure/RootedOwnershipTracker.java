@@ -79,7 +79,7 @@ final class RootedOwnershipTracker {
         final Map<DocumentId, AffectedClosureSnapshot> checkpointPredecessors;
         final Map<DocumentId, AffectedClosureSnapshot> checkpointSuccessors;
 
-        private Snapshot(RootedInvocationBinding binding, AffectedClosureSnapshot inputSnapshot, Set<DocumentId> owners,
+        Snapshot(RootedInvocationBinding binding, AffectedClosureSnapshot inputSnapshot, Set<DocumentId> owners,
                 List<AffectedClosureSnapshot> boundaries,
                 Map<DocumentId, AffectedClosureSnapshot> checkpointPredecessors,
                 Map<DocumentId, AffectedClosureSnapshot> checkpointSuccessors) {

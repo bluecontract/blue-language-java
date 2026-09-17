@@ -24,7 +24,7 @@ public final class ManagedOccurrenceEvidenceDemand
     private final long demandOrdinal;
     private final Node suppliedExactValue;
     // Runtime-issued authority is separate from the public canonical value.
-    // It is immutable, process-local, and bound to the complete verified input.
+    // It is immutable, processor-issued, and bound to the complete verified input.
     private final String emittedInvocationIdentity;
 
     /**
@@ -355,6 +355,23 @@ public final class ManagedOccurrenceEvidenceDemand
     boolean wasEmittedBy(String invocationIdentity) {
         return emittedInvocationIdentity != null
                 && emittedInvocationIdentity.equals(invocationIdentity);
+    }
+
+    /** Original capability marker; never derive it from public demand fields. */
+    String storageEmittedInvocationIdentity() { return emittedInvocationIdentity; }
+
+    /** Authenticated pinned host storage only, not external demand admission. */
+    static ManagedOccurrenceEvidenceDemand fromTrustedStorage(
+            String demandIdentity, String logicalCauseIdentity, String inputClosureIdentity,
+            long inputGraphGeneration, DocumentId sourceDocumentId, String sourcePath,
+            String declarationIdentity, String suppliedValueBlueId, long demandOrdinal,
+            Node suppliedExactValue, String emittedInvocationIdentity) {
+        return new ManagedOccurrenceEvidenceDemand(demandIdentity, logicalCauseIdentity,
+                inputClosureIdentity, inputGraphGeneration, sourceDocumentId, sourcePath,
+                declarationIdentity, suppliedValueBlueId, demandOrdinal, suppliedExactValue,
+                suppliedExactValue != null, emittedInvocationIdentity == null ? null
+                        : ClosureValueSupport.requireSha256Identity(emittedInvocationIdentity,
+                                "emittedInvocationIdentity"));
     }
 
     private static Node verifiedExactInlineValue(

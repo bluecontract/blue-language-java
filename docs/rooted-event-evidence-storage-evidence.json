@@ -1,0 +1,72 @@
+{
+  "schema": "blue-language-rooted-event-evidence-storage/1",
+  "scope": "Trusted event-capability and complete rooted terminal-result physical storage; not a full release or host recovery gate",
+  "baseCommit": "d2ce037d3a274d72f7475cba3eefee4e80e58483",
+  "worktree": "/Users/kamil/Documents/Projects/Blue/worktrees/rooted-event-evidence-storage",
+  "archiveRoot": "/Users/kamil/Documents/Projects/Blue/rooted-event-evidence-storage-evidence.SWTU1U",
+  "eventFormat": "blue-contracts/exact-event-identity-evidence-storage/1",
+  "resultFormat": "blue-contracts/closure-process-result-storage/2",
+  "normalExternalVerificationChanged": false,
+  "hostAuthenticationRequired": true,
+  "javaHome": "/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home",
+  "sourceCompatibility": "Existing blue.java8-library-conventions unchanged",
+  "reproduction": "Run run-focused.rb from the archive root with a new destination and the exact command retained in green-final/receipt.json, from this worktree with the recorded JAVA_HOME. It captures all tracked/untracked nonignored input hashes, current XML only, and exact tested-source archive.",
+  "red": {
+    "batch": "red",
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0,
+    "sourceStable": true,
+    "failuresProven": [
+      "Actual rooted processor result restored an event with different Frozen construction (expected byte0, actual1)",
+      "Genuinely admitted typed Source event field restoration invoked denying provider for parent5ZiF5FrC1JpGeeWCQrhnvg7DyKwFfvYvQFEKts8bwZmf"
+    ],
+    "receiptSha256": "b10a1761d6d6c9e2252d20f6ce61fa229707c8a68f06472c13e7aa5ac9eb2d20",
+    "junitSha256": "0eef70094b5149fc3b969a8559e6aa817221439cb3c1b4e8adcd679b691b0cac",
+    "testedSourceArchiveSha256": "db7fb0105bd684a4ab5f873354a906c9f46756ce22e2a978262e225b17f72345"
+  },
+  "developmentAttemptsNotAdditive": [
+    {"batch": "green-01", "tests": 32, "failures": 0, "note": "Passing original focused set before the requested full typed-handler control"},
+    {"batch": "typed-full", "tests": 1, "failures": 1, "note": "Fixture correctly rejected missing explicit custom imported registry identity"},
+    {"batch": "typed-full-02", "tests": 0, "note": "Fixture var declaration rejected by Java8 source compatibility; replaced with explicit type"},
+    {"batch": "typed-full-03", "tests": 1, "failures": 1, "note": "Fixture provider lacked handler/bundled runtime type content"},
+    {"batch": "typed-full-04", "tests": 1, "failures": 1, "note": "Fixture core-provider fallback needed its documented nullable miss handling"},
+    {"batch": "typed-full-05", "tests": 1, "failures": 0, "note": "Complete rooted typed Source plus semantic-admitted exact emission passes after producer closes"}
+  ],
+  "green": {
+    "batch": "green-final",
+    "startedUtc": "2026-09-11T02:19:05Z",
+    "finishedUtc": "2026-09-11T02:19:22Z",
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "javadoc": "PASS; unchanged production Javadoc also executed in green-01",
+    "sourceStable": true,
+    "inputCount": 3016,
+    "sourceManifestSha256": "4ac05921d465f0db3280a4f23f8ea5f7861b9b9454137cf016b6732662c38d98",
+    "receiptSha256": "36eaea0940303ce38eafce4c6d8cafd5e09036647e8e665cd91fab9ae2bae8f9",
+    "logSha256": "ef34e9d0f1a232fb0c696475f0a71b4d8eb687633df5dbde9f3b11499afe8a70",
+    "testedSourceArchiveSha256": "e403fc62495e831271e9ed38d83b0ecb1d6138cca74ac060c957f06276965c3c",
+    "suites": {
+      "ExactEventIdentityEvidenceStorageCodecTest": 5,
+      "ExactEventIdentityEvidenceTest": 8,
+      "ClosureEventStorageTest": 3,
+      "ClosureProcessResultStorageCodecTest": 4,
+      "RootedHistoricalWitnessTest": 4,
+      "ClosureAdmissionRejectionProcessorTest": 3,
+      "ManagedCheckpointSettlementOwnershipTest.rooted*": 6
+    },
+    "junitSha256": {
+      "ExactEventIdentityEvidenceStorageCodecTest": "6b257f744870a5f6c0cbf4f19fe1480654ef1a79c77a3cbec4b01ea278e7ebbd",
+      "ExactEventIdentityEvidenceTest": "6cc1ee27a63ed7ca3d8a4f331aff1aa56ae2876d31e6d4ce089b887677dd57da",
+      "ClosureEventStorageTest": "5acf802e684ecd931322b305270dfaa42dc05789c00f7a6e4c55fcc15432fa43",
+      "ClosureProcessResultStorageCodecTest": "60a3263456d331bf78aca606a46fa631cfe6bbb05005228649d364d90d76a2ab",
+      "RootedHistoricalWitnessTest": "7dd922622ab64ad4c0153f18105b0efb17203caf216069a13a5c45cf7ef8b03c",
+      "ClosureAdmissionRejectionProcessorTest": "97c7c86802815626edd5189bee43aef7a5efdb11aa74165dc5ec98c26198dc24",
+      "ManagedCheckpointSettlementOwnershipTest": "7f1f0738120fecaa8c8de605048469161237679d557a3c4dfb7c3c25959f0649"
+    }
+  },
+  "postGateChanges": "Only this compact evidence manifest; all 3016 tested input files remain byte-identical"
+}

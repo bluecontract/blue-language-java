@@ -272,6 +272,137 @@ final class RootedWitnessSelectionTest {
     }
 
     @Test
+    void selectedIndependentContextsSurviveColdStorageAndExactGasReexecution() {
+        // given
+        AffectedClosureSnapshotStorageCodec snapshots =
+                new AffectedClosureSnapshotStorageCodec(16 * 1024 * 1024, 128);
+        ClosureExecutionEvidenceStorageCodec executions =
+                new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+        ClosureProcessResultStorageCodec results =
+                new ClosureProcessResultStorageCodec(16 * 1024 * 1024, 128);
+        Fixture fixture;
+        Map<String, Node> exact = new LinkedHashMap<>();
+        byte[] selectedBytes, invocationBytes, resultBytes, tightBytes, failedBytes;
+        try (Runtime producer = new Runtime()) {
+            fixture = mixed(producer, false, false);
+            AffectedClosureSnapshot selected = select(fixture.input.snapshot(), D, fixture.newProof);
+            ClosureInvocationInput input = invocation(fixture, selected, 100_000L);
+            ClosureProcessResult result = complete(producer.process(input));
+            ClosureInvocationInput tight = invocation(fixture, selected, result.totalGas() - 1L);
+            ClosureProcessResult failed = producer.process(tight).processResult();
+            selectedBytes = snapshots.encode(selected);
+            invocationBytes = executions.encodeInvocation(input);
+            resultBytes = results.encode(result);
+            tightBytes = executions.encodeInvocation(tight);
+            failedBytes = results.encode(failed);
+            producer.exact.forEach((id, node) -> exact.put(id, node.clone()));
+        }
+        // when: the issuing processor/provider is closed before any decode.
+        AffectedClosureSnapshot restoredSnapshot = snapshots.decode(selectedBytes);
+        long snapshotHits = snapshots.acceptedByteStatistics().hits;
+        AffectedClosureSnapshot warmSnapshot = snapshots.decode(selectedBytes.clone());
+        assertEquals(snapshotHits + 1, snapshots.acceptedByteStatistics().hits);
+        assertNotSame(restoredSnapshot, warmSnapshot);
+        assertNotSame(restoredSnapshot.rootedWitnesses().storedOriginals().get(A),
+                warmSnapshot.rootedWitnesses().storedOriginals().get(A));
+        assertSelection(fixture, warmSnapshot);
+        assertArrayEquals(selectedBytes, snapshots.encode(warmSnapshot));
+        ClosureInvocationInput restoredInput = executions.decodeInvocation(invocationBytes);
+        ClosureInvocationInput restoredTight = executions.decodeInvocation(tightBytes);
+        ClosureProcessResult restoredResult = results.decode(resultBytes);
+        ClosureProcessResult restoredFailure = results.decode(failedBytes);
+        // The same real A11/D2/D14 and G-1 evidence also crosses the cold
+        // result-input proof handoff, without replacing any witness object.
+        for (byte[] storedResult : Arrays.asList(resultBytes, failedBytes)) {
+            AffectedClosureSnapshotStorageCodec coldSnapshots =
+                    new AffectedClosureSnapshotStorageCodec(16 * 1024 * 1024, 128);
+            try (SnapshotStorageCall proven = coldSnapshots.newCall();
+                    SnapshotStorageCall disabled = new SnapshotStorageCall(coldSnapshots, 0, 0)) {
+                ClosureProcessResult reused = results.decodeInCall(storedResult, proven);
+                ClosureProcessResult uncached = results.decodeInCall(storedResult, disabled);
+                assertEquals(1, proven.resultInputVerificationReuses());
+                assertEquals(0, proven.resultInputVerificationAttempts());
+                assertEquals(0, disabled.resultInputVerificationReuses());
+                assertEquals(1, disabled.resultInputVerificationAttempts());
+                assertNotSame(reused.storageInputSnapshot(), uncached.storageInputSnapshot());
+                assertSelection(fixture, reused.storageInputSnapshot());
+                assertSelection(fixture, uncached.storageInputSnapshot());
+                assertArrayEquals(storedResult, results.encodeInCall(reused, disabled));
+                assertArrayEquals(storedResult, results.encodeInCall(uncached, proven));
+                assertEquals(reused.gasTraceIdentity(), uncached.gasTraceIdentity());
+                assertEquals(reused.managedTransitionReceiptsIdentity(), uncached.managedTransitionReceiptsIdentity());
+                assertTrue(proven.retainedVerifications() <= 32);
+                assertTrue(proven.peakEntries() <= 32);
+                assertTrue(proven.peakBytes() <= 8 * 1024 * 1024);
+            }
+        }
+        // Repeated result envelopes may share a decoded root object, but must
+        // preserve the complete independent/nested witness DAG's wire aliases.
+        try (SnapshotStorageCall reuse = snapshots.newCall();
+                SnapshotStorageCall disabled = new SnapshotStorageCall(snapshots, 0, 0)) {
+            ClosureProcessResult reused = results.decodeInCall(resultBytes, reuse);
+            ClosureProcessResult uncached = results.decodeInCall(resultBytes, disabled);
+            assertTrue(reuse.decodeHits() > 0, "The real historical result exercises repeated nested envelopes");
+            assertTrue(reuse.encodeHits() > 0);
+            assertTrue(reuse.verificationAttempts() < disabled.verificationAttempts());
+            assertSelection(fixture, reused.storageInputSnapshot());
+            assertSelection(fixture, reused.rootedProjection().resultingSnapshot());
+            assertArrayEquals(resultBytes, results.encodeInCall(reused, disabled));
+            assertArrayEquals(resultBytes, results.encodeInCall(uncached, reuse));
+            assertArrayEquals(failedBytes, results.encodeInCall(results.decodeInCall(failedBytes, reuse), disabled));
+        }
+        long resultHits = snapshots.acceptedByteStatistics().hits;
+        try (SnapshotStorageCall warm = snapshots.newCall();
+                SnapshotStorageCall disabled = new SnapshotStorageCall(snapshots, 0, 0)) {
+            ClosureProcessResult warmResult = results.decodeInCall(resultBytes, warm);
+            assertNotSame(restoredResult.storageInputSnapshot(), warmResult.storageInputSnapshot());
+            assertSelection(fixture, warmResult.storageInputSnapshot());
+            assertSelection(fixture, warmResult.rootedProjection().resultingSnapshot());
+            assertArrayEquals(resultBytes, results.encodeInCall(warmResult, disabled));
+        }
+        assertTrue(snapshots.acceptedByteStatistics().hits > resultHits,
+                "The complete independent-witness result exercises cross-call accepted bytes");
+        long failureHits = snapshots.acceptedByteStatistics().hits;
+        try (SnapshotStorageCall warm = snapshots.newCall();
+                SnapshotStorageCall disabled = new SnapshotStorageCall(snapshots, 0, 0)) {
+            ClosureProcessResult warmFailure = results.decodeInCall(failedBytes, warm);
+            assertNotSame(restoredFailure.storageInputSnapshot(), warmFailure.storageInputSnapshot());
+            assertEquals(restoredFailure.gasTraceIdentity(), warmFailure.gasTraceIdentity());
+            assertEquals(restoredFailure.rejectedCharge().rejectedChargeIdentity(), warmFailure.rejectedCharge().rejectedChargeIdentity());
+            assertArrayEquals(failedBytes, results.encodeInCall(warmFailure, disabled));
+            rollback(restoredTight, warmFailure);
+        }
+        assertTrue(snapshots.acceptedByteStatistics().hits > failureHits, "The G-1 result uses accepted bytes without result reuse");
+        // then: A11 still refers to D2 while the independently selected primary is D14.
+        assertSelection(fixture, restoredSnapshot);
+        assertSelection(fixture, restoredInput.snapshot());
+        assertSelection(fixture, restoredResult.rootedProjection().resultingSnapshot());
+        assertEquals(11L, restoredSnapshot.managedDocument(A).epoch());
+        assertEquals(14L, restoredSnapshot.managedDocument(D).epoch());
+        assertEquals(fixture.oldProof.managedDocument(D).blueId(),
+                row(restoredSnapshot, A, "/d").expectedTargetBlueId());
+        assertFalse(restoredSnapshot.graph().hasEdge(A, D));
+        assertEquals(Collections.singletonList(ROOT), restoredResult.rootedProjection().ownedDocumentIds());
+        assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED, restoredFailure.status());
+        assertNull(restoredFailure.rootedProjection());
+        assertNotNull(restoredFailure.rejectedCharge());
+        rollback(restoredTight, restoredFailure);
+        assertArrayEquals(selectedBytes, snapshots.encode(restoredSnapshot));
+        assertArrayEquals(invocationBytes, executions.encodeInvocation(restoredInput));
+        assertArrayEquals(resultBytes, results.encode(restoredResult));
+        assertArrayEquals(failedBytes, results.encode(restoredFailure));
+        try (Runtime consumer = new Runtime()) {
+            exact.forEach((id, node) -> consumer.exact.put(id, node.clone()));
+            ClosureProcessResult repeated = complete(consumer.process(restoredInput));
+            ClosureProcessResult repeatedFailure = consumer.process(restoredTight).processResult();
+            assertArrayEquals(resultBytes, results.encode(repeated),
+                    "Cold PROCESS must retain complete receipts, events, context, owners and gas trace");
+            assertArrayEquals(failedBytes, results.encode(repeatedFailure),
+                    "The same tight budget must preserve the rejected charge and rollback trace");
+        }
+    }
+
+    @Test
     void prospectiveBirthRetryPreservesSelectionAndReplaysTheOwnerPrefixOnlyOnce() {
         // given
         try (Runtime runtime = new Runtime()) {

@@ -29,8 +29,10 @@ public final class RootedPublicationProjection {
     private final List<PublicEventOccurrence> ownedPublicEvents;
     private final List<SubscriptionDelta> ownedSubscriptionDeltas;
     private final java.util.Map<DocumentId, String> checkpointReferenceProofs;
+    private final RootedOwnershipTracker.Snapshot storageOwnership;
 
     RootedPublicationProjection(ClosureProcessResult result, RootedOwnershipTracker.Snapshot ownership) {
+        this.storageOwnership = ownership;
         if (!result.commits() || result.commitCompanion() == null || ownership.boundaries.isEmpty()) {
             throw new IllegalArgumentException("Rooted publication requires a complete successful execution");
         }
@@ -56,18 +58,25 @@ public final class RootedPublicationProjection {
         }
         this.ownedDocuments = Collections.unmodifiableList(owned);
         this.embeddedViewDocuments = Collections.unmodifiableList(embedded);
-        List<ManagedDocumentSnapshot> calculated = new ArrayList<>();
-        List<DocumentId> publicRoots = new ArrayList<>();
-        for (ResultingDocument document : result.resultingDocuments()) {
-            calculated.add(new ManagedDocumentSnapshot(document.documentId(), document.afterBlueId(),
-                    document.document(), document.initialized(), document.terminated(), document.publicRoot(),
-                    document.epoch(), document.componentGeneration()));
-            if (document.publicRoot()) publicRoots.add(document.documentId());
+        RootedWitnessFrame.State outputWitnesses = ownership.boundaries.get(ownership.boundaries.size() - 1).rootedWitnesses();
+        AffectedClosureSnapshot verifiedOutput = result.storageVerifiedOutput();
+        if (verifiedOutput != null && verifiedOutput.hasVerifiedOwnedState()
+                && verifiedOutput.rootedWitnesses() == outputWitnesses) {
+            this.resultingSnapshot = verifiedOutput;
+        } else {
+            List<ManagedDocumentSnapshot> calculated = new ArrayList<>();
+            List<DocumentId> publicRoots = new ArrayList<>();
+            for (ResultingDocument document : result.resultingDocuments()) {
+                calculated.add(new ManagedDocumentSnapshot(document.documentId(), document.afterBlueId(),
+                        document.document(), document.initialized(), document.terminated(), document.publicRoot(),
+                        document.epoch(), document.componentGeneration()));
+                if (document.publicRoot()) publicRoots.add(document.documentId());
+            }
+            this.resultingSnapshot = new AffectedClosureSnapshot(result.outputClosureIdentity(), result.graphGeneration(), calculated,
+                    result.occurrenceBindings(), result.occurrenceBindingSetIdentity(), result.resultingComponents(), publicRoots,
+                    outputWitnesses);
+            ClosureEvidenceVerifier.verifySnapshot(resultingSnapshot);
         }
-        this.resultingSnapshot = new AffectedClosureSnapshot(result.outputClosureIdentity(), result.graphGeneration(), calculated,
-                result.occurrenceBindings(), result.occurrenceBindingSetIdentity(), result.resultingComponents(), publicRoots,
-                ownership.boundaries.get(ownership.boundaries.size() - 1).rootedWitnesses());
-        ClosureEvidenceVerifier.verifySnapshot(resultingSnapshot);
         if (!resultingSnapshot.closureIdentity().equals(result.outputClosureIdentity())) {
             throw new IllegalArgumentException("Rooted projection differs from the complete computed result");
         }
@@ -133,6 +142,8 @@ public final class RootedPublicationProjection {
      * @return frozen context */
     public RootedProcessingContext context() { return context; }
 
+    RootedOwnershipTracker.Snapshot storageOwnership() { return storageOwnership; }
+
     /** Returns the exact receiving/cause identity.
      * @return delivery identity */
     public String deliveryBasisIdentity() { return deliveryBasisIdentity; }
@@ -185,6 +196,11 @@ public final class RootedPublicationProjection {
     public AffectedClosureSnapshot resultingSnapshot() { return resultingSnapshot; }
 
     AffectedClosureSnapshot retainedSnapshot(java.util.Map<DocumentId, Long> epochs) {
+        return retainedSnapshot(epochs, null);
+    }
+
+    // Package-only observation of ordinary verification when source ownership is absent.
+    AffectedClosureSnapshot retainedSnapshot(java.util.Map<DocumentId, Long> epochs, Runnable beforeFullVerification) {
         if (epochs == null || !epochs.keySet().equals(new java.util.HashSet<>(ownedDocumentIds)))
             throw new IllegalArgumentException("Retained positions must cover exactly the derived owners");
         List<ManagedDocumentSnapshot> documents = new ArrayList<>();
@@ -206,8 +222,24 @@ public final class RootedPublicationProjection {
                 ClosureIdentityService.INSTANCE.affectedClosureIdentity(provisional), source.graphGeneration(),
                 documents, source.occurrences(), source.occurrenceBindingSetIdentity(), source.components(),
                 source.publicRootDocumentIds(), source.rootedWitnesses());
-        ClosureEvidenceVerifier.verifySnapshot(retained);
+        // Pure snapshot verification reads bodies, graph/bindings, components,
+        // witness proofs and marker flags, never document epochs. This exact
+        // factory changes only bounded owner epochs. Constructors above still
+        // enforce all witness positions and the closure identity is recomputed.
+        if (source.hasVerifiedOwnedState()) {
+            retained.acceptRetainedVerification(new RetainedSnapshotVerification(source, retained));
+        } else ClosureEvidenceVerifier.verifySnapshot(retained, beforeFullVerification);
         return retained;
+    }
+
+    /** Exact owned-source, epoch-only derivation; never a generic successful-verification certificate. */
+    static final class RetainedSnapshotVerification {
+        private final AffectedClosureSnapshot subject;
+        private RetainedSnapshotVerification(AffectedClosureSnapshot source, AffectedClosureSnapshot subject) {
+            if (!source.hasVerifiedOwnedState()) throw new IllegalArgumentException("Retained epoch proof requires an owned verified source");
+            this.subject = subject;
+        }
+        boolean certifies(AffectedClosureSnapshot selected) { return subject == selected; }
     }
 
     /** Returns complete owned components, never partial cyclic proofs.

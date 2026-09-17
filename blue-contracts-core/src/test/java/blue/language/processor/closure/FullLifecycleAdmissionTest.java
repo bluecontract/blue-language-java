@@ -1,5 +1,8 @@
 package blue.language.processor.closure;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.identity.CyclicMemberFinalization;
 import blue.language.identity.CyclicSetFinalization;
@@ -1508,6 +1511,16 @@ final class FullLifecycleAdmissionTest {
         assertManagedRevisionReceiptEventRetirement(true, true);
     }
 
+    @Test
+    void storedManagedRevisionRetryRetainsItsExactOriginalInputAndResult() {
+        assertManagedRevisionReceiptEventRetirement(true, true, true);
+    }
+
+    @Test
+    void storedManagedRevisionRetryPreservesAbsentOptionalInlineDemandValue() {
+        assertManagedRevisionReceiptEventRetirement(true, true, true, true);
+    }
+
     private static void assertManagedRevisionReceiptEventRetirement(
             boolean intermediateEpoch) {
         assertManagedRevisionReceiptEventRetirement(intermediateEpoch, false);
@@ -1516,6 +1529,16 @@ final class FullLifecycleAdmissionTest {
     private static void assertManagedRevisionReceiptEventRetirement(
             boolean intermediateEpoch,
             boolean retarget) {
+        assertManagedRevisionReceiptEventRetirement(intermediateEpoch, retarget, false);
+    }
+
+    private static void assertManagedRevisionReceiptEventRetirement(
+            boolean intermediateEpoch, boolean retarget, boolean storeRetry) {
+        assertManagedRevisionReceiptEventRetirement(intermediateEpoch, retarget, storeRetry, false);
+    }
+
+    private static void assertManagedRevisionReceiptEventRetirement(
+            boolean intermediateEpoch, boolean retarget, boolean storeRetry, boolean absentInline) {
         ProbeProcessor probe = new ProbeProcessor();
         Node authoredChild = new Node()
                 .name("Self-retiring retained source")
@@ -1754,8 +1777,66 @@ final class FullLifecycleAdmissionTest {
                     assertTrue(unused.getMessage().contains("unused"));
                     assertEquals(BigInteger.ZERO,
                             input.snapshot().managedDocument(A).document().get("/deliveries"));
-                    attempt = contracts.processClosureRetry(ClosureProcessRetryInput.derived(
-                            input, Collections.singletonList(exact)));
+                    ClosureProcessRetryInput retry = ClosureProcessRetryInput.derived(input, Collections.singletonList(exact));
+                    ClosureExecutionEvidenceStorageCodec storage = new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+                    if (storeRetry) {
+                        int calls = probe.executionCount;
+                        ClosureProcessRetryInput retryProducer = retry;
+                        ClosureAttemptResult baseSuspension = attempt;
+                        assertThrows(IllegalArgumentException.class, () -> storage.encodeAttempt(input,
+                                retryProducer, baseSuspension, demand), "The base suspension was not emitted by a retry");
+                        ClosureExecutionEvidenceStorageCodec.StoredAttempt cold = storage.decodeAttempt(storage.encodeAttempt(input, null, attempt, demand));
+                        assertEquals(calls, probe.executionCount, "Restoration does not execute the source or parent");
+                        assertSame(cold.attempt().resourceDemands().get(0), cold.selectedDemand());
+                        retry = ClosureProcessRetryInput.derived(cold.input(), Collections.singletonList(
+                                ManagedOccurrenceEvidenceResolution.derived((ManagedOccurrenceEvidenceDemand) cold.selectedDemand(), C, 1L)));
+                        assertEquals(exact.resolutionIdentity(), retry.resolutions().get(0).resolutionIdentity());
+                    }
+                    if (absentInline) {
+                        ManagedOccurrenceEvidenceDemand original = retry.resolutions().get(0).demand();
+                        ManagedOccurrenceEvidenceDemand canonical = new ManagedOccurrenceEvidenceDemand(original.demandIdentity(),
+                                original.logicalCauseIdentity(), original.inputClosureIdentity(), original.inputGraphGeneration(),
+                                original.sourceDocumentId(), original.sourcePath(), original.processEmbeddedDeclarationIdentity(),
+                                original.suppliedValueBlueId(), original.demandOrdinal());
+                        assertEquals(original, canonical);
+                        assertFalse(canonical.suppliedExactValue().isPresent());
+                        assertFalse(canonical.wasEmittedBy(input.invocationIdentity()), "Canonical resolution data is not birth authority");
+                        retry = ClosureProcessRetryInput.derived(retry.baseInvocation(), Collections.singletonList(
+                                ManagedOccurrenceEvidenceResolution.derived(canonical, C, 1L)));
+                    }
+                    if (storeRetry) {
+                        int calls = probe.executionCount;
+                        byte[] prepared = storage.encodeRetry(retry);
+                        ClosureProcessRetryInput coldRetry = storage.decodeRetry(prepared);
+                        assertEquals(calls, probe.executionCount, "A prepared retry has no executed attempt to recreate");
+                        assertArrayEquals(prepared, storage.encodeRetry(coldRetry));
+                        assertArrayEquals(storage.encodeInvocation(retry.baseInvocation()), storage.encodeInvocation(coldRetry.baseInvocation()));
+                        assertEquals(retry.retryInvocationIdentity(), coldRetry.retryInvocationIdentity());
+                        assertEquals(retry.resolutionSetIdentity(), coldRetry.resolutionSetIdentity());
+                        assertThrows(IllegalArgumentException.class, () -> storage.decodeAttempt(prepared));
+                        assertThrows(IllegalArgumentException.class, () -> storage.decodeRetry(storage.encodeInvocation(input)));
+                        if (absentInline) {
+                            assertFalse(coldRetry.resolutions().get(0).demand().suppliedExactValue().isPresent());
+                            assertFalse(coldRetry.resolutions().get(0).demand().wasEmittedBy(input.invocationIdentity()));
+                        }
+                        retry = coldRetry;
+                    }
+                    attempt = contracts.processClosureRetry(retry);
+                    if (storeRetry) {
+                        int calls = probe.executionCount;
+                        ClosureExecutionEvidenceStorageCodec.StoredAttempt cold = storage.decodeAttempt(
+                                storage.encodeAttempt(retry.baseInvocation(), retry, attempt, null));
+                        assertEquals(calls, probe.executionCount);
+                        assertEquals(retry.retryInvocationIdentity(), cold.retry().retryInvocationIdentity());
+                        assertEquals(retry.resolutionSetIdentity(), cold.retry().resolutionSetIdentity());
+                        if (absentInline) {
+                            assertFalse(cold.retry().resolutions().get(0).demand().suppliedExactValue().isPresent());
+                            assertFalse(cold.retry().resolutions().get(0).demand().wasEmittedBy(input.invocationIdentity()));
+                            assertFalse(cold.attempt().processResult().storageResolutions().get(0).demand().suppliedExactValue().isPresent());
+                        }
+                        ClosureProcessResultStorageCodec resultStorage = new ClosureProcessResultStorageCodec(16 * 1024 * 1024, 128);
+                        assertArrayEquals(resultStorage.encode(attempt.processResult()), resultStorage.encode(cold.attempt().processResult()));
+                    }
                 }
             }
 

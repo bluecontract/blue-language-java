@@ -1,5 +1,7 @@
 package blue.language.processor.closure;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.identity.CyclicSetFinalization;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -63,8 +65,23 @@ final class ManagedCheckpointSettlementOwnershipTest {
     @Test
     void numberedTailDoesNotSkipActualReturnToTheNumberedAnchor() { numberedTail(true); }
 
+    @Test
+    void storedHistoricalInputsRetainCompleteRepresentationProvenance() { numberedTail(false, true); }
+
+    @Test
+    void differentStoredRepresentationCausesReuseTheirCompleteOriginalResult() { numberedTail(false, false, true); }
+
     private void numberedTail(boolean repeatedIdentity) {
+        numberedTail(repeatedIdentity, false);
+    }
+
+    private void numberedTail(boolean repeatedIdentity, boolean storeInputs) {
+        numberedTail(repeatedIdentity, storeInputs, false);
+    }
+
+    private void numberedTail(boolean repeatedIdentity, boolean storeInputs, boolean verifyResultReuse) {
         try (Fixture fixture = new Fixture(true)) {
+            fixture.storeInputs = storeInputs;
             Node b = fixture.root("b", "attach", false);
             b.getContracts().properties("embedded", embedded("/peer"));
             Node a = fixture.root("a", "assign", false);
@@ -142,8 +159,10 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     occurrence.occurrenceIdentity(), epoch - 1L, epoch,
                     result(numberedAnchor, A).document(), anchor, null);
             assertFalse(originalNumbered.successorRepresentationCause().isPresent());
-            ManagedRepresentationCause first = new ManagedRepresentationCause(occurrence.occurrenceIdentity(),
-                    positions.get(0), targetPosition, null, null);
+            ManagedRepresentationCause first = (ManagedRepresentationCause) fixture.storedCause(
+                    new ManagedRepresentationCause(occurrence.occurrenceIdentity(), positions.get(0), targetPosition, null, null));
+            if (verifyResultReuse) ClosureResultStorageReuseTest.assertDifferentCausesShareResult(first,
+                    new ManagedRepresentationCause(hash('f'), positions.get(0), targetPosition, null, null));
             ManagedRevisionCause carrier = originalNumbered.withSuccessorRepresentationCause(first);
             assertNotEquals(originalNumbered.causeIdentity(), carrier.causeIdentity());
             assertEquals(ProcessingCause.Kind.MANAGED_REVISION, carrier.kind());
@@ -154,11 +173,11 @@ final class ManagedCheckpointSettlementOwnershipTest {
             assertThrows(IllegalStateException.class, () -> carrier.withSuccessorRepresentationCause(first));
             final String occurrenceId = occurrence.occurrenceIdentity();
             assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
-                    new ManagedRepresentationCause(occurrenceId, positions.get(1), targetPosition, null, null)));
+                    (ManagedRepresentationCause) fixture.storedCause(new ManagedRepresentationCause(occurrenceId, positions.get(1), targetPosition, null, null))));
             assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
-                    new ManagedRepresentationCause(hash('f'), positions.get(0), targetPosition, null, null)));
+                    (ManagedRepresentationCause) fixture.storedCause(new ManagedRepresentationCause(hash('f'), positions.get(0), targetPosition, null, null))));
             assertThrows(IllegalArgumentException.class, () -> originalNumbered.withSuccessorRepresentationCause(
-                    new ManagedRepresentationCause(occurrenceId, positions.get(0), targetPosition, hash('f'), null)));
+                    (ManagedRepresentationCause) fixture.storedCause(new ManagedRepresentationCause(occurrenceId, positions.get(0), targetPosition, hash('f'), null))));
             final AffectedClosureSnapshot beforeNumbered = snapshot;
             try (Fixture legacy = new Fixture()) {
                 assertThrows(IllegalArgumentException.class, () -> ClosureEvidenceFactory.processClosure(
@@ -855,6 +874,9 @@ final class ManagedCheckpointSettlementOwnershipTest {
 
     private static void assertActualCheckpointReference(Run run, int references) {
         assertSuccess(run);
+        ClosureProcessResult stored = ClosureProcessResultStorageCodecTest.assertRoundTrip(run.result);
+        assertEquals(run.result.rootedProjection().checkpointReferenceProofIdentity(A),
+                stored.rootedProjection().checkpointReferenceProofIdentity(A));
         assertNotNull(run.result.rootedProjection());
         assertEquals(Collections.singletonList(A), run.result.rootedProjection().ownedDocumentIds());
         assertEquals(Collections.singletonList(B), run.input.directDeliveries().stream()
@@ -878,6 +900,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
     }
 
     private static final class Fixture implements AutoCloseable {
+        private boolean storeInputs;
         private final Map<String, Node> exact = new LinkedHashMap<>();
         private final ProbeProcessor probe = new ProbeProcessor();
         private final DocumentProcessor owner;
@@ -1075,6 +1098,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     ClosureEvidenceFactory.executionPolicy(100_000L, Collections.emptyMap(), "representation-return-v1"), environment);
             Capture capture = new Capture();
             ClosureAttemptResult attempt;
+            input = storedInput(input);
             try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
                 attempt = contracts.processClosure(input);
                 if (historicalEpoch != null) {
@@ -1090,6 +1114,7 @@ final class ManagedCheckpointSettlementOwnershipTest {
                             snapshot.components(), snapshot.publicRootDocumentIds());
                     input = ClosureEvidenceFactory.processClosure(expanded, cause, input.directDeliveries(),
                             input.executionPolicy(), environment);
+                    input = storedInput(input);
                     attempt = contracts.processClosure(input);
                 }
             }
@@ -1101,11 +1126,37 @@ final class ManagedCheckpointSettlementOwnershipTest {
             ClosureInvocationInput input = ClosureEvidenceFactory.processClosure(snapshot, cause, Collections.emptyList(),
                     ClosureEvidenceFactory.executionPolicy(100_000L, Collections.emptyMap(), "representation-return-v1"), environment);
             Capture capture = new Capture();
+            input = storedInput(input);
             try (BlueClosureContracts contracts = new BlueClosureContracts(owner, capture)) {
                 ClosureAttemptResult attempt = contracts.processClosure(input);
                 assertTrue(attempt.isComplete());
                 return new Run(input, attempt.processResult(), capture.evidence);
             }
+        }
+
+        private ClosureInvocationInput storedInput(ClosureInvocationInput input) {
+            if (!storeInputs) return input;
+            ClosureExecutionEvidenceStorageCodec codec = new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+            assertEquals(input.cause().causeIdentity(), storedCause(input.cause()).causeIdentity());
+            byte[] bytes = codec.encodeInvocation(input);
+            ClosureInvocationInput restored = codec.decodeInvocation(bytes);
+            assertArrayEquals(bytes, codec.encodeInvocation(restored));
+            assertEquals(input.cause().causeIdentity(), restored.cause().causeIdentity());
+            assertEquals(input.invocationIdentity(), restored.invocationIdentity());
+            return restored;
+        }
+
+        private ProcessingCause storedCause(ProcessingCause cause) {
+            if (!storeInputs) return cause;
+            int calls = probe.calls.size();
+            ClosureExecutionEvidenceStorageCodec codec = new ClosureExecutionEvidenceStorageCodec(16 * 1024 * 1024, 128);
+            byte[] bytes = codec.encodeProcessingCause(cause);
+            ProcessingCause restored = codec.decodeProcessingCause(bytes);
+            assertArrayEquals(bytes, codec.encodeProcessingCause(restored));
+            assertEquals(cause.causeIdentity(), restored.causeIdentity());
+            assertEquals(calls, probe.calls.size(), "A future historical cause is restored without applying it");
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeResourceDemand(bytes));
+            return restored;
         }
 
         private AffectedClosureSnapshot after(ClosureProcessResult result) {

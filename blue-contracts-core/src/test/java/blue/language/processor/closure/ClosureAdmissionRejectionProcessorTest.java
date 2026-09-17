@@ -244,6 +244,8 @@ final class ClosureAdmissionRejectionProcessorTest {
             ClosureProcessResult result,
             long totalGas,
             ProcessorErrorCategory category) {
+        ClosureProcessResult restored = ClosureProcessResultStorageCodecTest.assertRoundTrip(result);
+        assertNotNull(restored.storageRejectedCandidate());
         assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
                 result.status());
         assertFalse(result.commits());

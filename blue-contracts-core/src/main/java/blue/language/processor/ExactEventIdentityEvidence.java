@@ -138,6 +138,22 @@ public final class ExactEventIdentityEvidence {
                 admitted.frozenValue(), admitted.blueId());
     }
 
+    /** Restores invocation-issued evidence selected by authenticated host storage, not external Source. */
+    static ExactEventIdentityEvidence fromTrustedStorage(FrozenNode event, String eventBlueId) {
+        ExactEventIdentityEvidence restored = new ExactEventIdentityEvidence(event, eventBlueId);
+        // These consistency checks need no provider or Source canonicalization.
+        // A materialized nominal type can have a different Language-owned Source
+        // identity; its original admitted pair remains the pinned host's evidence.
+        if (event.isReferenceOnly() || event.isStrictCanonical()
+                && !BlueIds.hasCyclicMemberSeparator(eventBlueId)
+                && !CanonicalIdentityEvidence.requiresEffectiveTypeIdentity(event.toNode())) {
+            if (!eventBlueId.equals(event.blueId())) {
+                throw new IllegalArgumentException("Stored event identity differs from its exact frozen value");
+            }
+        }
+        return restored;
+    }
+
     /** Carries ordinary Source evidence just established by this processor. */
     static ExactEventIdentityEvidence fromVerifiedSource(
             Node exactEvent,

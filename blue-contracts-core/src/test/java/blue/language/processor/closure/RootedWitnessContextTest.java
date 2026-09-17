@@ -145,6 +145,7 @@ final class RootedWitnessContextTest {
             Expansion values = mixed(runtime, false);
             ClosureInvocationInput expanded = values.prepare(values.proofs);
             ClosureProcessResult result = complete(runtime.process(expanded));
+            DecodedResultDerivedSnapshotVerificationTest.assertHistoricalEpochTransfer(result);
             assertEquals(Collections.singletonList(ROOT), result.rootedProjection().ownedDocumentIds());
             assertEquals(1L, ((Number) result.rootedProjection().resultingSnapshot()
                     .managedDocument(ROOT).document().getNode("/count").getValue()).longValue());
