@@ -1,88 +1,30 @@
-name: Build and validate
+name: Check existing RC28 Maven Central status
 
 on:
   push:
     branches:
-      - master
-      - next
-      - 'codex/*'
-      - 'feature/*'
-      - 'fix/*'
-      - 'hotfix/*'
-      - 'release/*'
-  pull_request:
-    branches:
-      - master
-      - next
+      - codex/language-rc28-status-check
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  prepare:
-    uses: ./.github/workflows/prepare-verification-source.yml
-    with:
-      mode: existing
-      scope: build
-  transitions:
-    needs: prepare
-    uses: ./.github/workflows/transition-verification.yml
-    with:
-      scope: build
-      commit: ${{ needs.prepare.outputs.commit }}
-      tree: ${{ needs.prepare.outputs.tree }}
-      prepared: ${{ needs.prepare.outputs.prepared }}
-      source-attempt: ${{ needs.prepare.outputs.attempt }}
-
-  Build:
-    needs: prepare
+  status:
+    name: Read existing RC28 deployment status
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      CI: true
-      BLUE_CI_DISTRIBUTED: verified-source
-      BLUE_CI_SCOPE: build
-      BLUE_CI_COMMIT: ${{ needs.prepare.outputs.commit }}
-      BLUE_CI_TREE: ${{ needs.prepare.outputs.tree }}
-      BLUE_CI_SOURCE_ATTEMPT: ${{ needs.prepare.outputs.attempt }}
-      BLUE_CI_PREPARED: ${{ needs.prepare.outputs.prepared }}
-      BLUE_CI_SOURCE: ${{ github.workspace }}/../verification-source
-      CI_TRANSITION_RECEIPTS: ${{ github.workspace }}/../transition-receipts
+    timeout-minutes: 3
+    environment: rc-release
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/verification-setup
-      - name: Build and run local checks
-        uses: ./.github/actions/verify-core
+      - uses: actions/setup-python@v5
         with:
-          phase: build
-
-      - name: Wait for transition verification
+          python-version: '3.12'
+      - name: Confirm existing deployment publication (status API only)
         env:
-          GH_TOKEN: ${{ github.token }}
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
         run: |
-          node .github/scripts/ci-verification-source.js check
-          node .github/scripts/ci-verification-gate.js
-
-      - name: Archive test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.run_attempt }}
-          path: |
-            build/reports
-            build/test-results
-            blue-*/build/reports
-            blue-*/build/test-results
-            examples/build/reports
-            examples/build/test-results
-            build-logic/build/reports
-            smoke-tests/published/build/reports
-      - name: Archive libs
-        uses: actions/upload-artifact@v4
-        with:
-          name: libs-${{ github.run_attempt }}
-          path: blue-*/build/libs
+          printf '%s\n' 'deployMavenCentralSonatypeDeploymentId=4b5b2451-c22f-4f8e-841f-1e08b1b714ec' > "$RUNNER_TEMP/rc28-submitted.properties"
+          timeout 120s python3 .github/scripts/wait-maven-central.py "$RUNNER_TEMP/rc28-submitted.properties" --receipt "$RUNNER_TEMP/rc28-published.json"
