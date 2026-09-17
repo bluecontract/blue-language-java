@@ -18,6 +18,8 @@ runs:
         java-version: '25'
         distribution: corretto
     - uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: true
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'

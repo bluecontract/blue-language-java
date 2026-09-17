@@ -12,7 +12,8 @@ runs:
       run: node .github/scripts/ci-verification-source.js check
     - name: Execute clean Gradle build
       shell: bash
-      run: ./gradlew --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
+      run: |
+        python .github/scripts/measure-forks.py "$RUNNER_TEMP/fork-experiment" -- ./gradlew --no-daemon --no-build-cache --no-parallel --max-workers=4 --init-script .github/scripts/ci-transition-receipts.init.gradle --init-script .github/scripts/four-jvms.init.gradle clean build
     - name: Execute RC verification
       if: inputs.release == 'true'
       shell: bash

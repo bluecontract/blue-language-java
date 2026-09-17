@@ -1,0 +1,18 @@
+// Measurement-only override. Never changes production defaults or JUnit method parallelism.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    if (!new File(root.projectDir, '.github/scripts/ci-transition-verification.js').isFile()) return
+    def forks = Integer.parseInt(System.getenv('BLUE_EXPERIMENT_FORKS'))
+    if (!(forks in [1, 4]) || gradle.startParameter.maxWorkerCount != 4) {
+        throw new GradleException('Fork experiment requires 1 or 4 forks and exactly 4 Gradle workers')
+    }
+    root.allprojects { project ->
+        project.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { task ->
+            task.maxParallelForks = forks
+            task.systemProperty('junit.jupiter.execution.parallel.enabled', 'false')
+            task.doFirst {
+                logger.lifecycle("FORK_EXPERIMENT ${task.path} forks=${task.maxParallelForks} methods=${task.systemProperties['junit.jupiter.execution.parallel.enabled']} heap=${task.maxHeapSize}")
+            }
+        }
+    }
+}

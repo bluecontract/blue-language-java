@@ -2,18 +2,7 @@ name: Build and validate
 
 on:
   push:
-    branches:
-      - master
-      - next
-      - 'codex/*'
-      - 'feature/*'
-      - 'fix/*'
-      - 'hotfix/*'
-      - 'release/*'
-  pull_request:
-    branches:
-      - master
-      - next
+    branches: [codex/ci/language-four-jvms]
 
 permissions:
   contents: read
@@ -36,11 +25,19 @@ jobs:
       source-attempt: ${{ needs.prepare.outputs.attempt }}
 
   Build:
+    name: Full build / ${{ matrix.forks }} JVMs
+    strategy:
+      fail-fast: false
+      matrix:
+        forks: [1, 4]
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       CI: true
+      BLUE_EXPERIMENT_FORKS: ${{ matrix.forks }}
+      JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=4
+      PYTHONHASHSEED: 0
       BLUE_CI_DISTRIBUTED: verified-source
       BLUE_CI_SCOPE: build
       BLUE_CI_COMMIT: ${{ needs.prepare.outputs.commit }}
@@ -55,6 +52,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
+      - name: Install process monitor
+        run: python -m pip install psutil==7.0.0
+      - name: Record runner capacity
+        run: |
+          test "$(nproc)" -eq 4
+          lscpu
+          free -b
+          java -version
       - uses: ./.github/actions/verify-core
         with:
           release: 'false'
@@ -65,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ github.run_attempt }}
+          name: test-results-${{ matrix.forks }}-${{ github.run_attempt }}
           path: |
             build/reports
             build/test-results
@@ -78,5 +83,13 @@ jobs:
       - name: Archive libs
         uses: actions/upload-artifact@v4
         with:
-          name: libs-${{ github.run_attempt }}
+          name: libs-${{ matrix.forks }}-${{ github.run_attempt }}
           path: blue-*/build/libs
+
+      - name: Archive fork experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fork-experiment-${{ matrix.forks }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fork-experiment
+          if-no-files-found: error
