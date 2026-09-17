@@ -49,7 +49,6 @@ import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.NodePathEditor;
 import blue.language.identity.NodeToBlueIdInput;
-import blue.language.matching.NodeTypeMatcher;
 import blue.language.provider.Types;
 import blue.language.resolve.ResolutionLimits;
 
@@ -731,6 +730,15 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 this::rawPreprocess));
     }
 
+    /** Matches both operands using one demand-limited evidence scope. */
+    @Override
+    public BlueOperationResult<Boolean> matchesLimitedForMatching(
+            Node candidate, Node type, BlueOperationLimits limits) {
+        return call(() -> LanguageRuntimeLimitedResolution.matches(
+                nodeProvider, mergingProcessor, candidate, type, limits,
+                this::rawPreprocess, matchingCachePolicy()));
+    }
+
     ResolvedSnapshot resolveSnapshot(Node source) {
         return call(() -> {
             Node preprocessed = rawPreprocess(Objects.requireNonNull(
@@ -825,24 +833,6 @@ public final class BlueLanguageRuntime implements NodeResolver,
         } finally {
             lifecycle.readLock().unlock();
         }
-    }
-
-    boolean matches(Node candidate, Node type) {
-        return call(() -> new NodeTypeMatcher(this)
-                .matchesType(candidate, type, NO_LIMITS));
-    }
-
-    boolean matches(FrozenNode candidate, FrozenNode type) {
-        return call(() -> new NodeTypeMatcher(this)
-                .matchesResolvedType(candidate, type));
-    }
-
-    boolean matches(
-            ResolvedSnapshot snapshot,
-            String pointer,
-            FrozenNode type) {
-        return call(() -> new NodeTypeMatcher(this)
-                .matchesResolvedType(snapshot, pointer, type));
     }
 
     CanonicalPatchResult applyPatch(

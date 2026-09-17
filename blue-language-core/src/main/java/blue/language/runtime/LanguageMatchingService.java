@@ -1,7 +1,6 @@
 package blue.language.runtime;
 
 import blue.language.api.BlueOperationLimits;
-import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.matching.BlueMatching;
 import blue.language.matching.MatchingRuntime;
@@ -21,27 +20,38 @@ public final class LanguageMatchingService implements BlueMatching {
 
     private final MatchingRuntime runtime;
     private final ResolutionLimits defaultLimits;
-    private final BiFunction<Node, BlueOperationLimits,
-            BlueOperationResult<Node>> limitedResolver;
+
+    /**
+     * Creates a matching service whose runtime owns limited matching evidence.
+     *
+     * @param runtime runtime used for resolution and operation-owned matching
+     * @param defaultLimits limits applied by complete mutable matching
+     */
+    public LanguageMatchingService(
+            MatchingRuntime runtime,
+            ResolutionLimits defaultLimits) {
+        this.runtime = Objects.requireNonNull(runtime, "runtime");
+        this.defaultLimits = Objects.requireNonNull(defaultLimits, "defaultLimits");
+    }
 
     /**
      * Creates a matching service with explicit resolution dependencies.
      *
      * @param runtime runtime used for preprocessing, resolution, and type lookup
      * @param defaultLimits limits applied by complete mutable matching
-     * @param limitedResolver exhaustive demand-limited resolver
+     * @param limitedResolver legacy candidate resolver, retained for compatibility;
+     *                        the runtime now owns the entire limited match
      * @throws NullPointerException if any argument is {@code null}
+     * @deprecated use the constructor with runtime and default limits
      */
+    @Deprecated
     public LanguageMatchingService(
             MatchingRuntime runtime,
             ResolutionLimits defaultLimits,
             BiFunction<Node, BlueOperationLimits,
                     BlueOperationResult<Node>> limitedResolver) {
-        this.runtime = Objects.requireNonNull(runtime, "runtime");
-        this.defaultLimits = Objects.requireNonNull(
-                defaultLimits, "defaultLimits");
-        this.limitedResolver = Objects.requireNonNull(
-                limitedResolver, "limitedResolver");
+        this(runtime, defaultLimits);
+        Objects.requireNonNull(limitedResolver, "limitedResolver");
     }
 
     /**
@@ -94,7 +104,7 @@ public final class LanguageMatchingService implements BlueMatching {
      * @param candidate authored candidate value
      * @param type authored type definition
      * @param limits semantic-demand and reference-expansion limits
-     * @return established match result or the resolver's explicit absent,
+     * @return established match result or the runtime's explicit absent,
      *         incomplete, or invalid outcome
      */
     @Override
@@ -102,27 +112,6 @@ public final class LanguageMatchingService implements BlueMatching {
             Node candidate,
             Node type,
             BlueOperationLimits limits) {
-        BlueOperationResult<Node> resolved = limitedResolver.apply(
-                candidate, limits);
-        if (resolved.outcome()
-                == BlueOperationOutcome.ESTABLISHED) {
-            return BlueOperationResult.established(
-                    matches(resolved.requireEstablished(), type));
-        }
-        if (resolved.outcome() == BlueOperationOutcome.ABSENT) {
-            return BlueOperationResult.absent(
-                    resolved.reason().orElse(null));
-        }
-        if (resolved.outcome()
-                == BlueOperationOutcome.INCOMPLETE) {
-            return BlueOperationResult.incomplete(
-                    null,
-                    resolved.outstandingBlueIds(),
-                    resolved.providerOutcome().orElse(null),
-                    resolved.reason().orElse(null));
-        }
-        return BlueOperationResult.invalid(
-                resolved.reason().orElse(null),
-                resolved.providerOutcome().orElse(null));
+        return runtime.matchesLimitedForMatching(candidate, type, limits);
     }
 }

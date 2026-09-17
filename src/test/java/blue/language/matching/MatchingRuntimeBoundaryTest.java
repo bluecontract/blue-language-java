@@ -1,6 +1,10 @@
 package blue.language.matching;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.runtime.LanguageMatchingService;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.model.Node;
@@ -24,6 +28,28 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MatchingRuntimeBoundaryTest {
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void shouldKeepLegacyLimitedMatchingIncompleteWithoutAnOperationScope() {
+        // given
+        RecordingRuntime runtime = new RecordingRuntime();
+        LanguageMatchingService service = new LanguageMatchingService(
+                runtime, ResolutionLimits.NO_LIMITS,
+                (candidate, limits) -> BlueOperationResult.established(candidate));
+
+        // when
+        BlueOperationResult<Boolean> result = service.matchesLimited(
+                new Node().value("same"), new Node().value("same"),
+                BlueOperationLimits.UNLIMITED);
+
+        // then
+        assertEquals(BlueOperationOutcome.INCOMPLETE, result.outcome());
+        assertFalse(result.value().isPresent());
+        assertEquals(0, runtime.preprocessCalls);
+        assertEquals(0, runtime.resolveCalls);
+        assertEquals(0, runtime.materializationCalls);
+    }
 
     @Test
     void shouldUseOnlyTheFocusedRuntimeSurfaceForMutableMatching() {
