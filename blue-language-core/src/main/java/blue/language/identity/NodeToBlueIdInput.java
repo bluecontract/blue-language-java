@@ -593,7 +593,12 @@ public final class NodeToBlueIdInput {
     }
 
     private static String appendPath(String path, String segment) {
-        return JsonPointer.append(path, segment);
+        // Every private traversal root is "/" or "/" + an integer, and every
+        // child path is created here. The parent is already canonical: do not
+        // split, unescape and re-escape all ancestors for each visited child.
+        String child = JsonPointer.escape(segment);
+        return JsonPointer.ROOT.equals(path)
+                ? JsonPointer.ROOT + child : path + JsonPointer.ROOT + child;
     }
 
     private static String appendPath(String path, String segment, int index) {

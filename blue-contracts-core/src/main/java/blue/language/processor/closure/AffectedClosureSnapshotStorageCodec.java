@@ -31,9 +31,11 @@ import static blue.language.snapshot.ExactNodeStorageCodec.*;
  * snapshots use backward references. Byte and physical traversal-depth limits are
  * operational storage limits, not semantic graph, gas or processing limits.</p>
  *
- * <p>An instance can retain up to 32 previously decode-accepted envelopes and
+ * <p>An instance can retain up to 32 previously accepted envelopes and
  * {@code min(maximumBytes, 8 MiB)} of their bytes. Exact hits parse fresh objects
  * without repeating codec-level semantic verification or canonical re-encoding.
+ * Acceptance follows complete decoding or complete encoding of an already
+ * library-verified, privately owned snapshot and its owned witness graph.
  * Constructors still validate normally. These additional instance-lifetime
  * payload bytes are not a total-heap bound or current publication authority.</p>
  */
@@ -88,9 +90,18 @@ public final class AffectedClosureSnapshotStorageCodec {
 
     private byte[] encodeInCall(AffectedClosureSnapshot snapshot, SnapshotStorageCall call, DecodedRecords records) {
         Objects.requireNonNull(snapshot, "snapshot");
-        return nodes.encodeEnvelope(FORMAT, out -> writeSnapshot(out, snapshot, 0,
+        byte[] encoded = nodes.encodeEnvelope(FORMAT, out -> writeSnapshot(out, snapshot, 0,
                 new IdentityHashMap<AffectedClosureSnapshot, Integer>(),
                 new IdentityHashMap<AffectedClosureSnapshot, Boolean>(), call, records));
+        // A completed canonical encoder may retain these exact bytes only when
+        // the source already has library-issued pure-state proof and every
+        // emitted representation (including witness originals) is detached.
+        // writeSnapshot above still validates every otherwise-unverified witness.
+        // Public/freshly mutable input and an incomplete encode never qualify.
+        if (snapshot.hasVerifiedOwnedState() && snapshot.hasDetachedRepresentation()) {
+            acceptedBytes.retainEncoded(encoded);
+        }
+        return encoded;
     }
 
     /**
@@ -315,6 +326,19 @@ public final class AffectedClosureSnapshotStorageCodec {
                 retainedBytes -= entries.remove(0).length;
             entries.add(bytes); retainedBytes += bytes.length;
             peakBytes = Math.max(peakBytes, retainedBytes); peakEntries = Math.max(peakEntries, entries.size());
+        }
+
+        // The encoder returns its frame to callers. Bound before allocating an
+        // independent private copy; never retain the exposed returned byte array.
+        private synchronized void retainEncoded(byte[] bytes) {
+            if (maximumEntries == 0 || bytes.length > maximumBytes) return;
+            for (int index = 0; index < entries.size(); index++) {
+                if (Arrays.equals(entries.get(index), bytes)) {
+                    entries.add(entries.remove(index));
+                    return;
+                }
+            }
+            retain(bytes.clone());
         }
 
         private synchronized AcceptedByteStatistics statistics() {

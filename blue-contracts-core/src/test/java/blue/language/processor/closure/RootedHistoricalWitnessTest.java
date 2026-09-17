@@ -74,6 +74,12 @@ final class RootedHistoricalWitnessTest {
         });
     }
 
+    @Test
+    void ownedHistoricalOutputEncodingProvesTheImmediateExactReadback() {
+        historicalReaction(false, ignored -> { }, false,
+                OwnedSnapshotEncodeAcceptanceTest::assertHistoricalReadback);
+    }
+
     private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy) {
         historicalReaction(retiredReturn, verifyPublicCopy, false);
     }
