@@ -38,3 +38,20 @@ https://github.com/bluecontract/blue-language-java/actions/runs/35116555937
 Final-head PR CI exercises actual Build and the shared helpers. Earlier isolated
 RC/Stable verification passed, but the removed harness is not rerun at the final
 head, and no production release or publication is dispatched for validation.
+
+## Maven Central publication visibility
+
+RC and Stable first create the local staging repository, then run `jreleaserDeploy`
+with `-PblueMavenCentralSkipPublicationCheck=true`. JReleaser signs/checksums,
+uploads, validates and submits the deployment, returning at PUBLISHING or PUBLISHED.
+The opt-in property defaults to false for ordinary invocations.
+
+The next **Wait for Maven Central publication** step polls only the persisted
+Sonatype deployment ID until PUBLISHED; it never uploads or resubmits. The submission
+properties are copied to `maven-central-submitted.properties` so the final JReleaser
+invocation cannot overwrite the input bound by the confirmation receipt. Stale
+output, submitted properties and confirmation files are removed before deployment. Failure or timeout blocks
+the final GitHub release. The final `jreleaserFullRelease --exclude-deployer=mavenCentral`
+retains the original release/upload/package/announce lifecycle without redeploying.
+Plain `jreleaserRelease` also includes deployment in JReleaser 1.24.0 and is not a
+safe wait-only command. This split does not repeat the Gradle verification graph.

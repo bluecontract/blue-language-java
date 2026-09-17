@@ -39,7 +39,9 @@ jobs:
         with:
           node-version: '22'
       - name: Test release tooling
-        run: node --test .github/scripts/*.test.js
+        run: |
+          node --test .github/scripts/*.test.js
+          python3 -m unittest discover -s .github/scripts -p 'test_wait_maven_central.py'
       - name: Fetch master and tags
         if: inputs.mode == 'rc'
         run: git fetch origin master:refs/remotes/origin/master --tags

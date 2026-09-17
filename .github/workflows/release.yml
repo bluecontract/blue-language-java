@@ -65,7 +65,7 @@ jobs:
       - name: Execute Gradle publish
         run: ./gradlew publish
 
-      - name: Execute Gradle release
+      - name: Sign, upload and submit Maven Central deployment
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
@@ -73,7 +73,28 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
-        run: ./gradlew jreleaserFullRelease
+        run: |
+          rm -f build/jreleaser/output.properties build/jreleaser/maven-central-published.json build/jreleaser/maven-central-submitted.properties
+          ./gradlew jreleaserDeploy -PblueMavenCentralSkipPublicationCheck=true
+          cp build/jreleaser/output.properties build/jreleaser/maven-central-submitted.properties
+
+      - name: Wait for Maven Central publication
+        env:
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
+        run: >-
+          python .github/scripts/wait-maven-central.py build/jreleaser/maven-central-submitted.properties
+          --receipt build/jreleaser/maven-central-published.json
+
+      - name: Complete GitHub release after Maven Central publication
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_SECRET_KEY }}
+        run: ./gradlew jreleaserFullRelease --exclude-deployer=mavenCentral
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
