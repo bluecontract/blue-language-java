@@ -55,7 +55,7 @@ Sonatype deployment ID until PUBLISHED; it never uploads or resubmits. The submi
 properties are copied to `maven-central-submitted.properties` so the final JReleaser
 invocation cannot overwrite the input bound by the confirmation receipt. Stale
 output, submitted properties and confirmation files are removed before deployment. Failure or timeout blocks
-the final GitHub release. The final `jreleaserFullRelease --exclude-deployer=mavenCentral`
+the final GitHub release. The final `jreleaserFullRelease --exclude-deployer-name=sonatype`
 retains the original release/upload/package/announce lifecycle without redeploying.
 Plain `jreleaserRelease` also includes deployment in JReleaser 1.24.0 and is not a
 safe wait-only command. This split does not repeat the Gradle verification graph.
