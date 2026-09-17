@@ -28,7 +28,8 @@ jobs:
         run: |
           printf '%s\n' 'deployMavenCentralSonatypeDeploymentId=4b5b2451-c22f-4f8e-841f-1e08b1b714ec' > "$RUNNER_TEMP/rc28-submitted.properties"
           python3 - <<'PYTHON'
-          import base64, importlib.util, json, os
+          import base64, importlib.util, json, os, re
+          from urllib.parse import quote
           spec = importlib.util.spec_from_file_location('waiter', '.github/scripts/wait-maven-central.py')
           waiter = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(waiter)
@@ -49,6 +50,22 @@ jobs:
               print('Decoded errors type:', type(errors).__name__)
               print('Decoded errors size:', len(errors) if isinstance(errors, (dict, list)) else 'not-container')
               print('All error buckets empty:', isinstance(errors, dict) and all(value in [None, {}, [], ''] for value in errors.values()))
+              credentials = [os.environ['JRELEASER_MAVENCENTRAL_USERNAME'], os.environ['JRELEASER_MAVENCENTRAL_PASSWORD'], token]
+              sensitive = sorted({part for value in credentials for part in [value, quote(value, safe='')] if part}, key=len, reverse=True)
+              def redact(value):
+                  if isinstance(value, dict):
+                      return {redact(str(key)): redact(item) for key, item in value.items()}
+                  if isinstance(value, list):
+                      return [redact(item) for item in value]
+                  if isinstance(value, str):
+                      for part in sensitive:
+                          value = value.replace(part, '[REDACTED]')
+                      return re.sub(r'(?i)\b(?:Bearer|Basic)\s+[^\s"\\]+', '[REDACTED AUTHORIZATION]', value)
+                  return value
+              safe_errors = json.dumps(redact(errors), ensure_ascii=True, sort_keys=True)
+              print('Sanitized deployment errors JSON:', safe_errors[:4000])
+              print('Errors output truncated:', len(safe_errors) > 4000)
+
           except (ValueError, KeyError, OSError, TimeoutError) as error:
               raise SystemExit(waiter.failure_message(error))
           PYTHON
