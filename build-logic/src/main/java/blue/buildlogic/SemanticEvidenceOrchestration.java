@@ -33,7 +33,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService;
 /** Registers the release reports and executable proofs for semantic compatibility. */
 final class SemanticEvidenceOrchestration {
 
-    private static final int JAVA_VERSION = 25;
+    private static final int JAVA_VERSION = 17;
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
     private static final List<String> LEGACY_SEMANTIC_LOCALITY_FILES =
             Collections.unmodifiableList(Arrays.asList(

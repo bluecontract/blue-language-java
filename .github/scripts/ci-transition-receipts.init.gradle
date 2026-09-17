@@ -1,6 +1,6 @@
-// Verification workflows opt in to same-run remote transition receipts.
-// Production evidence rules remain unchanged; publication is never allowed in
-// this invocation. Every delegated test requires an exact-source receipt.
+// Verification workflows opt in to same-run remote transition owners.
+// Clean build defers their results to the visible workflow gate; release checks
+// validate receipts at task boundaries. Publication is forbidden in both phases.
 gradle.projectsEvaluated {
     def root = gradle.rootProject
     def script = new File(root.projectDir, '.github/scripts/ci-transition-verification.js')
@@ -29,6 +29,7 @@ gradle.projectsEvaluated {
     def json = command.text
     if (command.waitFor() != 0) throw new GradleException('Cannot load transition assignments')
     def assignments = new groovy.json.JsonSlurper().parseText(json)
+    def receiptMode = System.getenv('BLUE_CI_DEFER_TRANSITIONS') == 'true' ? 'defer' : 'receipt'
     assignments.each { group, taskPaths ->
         taskPaths.each { taskPath ->
             def task = root.tasks.getByPath(taskPath)
@@ -36,8 +37,8 @@ gradle.projectsEvaluated {
                 throw new GradleException("Expected an Exec transition task: ${taskPath}")
             }
             task.workingDir(root.projectDir)
-            task.commandLine('node', script.absolutePath, 'receipt', group, taskPath)
-            // Revalidate even on the second invocation (rcVerify); no Python rerun.
+            task.commandLine('node', script.absolutePath, receiptMode, group, taskPath)
+            // Build delegates to the visible gate; rcVerify revalidates its receipts.
             task.outputs.upToDateWhen { false }
         }
     }

@@ -1,11 +1,15 @@
 # Distributed production verification
 
-The original Build, Release RC and Release workflows run on Java 25. Each starts
+The original Build, Release RC and Release workflows run on Java 17. Each starts
 one source-preparation job, five independent Python transition owners, and a core
-job. Core and owners overlap. The core still runs the normal build and release
-verification graph, requiring successful remote receipts in place of repeating
-the six Python transition commands. Publication is prohibited in that verification
-invocation; the original release publication steps run only after its full gate.
+job. Core and owners overlap. The core first runs the normal clean build with six Python transition commands
+explicitly delegated to their owners. This intermediate build success does not
+approve a release. The top-level **Wait for transition verification** step then
+requires every successful same-source receipt. RC and Stable run their full
+`rcVerify`, source archive and API checks after this gate, validating the receipts
+again at normal task boundaries without repeating Python work. Publication is
+prohibited in the distributed Gradle invocations; tags, pushes and publication
+follow all checks. A failed owner is reported by the visible wait step.
 
 The two `workflow_call` helpers are production implementation details, not extra
 experiment pipelines: preparation transfers one exact source commit, and transition

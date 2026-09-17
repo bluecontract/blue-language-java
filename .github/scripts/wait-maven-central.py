@@ -15,17 +15,40 @@ KEY = 'deployMavenCentralSonatypeDeploymentId'
 URL = 'https://central.sonatype.com/api/v1/publisher/status'
 
 
+class StatusError(ValueError):
+    """Only fixed, secret-free diagnostic messages may enter this exception."""
+
+
+def failure_message(error):
+    if isinstance(error, StatusError):
+        detail = str(error)
+    elif isinstance(error, HTTPError):
+        detail = 'status HTTP '+str(error.code)
+    elif isinstance(error, json.JSONDecodeError):
+        detail = 'invalid JSON response'
+    elif isinstance(error, KeyError) and error.args[0] in (
+            'JRELEASER_MAVENCENTRAL_USERNAME', 'JRELEASER_MAVENCENTRAL_PASSWORD'):
+        detail = 'missing environment variable '+error.args[0]
+    elif isinstance(error, TimeoutError):
+        detail = 'timed out waiting for PUBLISHED status'
+    elif isinstance(error, OSError):
+        detail = 'local file or network error'
+    else:
+        detail = 'invalid input or status response'
+    return 'Maven Central publication not confirmed: '+detail+'.'
+
+
 def deployment_id(text):
     values = [line.split('=', 1)[1].strip() for line in text.splitlines()
               if line.split('=', 1)[0].strip() == KEY and '=' in line]
     if len(values) != 1 or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', values[0]):
-        raise ValueError('Missing, duplicate or invalid Sonatype deployment ID')
+        raise StatusError('missing, duplicate or invalid Sonatype deployment ID')
     return values[0]
 
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise ValueError('Maven Central status redirect refused')
+        raise StatusError('status redirect refused')
 
 
 def status(deployment, token, timeout):
@@ -42,17 +65,25 @@ def wait(deployment, token, *, request=status, clock=time.monotonic, sleep=time.
             row = request(deployment, token, min(30, max(.001, deadline-clock())))
         except HTTPError as error:
             if error.code != 429 and not 500 <= error.code < 600:
-                raise ValueError('Maven Central status HTTP '+str(error.code)) from None
+                raise StatusError('status HTTP '+str(error.code)) from None
         except (URLError, TimeoutError, OSError):
             pass
         else:
-            if not isinstance(row, dict) or row.get('deploymentId') != deployment or row.get('errors'):
-                raise ValueError('Invalid or failed Maven Central deployment status')
+            if not isinstance(row, dict):
+                raise StatusError('status response must be an object')
+            if 'deploymentId' not in row:
+                raise StatusError('missing deployment ID in status response')
+            if row['deploymentId'] != deployment:
+                raise StatusError('deployment ID mismatch in status response')
+            # Sonatype can retain error metadata even after publication. Like
+            # JReleaser, decide readiness from the matching deployment's state.
             state = row.get('deploymentState')
             if state == 'PUBLISHED':
                 return dict(deploymentId=deployment, deploymentState=state)
+            if state == 'FAILED':
+                raise StatusError('deployment state FAILED')
             if state not in ['PENDING', 'VALIDATING', 'VALIDATED', 'PUBLISHING']:
-                raise ValueError('Maven Central deployment failed or returned unknown state')
+                raise StatusError('unknown deployment state')
             print('Maven Central deployment state: '+state, flush=True)
         remaining = deadline-clock()
         if remaining > 0:
@@ -66,8 +97,9 @@ def run(properties, receipt):
     deployment = deployment_id(content.decode('utf-8'))
     username = os.environ['JRELEASER_MAVENCENTRAL_USERNAME']
     password = os.environ['JRELEASER_MAVENCENTRAL_PASSWORD']
-    if not username or not password:
-        raise ValueError('Missing Maven Central credentials')
+    for name, value in [('JRELEASER_MAVENCENTRAL_USERNAME', username), ('JRELEASER_MAVENCENTRAL_PASSWORD', password)]:
+        if not value:
+            raise StatusError('empty environment variable '+name)
     token = base64.b64encode((username+':'+password).encode()).decode()
     row = wait(deployment, token)
     row['propertiesSha256'] = hashlib.sha256(content).hexdigest()
@@ -83,6 +115,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         run(args.properties, args.receipt)
-    except (ValueError, KeyError, OSError, TimeoutError):
+    except (ValueError, KeyError, OSError, TimeoutError) as error:
         # Do not print HTTP response bodies, credentials or exception internals.
-        parser.exit(1, 'Maven Central publication not confirmed; status check failed.\n')
+        parser.exit(1, failure_message(error)+'\n')

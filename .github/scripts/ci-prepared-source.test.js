@@ -89,6 +89,17 @@ if (args[0] === 'api') {
 }
 `, {mode: 0o755});
       restoreEnv.PATH = `${bin}:${process.env.PATH}`;
+      // Defer validates source/assignment but must never contact the owners.
+      // No jobs file exists yet, so an accidental gh lookup would fail.
+      const deferArgs = [receiptScript, 'defer', 'detached-retarget', groups['detached-retarget'][0]];
+      const deferEnv = {...restoreEnv, BLUE_CI_DEFER_TRANSITIONS: 'true'};
+      assert.equal(spawnSync(process.execPath, deferArgs, {cwd: consumer, env: deferEnv}).status, 0);
+      for (const patch of [{BLUE_CI_DEFER_TRANSITIONS: ''}, {BLUE_CI_TREE: 'wrong'}, {BLUE_CI_DISTRIBUTED: ''}]) {
+        assert.equal(spawnSync(process.execPath, deferArgs, {cwd: consumer, env: {...deferEnv, ...patch}}).status, 1);
+      }
+      assert.equal(spawnSync(process.execPath, [receiptScript, 'defer', 'detached-retarget', ':wrong'],
+        {cwd: consumer, env: deferEnv}).status, 1);
+
       for (const [index, group] of ['detached-retarget', 'reconciliation'].entries()) {
         const attempt = String(index + 1);
         fs.writeFileSync(jobFile, JSON.stringify([{jobs: [{name: `transitions / Python rc / ${group}`,
@@ -106,6 +117,28 @@ if (args[0] === 'api') {
           assert.equal(spawnSync(process.execPath, args, {cwd: consumer, env: restoreEnv}).status, 1);
         }
       }
+      // Exercise the exact workflow gate, including all six required receipts.
+      for (const script of ['ci-verification-gate.js', 'ci-transition-verification.js', 'ci-verification-source.js']) {
+        fs.copyFileSync(path.join(__dirname, script), path.join(consumer, '.github/scripts', script));
+      }
+      const jobs = [];
+      for (const [index, group] of Object.keys(groups).entries()) {
+        const attempt = String(index % 2 + 1);
+        jobs.push({name: `transitions / Python rc / ${group}`, run_attempt: Number(attempt), status: 'completed', conclusion: 'success'});
+        const receiptPath = path.join(restoreEnv.CI_TRANSITION_RECEIPTS, 'rc', `attempt-${attempt}`, group);
+        fs.mkdirSync(receiptPath, {recursive: true});
+        fs.writeFileSync(path.join(receiptPath, `${group}.json`), JSON.stringify({...prepared,
+          sourceAttempt: prepared.runAttempt, runAttempt: attempt, group, success: true, elapsedSeconds: 1,
+          commands: commandsFor(group).map(args => ({args, exitCode: 0, elapsedSeconds: 1}))}));
+      }
+      const gateArgs = ['.github/scripts/ci-verification-gate.js'];
+      fs.writeFileSync(jobFile, JSON.stringify([{jobs}]));
+      assert.equal(spawnSync(process.execPath, gateArgs, {cwd: consumer, env: restoreEnv}).status, 0);
+      jobs[0] = {...jobs[0], run_attempt: 2, conclusion: 'failure'};
+      fs.writeFileSync(jobFile, JSON.stringify([{jobs}]));
+      const rejected = spawnSync(process.execPath, gateArgs, {cwd: consumer, env: restoreEnv, encoding: 'utf8'});
+      assert.equal(rejected.status, 1);
+      assert.match(rejected.stderr, /Transition owner failed/);
       for (const patch of [{BLUE_CI_TREE: 'wrong'}, {BLUE_CI_SOURCE_ATTEMPT: '2'}, {BLUE_CI_SOURCE_ATTEMPT: '0'}]) {
         assert.equal(spawnSync(process.execPath, [sourceScript, 'check'],
           {cwd: consumer, env: {...restoreEnv, ...patch}}).status, 1);

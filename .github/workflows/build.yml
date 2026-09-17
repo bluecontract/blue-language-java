@@ -55,11 +55,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/verification-setup
-      - uses: ./.github/actions/verify-core
+      - name: Build and run local checks
+        uses: ./.github/actions/verify-core
         with:
-          release: 'false'
+          phase: build
+
+      - name: Wait for transition verification
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          node .github/scripts/ci-verification-source.js check
+          node .github/scripts/ci-verification-gate.js
 
       - name: Archive test results
         uses: actions/upload-artifact@v4

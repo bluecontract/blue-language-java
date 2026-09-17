@@ -50,7 +50,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 public final class RootOrchestrationPlugin implements Plugin<Project> {
 
     private static final int BYTECODE_VERSION = 8;
-    private static final int JAVA_RUNTIME_VERSION = 25;
+    private static final int JAVA_RUNTIME_VERSION = 17;
     private static final int EXECUTABLE_FILE_MODE = 0755;
     private static final int REGULAR_FILE_MODE = 0644;
     private static final String COMPATIBILITY_SOURCE_DIRECTORY =

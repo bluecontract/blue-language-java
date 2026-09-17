@@ -15,7 +15,7 @@ runs:
       run: node .github/scripts/ci-verification-source.js restore
     - uses: actions/setup-java@v4
       with:
-        java-version: '25'
+        java-version: '17'
         distribution: corretto
     - uses: gradle/actions/setup-gradle@v4
     - uses: actions/setup-python@v5
