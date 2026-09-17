@@ -22,9 +22,12 @@ import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
  * <p>Found values are retained through {@link NodeProviderResult}, which
  * defensively copies nodes on both insertion and access. A definitive miss may
  * be cached, but transient unavailability and invalid evidence are never
- * cached and therefore can never be rewritten as absence.</p>
+ * cached and therefore can never be rewritten as absence. Cyclic evidence
+ * capability is forwarded to the delegate without caching proof acquisition
+ * outcomes, so missing or temporarily unavailable proofs can be retried.</p>
  */
-public final class CachingNodeProvider implements NodeProvider {
+public final class CachingNodeProvider
+        implements NodeProvider, CyclicAwareNodeProvider {
 
     private static final long OUTCOME_ENTRY_WEIGHT_BYTES = 32L;
 
@@ -98,6 +101,41 @@ public final class CachingNodeProvider implements NodeProvider {
             cache(blueId, result);
         }
         return result;
+    }
+
+    /**
+     * Forwards the delegate's compatibility probe without treating a cache
+     * entry as verified evidence or granting trusted-provider status.
+     *
+     * @param blueId exact content identity to probe
+     * @return the delegate's conclusion, or false without cyclic capability
+     */
+    @Override
+    public boolean hasVerifiedContentForBlueId(String blueId) {
+        return delegate instanceof CyclicAwareNodeProvider
+                && ((CyclicAwareNodeProvider) delegate)
+                        .hasVerifiedContentForBlueId(blueId);
+    }
+
+    /**
+     * Forwards complete cyclic-set evidence acquisition for the exact key.
+     *
+     * <p>Proof results are immutable and are returned without retaining any
+     * acquisition outcome. A verifier must still independently validate found
+     * evidence; the delegate's capability never confers trust.</p>
+     *
+     * @param blueId cyclic-member identity
+     * @return delegated typed result, or a miss without cyclic capability
+     * @throws NullPointerException if the delegated proof result is null
+     */
+    @Override
+    public CyclicSetProofResult cyclicSetProofFor(String blueId) {
+        return delegate instanceof CyclicAwareNodeProvider
+                ? Objects.requireNonNull(
+                        ((CyclicAwareNodeProvider) delegate)
+                                .cyclicSetProofFor(blueId),
+                        "delegate cyclic-set proof result")
+                : CyclicSetProofResult.notFound();
     }
 
     private void cache(String blueId, NodeProviderResult result) {

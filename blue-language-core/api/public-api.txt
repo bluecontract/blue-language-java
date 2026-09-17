@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-core
-# entryCount: 1148
+# entryCount: 1150
 field blue.language.api.BlueLanguageErrorCategory#CanonicalizationError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#CircularSetError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#DuplicateKey descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -628,10 +628,12 @@ method blue.language.provider.AbstractNodeProvider#<init> descriptor=()V access=
 method blue.language.provider.AbstractNodeProvider#fetchByBlueId descriptor=(Ljava/lang/String;)Ljava/util/List; access=public signature=(Ljava/lang/String;)Ljava/util/List<Lblue/language/model/Node;>; throws=-
 method blue.language.provider.AbstractNodeProvider#fetchContentByBlueId descriptor=(Ljava/lang/String;)Lcom/fasterxml/jackson/databind/JsonNode; access=protected,abstract signature=- throws=-
 method blue.language.provider.CachingNodeProvider#<init> descriptor=(Lblue/language/provider/NodeProvider;J)V access=public signature=- throws=-
+method blue.language.provider.CachingNodeProvider#cyclicSetProofFor descriptor=(Ljava/lang/String;)Lblue/language/provider/CyclicSetProofResult; access=public signature=- throws=-
 method blue.language.provider.CachingNodeProvider#fetchByBlueId descriptor=(Ljava/lang/String;)Ljava/util/List; access=public signature=(Ljava/lang/String;)Ljava/util/List<Lblue/language/model/Node;>; throws=-
 method blue.language.provider.CachingNodeProvider#fetchResultByBlueId descriptor=(Ljava/lang/String;)Lblue/language/provider/NodeProviderResult; access=public signature=- throws=-
 method blue.language.provider.CachingNodeProvider#getCacheSize descriptor=()I access=public signature=- throws=-
 method blue.language.provider.CachingNodeProvider#getCurrentSize descriptor=()J access=public signature=- throws=-
+method blue.language.provider.CachingNodeProvider#hasVerifiedContentForBlueId descriptor=(Ljava/lang/String;)Z access=public signature=- throws=-
 method blue.language.provider.CyclicAwareNodeProvider#cyclicSetProofFor descriptor=(Ljava/lang/String;)Lblue/language/provider/CyclicSetProofResult; access=public signature=- throws=-
 method blue.language.provider.CyclicAwareNodeProvider#hasVerifiedContentForBlueId descriptor=(Ljava/lang/String;)Z access=public signature=- throws=-
 method blue.language.provider.CyclicSetProof#declaredPlaceholderSet descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/model/Node;>; throws=-
@@ -1091,7 +1093,7 @@ type blue.language.preprocess.TransformationSnapshot access=public,final super=j
 type blue.language.preprocess.provider.BasicNodeProvider access=public super=blue.language.provider.PreloadedNodeProvider interfaces=blue.language.provider.CyclicAwareNodeProvider signature=-
 type blue.language.preprocess.provider.DirectoryBasedNodeProvider access=public super=blue.language.provider.PreloadedNodeProvider interfaces=- signature=-
 type blue.language.provider.AbstractNodeProvider access=public,abstract super=java.lang.Object interfaces=blue.language.provider.NodeProvider signature=-
-type blue.language.provider.CachingNodeProvider access=public,final super=java.lang.Object interfaces=blue.language.provider.NodeProvider signature=-
+type blue.language.provider.CachingNodeProvider access=public,final super=java.lang.Object interfaces=blue.language.provider.CyclicAwareNodeProvider,blue.language.provider.NodeProvider signature=-
 type blue.language.provider.CyclicAwareNodeProvider access=public,abstract,interface super=java.lang.Object interfaces=- signature=-
 type blue.language.provider.CyclicSetProof access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.provider.CyclicSetProofResult access=public,final super=java.lang.Object interfaces=- signature=-
