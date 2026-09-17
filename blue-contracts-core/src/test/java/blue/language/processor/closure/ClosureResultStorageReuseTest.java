@@ -52,7 +52,7 @@ final class ClosureResultStorageReuseTest {
                 assertEquals(0, call.retainedEntries());
             }
         }
-        assertNull(produced.storageVerifiedOutput());
+        assertNotNull(produced.storageVerifiedOutput());
         full.set(0);
         try (SnapshotStorageCall call = new SnapshotStorageCall(snapshots, 1, 1)) {
             assertArrayEquals(bytes, results.encode(results.decodeInCall(bytes, call)));
@@ -64,7 +64,7 @@ final class ClosureResultStorageReuseTest {
         for (boolean rooted : new boolean[] {false, true}) {
             ClosureProcessResult produced = result(0, rooted);
             byte[] bytes = codec(null).encode(produced);
-            assertNull(produced.storageVerifiedOutput(), "Successful producer encoding grants no decoder ownership");
+            assertNotNull(produced.storageVerifiedOutput(), "The processor retains its validated detached output, not decoder ownership");
             for (int capacity : new int[] {-1, 0, 1}) {
                 Memo memo = capacity < 0 ? null : new Memo(capacity);
                 AtomicInteger full = new AtomicInteger();
@@ -96,7 +96,7 @@ final class ClosureResultStorageReuseTest {
                 int first = full.get(); assertTrue(first > 0, "Public/fresh results still take their ordinary pure checks");
                 assertArrayEquals(bytes, codec.encode(produced));
                 assertEquals(first * 2, full.get());
-                assertNull(produced.storageVerifiedOutput());
+                assertNotNull(produced.storageVerifiedOutput());
             }
         }
     }

@@ -2,6 +2,7 @@ package blue.language.processor.closure;
 
 import blue.language.identity.BlueIds;
 import blue.language.provider.CyclicSetProof;
+import blue.language.model.Node;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,6 +22,7 @@ public final class ComponentSnapshot {
     private final List<String> orderedMemberBlueIds;
     private final String masterBlueId;
     private final CyclicSetProof completeCyclicProof;
+    private final boolean detachedStandardProof;
     private final String cyclicProofIdentity;
 
     /**
@@ -83,7 +85,9 @@ public final class ComponentSnapshot {
                     masterBlueId, "masterBlueId");
             this.cyclicProofIdentity = ClosureValueSupport.requireSha256Identity(
                     cyclicProofIdentity, "cyclicProofIdentity");
-            this.completeCyclicProof = copyProof(completeCyclicProof);
+            List<Node> placeholderSet = completeCyclicProof.declaredPlaceholderSet();
+            this.detachedStandardProof = ClosureOwnedRepresentation.standardGraph(placeholderSet);
+            this.completeCyclicProof = CyclicSetProof.fromDeclaredPlaceholderSet(placeholderSet);
             if (this.completeCyclicProof.declaredPlaceholderSet().size()
                     != this.orderedMemberDocumentIds.size()) {
                 throw new IllegalArgumentException(
@@ -94,6 +98,7 @@ public final class ComponentSnapshot {
             this.masterBlueId = null;
             this.cyclicProofIdentity = null;
             this.completeCyclicProof = null;
+            this.detachedStandardProof = true;
         }
     }
 
@@ -168,6 +173,8 @@ public final class ComponentSnapshot {
     public CyclicSetProof completeCyclicProof() {
         return completeCyclicProof == null ? null : copyProof(completeCyclicProof);
     }
+
+    boolean hasDetachedStandardProof() { return detachedStandardProof; }
 
     /**
      * Returns the documented value.

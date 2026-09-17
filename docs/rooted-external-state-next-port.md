@@ -95,3 +95,10 @@ See `lang-audit.json`, `lang-controls01/`, `dependency-summary.json`, and
 under the Blue project directory. Subsequent documentation-only commits do not
 change the tested implementation or relabel its immutable artifact. No remote
 branch, PR or release was modified.
+
+## Subsequent POC follow-up
+
+[Processor-owned output reuse](rooted-processor-owned-output-reuse.md) retains the
+already validated, privately owned result snapshot to avoid repeated pure graph
+verification. Its ownership controls and separately measured test results are
+documented there; this does not change or extend the port qualification above.

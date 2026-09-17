@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.processor.closure.CompositionCampaignFixture.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Only complete decoder ownership can lend pure verification to derived result views. */
+/** Decoder ownership and fully validated processor-owned output lend only pure state verification. */
 final class DecodedResultDerivedSnapshotVerificationTest {
     private static final int LIMIT = 16 * 1024 * 1024;
     private static final DocumentId ROOT = new DocumentId("d0");
@@ -27,7 +27,8 @@ final class DecodedResultDerivedSnapshotVerificationTest {
             ClosureProcessResult restored = results.decode(resultBytes);
             AffectedClosureSnapshot originalOutput = original.rootedProjection().resultingSnapshot();
             AffectedClosureSnapshot output = restored.rootedProjection().resultingSnapshot();
-            assertFalse(originalOutput.hasVerifiedOwnedState(), "Encoding cannot certify public or processor input");
+            assertTrue(originalOutput.hasVerifiedOwnedState(), "The internal processor retained its validated, detached output");
+            assertSame(original.storageVerifiedOutput(), originalOutput);
             assertTrue(output.hasVerifiedOwnedState());
             assertFalse(output.hasVerifiedStorageSnapshot(), "A derived output was not a parsed snapshot record");
             AtomicInteger full = new AtomicInteger();
@@ -98,8 +99,8 @@ final class DecodedResultDerivedSnapshotVerificationTest {
             AffectedClosureSnapshot ordinaryRetained = original.rootedProjection().retainedSnapshot(retainedEpochs(original, 1),
                     full::incrementAndGet);
             ClosureEvidenceVerifier.verifySnapshot(ordinaryRetained, full::incrementAndGet);
-            assertEquals(6, full.get(), "Unowned producer inputs keep ordinary verification on every call");
-            assertFalse(ordinaryRetained.hasVerifiedOwnedState());
+            assertEquals(4, full.get(), "The processor-owned source also proves its exact epoch-only transform");
+            assertTrue(ordinaryRetained.hasVerifiedOwnedState());
         }
     }
 
@@ -130,7 +131,7 @@ final class DecodedResultDerivedSnapshotVerificationTest {
             byte[] corrupt = bytes.clone(); corrupt[corrupt.length - 1] ^= 1;
             assertThrows(IllegalArgumentException.class, () -> results.decode(corrupt));
             assertThrows(IllegalArgumentException.class, () -> new ClosureProcessResultStorageCodec(bytes.length - 1, 128).decode(bytes));
-            assertFalse(original.rootedProjection().resultingSnapshot().hasVerifiedOwnedState());
+            assertTrue(original.rootedProjection().resultingSnapshot().hasVerifiedOwnedState());
             assertArrayEquals(bytes, results.encode(restored));
         }
     }

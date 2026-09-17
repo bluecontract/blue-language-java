@@ -7,6 +7,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.processor.closure.CompositionCampaignFixture.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,11 +42,48 @@ final class RootedHistoricalWitnessTest {
         historicalReaction(true, output -> assertNull(publicCopy(output).rootedWitnesses()), true);
     }
 
+    @Test
+    void oneSynchronousResultAndViewEncodingReducesRepeatedHistoricalWitnessVerification() {
+        historicalReaction(false, ignored -> { }, false, result -> {
+            if (result.rootedProjection() == null) return;
+            int maximumBytes = 16 * 1024 * 1024;
+            AffectedClosureSnapshot output = result.rootedProjection().resultingSnapshot();
+            AffectedClosureSnapshot retained = ClosureEvidenceFactory.rootedRetainedSnapshot(result,
+                    Collections.singletonMap(P, output.managedDocument(P).epoch() + 1L));
+            AtomicInteger ordinaryChecks = new AtomicInteger(), sharedChecks = new AtomicInteger();
+            ClosureProcessResultStorageCodec ordinaryResults = new ClosureProcessResultStorageCodec(maximumBytes, 128,
+                    null, ordinaryChecks::incrementAndGet);
+            AffectedClosureSnapshotStorageCodec ordinarySnapshots = new AffectedClosureSnapshotStorageCodec(maximumBytes, 128,
+                    0, 0, ordinaryChecks::incrementAndGet);
+            byte[] resultBytes = ordinaryResults.encode(result);
+            byte[] outputBytes = ordinarySnapshots.encode(output), retainedBytes = ordinarySnapshots.encode(retained);
+            AffectedClosureSnapshotStorageCodec sharedSnapshots = new AffectedClosureSnapshotStorageCodec(maximumBytes, 128,
+                    0, 0, sharedChecks::incrementAndGet);
+            ClosureProcessResultStorageCodec sharedResults = new ClosureProcessResultStorageCodec(maximumBytes, 128);
+            try (SnapshotStorageCall call = sharedSnapshots.newCall()) {
+                assertArrayEquals(resultBytes, sharedResults.encodeInCall(result, call));
+                assertArrayEquals(outputBytes, call.encode(output));
+                assertArrayEquals(retainedBytes, call.encode(retained));
+                assertTrue(call.peakBytes() <= 8 * 1024 * 1024);
+                assertTrue(call.peakEntries() <= 32);
+            }
+            System.out.println("Historical view encode full snapshot checks: ordinary=" + ordinaryChecks.get()
+                    + ", shared=" + sharedChecks.get() + ", ownerEpoch=" + output.managedDocument(P).epoch());
+            assertEquals(6, ordinaryChecks.get(), "Retaining the processor-owned output removes three formerly repeated full checks (9 -> 6)");
+            assertEquals(4, sharedChecks.get(), "The experimental shared call additionally removes two duplicate witness checks (7 -> 4)");
+        });
+    }
+
     private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy) {
         historicalReaction(retiredReturn, verifyPublicCopy, false);
     }
 
     private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy, boolean cold) {
+        historicalReaction(retiredReturn, verifyPublicCopy, cold, ignored -> { });
+    }
+
+    private void historicalReaction(boolean retiredReturn, Consumer<AffectedClosureSnapshot> verifyPublicCopy, boolean cold,
+            Consumer<ClosureProcessResult> observeStorage) {
         try (CompositionCampaignFixture fixture = new CompositionCampaignFixture(true)) {
             Node source0 = initialized(document("source"));
             source0.getContracts().properties("embedded", process("paths", "/peer"));
@@ -95,6 +133,7 @@ final class RootedHistoricalWitnessTest {
                 assertEquals(reverse.bindingIdentity(), result.occurrenceBindings().stream()
                         .filter(row -> row.sourceDocumentId().equals(S)).findFirst().get().bindingIdentity());
                 assertTrue(result.managedTransitionReceipts().stream().noneMatch(value -> value.documentId().equals(S)));
+                observeStorage.accept(result);
                 AffectedClosureSnapshot output = result.rootedProjection().resultingSnapshot();
                 long ownerEpoch = output.managedDocument(P).epoch();
                 AffectedClosureSnapshot retained = ClosureEvidenceFactory.rootedRetainedSnapshot(result,
@@ -158,6 +197,7 @@ final class RootedHistoricalWitnessTest {
                 assertEquals(reverse.bindingIdentity(), nextResult.occurrenceBindings().stream()
                         .filter(row -> row.sourceDocumentId().equals(S)).findFirst().get().bindingIdentity());
                 assertTrue(nextResult.managedTransitionReceipts().stream().noneMatch(value -> value.documentId().equals(S)));
+                observeStorage.accept(nextResult);
                 if (cold) {
                     ClosureProcessResultStorageCodecTest.assertRoundTrip(result);
                     ClosureProcessResultStorageCodecTest.assertRoundTrip(nextResult);

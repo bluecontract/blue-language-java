@@ -12,6 +12,7 @@ public final class ManagedDocumentSnapshot
     private final DocumentId documentId;
     private final String blueId;
     private final Node document;
+    private final boolean detachedStandardDocument;
     private final boolean initialized;
     private final boolean terminated;
     private final boolean publicRoot;
@@ -43,6 +44,7 @@ public final class ManagedDocumentSnapshot
         this.blueId = ClosureValueSupport.requireBlueId(
                 blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         this.document = Objects.requireNonNull(document, "document").clone();
+        this.detachedStandardDocument = ClosureOwnedRepresentation.detachedCopy(document, this.document);
         this.initialized = initialized;
         this.terminated = terminated;
         this.publicRoot = publicRoot;
@@ -77,6 +79,8 @@ public final class ManagedDocumentSnapshot
     public Node document() {
         return document.clone();
     }
+
+    boolean hasDetachedStandardDocument() { return detachedStandardDocument; }
 
     /**
      * Returns the asserted initialization state.

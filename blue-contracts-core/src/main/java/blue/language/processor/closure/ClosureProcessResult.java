@@ -50,6 +50,7 @@ public final class ClosureProcessResult {
     private final List<ManagedOccurrenceEvidenceResolution> storageResolutions;
     private final AdmissionCandidate storageRejectedCandidate;
     private volatile ClosureProcessResultStorageCodec.DecodedOutput verifiedStorageOutput;
+    private final AffectedClosureSnapshot processorVerifiedOutput;
 
     /**
      * Creates and semantically cross-validates one complete result.
@@ -640,6 +641,21 @@ public final class ClosureProcessResult {
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }
+        // Only the internal processor path supplies its completed finalization.
+        // Retain the exact output already validated above, after proving that its
+        // entire physical representation cannot retain caller-mutable aliases.
+        boolean owned = reusableFinalization != null && storageCall == null && output.hasDetachedRepresentation();
+        for (ResultingDocument document : this.resultingDocuments) {
+            owned &= document.hasDetachedStandardDocument();
+        }
+        this.processorVerifiedOutput = owned ? output : null;
+        if (owned) output.acceptProcessorVerification(new ProcessorSnapshotVerification(output));
+    }
+
+    static final class ProcessorSnapshotVerification {
+        private final AffectedClosureSnapshot subject;
+        private ProcessorSnapshotVerification(AffectedClosureSnapshot subject) { this.subject = subject; }
+        boolean certifies(AffectedClosureSnapshot candidate) { return candidate == subject; }
     }
 
     /**
@@ -652,7 +668,7 @@ public final class ClosureProcessResult {
     AffectedClosureSnapshot storageInputSnapshot() { return storageInputSnapshot; }
     AffectedClosureSnapshot storageVerifiedOutput() {
         ClosureProcessResultStorageCodec.DecodedOutput selected = verifiedStorageOutput;
-        return selected == null ? null : selected.outputFor(this);
+        return selected == null ? processorVerifiedOutput : selected.outputFor(this);
     }
     void acceptDecodedOutput(ClosureProcessResultStorageCodec.DecodedOutput certificate) {
         Objects.requireNonNull(certificate, "certificate").outputFor(this);
@@ -700,6 +716,7 @@ public final class ClosureProcessResult {
         storageOutputWitnesses = base.storageOutputWitnesses;
         storageResolutions = base.storageResolutions;
         storageRejectedCandidate = base.storageRejectedCandidate;
+        processorVerifiedOutput = base.processorVerifiedOutput;
         rootedProjection = new RootedPublicationProjection(base, ownership);
     }
 

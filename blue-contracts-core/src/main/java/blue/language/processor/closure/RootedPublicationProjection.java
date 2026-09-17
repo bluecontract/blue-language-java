@@ -58,18 +58,25 @@ public final class RootedPublicationProjection {
         }
         this.ownedDocuments = Collections.unmodifiableList(owned);
         this.embeddedViewDocuments = Collections.unmodifiableList(embedded);
-        List<ManagedDocumentSnapshot> calculated = new ArrayList<>();
-        List<DocumentId> publicRoots = new ArrayList<>();
-        for (ResultingDocument document : result.resultingDocuments()) {
-            calculated.add(new ManagedDocumentSnapshot(document.documentId(), document.afterBlueId(),
-                    document.document(), document.initialized(), document.terminated(), document.publicRoot(),
-                    document.epoch(), document.componentGeneration()));
-            if (document.publicRoot()) publicRoots.add(document.documentId());
+        RootedWitnessFrame.State outputWitnesses = ownership.boundaries.get(ownership.boundaries.size() - 1).rootedWitnesses();
+        AffectedClosureSnapshot verifiedOutput = result.storageVerifiedOutput();
+        if (verifiedOutput != null && verifiedOutput.hasVerifiedOwnedState()
+                && verifiedOutput.rootedWitnesses() == outputWitnesses) {
+            this.resultingSnapshot = verifiedOutput;
+        } else {
+            List<ManagedDocumentSnapshot> calculated = new ArrayList<>();
+            List<DocumentId> publicRoots = new ArrayList<>();
+            for (ResultingDocument document : result.resultingDocuments()) {
+                calculated.add(new ManagedDocumentSnapshot(document.documentId(), document.afterBlueId(),
+                        document.document(), document.initialized(), document.terminated(), document.publicRoot(),
+                        document.epoch(), document.componentGeneration()));
+                if (document.publicRoot()) publicRoots.add(document.documentId());
+            }
+            this.resultingSnapshot = new AffectedClosureSnapshot(result.outputClosureIdentity(), result.graphGeneration(), calculated,
+                    result.occurrenceBindings(), result.occurrenceBindingSetIdentity(), result.resultingComponents(), publicRoots,
+                    outputWitnesses);
+            ClosureEvidenceVerifier.verifySnapshot(resultingSnapshot);
         }
-        this.resultingSnapshot = new AffectedClosureSnapshot(result.outputClosureIdentity(), result.graphGeneration(), calculated,
-                result.occurrenceBindings(), result.occurrenceBindingSetIdentity(), result.resultingComponents(), publicRoots,
-                ownership.boundaries.get(ownership.boundaries.size() - 1).rootedWitnesses());
-        ClosureEvidenceVerifier.verifySnapshot(resultingSnapshot);
         if (!resultingSnapshot.closureIdentity().equals(result.outputClosureIdentity())) {
             throw new IllegalArgumentException("Rooted projection differs from the complete computed result");
         }
