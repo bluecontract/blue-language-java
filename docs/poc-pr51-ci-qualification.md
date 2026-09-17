@@ -67,3 +67,29 @@ baseline checks pass locally. All 23 focused generator, stale-report diagnostic
 and implementation-inventory tests also pass. Full release qualification remains
 required; a local `rcVerify --continue` diagnostic is not a clean-source release
 certificate and must not replace the automatic RC pipeline.
+
+The broader diagnostic completed in 21m46s with four failures:
+
+- The separate legacy-to-current API migration ledger omitted the same fourteen
+  additive storage/reuse types already present in the module relocation ledger.
+  Add one explicit `poc-rooted-storage-reuse` entry; preserve every prior
+  approval, the original API baseline and the checker. No incompatible changes
+  are newly approved.
+- One resource-followup checker used macOS Python 3.9, which cannot parse the
+  fixture's ISO timestamp ending in `Z`. Its six tests pass unchanged under the
+  available Python 3.13; CI already selects Python 3.12. This needs no source or
+  fixture change. Use the supported interpreter for subsequent local checks.
+- Immutable staging correctly rejected the unprepared `3.1.0-rc.31-SNAPSHOT`
+  diagnostic version. The real RC workflow prepares an exact release version.
+- Clean-build evidence was absent, as expected for this diagnostic invocation.
+  Do not invent evidence or treat that run as release qualification.
+
+No Java test failure was reported in this diagnostic. Downstream checks whose
+dependencies failed still require the normal clean-source RC run; this is not
+a claim that every release gate completed successfully.
+
+After recording the fourteen additions, `verifySemanticApiMigration` passes:
+all 351 historical incompatible approvals are unchanged, while approved additions
+increase from 548 to 562. The focused Java API-ledger verifier suite and all six
+resource-followup checks also pass using the supported local interpreter. The
+binary baseline, previous ledger entries and verification logic are unchanged.
