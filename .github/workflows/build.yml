@@ -27,4 +27,29 @@ jobs:
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
         run: |
           printf '%s\n' 'deployMavenCentralSonatypeDeploymentId=4b5b2451-c22f-4f8e-841f-1e08b1b714ec' > "$RUNNER_TEMP/rc28-submitted.properties"
+          python3 - <<'PYTHON'
+          import base64, importlib.util, json, os
+          spec = importlib.util.spec_from_file_location('waiter', '.github/scripts/wait-maven-central.py')
+          waiter = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(waiter)
+          try:
+              token = base64.b64encode((os.environ['JRELEASER_MAVENCENTRAL_USERNAME']+':'+os.environ['JRELEASER_MAVENCENTRAL_PASSWORD']).encode()).decode()
+              row = waiter.status('4b5b2451-c22f-4f8e-841f-1e08b1b714ec', token, 30)
+              state = row.get('deploymentState') if isinstance(row, dict) else None
+              print('Deployment state:', state if state in ['PENDING', 'VALIDATING', 'VALIDATED', 'PUBLISHING', 'PUBLISHED', 'FAILED'] else 'unknown')
+              errors = row.get('errors') if isinstance(row, dict) else None
+              print('Errors type:', type(errors).__name__)
+              print('Errors size:', len(errors) if isinstance(errors, (dict, list, str)) else 'not-container')
+              if isinstance(errors, str):
+                  try:
+                      errors = json.loads(errors)
+                      print('Errors string contains empty JSON:', errors in [None, {}, []])
+                  except ValueError:
+                      print('Errors string contains empty JSON:', False)
+              print('Decoded errors type:', type(errors).__name__)
+              print('Decoded errors size:', len(errors) if isinstance(errors, (dict, list)) else 'not-container')
+              print('All error buckets empty:', isinstance(errors, dict) and all(value in [None, {}, [], ''] for value in errors.values()))
+          except (ValueError, KeyError, OSError, TimeoutError) as error:
+              raise SystemExit(waiter.failure_message(error))
+          PYTHON
           timeout 120s python3 .github/scripts/wait-maven-central.py "$RUNNER_TEMP/rc28-submitted.properties" --receipt "$RUNNER_TEMP/rc28-published.json"
