@@ -12,11 +12,11 @@ runs:
       run: node .github/scripts/ci-verification-source.js check
     - name: Execute clean Gradle build
       shell: bash
-      run: ./gradlew --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
+      run: ./gradlew --max-workers=4 --no-parallel --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
     - name: Execute RC verification
       if: inputs.release == 'true'
       shell: bash
-      run: ./gradlew --init-script .github/scripts/ci-transition-receipts.init.gradle rcVerify
+      run: ./gradlew --max-workers=4 --no-parallel --init-script .github/scripts/ci-transition-receipts.init.gradle rcVerify
     - name: Verify reproducible source release
       if: inputs.release == 'true'
       shell: bash

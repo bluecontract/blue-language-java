@@ -16,6 +16,15 @@ gradle.projectsEvaluated {
     if (!gradle.startParameter.excludedTaskNames.empty) {
         throw new GradleException('Distributed verification cannot exclude Gradle tasks')
     }
+    // Bound class-level concurrency across the whole Gradle invocation. Keep
+    // methods serial; extra JVMs only distribute independent test classes.
+    def testForks = Math.min(4, gradle.startParameter.maxWorkerCount)
+    root.allprojects { project ->
+        project.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { task ->
+            task.maxParallelForks = testForks
+            task.systemProperty('junit.jupiter.execution.parallel.enabled', 'false')
+        }
+    }
     def command = ['node', script.absolutePath, 'assignments'].execute(null, root.projectDir)
     def json = command.text
     if (command.waitFor() != 0) throw new GradleException('Cannot load transition assignments')
