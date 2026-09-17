@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.*;
 import static com.fasterxml.jackson.databind.SerializationFeature.INDENT_OUTPUT;
@@ -34,12 +33,9 @@ import static com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.MINIMI
  *
  * <p>Both shared instances reject duplicate keys and preserve arbitrary
  * precision numeric tokens. The YAML instance additionally rejects tags,
- * anchors, and aliases because they are outside the Blue data model.</p>
+ * anchors, aliases, and merge keys because they are outside portable Blue YAML.</p>
  */
 public class UncheckedObjectMapper extends ObjectMapper {
-
-    private static final Pattern YAML_TAG_PATTERN = Pattern.compile("(^|[\\s\\[{,])![^\\s]+");
-    private static final Pattern YAML_ANCHOR_OR_ALIAS_PATTERN = Pattern.compile("(^|\\s)[&*][A-Za-z0-9_-]+");
 
     /**
      * Shared strict YAML mapper. Treat it as process configuration and do not
@@ -218,12 +214,6 @@ public class UncheckedObjectMapper extends ObjectMapper {
     private void rejectYamlOnlySyntax(String content) {
         if (!(getFactory() instanceof YAMLFactory) || content == null) {
             return;
-        }
-        if (YAML_TAG_PATTERN.matcher(content).find()) {
-            throw new JsonException(new IllegalArgumentException("YAML tags are not part of the Blue JSON data model."));
-        }
-        if (YAML_ANCHOR_OR_ALIAS_PATTERN.matcher(content).find()) {
-            throw new JsonException(new IllegalArgumentException("YAML anchors and aliases are not part of the Blue JSON data model."));
         }
         YamlObjectKeyValidator.validate(content);
     }
