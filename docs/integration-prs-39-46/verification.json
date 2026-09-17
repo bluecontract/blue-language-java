@@ -1,0 +1,545 @@
+{
+  "status": "PASS",
+  "plan": {
+    "languageBase": "fb46ae5134a2c82143a8dbc91a02f70ce5478071",
+    "coordinationBase": "69cd6db22707028abfbaab04741dc9b61961aa19",
+    "branch": "integration/language-prs-39-46",
+    "prs": [
+      {
+        "number": 39,
+        "head": "33364d03c9e5ad6102dfedcd84f8f4127111d633",
+        "title": "docs(language): record T02 verification and handoff"
+      },
+      {
+        "number": 40,
+        "head": "ce291bdc18417e6e0135f166f3a87db759a1f12b",
+        "title": "fix: reject missing list indices during exact replacement"
+      },
+      {
+        "number": 42,
+        "head": "853741c25de4b464ce06720ee893455950e81ff7",
+        "title": "fix: finalize ordinary processing after root termination"
+      },
+      {
+        "number": 43,
+        "head": "9a371fbc2206d83ed9b7a7df9b9fdcfda58ffb5e",
+        "title": "fix(contracts): resolve reference-backed patch parents before absence checks"
+      },
+      {
+        "number": 44,
+        "head": "d3ae1f20414471efd494640e97d3d1d65241458e",
+        "title": "fix: enforce portable YAML restrictions at token boundaries"
+      },
+      {
+        "number": 46,
+        "head": "f6b35ecdcec9a7bb9e5f635526f4160100e5951f",
+        "title": "fix(provider): preserve cyclic proof capability through caching"
+      }
+    ],
+    "publication": "local-only",
+    "java17": "17.0.20.1+1",
+    "java21": "21.0.11+10"
+  },
+  "stages": [
+    {
+      "pr": 39,
+      "languageCommit": "ef9019aaf6b11e9129da2439cb7a70c9fd1488ca",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:53c8417d7bba157fc81982ce36bb75ceb2219183e665fe56aa7783a44cbb063d",
+      "nativeManifestSha256": "sha256:b6272ba9ff1f9c784151419ffca620e833fb059cd76ba8da724824e608bbf705",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 2823
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    },
+    {
+      "pr": 40,
+      "languageCommit": "c59b10dc1ce86000799e5fa3a34e9cdbcd572427",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:63f2eb3b1fe4b2700252d8e5cb3aba67ce5e8980158500a7b7bdebdd5eace16e",
+      "nativeManifestSha256": "sha256:358c0fc6daa88089099ca779bb2c84a2770524903b257523215925aa00bbcbbe",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 2901
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    },
+    {
+      "pr": 42,
+      "languageCommit": "6f2589bc258513afeca1d043a4003a6326f9ea1c",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:dd3a2677a541748192b47aa719329a8321ac65df90b59c8fdaf600a345a261bf",
+      "nativeManifestSha256": "sha256:483bd5e11099ff005b5ea59eff0cd73cbb9929264d73d208968f7486cf8fa9df",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 2914
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    },
+    {
+      "pr": 43,
+      "languageCommit": "41056338b592b54df78943bfdc9068991c881379",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:d576ddab055bac87a85d6b6c315fe8955714f1679383f65d3593e4124b181651",
+      "nativeManifestSha256": "sha256:d8a264d38e1ba5c47e850112c7978bccbdcf0ab19705c09378b80fdc5e3083d9",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 2938
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    },
+    {
+      "pr": 44,
+      "languageCommit": "4d44355338301d9b79b2f0ce12bdc6b9e4666dc2",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:299473b9aeaf50354bc9d7749c923e12585f866021ed7e4e91602cab29fe2e91",
+      "nativeManifestSha256": "sha256:054adf828dbc96de9cb34e367f2fecffadd6bdc2f0e1f88d28993427b09f6c00",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3011
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    },
+    {
+      "pr": 46,
+      "languageCommit": "bb474f5a9447a0b948efb95613bebda5db447c5c",
+      "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+      "manifestSha256": "sha256:eb4bba7616c92e68ee51a61c62a80f0c262fcde8e5fcc3b65166613a836fe94d",
+      "nativeManifestSha256": "sha256:a451c1e979c5095c9210a925b124a4aeb32a897567eb1177823bae71b4776780",
+      "languageTests": {
+        "blue-conformance/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 182
+        },
+        "blue-contracts-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 612
+        },
+        "blue-language-core/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 173
+        },
+        "blue-language-java/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 7
+        },
+        "blue-language-model/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 3061
+        },
+        "examples/build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 20
+        }
+      },
+      "coordinationJava17Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      },
+      "coordinationJava21Tests": {
+        "build/test-results/consumerTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 16
+        },
+        "build/test-results/integrationTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 91
+        },
+        "build/test-results/scenarioTest": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 14
+        },
+        "build/test-results/test": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 1065
+        }
+      }
+    }
+  ],
+  "campaign": {
+    "coordinationCommit": "5ff515d0e3a409f40985d101ceb248d767a0f9f2",
+    "languageCommit": "bb474f5a9447a0b948efb95613bebda5db447c5c",
+    "prs": [
+      39,
+      40,
+      42,
+      43,
+      44,
+      46
+    ]
+  }
+}
