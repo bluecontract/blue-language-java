@@ -67,6 +67,13 @@ jobs:
           node .github/scripts/ci-verification-source.js check
           node .github/scripts/ci-verification-gate.js
 
+      - name: Verify release gates without publication
+        uses: ./.github/actions/verify-core
+        with:
+          phase: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Archive test results
         uses: actions/upload-artifact@v4
         if: always()
