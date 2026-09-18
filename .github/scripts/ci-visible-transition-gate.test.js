@@ -4,6 +4,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 
+test('build phase requires the sentinel audit before the expensive build', () => {
+  const action = read('actions/verify-core/action.yml');
+  const start = action.indexOf('- name: Verify empty-object sentinel audit');
+  assert.ok(start > action.indexOf('- name: Check source identity before verification'));
+  assert.ok(start < action.indexOf('- name: Execute clean Gradle build'));
+  const step = action.slice(start).split(/\n    - name:/)[0];
+  assert.match(step, /if: inputs\.phase == 'build'/);
+  assert.match(step, /run: \.\/gradlew --max-workers=4 --no-parallel verifyEmptySentinelAudit/);
+  assert.doesNotMatch(step, /continue-on-error|\|\|\s*true/);
+});
+
 for (const file of ['build.yml', 'release-rc.yml', 'release.yml']) {
   test(`${file} exposes mandatory transition gate after core and before side effects`, () => {
     const workflow = read(`workflows/${file}`);
