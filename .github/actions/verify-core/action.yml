@@ -15,6 +15,10 @@ runs:
     - name: Check source identity before verification
       shell: bash
       run: node .github/scripts/ci-verification-source.js check
+    - name: Verify empty-object sentinel audit
+      if: inputs.phase == 'build'
+      shell: bash
+      run: ./gradlew --max-workers=4 --no-parallel verifyEmptySentinelAudit
     - name: Execute clean Gradle build
       if: inputs.phase == 'build'
       shell: bash
