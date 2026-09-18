@@ -54,3 +54,33 @@ test('core rejects unknown or missing phases before any verification', () => {
       ['build', 'release'].includes(phase) ? 0 : 1);
   }
 });
+
+test('ordinary Build runs full release gates in the same workspace without a second build', () => {
+  const workflow = read('workflows/build.yml');
+  const job = workflow.split('\n  Build:\n')[1];
+  assert.ok(job);
+  assert.equal((workflow.match(/phase: build/g) || []).length, 1);
+  assert.equal((workflow.match(/phase: release/g) || []).length, 1);
+  const gate = job.indexOf('- name: Wait for transition verification');
+  const release = job.indexOf('- name: Verify release gates without publication');
+  assert.ok(release > gate);
+  assert.ok(release < job.indexOf('- name: Archive test results'));
+  const step = job.slice(release).split(/\n      - /)[0];
+  assert.match(step, /uses: \.\/\.github\/actions\/verify-core/);
+  assert.match(step, /phase: release/);
+  assert.match(step, /GH_TOKEN: \$\{\{ github.token \}\}/);
+  assert.doesNotMatch(step, /continue-on-error|if:|clean/);
+  assert.doesNotMatch(workflow, /ReleaseChecks:|contents: write|git push|git tag|jreleaser|secrets\./);
+  assert.match(workflow, /mode: existing\n\s+scope: build/);
+});
+
+test('build phase checks semantic API migration immediately after building JARs', () => {
+  const action = read('actions/verify-core/action.yml');
+  const start = action.indexOf('- name: Verify semantic API migration');
+  assert.ok(start > action.indexOf('- name: Execute clean Gradle build'));
+  assert.ok(start < action.indexOf('- name: Execute RC verification'));
+  const step = action.slice(start).split(/\n    - name:/)[0];
+  assert.match(step, /if: inputs\.phase == 'build'/);
+  assert.match(step, /run: \.\/gradlew --max-workers=4 --no-parallel verifySemanticApiMigration/);
+  assert.doesNotMatch(step, /continue-on-error|\|\|\s*true/);
+});

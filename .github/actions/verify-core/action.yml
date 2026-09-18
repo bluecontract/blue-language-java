@@ -25,6 +25,10 @@ runs:
       env:
         BLUE_CI_DEFER_TRANSITIONS: 'true'
       run: ./gradlew --max-workers=4 --no-parallel --init-script .github/scripts/ci-transition-receipts.init.gradle clean build
+    - name: Verify semantic API migration
+      if: inputs.phase == 'build'
+      shell: bash
+      run: ./gradlew --max-workers=4 --no-parallel verifySemanticApiMigration
     - name: Execute RC verification
       if: inputs.phase == 'release'
       shell: bash

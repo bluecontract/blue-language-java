@@ -5,7 +5,7 @@ one source-preparation job, five independent Python transition owners, and a cor
 job. Core and owners overlap. The core first runs the normal clean build with six Python transition commands
 explicitly delegated to their owners. This intermediate build success does not
 approve a release. The top-level **Wait for transition verification** step then
-requires every successful same-source receipt. RC and Stable run their full
+requires every successful same-source receipt. Build, RC and Stable run their full
 `rcVerify`, source archive and API checks after this gate, validating the receipts
 again at normal task boundaries without repeating Python work. Publication is
 prohibited in the distributed Gradle invocations; tags, pushes and publication
@@ -39,9 +39,31 @@ experimental fork settings were removed. The earlier same-source Java 25 result
 and the run artifacts, not an additional workflow:
 https://github.com/bluecontract/blue-language-java/actions/runs/35116555937
 
-Final-head PR CI exercises actual Build and the shared helpers. Earlier isolated
-RC/Stable verification passed, but the removed harness is not rerun at the final
-head, and no production release or publication is dispatched for validation.
+## PR coverage of release gates
+
+The existing `Build` job runs the same shared build and release phases as RC and
+Stable. After its single clean build it checks semantic API migration, waits for
+all same-source transition receipts, then executes `rcVerify`, source archive
+reproducibility and `verifyFinalApiBaseline` in the same workspace. This preserves
+clean-build evidence and reuses Gradle outputs without a second runner/build or
+cross-runner transfer of Java test evidence. Transition owners are not rerun.
+
+The added release verification includes candidate/source preflight, identity and
+sentinel inventories, API migration and final baseline, publication metadata,
+local staged-repository checks, consumer smoke, conformance and aggregate release
+evidence. Gradle owns the complete dependency graph. The additional checks have a
+real runtime cost; they are mandatory, not an optional fast lane.
+
+Preparation uses unchanged PR/push source (`mode: existing`, `scope: build`). No
+version is reserved, no tag or push is made, and no Maven signing/upload or GitHub
+release is performed. Permissions remain read-only. The distributed init script
+forbids remote publication and JReleaser tasks while allowing local staging.
+Failed checks fail the existing `Build` check, whose reports are always archived.
+Branch protection must require `Build` to prevent a merge with failing checks.
+
+Release credentials, the actual prepared version/tag, signing, remote permissions
+and Maven availability still require release-time validation. A green PR does not
+certify those operations or a different merge tree. No extra workflow is added.
 
 ## Maven Central publication visibility
 

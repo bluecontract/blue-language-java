@@ -1,10 +1,10 @@
 name: Build and validate
 
 on:
+  # Pushes to next are verified by Release RC; keep PR validation below.
   push:
     branches:
       - master
-      - next
       - 'codex/*'
       - 'feature/*'
       - 'fix/*'
@@ -66,6 +66,13 @@ jobs:
         run: |
           node .github/scripts/ci-verification-source.js check
           node .github/scripts/ci-verification-gate.js
+
+      - name: Verify release gates without publication
+        uses: ./.github/actions/verify-core
+        with:
+          phase: release
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Archive test results
         uses: actions/upload-artifact@v4
