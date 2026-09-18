@@ -1,10 +1,10 @@
 name: Build and validate
 
 on:
+  # Pushes to next are verified by Release RC; keep PR validation below.
   push:
     branches:
       - master
-      - next
       - 'codex/*'
       - 'feature/*'
       - 'fix/*'
