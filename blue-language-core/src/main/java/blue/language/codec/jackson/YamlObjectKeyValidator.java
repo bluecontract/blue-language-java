@@ -11,9 +11,10 @@ import org.yaml.snakeyaml.events.CollectionEndEvent;
 import org.yaml.snakeyaml.events.CollectionStartEvent;
 import org.yaml.snakeyaml.events.Event;
 import org.yaml.snakeyaml.events.MappingStartEvent;
+import org.yaml.snakeyaml.events.NodeEvent;
 import org.yaml.snakeyaml.events.ScalarEvent;
 
-/** Checks key tokens before the JSON-facing YAML parser coerces them to strings. */
+/** Checks portable syntax before the JSON-facing parser discards YAML token metadata. */
 final class YamlObjectKeyValidator {
     private static final Pattern JSON_SCALAR = Pattern.compile(
             "(?:null|true|false|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)");
@@ -33,6 +34,7 @@ final class YamlObjectKeyValidator {
         // Parse events only: no YAML object construction, implicit Java types,
         // alias expansion, or provider reads occur at this syntax boundary.
         for (Event event : new Yaml().parse(new StringReader(source))) {
+            rejectYamlOnlySyntax(event);
             if (event instanceof CollectionEndEvent) {
                 containers.pop();
                 continue;
@@ -42,9 +44,14 @@ final class YamlObjectKeyValidator {
             }
             Container parent = containers.peek();
             if (parent != null && parent.mapping) {
-                if (parent.key && !stringKey(event)) {
-                    throw new UncheckedObjectMapper.JsonException(new IllegalArgumentException(
-                            "Portable Blue YAML requires string object keys."));
+                if (parent.key) {
+                    if (!stringKey(event)) {
+                        reject("Portable Blue YAML requires string object keys.");
+                    }
+                    ScalarEvent key = (ScalarEvent) event;
+                    if (key.isPlain() && "<<".equals(key.getValue())) {
+                        reject("Portable Blue YAML does not support merge keys.");
+                    }
                 }
                 parent.key = !parent.key;
             }
@@ -52,6 +59,26 @@ final class YamlObjectKeyValidator {
                 containers.push(new Container(event instanceof MappingStartEvent));
             }
         }
+    }
+
+    private static void rejectYamlOnlySyntax(Event event) {
+        // AliasEvent is also a NodeEvent: its anchor names the referenced node.
+        if (event instanceof NodeEvent && ((NodeEvent) event).getAnchor() != null) {
+            reject("YAML anchors and aliases are not part of the Blue JSON data model.");
+        }
+        String tag = null;
+        if (event instanceof ScalarEvent) {
+            tag = ((ScalarEvent) event).getTag();
+        } else if (event instanceof CollectionStartEvent) {
+            tag = ((CollectionStartEvent) event).getTag();
+        }
+        if (tag != null) {
+            reject("YAML tags are not part of the Blue JSON data model.");
+        }
+    }
+
+    private static void reject(String message) {
+        throw new UncheckedObjectMapper.JsonException(new IllegalArgumentException(message));
     }
 
     private static boolean stringKey(Event event) {

@@ -1,6 +1,7 @@
 package blue.language.runtime;
 
 import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
@@ -10,11 +11,16 @@ import blue.language.provider.ProviderUnavailableException;
 
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
+import blue.language.merge.TypeEvidenceResolution;
+import blue.language.graph.NodeExpander;
+import blue.language.matching.MatchingRuntime;
+import blue.language.matching.NodeTypeMatcher;
 import blue.language.model.Node;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.resolve.ResolutionLimits;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,6 +38,40 @@ final class LanguageRuntimeLimitedResolution {
             REFERENCE_CACHE_ADMISSION = blueId -> true;
 
     private LanguageRuntimeLimitedResolution() {
+    }
+
+    static BlueOperationResult<Boolean> matches(
+            NodeProvider nodeProvider,
+            MergingProcessor mergingProcessor,
+            Node candidate,
+            Node type,
+            BlueOperationLimits limits,
+            Function<Node, Node> preprocessor,
+            BlueCachePolicy cachePolicy) {
+        Objects.requireNonNull(candidate, "candidate");
+        Objects.requireNonNull(limits, "limits");
+        ReferenceBudget budget = new ReferenceBudget(limits.maxReferenceExpansions());
+        LimitedMatchingRuntime runtime = new LimitedMatchingRuntime(
+                budgetedProvider(nodeProvider, budget), mergingProcessor,
+                limits, preprocessor, cachePolicy);
+        try {
+            boolean matched;
+            if (type == null) {
+                runtime.resolveTypeEvidenceForMatching(
+                        preprocessor.apply(candidate.clone()), ResolutionLimits.NO_LIMITS);
+                matched = true;
+            } else {
+                // The throwing path retains evidence failures until this operation
+                // forms its typed result. Candidate preparation happens only once.
+                matched = new NodeTypeMatcher(runtime).matchesTypeOrThrow(
+                        candidate, type, ResolutionLimits.NO_LIMITS);
+            }
+            return BlueOperationResult.established(matched);
+        } catch (DemandedPathsAbsentException absent) {
+            return BlueOperationResult.absent(absent.getMessage());
+        } catch (RuntimeException failure) {
+            return classifyFailure(failure, budget);
+        }
     }
 
     static BlueOperationResult<Node> resolve(
@@ -68,17 +108,24 @@ final class LanguageRuntimeLimitedResolution {
             return classifyFailure(failure, budget);
         }
 
+        if (hasDemandedPath(resolved, limits)) {
+            return BlueOperationResult.established(resolved);
+        }
+        return BlueOperationResult.absent(
+                "Demanded paths are absent from the completed resolved value.");
+    }
+
+    private static boolean hasDemandedPath(Node resolved, BlueOperationLimits limits) {
         for (String path : limits.demandedPaths()) {
             try {
                 if (BlueViewPath.select(resolved, path) != null) {
-                    return BlueOperationResult.established(resolved);
+                    return true;
                 }
             } catch (IllegalArgumentException absent) {
                 // Continue until every demanded path has been checked.
             }
         }
-        return BlueOperationResult.absent(
-                "Demanded paths are absent from the completed resolved value.");
+        return false;
     }
 
     private static NodeProvider budgetedProvider(
@@ -129,7 +176,7 @@ final class LanguageRuntimeLimitedResolution {
         };
     }
 
-    private static BlueOperationResult<Node> classifyFailure(
+    private static <T> BlueOperationResult<T> classifyFailure(
             RuntimeException failure,
             ReferenceBudget budget) {
         for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
@@ -169,6 +216,77 @@ final class LanguageRuntimeLimitedResolution {
         }
         return BlueOperationResult.invalid(
                 failure.getMessage(), null);
+    }
+
+    /** All candidate preparation and demanded target lookups share this provider. */
+    private static final class LimitedMatchingRuntime implements MatchingRuntime {
+        private final NodeProvider provider;
+        private final Merger merger;
+        private final BlueOperationLimits limits;
+        private final Function<Node, Node> preprocessor;
+        private final BlueCachePolicy cachePolicy;
+
+        private LimitedMatchingRuntime(
+                NodeProvider provider,
+                MergingProcessor mergingProcessor,
+                BlueOperationLimits limits,
+                Function<Node, Node> preprocessor,
+                BlueCachePolicy cachePolicy) {
+            this.provider = provider;
+            // Resolved caches must not skip this invocation's reference budget.
+            this.merger = new Merger(mergingProcessor, provider, null, REFERENCE_CACHE_ADMISSION);
+            this.limits = limits;
+            this.preprocessor = preprocessor;
+            this.cachePolicy = cachePolicy;
+        }
+
+        @Override
+        public BlueCachePolicy matchingCachePolicy() {
+            return cachePolicy;
+        }
+
+        @Override
+        public Node preprocessForMatching(Node source) {
+            return preprocessor.apply(source);
+        }
+
+        @Override
+        public void expandForMatching(Node source, ResolutionLimits targetLimits) {
+            new NodeExpander(provider).expand(source, candidateLimits(targetLimits));
+        }
+
+        @Override
+        public TypeEvidenceResolution resolveTypeEvidenceForMatching(
+                Node source, ResolutionLimits targetLimits) {
+            TypeEvidenceResolution resolution = merger.resolveTypeEvidence(
+                    source, candidateLimits(targetLimits));
+            if (!hasDemandedPath(resolution.resolvedRoot().toNode(), limits)) {
+                throw new DemandedPathsAbsentException();
+            }
+            return resolution;
+        }
+
+        @Override
+        public TypeEvidenceResolution materializeTypeReferenceForMatching(FrozenNode reference) {
+            TypeEvidenceResolution wrapper = merger.materializeTypeReferenceEvidence(
+                    reference, ResolutionLimits.NO_LIMITS);
+            FrozenNode materialized = wrapper.resolvedRoot().getType();
+            if (materialized == null || materialized.isReferenceOnly()) {
+                throw new IllegalStateException("Required matching reference was not materialized: "
+                        + reference.getReferenceBlueId());
+            }
+            return new TypeEvidenceResolution(materialized, wrapper.canonicalTypeIdentities());
+        }
+
+        private ResolutionLimits candidateLimits(ResolutionLimits targetLimits) {
+            return ResolutionLimits.allOf(targetLimits, new SemanticDemandLimits(limits.demandedSegments()));
+        }
+    }
+
+    private static final class DemandedPathsAbsentException extends RuntimeException {
+        private DemandedPathsAbsentException() {
+            super("Demanded paths are absent from the completed resolved value.");
+        }
     }
 
     private static final class ReferenceBudget {
